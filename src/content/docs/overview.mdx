@@ -1,0 +1,75 @@
+# Tổng quan chương 1 — Hust Media
+
+Tài liệu này tóm lược nội dung Chương 1 (Khảo sát, Phân tích và Hướng đi vào chi tiết) của đồ án Hust Media. Nội dung tập trung vào bối cảnh, đối tượng người dùng, cơ chế vận hành và yêu cầu phi chức năng.
+
+## Mục tiêu dự án
+
+- Xây dựng nền tảng trung gian giúp tăng tương tác và hỗ trợ đánh giá dịch vụ trực tuyến dựa trên cơ chế điểm thưởng.
+- Tập trung người dùng trẻ, hành vi tương tác cao, thao tác đơn giản và nhanh.
+- Tận dụng nền tảng mạng xã hội sẵn có thay vì xây một mạng xã hội mới.
+- Duy trì tăng trưởng qua SEO và tối ưu vận hành, giảm chi phí lưu log bằng cơ chế điểm thưởng.
+
+## Khảo sát thị trường và hướng đi
+
+- AI theo tầng: ưu tiên module AI nhẹ, phục vụ tác vụ cụ thể.
+- Low-code/vibe-code: giảm rào cản kỹ thuật và rút ngắn thời gian triển khai.
+- Bảo mật và kiểm soát dữ liệu: cân nhắc on-premise và hybrid để tối ưu chi phí.
+- Trải nghiệm người dùng đơn giản: giảm thao tác, tăng tốc phản hồi.
+
+## Cơ chế ứng dụng
+
+- Luồng tổng quát: React UI → API Server (Windows) → module Node.js/PHP/Python → dữ liệu → trả kết quả.
+- Thu hút người dùng mới qua SEO, hạn chế phụ thuộc cơ chế giữ chân phức tạp.
+- Cơ chế điểm thưởng được dùng làm bộ lọc hành vi bất thường và kiểm soát thao tác.
+- Tương tác gián tiếp qua nền tảng mạng xã hội lớn để tận dụng hệ sinh thái sẵn có.
+
+## Yêu cầu phi chức năng
+
+- Hiệu năng: giới hạn timeout backend, cache phía client (LocalStorage), tối ưu truy vấn SQL.
+- Mở rộng: nâng băng thông/lưu trữ, mở rộng phần cứng khi cần.
+- Bảo mật: thay đổi port mặc định, phân quyền truy cập, giới hạn truy vấn, Cloudflare, backup định kỳ.
+
+## Công nghệ sử dụng
+
+| Nhóm | Công nghệ | Vai trò |
+| --- | --- | --- |
+| Frontend | React | Giao diện người dùng, phản hồi nhanh nhờ Virtual DOM. |
+| Backend | Node.js / PHP / Python | Xử lý API, nghiệp vụ và tự động hóa module. |
+| Hạ tầng | Windows Server + GitHub Auto Update | Vận hành liên tục và tự động cập nhật. |
+| Mạng/Bảo mật | Cloudflare, port tùy chỉnh | Ẩn IP thật, giảm rủi ro quét cổng/DDoS. |
+| Lưu trữ | SQL (MariaDB) | Lưu dữ liệu cấu trúc: user, nhiệm vụ, điểm thưởng. |
+
+## Ví dụ kết nối MariaDB bằng Golang
+
+```go
+package main
+
+import (
+	"database/sql"
+	"fmt"
+
+	_ "github.com/go-sql-driver/mysql"
+)
+
+func main() {
+	// Thay user, pass, host, db cho đúng môi trường của bạn.
+	dsn := "user:pass@tcp(127.0.0.1:3306)/hust_media?parseTime=true"
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		panic(err)
+	}
+
+	var now string
+	if err := db.QueryRow("SELECT NOW()").Scan(&now); err != nil {
+		panic(err)
+	}
+
+	fmt.Println("DB time:", now)
+}
+```
