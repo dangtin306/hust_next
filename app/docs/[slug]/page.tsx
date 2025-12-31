@@ -1,5 +1,4 @@
-import { existsSync } from "fs";
-import { readFile } from "fs/promises";
+import { readFile, readdir } from "fs/promises";
 import path from "path";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -7,17 +6,29 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 
 const docsDir = path.join(process.cwd(), "src", "content", "docs");
+const defaultOrderMap: Record<string, number> = {
+  overview: 1,
+  architecture: 2,
+  algorithm: 3,
+};
 
-const navItems = [
-  { title: "Overview", slug: "overview" },
-  { title: "Architecture", slug: "architecture" },
-  { title: "Algorithm", slug: "algorithm" },
-];
+type Frontmatter = {
+  title?: string;
+  description?: string;
+  order?: string;
+  chapter?: string;
+  [key: string]: string | undefined;
+};
 
 type DocData = {
+  frontmatter: Frontmatter;
+  content: string;
+};
+
+type DocSummary = {
+  slug: string;
   title: string;
-  description: string;
-  source: string;
+  order: number;
 };
 
 function slugToTitle(slug: string) {
@@ -28,51 +39,87 @@ function slugToTitle(slug: string) {
     .join(" ");
 }
 
-function extractTitleAndDescription(source: string, slug: string) {
+function splitFrontmatter(source: string): {
+  frontmatter: Frontmatter;
+  content: string;
+} {
   const lines = source.split(/\r?\n/);
-  let title = "";
-  let index = 0;
+  if (lines.length < 3 || lines[0].trim() !== "---") {
+    return { frontmatter: {}, content: source };
+  }
 
-  for (; index < lines.length; index++) {
-    const line = lines[index].trim();
-    const match = /^#\s+(.+)/.exec(line);
-    if (match) {
-      title = match[1].trim();
-      index++;
+  const frontmatterLines: string[] = [];
+  let endIndex = -1;
+
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "---") {
+      endIndex = i;
       break;
     }
+    frontmatterLines.push(lines[i]);
   }
 
-  if (!title) {
-    title = slugToTitle(slug);
+  if (endIndex === -1) {
+    return { frontmatter: {}, content: source };
   }
 
-  const descriptionLines: string[] = [];
-  for (; index < lines.length; index++) {
-    const line = lines[index].trim();
-    if (!line) {
-      if (descriptionLines.length) break;
-      continue;
+  const frontmatter: Frontmatter = {};
+  for (const line of frontmatterLines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const separatorIndex = trimmed.indexOf(":");
+    if (separatorIndex === -1) continue;
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    value = value.replace(/^['"]|['"]$/g, "");
+    frontmatter[key] = value;
+  }
+
+  return {
+    frontmatter,
+    content: lines.slice(endIndex + 1).join("\n"),
+  };
+}
+
+function extractTitleFromContent(content: string, slug: string) {
+  const lines = content.split(/\r?\n/);
+  for (const line of lines) {
+    const match = /^#\s+(.+)/.exec(line.trim());
+    if (match) {
+      return match[1].trim();
     }
-    descriptionLines.push(line);
   }
 
-  let description = descriptionLines.join(" ");
-  description = description
+  return slugToTitle(slug);
+}
+
+function toPlainText(markdown: string) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[`*_>#]/g, "")
+    .replace(/[#>*_~]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
 
-  if (!description) {
-    description = `Documentation for ${title}.`;
+function getDocOrder(frontmatter: Frontmatter, slug: string) {
+  const orderValue = frontmatter.order ?? frontmatter.chapter;
+  if (orderValue) {
+    const numeric = Number(orderValue);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
   }
 
-  if (description.length > 160) {
-    description = `${description.slice(0, 157).trimEnd()}...`;
+  const slugMatch = /^(\d+)[-_]/.exec(slug);
+  if (slugMatch) {
+    return Number(slugMatch[1]);
   }
 
-  return { title, description };
+  return defaultOrderMap[slug] ?? Number.POSITIVE_INFINITY;
 }
 
 async function getDocBySlug(slug: string): Promise<DocData | null> {
@@ -80,15 +127,37 @@ async function getDocBySlug(slug: string): Promise<DocData | null> {
 
   try {
     const source = await readFile(filePath, "utf8");
-    const { title, description } = extractTitleAndDescription(source, slug);
-    return { title, description, source };
+    const { frontmatter, content } = splitFrontmatter(source);
+    return { frontmatter, content };
   } catch {
     return null;
   }
 }
 
-function isDocAvailable(slug: string) {
-  return existsSync(path.join(docsDir, `${slug}.mdx`));
+async function getDocList(): Promise<DocSummary[]> {
+  try {
+    const entries = await readdir(docsDir, { withFileTypes: true });
+    const docs = await Promise.all(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".mdx"))
+        .map(async (entry) => {
+          const slug = entry.name.replace(/\.mdx$/, "");
+          const source = await readFile(path.join(docsDir, entry.name), "utf8");
+          const { frontmatter, content } = splitFrontmatter(source);
+          const title = frontmatter.title?.trim() ||
+            extractTitleFromContent(content, slug);
+          const order = getDocOrder(frontmatter, slug);
+          return { slug, title, order };
+        })
+    );
+
+    return docs.sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.title.localeCompare(b.title);
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({
@@ -98,12 +167,38 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const doc = await getDocBySlug(slug);
-  const title = doc?.title ?? slugToTitle(slug);
-  const description = doc?.description ?? `Documentation for ${title}.`;
+  const frontmatter = doc?.frontmatter ?? {};
+  const content = doc?.content ?? "";
+  const fallbackTitle = extractTitleFromContent(content, slug);
+  const title = frontmatter.title?.trim() || fallbackTitle;
+  let description = frontmatter.description?.trim() ?? "";
+
+  if (!description) {
+    const plainText = toPlainText(content);
+    description = plainText
+      ? plainText.slice(0, 160).trim()
+      : `Documentation for ${title}.`;
+  }
+
+  if (description.length > 160) {
+    description = `${description.slice(0, 157).trimEnd()}...`;
+  }
+
+  const canonicalUrl = `https://docs.hust.media/docs/${slug}`;
 
   return {
     title: `${title} | Hust Media`,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: `${title} | Hust Media`,
+      description,
+      url: canonicalUrl,
+      siteName: "Hust Media",
+      type: "article",
+    },
   };
 }
 
@@ -118,10 +213,7 @@ export default async function DocPage({
     notFound();
   }
 
-  const nav = navItems.map((item) => ({
-    ...item,
-    available: isDocAvailable(item.slug),
-  }));
+  const nav = await getDocList();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -137,17 +229,6 @@ export default async function DocPage({
                   const isActive = item.slug === slug;
                   const baseClass =
                     "block rounded-lg px-3 py-2 text-sm transition";
-
-                  if (!item.available) {
-                    return (
-                      <span
-                        key={item.slug}
-                        className={`${baseClass} cursor-not-allowed text-slate-500`}
-                      >
-                        {item.title}
-                      </span>
-                    );
-                  }
 
                   return (
                     <Link
@@ -171,7 +252,7 @@ export default async function DocPage({
         <main className="min-w-0 flex-1">
           <article className="rounded-3xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl backdrop-blur-xl">
             <div className="prose prose-invert max-w-none">
-              <MDXRemote source={doc.source} />
+              <MDXRemote source={doc.content} />
             </div>
           </article>
         </main>

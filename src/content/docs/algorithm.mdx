@@ -1,0 +1,107 @@
+---
+title: Thuật toán & điểm thưởng
+description: Auto đánh giá tương tác, chống gian lận và logic thưởng/duyệt trong Hust Media.
+---
+
+# Thuật toán & cơ chế điểm thưởng — Hust Media
+
+Tài liệu này tổng hợp các thuật toán trong Chương 3, tập trung vào cơ chế điểm thưởng tự động, chống gian lận trong MMO và các đoạn code minh họa.
+
+## Cơ chế điểm thưởng AI
+
+Hệ thống vận hành theo chuỗi **nhiệm vụ → minh chứng → đánh giá → cộng điểm**. Để giảm tải kiểm duyệt thủ công, Hust Media kết hợp hai lớp đánh giá:
+
+1) **Tự động hóa kỹ thuật**: kiểm tra trạng thái tương tác qua API (follow/like/view) và kiểm soát các điều kiện thời gian, mức nhiệm vụ, lịch sử làm nhiệm vụ.
+2) **AI hỗ trợ minh chứng**: dùng OCR/LLM để đọc ảnh minh chứng, xác nhận trạng thái và đối chiếu thông tin nhiệm vụ (ví dụ: tên chiến dịch, nền tảng, thời điểm).
+
+Khi cả hai lớp xác nhận hợp lệ, hệ thống ghi nhận hoàn thành và **cộng điểm thưởng** vào tài khoản, đồng thời tạo log đối soát để đảm bảo truy vết khi có khiếu nại.
+
+## Thuật toán chống gian lận MMO
+
+Các luồng MMO có rủi ro cao về spam và hành vi bất thường. Hệ thống áp dụng nhiều lớp lọc:
+
+- **Cooldown theo thời gian nhiệm vụ**: tránh nhận nhiệm vụ quá dày trong khoảng ngắn.
+- **Level gating**: chỉ phân phối nhiệm vụ phù hợp với level người dùng.
+- **Alias tracking**: link rút gọn giúp đồng bộ trạng thái theo từng nhiệm vụ.
+- **Phạt nguội**: quét lại nhiệm vụ sau một khoảng thời gian (ví dụ 28 ngày) để đối soát follow/like còn hiệu lực, nếu vi phạm thì trừ điểm.
+- **Lọc outlier (IQR)**: phân tích thời gian tương tác để loại bỏ hành vi quá nhanh/quá chậm bất thường.
+
+Tổng thể, thuật toán vừa đảm bảo **công bằng**, vừa giảm gian lận mà không cần tăng quá nhiều chi phí vận hành.
+
+## Code Snippet (Go/TypeScript)
+
+### Go: kiểm soát cooldown + cộng điểm
+
+```go
+package reward
+
+import (
+	"database/sql"
+	"time"
+)
+
+func canTakeMission(lastTime time.Time, cooldownSec int) bool {
+	return time.Since(lastTime) > time.Duration(cooldownSec)*time.Second
+}
+
+func awardPoints(tx *sql.Tx, userID int, missionID int, points int) error {
+	_, err := tx.Exec(
+		"UPDATE users SET points = points + ? WHERE id = ?",
+		points,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(
+		"INSERT INTO points_log(user_id, mission_id, points, created_at) VALUES(?,?,?,NOW())",
+		userID,
+		missionID,
+		points,
+	)
+	return err
+}
+```
+
+### TypeScript: lọc outlier theo IQR
+
+```ts
+type Stats = {
+  q1: number;
+  q3: number;
+  iqr: number;
+  avg: number;
+};
+
+function percentile(sorted: number[], p: number) {
+  const n = sorted.length;
+  const k = (n - 1) * (p / 100);
+  const f = Math.floor(k);
+  const c = Math.min(f + 1, n - 1);
+  const frac = k - f;
+  return sorted[f] * (1 - frac) + sorted[c] * frac;
+}
+
+export function iqrFilter(durations: number[]): Stats | null {
+  if (!durations.length) return null;
+
+  const sorted = [...durations].sort((a, b) => a - b);
+  const q1 = percentile(sorted, 25);
+  const q3 = percentile(sorted, 75);
+  const iqr = q3 - q1;
+  const lower = q1 - 1.0 * iqr;
+  const upper = q3 + 1.0 * iqr;
+
+  const filtered = sorted.filter((v) => v >= lower && v <= upper);
+  const avg = filtered.reduce((acc, v) => acc + v, 0) / filtered.length;
+
+  return { q1, q3, iqr, avg };
+}
+```
+
+## Gợi ý áp dụng
+
+- Dùng IQR để tạo ngưỡng thời gian “hợp lệ” theo từng loại nhiệm vụ.
+- Gắn thêm log thưởng/khấu trừ để đối soát khi có tranh chấp.
+- Kết hợp phạt nguội và AI đánh giá minh chứng để giảm hành vi gian lận dài hạn.
