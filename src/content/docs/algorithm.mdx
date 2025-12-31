@@ -5,7 +5,7 @@ description: Auto đánh giá tương tác, chống gian lận và logic thưở
 
 # Thuật toán & cơ chế điểm thưởng — Hust Media
 
-Tài liệu này tổng hợp các thuật toán trong Chương 3, tập trung vào cơ chế điểm thưởng tự động, chống gian lận trong MMO và các đoạn code minh họa.
+Tài liệu này tổng hợp các thuật toán trong Chương 3, tập trung vào cơ chế điểm thưởng tự động, chống gian lận trong Automation Tools và các đoạn code minh họa.
 
 ## Cơ chế điểm thưởng AI
 
@@ -16,9 +16,9 @@ Hệ thống vận hành theo chuỗi **nhiệm vụ → minh chứng → đánh
 
 Khi cả hai lớp xác nhận hợp lệ, hệ thống ghi nhận hoàn thành và **cộng điểm thưởng** vào tài khoản, đồng thời tạo log đối soát để đảm bảo truy vết khi có khiếu nại.
 
-## Thuật toán chống gian lận MMO
+## Thuật toán chống gian lận Automation Tools
 
-Các luồng MMO có rủi ro cao về spam và hành vi bất thường. Hệ thống áp dụng nhiều lớp lọc:
+Các luồng Automation Tools có rủi ro cao về spam và hành vi bất thường. Hệ thống áp dụng nhiều lớp lọc:
 
 - **Cooldown theo thời gian nhiệm vụ**: tránh nhận nhiệm vụ quá dày trong khoảng ngắn.
 - **Level gating**: chỉ phân phối nhiệm vụ phù hợp với level người dùng.
