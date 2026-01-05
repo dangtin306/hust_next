@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@source "../react_app/src/**/*.{js,jsx,ts,tsx}";
 
 :root {
   --background: #ffffff;
