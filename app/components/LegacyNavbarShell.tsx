@@ -14,7 +14,7 @@ const LegacyNavbarShell = () => {
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         apikeyExists={false}
-        switch_router={(path) => router.push(path)}
+        switch_router={(path: string) => router.push(path)}
         type_user=""
         idExist={null}
         set_open_button_support={() => {}}
