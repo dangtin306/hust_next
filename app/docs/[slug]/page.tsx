@@ -184,7 +184,7 @@ export async function generateMetadata({
     description = `${description.slice(0, 157).trimEnd()}...`;
   }
 
-  const canonicalUrl = `https://docs.hust.media/docs/${slug}`;
+  const canonicalUrl = `https://docs.hust.media/next/docs/${slug}`;
 
   return {
     title: `${title} | Hust Media`,

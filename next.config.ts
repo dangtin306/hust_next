@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  basePath: "/next",
   experimental: { externalDir: true },
   webpack: (config, { isServer }) => {
     if (!isServer) {
