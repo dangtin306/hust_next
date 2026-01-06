@@ -13,12 +13,11 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# next.js (tracked build output)
+# .next and out are intentionally committed
 
-# production
-/build
+# production (tracked build output)
+# /build is intentionally committed
 
 # misc
 .DS_Store
