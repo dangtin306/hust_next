@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev --webpack -p 3001",
     "build": "next build --webpack",
-    "start": "next start -p 3001",
+    "start": "NEXT_DISABLE_DEV_INDICATOR=1 next dev --webpack -p 3001",
     "lint": "eslint"
   },
   "dependencies": {
