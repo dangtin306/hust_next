@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST="{\"app/components/LegacyNavbar.tsx -> ../../../react_app/src/shared/next_navbar.jsx\":{\"id\":\"app/components/LegacyNavbar.tsx -> ../../../react_app/src/shared/next_navbar.jsx\",\"files\":[\"static/chunks/_app-pages-browser_react_app_src_shared_next_navbar_jsx.js\"]}}"

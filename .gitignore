@@ -14,6 +14,11 @@
 /coverage
 
 # next.js (tracked build output)
+# dev caches (ignore even though .next is tracked)
+/.next/cache/
+/.next/dev/
+
+
 # .next and out are intentionally committed
 
 # production (tracked build output)
