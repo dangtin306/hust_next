@@ -1,5 +1,5 @@
 {
-  "app/components/LegacyNavbar.tsx -> ../../../react_app/src/shared/next_navbar.jsx": {
+  "app/components/LegacyNavbarShell.tsx -> ../../../react_app/src/shared/next_navbar.jsx": {
     "id": 2505,
     "files": [
       "static/chunks/8a4346fb.f37a2b833b474e7b.js",

@@ -1,0 +1,51 @@
+---
+title: Hust Media Public API v3
+description: Public API reference for creating engagement campaigns.
+order: 4
+---
+
+# Hust Media Public API v3
+
+## Authentication
+All requests require an **API Key**. Pass the key as the `key` field in the JSON body.
+
+## Endpoint
+`POST /api/v3/campaign/create`
+
+### Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| action | string | yes | Action verb. Use `add` to create a campaign. |
+| key | string | yes | API key assigned to your account. |
+| link | string | yes | Target URL for the campaign. |
+| quantity | int | yes | Number of actions to deliver. |
+| service | string | yes | Service identifier for the campaign type. |
+| comments | string[] | no | Optional comment list for comment-based services. |
+
+### Example Request
+```json
+POST /api/v3/campaign/create
+{
+  "action": "add",
+  "comments": ["comment_1", "comment_2"],
+  "key": "YOUR_API_KEY",
+  "link": "https://example.com/target",
+  "quantity": 1000,
+  "service": "follow"
+}
+```
+
+### Example Response (Success)
+```json
+{
+  "order": 98412
+}
+```
+
+### Example Response (Error)
+```json
+{
+  "error": "quantity_less_than_min"
+}
+```

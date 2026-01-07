@@ -1,0 +1,60 @@
+---
+title: Core Engine: Gamification & Anti-Fraud Logic
+description: Engagement-point architecture with credit allocation, automated verification, and fraud detection.
+order: 6
+---
+
+# Core Engine: Gamification & Anti-Fraud Logic
+
+## Credit Allocation Algorithm
+The platform replaces "coins/rewards" with **Digital Credits** (also referred to as **Engagement Points**) to drive **User Engagement Metrics**. Credits are issued when users complete **Executing Micro-Interactions** that match campaign intent and evidence rules.
+
+Allocation uses a weighted score that combines difficulty, completion quality, and user reputation:
+
+```text
+credit = base_rate
+       * difficulty_weight
+       * quality_score
+       * reputation_multiplier
+       * time_decay
+```
+
+Inputs:
+- **difficulty_weight**: derived from interaction type (follow, vote, view) and proof strictness.
+- **quality_score**: evidence confidence from verification pipeline.
+- **reputation_multiplier**: dynamic trust tier based on historical success and dispute rate.
+- **time_decay**: penalizes abnormal latency or burst patterns.
+
+This model maintains a stable credit economy while incentivizing sustained engagement across campaigns.
+
+---
+
+## Automated Verification Layer
+Evidence is validated by an **Automated Verification Worker** that combines AI/OCR and rule-based checks to confirm that **Executing Micro-Interactions** occurred on the target platform.
+
+Verification stages:
+- **OCR extraction** for screenshots and UI evidence.
+- **Semantic validation** of metadata and platform identifiers.
+- **Cross-check** against API signals or third-party telemetry when available.
+
+```text
+Evidence -> OCR -> Normalize -> Validate -> Confidence Score -> Credit Grant
+```
+
+This layer provides deterministic gating so credits are only released when evidence meets minimum confidence thresholds.
+
+---
+
+## Fraud Detection Protocol
+The platform applies **Anomaly & Fraud Detection Algorithms** to prevent spam, click farms, and replayed evidence. Controls are enforced at both request and post-audit stages:
+
+- **Rate limiting** per device and account.
+- **Cooldown windows** to prevent burst submissions.
+- **Reputation scoring** tied to dispute ratio and completion consistency.
+- **Post-audit sweeps** to invalidate suspicious events and revoke credits.
+
+```text
+Signals -> Anomaly Scoring -> Quarantine -> Post-Audit -> Finalize
+```
+
+This protocol protects campaign integrity while keeping engagement pipelines responsive and scalable.

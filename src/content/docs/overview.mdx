@@ -1,75 +1,168 @@
-# Tổng quan — Hust Media
+# Hust Media Engagement Platform
 
-Tài liệu này tóm lược nội dung Chương 1 (Khảo sát, Phân tích và Hướng đi vào chi tiết) của đồ án Hust Media. Nội dung tập trung vào bối cảnh, đối tượng người dùng, cơ chế vận hành và yêu cầu phi chức năng.
+## Introduction & Core Concepts
+Hust Media Engagement Platform là một **Engagement Intermediary** giúp tăng tương tác mạng xã hội và chuẩn hóa quy trình đánh giá dịch vụ trực tuyến thông qua cơ chế **Reward Points**. Hệ thống vận hành theo mô hình **Client–Server**, tách rõ **API Gateway**, **Core Services**, **Data Pipeline** và **Verification Engine** để duy trì **Real-time Latency** ổn định.
 
-## Mục tiêu dự án
+Core flow:
+- **Mission → Proof → Verification → Reward → Exchange**
+- **Microservices** theo nhóm nghiệp vụ
+- **Hybrid Delivery**: React cho realtime, Next.js cho SEO/SSR
 
-- Xây dựng nền tảng trung gian giúp tăng tương tác và hỗ trợ đánh giá dịch vụ trực tuyến dựa trên cơ chế điểm thưởng.
-- Tập trung người dùng trẻ, hành vi tương tác cao, thao tác đơn giản và nhanh.
-- Tận dụng nền tảng mạng xã hội sẵn có thay vì xây một mạng xã hội mới.
-- Duy trì tăng trưởng qua SEO và tối ưu vận hành, giảm chi phí lưu log bằng cơ chế điểm thưởng.
+---
 
-## Khảo sát thị trường và hướng đi
+## System Design Goals
+- **Scalability**: scale ngang qua provider offloading, scale dọc qua mở rộng RAM/GPU.
+- **Low Latency**: cache hai nhịp (client store + SSR/SSG cache), tối ưu truy vấn + timeout.
+- **Data Integrity**: audit chain theo alias/link rút gọn để truy vết nhiệm vụ.
+- **Threat Intelligence**: module tra cứu rủi ro + pipeline AI kiểm duyệt dữ liệu.
+- **Operational Efficiency**: cập nhật tự động qua Git, triển khai on‑prem + hybrid.
 
-- AI theo tầng: ưu tiên module AI nhẹ, phục vụ tác vụ cụ thể.
-- Low-code/vibe-code: giảm rào cản kỹ thuật và rút ngắn thời gian triển khai.
-- Bảo mật và kiểm soát dữ liệu: cân nhắc on-premise và hybrid để tối ưu chi phí.
-- Trải nghiệm người dùng đơn giản: giảm thao tác, tăng tốc phản hồi.
+---
 
-## Cơ chế ứng dụng
+## Architecture Overview
 
-- Luồng tổng quát: React UI → API Server (Windows) → module Node.js/PHP/Python → dữ liệu → trả kết quả.
-- Thu hút người dùng mới qua SEO, hạn chế phụ thuộc cơ chế giữ chân phức tạp.
-- Cơ chế điểm thưởng được dùng làm bộ lọc hành vi bất thường và kiểm soát thao tác.
-- Tương tác gián tiếp qua nền tảng mạng xã hội lớn để tận dụng hệ sinh thái sẵn có.
+### Logical Topology
+```text
+Client (Web/App)
+  -> API Gateway (Nginx / Go / Node)
+    -> Core Services (PHP / Go / Python)
+      -> Data Stores (MariaDB / MongoDB)
+        -> Integrations (MQTT, Cloudflare, Provider APIs)
+```
 
-## Yêu cầu phi chức năng
+### Data Pipeline
+- **Ingestion**: nhận nhiệm vụ, minh chứng, log trạng thái.
+- **Normalization**: chuẩn hóa JSON, định danh theo alias.
+- **Verification**: đối soát qua API bên thứ 3 + Image/Video checks.
+- **Settlement**: cộng điểm, đổi dịch vụ, cập nhật trạng thái.
 
-- Hiệu năng: giới hạn timeout backend, cache phía client (LocalStorage), tối ưu truy vấn SQL.
-- Mở rộng: nâng băng thông/lưu trữ, mở rộng phần cứng khi cần.
-- Bảo mật: thay đổi port mặc định, phân quyền truy cập, giới hạn truy vấn, Cloudflare, backup định kỳ.
+---
 
-## Công nghệ sử dụng
+## Technology Stack
 
-| Nhóm | Công nghệ | Vai trò |
+| Layer | Technology | Role |
 | --- | --- | --- |
-| Frontend | React | Giao diện người dùng, phản hồi nhanh nhờ Virtual DOM. |
-| Backend | Node.js / PHP / Python | Xử lý API, nghiệp vụ và tự động hóa module. |
-| Hạ tầng | Windows Server + GitHub Auto Update | Vận hành liên tục và tự động cập nhật. |
-| Mạng/Bảo mật | Cloudflare, port tùy chỉnh | Ẩn IP thật, giảm rủi ro quét cổng/DDoS. |
-| Lưu trữ | SQL (MariaDB) | Lưu dữ liệu cấu trúc: user, nhiệm vụ, điểm thưởng. |
+| Frontend | React / Next.js | Dashboard realtime + SEO/SSR public pages. |
+| Mobile | React Native + WebView | Shell native, cập nhật nhanh logic web. |
+| Backend | Node.js / PHP / Go / Python | REST API, job queue, automation, AI utilities. |
+| Storage | MariaDB / MongoDB | Structured + semi‑structured data. |
+| Infra | Nginx + Cloudflare Tunnel | Gateway, reverse proxy, IP masking. |
 
-## Ví dụ kết nối MariaDB bằng Golang
+---
 
-```go
-package main
+## Hybrid Frontend Strategy
+**React SPA** xử lý thao tác realtime (dashboard, nhiệm vụ), **Next.js** phục vụ các entry pages cần SEO/SSR. Cả hai dùng chung **data contract** để tránh lệch hành vi.
 
-import (
-	"database/sql"
-	"fmt"
+```text
+render(view) -> state.sync(...) -> ui.update(...)
+```
 
-	_ "github.com/go-sql-driver/mysql"
-)
+**MQTT/WebSocket** giữ pipeline realtime đồng nhất giữa React và Next.
 
-func main() {
-	// Thay user, pass, host, db cho đúng môi trường của bạn.
-	dsn := "user:pass@tcp(127.0.0.1:3306)/hust_media?parseTime=true"
+---
 
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
+## Core Modules
 
-	if err := db.Ping(); err != nil {
-		panic(err)
-	}
+### Module A — Engagement Boosting
+Module A tăng **Follow / Like / View** theo mô hình **Task Distribution**.
 
-	var now string
-	if err := db.QueryRow("SELECT NOW()").Scan(&now); err != nil {
-		panic(err)
-	}
+Flow:
+1) **Task Atomization**: chia chiến dịch thành micro-tasks  
+2) **Distribution Queue**: phân phối theo level, uy tín thiết bị  
+3) **Execution & Proof**: worker thao tác + gửi minh chứng  
+4) **Dual Verification**: API bên thứ 3 + kiểm tra hình ảnh  
+5) **Settlement**: cập nhật trạng thái, cộng điểm thưởng  
 
-	fmt.Println("DB time:", now)
+### Module B — Rating with Evidence
+Module B tăng **rating/vote** kèm minh chứng. Thời gian thao tác được làm sạch bằng **IQR Filtering** để loại outlier.
+
+```python
+q1 = percentile(sorted_data, 25)
+q3 = percentile(sorted_data, 75)
+iqr = q3 - q1
+lower = q1 - 1.0 * iqr
+upper = q3 + 1.0 * iqr
+filtered = [x for x in sorted_data if lower <= x <= upper]
+avg = sum(filtered) / len(filtered)
+```
+
+### Module C — Risk & Scam Detection
+Module C cung cấp **Threat Intelligence** theo cơ chế tra cứu + tố cáo:
+- Normalize input (phone/bank/social/website)
+- Tra cứu nhanh qua **MongoDB** index
+- Trả hồ sơ chi tiết từ **MariaDB**
+- AI review hai lớp trước khi công khai dữ liệu
+
+---
+
+## Reward Engine
+Reward Points là **currency nội bộ**:
+- Người dùng B hoàn thành nhiệm vụ → nhận điểm.
+- Điểm dùng để tạo nhiệm vụ mới → tạo vòng lặp tự vận hành.
+- Alias/shortlink được dùng để audit toàn chuỗi giao việc.
+
+---
+
+## API & Data Contract
+
+### Mission Creation (P2P)
+```json
+POST https://domain/api/v3
+{
+  "action": "add",
+  "comments": ["comment_1", "comment_2"],
+  "key": "{API_KEY}",
+  "link": "{target_link}",
+  "quantity": 1000,
+  "service": "{service_id}"
 }
 ```
+
+### Response
+```json
+{ "order": 98412 }
+```
+
+---
+
+## Security & Privacy
+- **API Key** xác thực request, kết hợp rate limiting.
+- **Cloudflare Tunnel** ẩn IP thật, giảm rủi ro DDoS.
+- **Database Hardening**: đổi port mặc định, giới hạn quyền, backup định kỳ.
+
+```go
+c.Header("Access-Control-Allow-Origin", "*")
+c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+c.Header("Access-Control-Allow-Credentials", "true")
+```
+
+```yaml
+ingress:
+  - hostname: ws.hust.media
+    service: http://localhost:8793
+  - hostname: nginx.hust.media
+    service: http://localhost:8794
+  - service: http_status:404
+```
+
+---
+
+## Deployment & Operations
+- **On‑prem** server cho core services, hybrid network qua Cloudflare.
+- **Auto‑restart** theo thứ tự Nginx → Golang → Workers.
+- **Git Auto‑Update** để đồng bộ mã nguồn nhanh, giảm downtime.
+
+---
+
+## Observability & Reliability
+- **Background QA Jobs** rà soát nhiệm vụ backlog.
+- **Audit Trail** đầy đủ trạng thái nhiệm vụ và lịch sử thao tác.
+- **Alerting** qua Telegram + dashboard theo dõi hệ thống.
+
+---
+
+## Performance Benchmarks
+- **Local API hop**: 0.01–0.05 ms nội bộ.
+- **Timeout Guardrail**: tự hủy tác vụ > 180s để tránh overload.
+- **Cache Strategy**: client store + SSR cache giảm truy vấn lặp.
+- **Hybrid Routing**: entry points SSR nhanh, thao tác realtime mượt.

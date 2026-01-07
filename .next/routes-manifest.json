@@ -3,8 +3,17 @@
   "pages404": true,
   "appType": "app",
   "caseSensitive": false,
-  "basePath": "",
+  "basePath": "/next",
   "redirects": [
+    {
+      "source": "/next/",
+      "destination": "/next",
+      "basePath": false,
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^/next/$"
+    },
     {
       "source": "/:path+/",
       "destination": "/:path+",

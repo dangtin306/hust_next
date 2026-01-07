@@ -1,0 +1,74 @@
+---
+title: Security Intelligence: Threat Detection Logic
+description: Threat Analysis pipeline with community ingestion, AI verification, and real-time post-audit controls.
+order: 5
+---
+
+# Security Intelligence: Threat Detection Logic
+
+## Overview
+This protocol defines the **Threat Analysis** pipeline used to detect **Malicious Activity/Fraud** across community-driven signals, third-party feeds, and automated validation. The system is designed for **cyber risk containment**, **rapid triage**, and **high-fidelity evidence handling**.
+
+---
+
+## 1) Data Ingestion (Community Signals)
+**Community Signals** are ingested as structured reports and normalized for downstream correlation:
+- **Indicators**: phone numbers, bank accounts, social handles, URLs.
+- **Evidence**: screenshots, chat logs, media artifacts.
+- **Normalization**: canonical phone format, consistent alias mapping, and deduplication.
+
+Ingestion also supports **external threat feeds** via crawler-based pipelines, converting raw HTML into structured JSON for correlation and scoring.
+
+```text
+Community Signals / External Feeds
+  -> Normalize (phone, bank, social, url)
+    -> Deduplicate
+      -> Queue for verification
+```
+
+---
+
+## 2) AI Verification (Semantic + OCR Evidence)
+AI verification enforces **data quality** and **signal integrity** before exposure:
+- **Semantic validation** to reduce noisy or irrelevant reports.
+- **OCR evidence extraction** from images to verify account identifiers.
+- **Two-stage review** with queue locks to prevent race conditions.
+
+```json
+{
+  "signal_type": "bank_account",
+  "indicator": "0123456789",
+  "evidence": {
+    "image_ocr": "BANK: ABC | ACCOUNT: 0123456789",
+    "semantic_score": 0.92
+  },
+  "verdict": "validated"
+}
+```
+
+---
+
+## 3) Real-time Post-Audit
+Real-time post-audit enforces **continuous verification** and prevents stale or malicious data from propagating:
+- **Batch scanning** over queued signals with strict state gates.
+- **Link extraction** using AI to normalize indicators into canonical JSON.
+- **Two-layer storage**: fast lookup via MongoDB, full case details via SQL.
+- **Masking & safe exposure** to protect sensitive fields in public results.
+
+```text
+Signals (Processing)
+  -> Post-Audit Batch
+    -> Normalize Links / Indicators
+      -> Update Status (Validated / Rejected)
+        -> Index for Search
+```
+
+---
+
+## Threat Analysis Outcomes
+Validated signals are promoted into the **Threat Intelligence index**, enabling:
+- **Real-time lookup** for suspicious entities.
+- **Risk flags** for known Malicious Activity/Fraud patterns.
+- **Community feedback loops** to continuously improve coverage.
+
+This design delivers a **modern, defense-in-depth threat detection system** that prioritizes evidence integrity, minimizes false positives, and supports rapid incident response workflows.
