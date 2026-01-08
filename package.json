@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev --webpack -p 3001",
     "build": "next build --webpack",
-    "start": "nodemon --watch app --watch src --watch public --ext js,jsx,ts,tsx,css,mdx --exec \"NEXT_PUBLIC_HIDE_DEV_INDICATOR=1 next dev --webpack -p 3001\"",
+    "start": "nodemon --watch app --watch src --watch public --ext js,jsx,ts,tsx,css,mdx --exec \"node scripts/start-dev.js\"",
     "start:prod": "next start -p 3001",
     "lint": "eslint"
   },
