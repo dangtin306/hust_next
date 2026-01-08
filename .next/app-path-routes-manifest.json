@@ -1,9 +1,9 @@
 {
-  "/favicon.ico/route": "/favicon.ico",
   "/_not-found/page": "/_not-found",
   "/_global-error/page": "/_global-error",
-  "/page": "/",
+  "/favicon.ico/route": "/favicon.ico",
   "/docs/[slug]/page": "/docs/[slug]",
+  "/page": "/",
   "/support/page": "/support",
   "/features/page": "/features"
 }

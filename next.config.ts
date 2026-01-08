@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const hideDevIndicator = process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR === "1";
+
 const nextConfig: NextConfig = {
   basePath: "/next",
+  ...(hideDevIndicator ? { devIndicators: false } : {}),
   experimental: { externalDir: true },
   webpack: (config, { isServer }) => {
     if (!isServer) {

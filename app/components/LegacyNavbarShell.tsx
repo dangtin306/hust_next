@@ -219,10 +219,21 @@ const LegacyNavbarShell = () => {
     };
   }, [shouldLoadLegacy]);
 
-  const switchRouter = (path: string) => router.push(path);
+  const switchRouter = (path: string) => {
+    if (!path) return;
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      window.location.href = path;
+      return;
+    }
+    if (path.startsWith("/docs") || path.startsWith("/support") || path === "/") {
+      router.push(path);
+      return;
+    }
+    window.location.href = path;
+  };
   const warmupLegacy = () => {
     if (!shouldLoadLegacy) {
-      setShouldLoadLegacy(true);
+      setShouldLoadLegacy(false);
     }
   };
 
