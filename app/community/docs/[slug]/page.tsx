@@ -184,7 +184,7 @@ export async function generateMetadata({
     description = `${description.slice(0, 157).trimEnd()}...`;
   }
 
-  const canonicalUrl = `https://docs.hust.media/next/docs/${slug}`;
+  const canonicalUrl = `https://docs.hust.media/next/community/docs/${slug}`;
 
   return {
     title: `${title} | Hust Media`,
@@ -234,7 +234,7 @@ export default async function DocPage({
                   return (
                     <Link
                       key={item.slug}
-                      href={`/docs/${item.slug}`}
+                      href={`/community/docs/${item.slug}`}
                       className={`${baseClass} ${
                         isActive
                           ? "bg-gradient-to-r from-pink-500/20 to-blue-500/20 text-white"
