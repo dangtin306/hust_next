@@ -223,7 +223,7 @@ export default async function DocPage({
           <div className="lg:sticky lg:top-10">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/70 to-blue-500/10 px-4 py-5 shadow-lg">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Docs
+                Doc s
               </p>
               <nav className="mt-4 space-y-1">
                 {nav.map((item) => {
