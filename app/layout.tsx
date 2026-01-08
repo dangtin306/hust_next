@@ -34,7 +34,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <DisableDevIndicator />
-        <LegacyNavbarShell />
+        <LegacyNavbarShell />sss
         <div className="min-h-screen md:pl-[280px]">{children}</div>
       </body>
     </html>
