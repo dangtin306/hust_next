@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { FaArrowCircleLeft } from "react-icons/fa";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 type LegacyNavbarProps = {
@@ -43,9 +44,8 @@ const getLabelText = (item: MenuItem) => {
 const CachedNavbar = ({
   isOpen,
   setIsOpen,
-  switch_router,
   onWarmup,
-}: Pick<LegacyNavbarProps, "isOpen" | "setIsOpen" | "switch_router"> & {
+}: Pick<LegacyNavbarProps, "isOpen" | "setIsOpen"> & {
   onWarmup?: () => void;
 }) => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([
@@ -55,7 +55,7 @@ const CachedNavbar = ({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [displayHostname, setDisplayHostname] = useState("");
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const hostname = window.location.hostname;
     setDisplayHostname(hostname === "tecom.pro" ? "hust.media" : hostname);
     try {
@@ -82,65 +82,101 @@ const CachedNavbar = ({
     });
   };
 
-  const handleNavigate = (item: MenuItem) => {
-    if (!item.url_redirect) return;
-    if (item.url_mode === "redirect" || /^https?:\/\//.test(item.url_redirect)) {
-      window.open(item.url_redirect, "_blank");
-      return;
-    }
-    switch_router(item.url_redirect);
-    setIsOpen(false);
-  };
-
   const renderItems = (items: MenuItem[], parentKey = "") =>
     items.map((item, index) => {
       const key = parentKey ? `${parentKey}-${index}` : `${index}`;
       const hasChildren = Array.isArray(item.data) && item.data.length > 0;
       const isOpenItem = openKeys.has(key);
       const isSelected = selectedKey === key;
+      const href = item.url_redirect || "#";
+      const isExternal =
+        item.url_mode === "redirect" || /^https?:\/\//.test(href);
+      const isNextRoute =
+        !isExternal &&
+        (href === "/" || href.startsWith("/docs") || href.startsWith("/support"));
+      const linkClassName =
+        "w-full flex items-center justify-between py-1.5 px-3 text-slate-900 no-underline " +
+        `${isOpenItem || isSelected ? "bg-pink-100" : "bg-gray-100"} ` +
+        "bg-opacity-50 hover:bg-opacity-75 " +
+        `${isOpenItem || isSelected ? "border-l-2 border-pink-400 " : ""}`;
+
+      const content = (
+        <div className="flex items-center">
+          {item.icon_src && (
+            item.icon_src.includes("/") ? (
+              <img
+                src={item.icon_src}
+                alt=""
+                className="h-5 w-5 mr-2"
+              />
+            ) : (
+              <span className="h-5 w-5 mr-2 flex items-center justify-center">
+                {item.icon_src}
+              </span>
+            )
+          )}
+          <div
+            className={`flex-1 text-[15px] whitespace-normal break-words text-left ${
+              isSelected ? "font-[600]" : ""
+            }`}
+          >
+            {getLabelText(item)}
+          </div>
+        </div>
+      );
 
       return (
         <div key={key} className="border-t border-gray-300 last:border-b">
-          <button
-            className={
-              "w-full flex items-center justify-between py-1.5 px-3 " +
-              `${isOpenItem || isSelected ? "bg-pink-100" : "bg-gray-100"} ` +
-              "bg-opacity-50 hover:bg-opacity-75 " +
-              `${isOpenItem || isSelected ? "border-l-2 border-pink-400 " : ""}`
-            }
-            onClick={() => {
-              onWarmup?.();
-              setSelectedKey(key);
-              if (hasChildren) {
+          {hasChildren ? (
+            <button
+              className={linkClassName}
+              onClick={() => {
+                onWarmup?.();
+                setSelectedKey(key);
                 toggle(key);
-              } else {
-                handleNavigate(item);
-              }
-            }}
-          >
-            <div className="flex items-center">
-              {item.icon_src && (
-                item.icon_src.includes("/") ? (
-                  <img
-                    src={item.icon_src}
-                    alt=""
-                    className="h-5 w-5 mr-2"
-                  />
-                ) : (
-                  <span className="h-5 w-5 mr-2 flex items-center justify-center">
-                    {item.icon_src}
-                  </span>
-                )
-              )}
-              <div
-                className={`flex-1 text-[15px] whitespace-normal break-words text-left ${
-                  isSelected ? "font-[600]" : ""
-                }`}
-              >
-                {getLabelText(item)}
-              </div>
-            </div>
-          </button>
+              }}
+            >
+              {content}
+            </button>
+          ) : isExternal ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkClassName}
+              onClick={() => {
+                onWarmup?.();
+                setSelectedKey(key);
+                setIsOpen(false);
+              }}
+            >
+              {content}
+            </a>
+          ) : isNextRoute ? (
+            <Link
+              href={href}
+              className={linkClassName}
+              onClick={() => {
+                onWarmup?.();
+                setSelectedKey(key);
+                setIsOpen(false);
+              }}
+            >
+              {content}
+            </Link>
+          ) : (
+            <a
+              href={href}
+              className={linkClassName}
+              onClick={() => {
+                onWarmup?.();
+                setSelectedKey(key);
+                setIsOpen(false);
+              }}
+            >
+              {content}
+            </a>
+          )}
 
           {hasChildren && isOpenItem && (
             <div className="pl-2">{renderItems(item.data || [], key)}</div>
@@ -194,12 +230,60 @@ const CachedNavbar = ({
   );
 };
 
+const menuCacheMaxAgeMs = 24 * 60 * 60 * 1000;
+
 const LegacyNavbarShell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [shouldLoadLegacy, setShouldLoadLegacy] = useState(false);
+  const [hasFreshCache, setHasFreshCache] = useState<boolean | null>(null);
   const [NavbarComponent, setNavbarComponent] =
     useState<React.ComponentType<LegacyNavbarProps> | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("sidebar_menu_test");
+      if (!raw) {
+        setHasFreshCache(false);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      const age = Date.now() - (parsed.timestamp || 0);
+      const isFresh =
+        age < menuCacheMaxAgeMs &&
+        Array.isArray(parsed.menu) &&
+        parsed.menu.length > 0;
+      setHasFreshCache(isFresh);
+    } catch {
+      setHasFreshCache(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (shouldLoadLegacy || hasFreshCache) return;
+    let idleId: number | null = null;
+    let timeoutId: number | null = null;
+
+    const requestIdle = (window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+
+    if (requestIdle) {
+      idleId = requestIdle(() => setShouldLoadLegacy(true), { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(() => setShouldLoadLegacy(true), 1000);
+    }
+
+    return () => {
+      const cancelIdle = (window as unknown as {
+        cancelIdleCallback?: (id: number) => void;
+      }).cancelIdleCallback;
+      if (idleId !== null && cancelIdle) cancelIdle(idleId);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [shouldLoadLegacy]);
 
   useEffect(() => {
     if (!shouldLoadLegacy) return;
@@ -233,13 +317,19 @@ const LegacyNavbarShell = () => {
   };
   const warmupLegacy = () => {
     if (!shouldLoadLegacy) {
-      setShouldLoadLegacy(false);
+      setShouldLoadLegacy(true);
     }
   };
 
+  const showLegacyNavbar = NavbarComponent && hasFreshCache === false;
+
   return (
-    <div className="legacy-navbar-theme">
-      {NavbarComponent ? (
+    <div
+      className="legacy-navbar-theme"
+      onMouseEnter={warmupLegacy}
+      onTouchStart={warmupLegacy}
+    >
+      {showLegacyNavbar ? (
         <NavbarComponent
           isOpen={isOpen}
           setIsOpen={setIsOpen}
@@ -253,7 +343,6 @@ const LegacyNavbarShell = () => {
         <CachedNavbar
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          switch_router={switchRouter}
           onWarmup={warmupLegacy}
         />
       )}
