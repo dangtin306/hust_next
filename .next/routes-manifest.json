@@ -31,12 +31,12 @@
   },
   "dynamicRoutes": [
     {
-      "page": "/docs/[slug]",
-      "regex": "^/docs/([^/]+?)(?:/)?$",
+      "page": "/community/docs/[slug]",
+      "regex": "^/community/docs/([^/]+?)(?:/)?$",
       "routeKeys": {
         "nxtPslug": "nxtPslug"
       },
-      "namedRegex": "^/docs/(?<nxtPslug>[^/]+?)(?:/)?$"
+      "namedRegex": "^/community/docs/(?<nxtPslug>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [
@@ -69,6 +69,24 @@
       "regex": "^/features(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/features(?:/)?$"
+    },
+    {
+      "page": "/info/about_us",
+      "regex": "^/info/about_us(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/info/about_us(?:/)?$"
+    },
+    {
+      "page": "/info/private_policy",
+      "regex": "^/info/private_policy(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/info/private_policy(?:/)?$"
+    },
+    {
+      "page": "/info/terms_service",
+      "regex": "^/info/terms_service(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/info/terms_service(?:/)?$"
     },
     {
       "page": "/support",

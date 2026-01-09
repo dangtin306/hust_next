@@ -143,6 +143,10 @@ body {
   --tw-bg-opacity: 0.75;
 }
 
+.legacy-navbar-theme .bg-indigo-600.bg-opacity-20 {
+  background-color: transparent;
+}
+
 .legacy-navbar-theme button {
   color: rgb(15 23 42 / var(--tw-text-opacity, 1));
 }
@@ -150,4 +154,3 @@ body {
 .legacy-navbar-theme .underline {
   text-decoration-line: none;
 }
-

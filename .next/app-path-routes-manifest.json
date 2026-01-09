@@ -2,8 +2,11 @@
   "/favicon.ico/route": "/favicon.ico",
   "/_not-found/page": "/_not-found",
   "/_global-error/page": "/_global-error",
-  "/docs/[slug]/page": "/docs/[slug]",
+  "/community/docs/[slug]/page": "/community/docs/[slug]",
+  "/info/terms_service/page": "/info/terms_service",
+  "/info/about_us/page": "/info/about_us",
   "/page": "/",
+  "/info/private_policy/page": "/info/private_policy",
   "/support/page": "/support",
   "/features/page": "/features"
 }

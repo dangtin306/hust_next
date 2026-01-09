@@ -1,8 +1,9 @@
 1:"$Sreact.fragment"
-2:I[7175,["344","static/chunks/9081a741-e728ebfc226eb22c.js","500","static/chunks/500-a2af03eb2256b7a0.js","177","static/chunks/app/layout-ea67fb2e9fcf9624.js"],"default"]
-3:I[373,["344","static/chunks/9081a741-e728ebfc226eb22c.js","500","static/chunks/500-a2af03eb2256b7a0.js","177","static/chunks/app/layout-ea67fb2e9fcf9624.js"],"default"]
-4:I[7121,[],""]
-5:I[4581,[],""]
+2:I[7175,["177","static/chunks/app/layout-3e9f7e6859c3306f.js"],"default"]
+3:I[8508,["177","static/chunks/app/layout-3e9f7e6859c3306f.js"],"default"]
+4:I[6599,["177","static/chunks/app/layout-3e9f7e6859c3306f.js"],"default"]
+5:I[7121,[],""]
+6:I[4581,[],""]
 :HL["/next/_next/static/css/7951c64b885ce122.css","style"]
-:HL["/next/_next/static/css/d93b4bbe9a8ae7f4.css","style"]
-0:{"buildId":"Tf3yyJqfjr5crF9oQUVGD","rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/next/_next/static/css/7951c64b885ce122.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/next/_next/static/css/d93b4bbe9a8ae7f4.css","precedence":"next"}]],["$","html",null,{"lang":"en","children":["$","body",null,{"className":"__variable_29dd84 __variable_87445d antialiased","children":[["$","$L2",null,{}],["$","$L3",null,{}],["$","div",null,{"className":"min-h-screen md:pl-[280px]","children":["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]}]]}]}]]}],"loading":null,"isPartial":false}
+:HL["/next/_next/static/css/9ec584ac6772a1be.css","style"]
+0:{"buildId":"cWKQjeDnWzVN0YaAoYgGk","rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/next/_next/static/css/7951c64b885ce122.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/next/_next/static/css/9ec584ac6772a1be.css","precedence":"next"}]],["$","html",null,{"lang":"en","children":["$","body",null,{"className":"__variable_29dd84 __variable_87445d antialiased","children":[["$","$L2",null,{}],["$","$L3",null,{}],["$","div",null,{"className":"flex-1 transition-all duration-300 md:ml-[280px]","children":["$","div",null,{"className":"antialiased bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200","children":["$","div",null,{"className":"layout-wrapper layout-content-navbar","children":["$","div",null,{"className":"layout-container","children":[["$","aside",null,{"id":"layout-menu","className":"layout-menu menu-vertical menu bg-menu-theme","children":["$","div",null,{"style":{"position":"fixed"},"children":[["$","br",null,{}],["$","div",null,{"className":"app-brand demo"}]]}]}],["$","div",null,{"className":"layout-page","children":[["$","$L4",null,{}],["$","$L5",null,{"parallelRouterKey":"children","template":["$","$L6",null,{}]}]]}]]}]}]}]}]]}]}]]}],"loading":null,"isPartial":false}

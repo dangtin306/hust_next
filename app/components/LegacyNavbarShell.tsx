@@ -34,6 +34,16 @@ const LegacyNavbarShell = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleToggle = () => {
+      setIsOpen((prev) => !prev);
+    };
+    window.addEventListener("legacy-menu-toggle", handleToggle);
+    return () => {
+      window.removeEventListener("legacy-menu-toggle", handleToggle);
+    };
+  }, []);
+
   const switchRouter = (path: string) => {
     if (!path) return;
     window.location.href = path;
