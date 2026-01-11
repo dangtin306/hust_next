@@ -61,7 +61,38 @@ const LegacyNavbarShell = () => {
           idExist={null}
           set_open_button_support={() => {}}
         />
-      ) : null}
+      ) : (
+        <nav
+          aria-hidden="true"
+          className={`
+            antialiased text-slate-900
+            flex flex-col h-full overflow-y-auto
+            bg-gradient-to-r from-indigo-100 via-purple-200 to-pink-200
+            px-4 py-4 fixed top-0 left-0
+            w-80 md:w-[280px]
+            transform transition-transform duration-300 ease-in-out
+            ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
+          `}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <div className="h-6 w-32 rounded bg-white/60" />
+            <div className="h-6 w-6 rounded-full bg-white/60 md:hidden" />
+          </div>
+          <div className="flex flex-col gap-2 border-t-2 border-b-2 border-pink-400 py-3">
+            {Array.from({ length: 10 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="h-8 rounded bg-white/50 shadow-sm"
+              />
+            ))}
+          </div>
+          <div className="mt-auto pt-2 mb-0 flex justify-around">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="h-5 w-5 rounded bg-white/60" />
+            ))}
+          </div>
+        </nav>
+      )}
     </div>
   );
 };
