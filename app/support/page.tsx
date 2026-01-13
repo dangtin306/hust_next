@@ -67,7 +67,7 @@ export default function SupportPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200/70 bg-white p-8 shadow-sm">
-            <form className="space-y-6">
+            <form className="space-y-6" suppressHydrationWarning>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">
                   Full Name
