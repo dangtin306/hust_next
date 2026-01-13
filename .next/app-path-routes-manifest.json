@@ -1,14 +1,14 @@
 {
-  "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/_global-error/page": "/_global-error",
   "/favicon.ico/route": "/favicon.ico",
+  "/info/about_us/page": "/info/about_us",
   "/docs/page": "/docs",
   "/community/docs/[slug]/page": "/community/docs/[slug]",
-  "/info/about_us/page": "/info/about_us",
   "/info/private_policy/page": "/info/private_policy",
   "/page": "/",
-  "/docs/[slug]/page": "/docs/[slug]",
   "/info/terms_service/page": "/info/terms_service",
+  "/docs/[slug]/page": "/docs/[slug]",
   "/support/page": "/support",
   "/features/page": "/features"
 }

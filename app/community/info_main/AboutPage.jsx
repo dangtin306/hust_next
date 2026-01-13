@@ -12,9 +12,9 @@ import {
 import Link from "next/link";
 
 const stats = [
-  { label: "Users", value: "2.4M+" },
-  { label: "Transactions", value: "180M+" },
-  { label: "Automation Runs", value: "6.8B+" },
+  { label: "Users", value: "204K+" },
+  { label: "Transactions", value: "18M+" },
+  { label: "Automation Runs", value: "1.1B+" },
   { label: "Uptime", value: "99.98%" },
 ];
 
