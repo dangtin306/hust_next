@@ -97,7 +97,12 @@ const SimpleTopBar = () => {
         <span className="text-xs text-gray-500" />
       )}
 
-      <div className="text-xs text-gray-600">{hostname}</div>
+      <a
+        href="/"
+        className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70 hover:shadow hover:ring-slate-300"
+      >
+        {hostname}
+      </a>
     </nav>
   );
 };
