@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk } from "next/font/google";
 import FeatureMedia from "./FeatureMedia";
+import fs from "fs";
+import path from "path";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -22,55 +24,175 @@ const cardTight =
 const imageFrame =
   "relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.8)]";
 
-const thesisFigures = [
+const featuresImage = (filename: string) => `/images/features/${filename}`;
+
+const moduleA2Path = featuresImage("module_a_2.png");
+const moduleA2Available = (() => {
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "features",
+      "module_a_2.png"
+    );
+    return fs.existsSync(filePath);
+  } catch {
+    return false;
+  }
+})();
+
+const moduleBPath = featuresImage("module_b.png");
+const moduleBAvailable = (() => {
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "features",
+      "module_b.png"
+    );
+    return fs.existsSync(filePath);
+  } catch {
+    return false;
+  }
+})();
+
+const moduleCPath = featuresImage("module_c.png");
+const moduleCAvailable = (() => {
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "features",
+      "module_c.png"
+    );
+    return fs.existsSync(filePath);
+  } catch {
+    return false;
+  }
+})();
+
+const moduleAQcScalePath = "/images/features/module_a_qc_scale.png";
+const moduleAQcScaleAvailable = (() => {
+  try {
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "images",
+      "features",
+      "module_a_qc_scale.png"
+    );
+    return fs.existsSync(filePath);
+  } catch {
+    return false;
+  }
+})();
+const moduleAImageSrc = moduleA2Available
+  ? moduleA2Path
+  : moduleAQcScaleAvailable
+    ? moduleAQcScalePath
+    : "/images/features/what_is.png";
+const moduleAImageAlt = moduleA2Available
+  ? "Module A — Campaign orchestration and scaling workflow"
+  : moduleAQcScaleAvailable
+    ? "Figure 3.6 — Module A quality control & scaling workflow"
+    : "Figure 0.1 — Application functions";
+const moduleBImageSrc = moduleBAvailable ? moduleBPath : undefined;
+const moduleCImageSrc = moduleCAvailable ? moduleCPath : undefined;
+
+const thesisFiguresBase = [
   {
-    src: "/images/features/123312231.png",
+    src: featuresImage("what_is.png"),
     title: "Figure 0.1 — Application functions",
     description:
       "High-level feature map of the platform: campaigns, tasks, proof submission, rewards, and supporting modules.",
   },
   {
-    src: "/images/features/1233122312.png",
+    src: featuresImage("1111.png"),
+    title: "Figure 1.1 — System technical diagram",
+    description:
+      "Client requests are handled by the server core, routed to modular services, and stored across dedicated data layers with update automation.",
+  },
+  {
+    src: featuresImage("1233122312.png"),
     title: "Figure 2.2 — Server structure",
     description:
       "On-prem server resources used to run long-lived services and handle proof/media workloads in the prototype.",
   },
   {
-    src: "/images/features/1321323121.png",
+    src: featuresImage("123312231.png"),
     title: "Figure 2.4 — Hybrid network architecture",
     description:
       "Hybrid access model using tunnel/reverse proxy to protect the origin server while keeping deployment practical.",
   },
   {
-    src: "/images/features/2121221.png",
-    title: "Figure 2.7 — Multi-platform frontend",
-    description:
-      "Frontend architecture overview across surfaces, focused on consistent UX and interoperable data contracts.",
-  },
-  {
-    src: "/images/features/23132132.png",
-    title: "Figure 2.10 — Backend overview",
-    description:
-      "Service layout showing modular responsibilities across Node.js/PHP/Go/Python with shared API endpoints.",
-  },
-  {
-    src: "/images/features/213231231.jpg",
+    src: featuresImage("213231231.jpg"),
     title: "Figure 2.6 — AI assistant in VS Code",
     description:
       "AI-assisted development used to speed up implementation while keeping review and testing in the loop.",
   },
   {
-    src: "/images/features/1111.png",
-    title: "Quality control — anomaly filtering",
+    src: featuresImage("23132132.png"),
+    title: "Figure 2.7 — Multi-platform frontend",
     description:
-      "Illustration for basic outlier filtering/quality control ideas used to reduce abnormal interactions and noise.",
+      "Frontend architecture overview across surfaces, focused on consistent UX and interoperable data contracts.",
   },
   {
-    src: "/images/features/Picture1.png",
+    src: featuresImage("backend.png"),
+    title: "Figure 2.10 — Backend overview",
+    description:
+      "Service layout showing modular responsibilities across Node.js/PHP/Go/Python with shared API endpoints.",
+  },
+  {
+    src: featuresImage("p2p_main.png"),
     title: "Figure 3.x — Requester/Worker flow",
     description:
       "Requester (A) creates campaigns; workers (B) execute tasks, submit proof, and receive points after review.",
   },
+  {
+    src: featuresImage("first_1.png"),
+    title: "Figure 4.1 — Initial release architecture",
+    description:
+      "First App Store deployment flow for the prototype release and its hybrid client strategy.",
+  },
+  {
+    src: featuresImage("first_2.png"),
+    title: "Figure 4.2 — Current release architecture",
+    description:
+      "Current deployment model with a React Native shell, WebView core, deep links, and runtime updates.",
+  },
+  {
+    src: featuresImage("performance.png"),
+    title: "Figure 4.5 — Performance monitoring overview",
+    description:
+      "Operational monitoring of CPU/RAM/disk/network combined with simple alerts to support stability.",
+  },
+  {
+    src: featuresImage("admin.png"),
+    title: "Figure 4.6 — Admin dashboard overview",
+    description:
+      "Admin interface for user/order management, proof moderation, and operational KPIs.",
+  },
+  {
+    src: featuresImage("backup.png"),
+    title: "Figure 4.7 — Backup and update workflow",
+    description:
+      "Automated backups and lightweight CI/CD sync to keep deployments recoverable and maintainable.",
+  },
+  {
+    src: moduleAQcScalePath,
+    title: "Figure 3.6 — Module A quality control & scaling workflow",
+    description:
+      "Quality control checks and scaling/dispatch flow for Module A (campaign distribution and post-audit).",
+  },
+];
+
+const thesisFigures = [
+  ...thesisFiguresBase.filter((fig) =>
+    fig.src === moduleAQcScalePath ? moduleAQcScaleAvailable : true
+  ),
 ];
 
 export default function FeaturesPage() {
@@ -191,8 +313,8 @@ export default function FeaturesPage() {
                   </ul>
                   <div className={`${imageFrame} mt-4`}>
                     <FeatureMedia
-                      src="/images/features/Picture1.png"
-                      alt="Campaign and task flow diagram"
+                      src={moduleAImageSrc}
+                      alt={moduleAImageAlt}
                     />
                   </div>
                 </div>
@@ -215,8 +337,13 @@ export default function FeaturesPage() {
                   </ul>
                   <div className={`${imageFrame} mt-4`}>
                     <FeatureMedia
+                      src={moduleBImageSrc}
                       alt="Figure 3.7 — Module B (rating with proof)"
-                      label="Image not included in this build. Replace with Figure 3.7 from the thesis."
+                      label={
+                        moduleBAvailable
+                          ? undefined
+                          : "Image not included in this build. Replace with Figure 3.7 from the thesis."
+                      }
                     />
                   </div>
                 </div>
@@ -239,8 +366,13 @@ export default function FeaturesPage() {
                   </ul>
                   <div className={`${imageFrame} mt-4`}>
                     <FeatureMedia
+                      src={moduleCImageSrc}
                       alt="Figure 3.8 / 3.9 — Risk lookup & processing pipeline"
-                      label="Image not included in this build. Replace with Figures 3.8 and 3.9 from the thesis."
+                      label={
+                        moduleCAvailable
+                          ? undefined
+                          : "Image not included in this build. Replace with Figures 3.8 and 3.9 from the thesis."
+                      }
                     />
                   </div>
                 </div>
@@ -277,7 +409,7 @@ export default function FeaturesPage() {
                 </div>
                 <figure className={imageFrame}>
                   <FeatureMedia
-                    src="/images/features/1233122312.png"
+                    src={featuresImage("server.png")}
                     alt="On-prem server configuration"
                   />
                 </figure>
@@ -331,7 +463,7 @@ export default function FeaturesPage() {
 
                 <figure className={imageFrame}>
                   <FeatureMedia
-                    src="/images/features/23132132.png"
+                    src={featuresImage("locgic_1.png")}
                     alt="Backend services and data layer map"
                   />
                 </figure>
@@ -357,7 +489,7 @@ export default function FeaturesPage() {
               </ul>
               <figure className={`${imageFrame} mt-5`}>
                 <FeatureMedia
-                  src="/images/features/1321323121.png"
+                  src={featuresImage("hybrid.png")}
                   alt="Hybrid deployment using tunnel and reverse proxy"
                 />
               </figure>
@@ -366,7 +498,10 @@ export default function FeaturesPage() {
 
           <section className="grid gap-6 md:grid-cols-2">
             {thesisFigures.map((diagram) => (
-              <figure key={diagram.src} className={`${cardBase} flex flex-col`}>
+              <figure
+                key={`${diagram.title}-${diagram.src}`}
+                className={`${cardBase} flex flex-col`}
+              >
                 <div className={imageFrame}>
                   <FeatureMedia
                     src={diagram.src}

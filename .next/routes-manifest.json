@@ -31,6 +31,14 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/api/features-image/[...asset]",
+      "regex": "^/api/features\\-image/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPasset": "nxtPasset"
+      },
+      "namedRegex": "^/api/features\\-image/(?<nxtPasset>.+?)(?:/)?$"
+    },
+    {
       "page": "/community/docs/[slug]",
       "regex": "^/community/docs/([^/]+?)(?:/)?$",
       "routeKeys": {
