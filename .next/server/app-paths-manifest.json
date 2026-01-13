@@ -1,15 +1,15 @@
 {
-  "/api/features-image/[...asset]/route": "app/api/features-image/[...asset]/route.js",
-  "/_global-error/page": "app/_global-error/page.js",
   "/_not-found/page": "app/_not-found/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/api/features-image/[...asset]/route": "app/api/features-image/[...asset]/route.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/docs/[slug]/page": "app/docs/[slug]/page.js",
-  "/info/about_us/page": "app/info/about_us/page.js",
   "/docs/page": "app/docs/page.js",
-  "/info/private_policy/page": "app/info/private_policy/page.js",
   "/community/docs/[slug]/page": "app/community/docs/[slug]/page.js",
   "/info/terms_service/page": "app/info/terms_service/page.js",
+  "/info/about_us/page": "app/info/about_us/page.js",
   "/page": "app/page.js",
+  "/info/private_policy/page": "app/info/private_policy/page.js",
   "/support/page": "app/support/page.js",
   "/features/page": "app/features/page.js"
 }

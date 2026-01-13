@@ -1,15 +1,15 @@
 {
-  "/api/features-image/[...asset]/route": "/api/features-image/[...asset]",
-  "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/_global-error/page": "/_global-error",
+  "/api/features-image/[...asset]/route": "/api/features-image/[...asset]",
   "/favicon.ico/route": "/favicon.ico",
   "/docs/[slug]/page": "/docs/[slug]",
-  "/info/about_us/page": "/info/about_us",
   "/docs/page": "/docs",
-  "/info/private_policy/page": "/info/private_policy",
   "/community/docs/[slug]/page": "/community/docs/[slug]",
   "/info/terms_service/page": "/info/terms_service",
+  "/info/about_us/page": "/info/about_us",
   "/page": "/",
+  "/info/private_policy/page": "/info/private_policy",
   "/support/page": "/support",
   "/features/page": "/features"
 }
