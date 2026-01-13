@@ -75,6 +75,7 @@ export default function SupportPage() {
                 <input
                   type="text"
                   placeholder="Your full name"
+                  suppressHydrationWarning
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
@@ -86,6 +87,7 @@ export default function SupportPage() {
                 <input
                   type="email"
                   placeholder="you@example.com"
+                  suppressHydrationWarning
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
@@ -94,7 +96,10 @@ export default function SupportPage() {
                 <label className="text-sm font-semibold text-slate-700">
                   Topic
                 </label>
-                <select className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200">
+                <select
+                  suppressHydrationWarning
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
                   <option>Student AI Package Support</option>
                   <option>Report Security Incident (Threat Intelligence)</option>
                   <option>Technical Issues</option>
@@ -109,6 +114,7 @@ export default function SupportPage() {
                 <textarea
                   rows={5}
                   placeholder="Tell us how we can help."
+                  suppressHydrationWarning
                   className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
