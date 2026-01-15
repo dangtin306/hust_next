@@ -22,7 +22,7 @@ const techStack = [
   { title: "ReactJS + NextJS Hybrid Core", icon: Atom },
   { title: "AI-Driven Verification", icon: Brain },
   { title: "Python & Data Automation", icon: Cpu },
-  { title: "Security Intelligence", icon: ShieldCheck },
+  { title: "System Monitor", icon: ShieldCheck },
   { title: "Cloud + On-Prem Hybrid", icon: Cloud },
   { title: "Privacy-First Architecture", icon: Lock },
 ];
@@ -57,7 +57,7 @@ export default function AboutPage() {
             </p>
             <div className="max-w-3xl">
               <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
-                Digital Automation & Security Intelligence Platform
+                Digital Automation & System Monitor
               </h1>
               <p className="mt-4 text-base leading-relaxed text-slate-600">
                 Hust Media cung cấp giải pháp Tự động hóa Kỹ thuật số

@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Hust Media Support Center | Official Help Desk",
   description:
-    "Official support channel for Hust Media - The AI Education & Security Intelligence Platform for Vietnamese students.",
+    "Official support channel for Hust Media - The AI Education & System Monitor for Vietnamese students.",
   icons: {
     icon: "/favicon.ico",
   },
