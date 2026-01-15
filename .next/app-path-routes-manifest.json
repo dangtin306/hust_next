@@ -4,12 +4,12 @@
   "/favicon.ico/route": "/favicon.ico",
   "/_global-error/page": "/_global-error",
   "/community/docs/[slug]/page": "/community/docs/[slug]",
-  "/docs/page": "/docs",
   "/docs/[slug]/page": "/docs/[slug]",
+  "/docs/page": "/docs",
   "/page": "/",
   "/support/page": "/support",
-  "/info/private_policy/page": "/info/private_policy",
   "/info/about_us/page": "/info/about_us",
   "/info/terms_service/page": "/info/terms_service",
+  "/info/private_policy/page": "/info/private_policy",
   "/features/page": "/features"
 }

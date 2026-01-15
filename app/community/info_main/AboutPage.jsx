@@ -60,8 +60,9 @@ export default function AboutPage() {
               Hust Media
             </p>
             <div className="max-w-3xl">
+              {/* SỬA: Bỏ span màu mè, để text đen thuần túy */}
               <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
-                Digital Automation & <span className="text-indigo-600">System Monitor</span>
+                Digital Automation & System Monitor
               </h1>
               <p className="mt-4 text-base leading-relaxed text-slate-600">
                 Hust Media provides Digital Automation and Data Verification solutions, helping users optimize online performance through an advanced Hybrid Architecture platform.
