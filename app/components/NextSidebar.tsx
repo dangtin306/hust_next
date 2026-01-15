@@ -143,7 +143,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
   const router = useRouter();
   const [displayHostname, setDisplayHostname] = useState("");
   const [menu, setMenu] = useState<MenuItem[]>([
-    { label: "Đang lấy dữ liệu", url_redirect: "/reactapp?app=showadview", iconType: "SlHome" },
+    { label: "Loading data ...", url_redirect: "/reactapp?app=showadview", iconType: "SlHome" },
   ]);
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);

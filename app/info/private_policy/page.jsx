@@ -1,3 +1,9 @@
+export const metadata = {
+  title: "Privacy Policy | Hust Media",
+  description:
+    "How Hust Media collects, processes, and protects data for security audits, fraud prevention, and platform operations.",
+};
+
 const lastUpdated = new Date().toISOString().slice(0, 10);
 
 const sections = [

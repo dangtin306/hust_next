@@ -12,9 +12,9 @@ import {
 import Link from "next/link";
 
 const stats = [
-  { label: "Users", value: "204K+" },
-  { label: "Transactions", value: "18M+" },
-  { label: "Automation Runs", value: "1.1B+" },
+  { label: "Users", value: "10K+" },
+  { label: "Transactions", value: "500K+" },
+  { label: "Automation Runs", value: "1M+" },
   { label: "Uptime", value: "99.98%" },
 ];
 
@@ -61,8 +61,7 @@ export default function AboutPage() {
               </h1>
               <p className="mt-4 text-base leading-relaxed text-slate-600">
                 Hust Media cung cấp giải pháp Tự động hóa Kỹ thuật số
-                (Digital Automation) và Trí tuệ An ninh mạng (Security
-                Intelligence), giúp người dùng tối ưu hóa hiệu suất trực tuyến
+                (Digital Automation) và Xác thực Dữ liệu (Data Verification), giúp người dùng tối ưu hóa hiệu suất trực tuyến
                 thông qua nền tảng Hybrid Architecture tiên tiến.
               </p>
             </div>
