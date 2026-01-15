@@ -41,7 +41,7 @@ export default function SupportPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Email</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    contact@hust.media
+                    dangtinn306@gmail.com
                   </p>
                 </div>
               </div>

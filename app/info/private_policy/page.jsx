@@ -13,13 +13,13 @@ const sections = [
     content: (
       <>
         <p>
-          Chúng tôi thu thập Device ID, IP Address và Browser Fingerprint nhằm
-          phục vụ cho Security Audit (Kiểm toán an ninh) và Fraud Prevention
-          (Chống gian lận). Dữ liệu này không được sử dụng để theo dõi hành vi
-          cá nhân trái phép hoặc mục đích ngoài phạm vi bảo mật.
+          We collect technical data such as Device ID, IP Address, and Browser
+          Fingerprint exclusively for Security Audits and Anomaly Detection.
+          This data is strictly not used for unauthorized personal tracking or
+          purposes outside the scope of system security.
         </p>
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-xs text-slate-600">
-          Purpose-limited: Security Audit + Fraud Prevention only.
+          Purpose-limited: Security Audit + System Integrity only.
         </div>
       </>
     ),
@@ -30,14 +30,15 @@ const sections = [
     content: (
       <>
         <p>
-          Hình ảnh và video minh chứng do người dùng tải lên được xử lý theo quy
-          trình bảo mật nhiều lớp: Mã hóa dữ liệu → Phân tích AI (OCR) → Lưu trữ
-          an toàn hoặc Xóa định kỳ theo Data Retention Policy.
+          Verification artifacts (images/videos) uploaded by users are processed
+          via a multi-layer security protocol: Data Encryption → Automated
+          Analysis (OCR) → Secure Storage or Scheduled Deletion according to our
+          Data Retention Policy.
         </p>
         <ul className="list-disc space-y-1 pl-5 text-slate-700">
-          <li>Encryption at rest và kiểm soát truy cập nghiêm ngặt.</li>
-          <li>AI/OCR chỉ dùng để xác thực minh chứng hợp lệ.</li>
-          <li>Chu kỳ xóa dữ liệu được áp dụng theo chính sách lưu trữ.</li>
+          <li>Encryption at rest and strict access control.</li>
+          <li>AI/OCR is used solely for validating verification data.</li>
+          <li>Data deletion cycles are enforced per the retention policy.</li>
         </ul>
       </>
     ),
@@ -48,10 +49,10 @@ const sections = [
     content: (
       <>
         <p>
-          Hust Media sử dụng Cookie để duy trì phiên đăng nhập và đồng bộ trạng
-          thái giữa các module (Shared Session React-NextJS). Cookie chỉ phục vụ
-          định danh phiên và không dùng cho hành vi tracking ngoài mục đích vận
-          hành.
+          Hust Media uses cookies to maintain user sessions and synchronize
+          state across modules (Shared Session React-NextJS). Cookies are used
+          solely for session identification and essential operations, not for
+          external tracking.
         </p>
       </>
     ),
@@ -62,9 +63,9 @@ const sections = [
     content: (
       <>
         <p>
-          Chúng tôi cam kết không bán dữ liệu người dùng. Chỉ chia sẻ dữ liệu ẩn
-          danh (Anonymized Data) với các đối tác phân tích khi thật sự cần thiết
-          để cải thiện hiệu năng và bảo mật hệ thống.
+          We do not sell user data. We only share anonymized data with
+          analytical partners when strictly necessary to improve system
+          performance and security.
         </p>
       </>
     ),
@@ -86,8 +87,8 @@ export default function PrivacyPolicyPage() {
             Last updated: {lastUpdated}
           </p>
           <p className="mt-4 text-sm text-slate-600">
-            Chính sách này mô tả cách Hust Media thu thập, xử lý và bảo vệ dữ
-            liệu nhằm đảm bảo an toàn hệ thống và chống gian lận.
+            This policy describes how Hust Media collects, processes, and protects
+            data to ensure system integrity and prevent abuse.
           </p>
         </header>
 
