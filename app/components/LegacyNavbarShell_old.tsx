@@ -17,6 +17,7 @@ const LegacyNavbarShell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [NavbarComponent, setNavbarComponent] =
     useState<React.ComponentType<LegacyNavbarProps> | null>(null);
+  const [hasImportError, setHasImportError] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -28,6 +29,9 @@ const LegacyNavbarShell = () => {
       })
       .catch((error) => {
         console.error("legacy navbar load error:", error);
+        if (isMounted) {
+          setHasImportError(true);
+        }
       });
 
     return () => {
@@ -52,7 +56,7 @@ const LegacyNavbarShell = () => {
 
   return (
     <div className="legacy-navbar-theme">
-      {NavbarComponent ? (
+      {hasImportError ? null : NavbarComponent ? (
         <NavbarComponent
           isOpen={isOpen}
           setIsOpen={setIsOpen}
