@@ -127,7 +127,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/hustadmin/cron": {
+    "/hustadmin/scheduler": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -140,8 +140,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/hustadmin/cron",
-      "dataRoute": "/hustadmin/cron.rsc",
+      "srcRoute": "/hustadmin/scheduler",
+      "dataRoute": "/hustadmin/scheduler.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",

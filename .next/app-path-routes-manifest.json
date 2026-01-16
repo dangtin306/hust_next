@@ -3,14 +3,14 @@
   "/api/features-image/[...asset]/route": "/api/features-image/[...asset]",
   "/favicon.ico/route": "/favicon.ico",
   "/_global-error/page": "/_global-error",
-  "/docs/[slug]/page": "/docs/[slug]",
-  "/docs/page": "/docs",
   "/community/docs/[slug]/page": "/community/docs/[slug]",
+  "/docs/[slug]/page": "/docs/[slug]",
+  "/hustadmin/scheduler/page": "/hustadmin/scheduler",
+  "/docs/page": "/docs",
   "/features/page": "/features",
-  "/hustadmin/cron/page": "/hustadmin/cron",
   "/page": "/",
   "/support/page": "/support",
-  "/info/about_us/page": "/info/about_us",
   "/info/terms_service/page": "/info/terms_service",
+  "/info/about_us/page": "/info/about_us",
   "/info/private_policy/page": "/info/private_policy"
 }
