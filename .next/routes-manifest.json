@@ -93,6 +93,12 @@
       "namedRegex": "^/features(?:/)?$"
     },
     {
+      "page": "/hustadmin/cron",
+      "regex": "^/hustadmin/cron(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/hustadmin/cron(?:/)?$"
+    },
+    {
       "page": "/info/about_us",
       "regex": "^/info/about_us(?:/)?$",
       "routeKeys": {},

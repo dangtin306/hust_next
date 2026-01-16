@@ -1,11 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default async function DocsSlugPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  redirect(`/community/docs/${slug}`);
-}
-
+export { default } from "../../community/docs/DocsSlugRedirect";

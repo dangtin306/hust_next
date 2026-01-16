@@ -1,6 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function DocsIndexPage() {
-  redirect("/community/docs/overview");
-}
-
+export { default } from "../community/docs/DocsIndexPage";

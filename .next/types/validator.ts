@@ -83,6 +83,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/hustadmin/cron/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/hustadmin/cron">> = Specific
+  const handler = {} as typeof import("../../app/hustadmin/cron/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/info/about_us/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/info/about_us">> = Specific

@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/hustadmin/layout,_N_T_/hustadmin/cron/layout,_N_T_/hustadmin/cron/page,_N_T_/hustadmin/cron"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/hustadmin/cron/__PAGE__",
+    "/hustadmin/cron",
+    "/hustadmin",
+    "/_index",
+    "/_head"
+  ]
+}
