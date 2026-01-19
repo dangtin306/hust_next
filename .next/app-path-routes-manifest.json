@@ -1,16 +1,16 @@
 {
-  "/_not-found/page": "/_not-found",
-  "/api/features-image/[...asset]/route": "/api/features-image/[...asset]",
-  "/favicon.ico/route": "/favicon.ico",
   "/_global-error/page": "/_global-error",
-  "/community/docs/[slug]/page": "/community/docs/[slug]",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/api/features-image/[...asset]/route": "/api/features-image/[...asset]",
   "/docs/[slug]/page": "/docs/[slug]",
-  "/hustadmin/scheduler/page": "/hustadmin/scheduler",
   "/docs/page": "/docs",
+  "/hustadmin/scheduler/page": "/hustadmin/scheduler",
+  "/community/docs/[slug]/page": "/community/docs/[slug]",
   "/features/page": "/features",
   "/page": "/",
   "/support/page": "/support",
+  "/info/private_policy/page": "/info/private_policy",
   "/info/terms_service/page": "/info/terms_service",
-  "/info/about_us/page": "/info/about_us",
-  "/info/private_policy/page": "/info/private_policy"
+  "/info/about_us/page": "/info/about_us"
 }

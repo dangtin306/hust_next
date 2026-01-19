@@ -29,7 +29,7 @@ type SidebarMenuCache = {
   };
 };
 
-const TIME_UPDATE_MS = 24 * 60 * 60 * 1000;
+const TIME_UPDATE_MS = 6 * 60 * 60 * 1000;
 const SIDEBAR_MENU_CACHE_KEY = "sidebar_menu_test";
 
 const ONE_DAY_SECONDS = 60 * 60 * 24;
@@ -101,38 +101,38 @@ const storeCachedMenu = (payload: SidebarMenuCache["payload"], menu: MenuItem[])
   window.localStorage.setItem(SIDEBAR_MENU_CACHE_KEY, JSON.stringify(store));
 };
 
-const socialLinks = [
-  {
-    href: "https://www.youtube.com/@hust_media",
-    Icon: FaYoutube,
-    ariaLabel: "YouTube",
-    colorClass: "text-red-600",
-  },
-  {
-    href: "https://www.tiktok.com/@rangthotv",
-    Icon: FaTiktok,
-    ariaLabel: "TikTok",
-    colorClass: "text-black",
-  },
-  {
-    href: "https://t.me/freefltiktok",
-    Icon: FaTelegramPlane,
-    ariaLabel: "Telegram",
-    colorClass: "text-blue-400",
-  },
-  {
-    href: "https://discord.gg/FQzpwfhqQv",
-    Icon: FaDiscord,
-    ariaLabel: "Discord",
-    colorClass: "text-indigo-600",
-  },
-  {
-    href: "https://www.facebook.com/hustmedia",
-    Icon: FaFacebook,
-    ariaLabel: "Facebook",
-    colorClass: "text-blue-700",
-  },
-] as const;
+// const socialLinks = [
+//   {
+//     href: "https://www.youtube.com/@hust_media",
+//     Icon: FaYoutube,
+//     ariaLabel: "YouTube",
+//     colorClass: "text-red-600",
+//   },
+//   {
+//     href: "https://www.tiktok.com/@rangthotv",
+//     Icon: FaTiktok,
+//     ariaLabel: "TikTok",
+//     colorClass: "text-black",
+//   },
+//   {
+//     href: "https://t.me/freefltiktok",
+//     Icon: FaTelegramPlane,
+//     ariaLabel: "Telegram",
+//     colorClass: "text-blue-400",
+//   },
+//   {
+//     href: "https://discord.gg/FQzpwfhqQv",
+//     Icon: FaDiscord,
+//     ariaLabel: "Discord",
+//     colorClass: "text-indigo-600",
+//   },
+//   {
+//     href: "https://www.facebook.com/hustmedia",
+//     Icon: FaFacebook,
+//     ariaLabel: "Facebook",
+//     colorClass: "text-blue-700",
+//   },
+// ] as const;
 
 type NextSidebarProps = {
   isOpen: boolean;
@@ -367,7 +367,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
           {renderItems(menu)}
         </div>
 
-        <div className="mt-auto pt-2 mb-0 flex justify-around">
+        {/* <div className="mt-auto pt-2 mb-0 flex justify-around">
           {socialLinks.map(({ href, Icon, ariaLabel, colorClass }) => (
             <a
               key={ariaLabel}
@@ -380,7 +380,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
               <Icon className="h-5 w-5" />
             </a>
           ))}
-        </div>
+        </div> */}
       </nav>
 
       {isOpen ? (
