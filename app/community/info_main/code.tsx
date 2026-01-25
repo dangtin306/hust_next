@@ -123,7 +123,7 @@ export default function DevelopmentServicesPage() {
                   Book a Consultation
                 </Link>
                 <Link
-                  href="/demos"
+                  href="/community/docs/overview"
                   className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white/80 px-6 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-white"
                 >
                   View Case Studies
