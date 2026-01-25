@@ -24,7 +24,7 @@ const SimpleTopBar = () => {
   const [domain, setDomain] = useState("hust");
   const [showDomainSelect, setShowDomainSelect] = useState(false);
   const [hideNav, setHideNav] = useState(false);
-  const [latestVersion, setLatestVersion] = useState("");
+  const [latestVersion, setLatestVersion] = useState(() => readCookie("latest_version"));
 
   useEffect(() => {
     const host = window.location.hostname;
