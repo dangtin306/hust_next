@@ -1,21 +1,21 @@
-# Hust Media Engagement Platform
+# Hust Media Automation Platform
 
 ## Introduction & Core Concepts
-Hust Media Engagement Platform là một **Engagement Intermediary** giúp tăng tương tác mạng xã hội và chuẩn hóa quy trình đánh giá dịch vụ trực tuyến thông qua cơ chế **Reward Points**. Hệ thống vận hành theo mô hình **Client–Server**, tách rõ **API Gateway**, **Core Services**, **Data Pipeline** và **Verification Engine** để duy trì **Real-time Latency** ổn định.
+Hust Media Automation Platform is a **Distributed Data Middleware** designed to standardize automated workflows and validate data quality through a **Compute Credits** mechanism. The system operates on a high-performance **Client-Server** model, distinctly separating the **API Gateway**, **Core Services**, **Data Pipeline**, and **Verification Engine** to maintain stable **Real-time Latency** for large-scale processing.
 
 Core flow:
-- **Mission → Proof → Verification → Reward → Exchange**
-- **Microservices** theo nhóm nghiệp vụ
-- **Hybrid Delivery**: React cho realtime, Next.js cho SEO/SSR
+- **Data Ingestion → Execution → Validation → Credit Allocation → Resource Balancing**
+- **Microservices** organized by functional business logic.
+- **Hybrid Delivery**: React for real-time dashboards, Next.js for SEO/SSR documentation.
 
 ---
 
 ## System Design Goals
-- **Scalability**: scale ngang qua provider offloading, scale dọc qua mở rộng RAM/GPU.
-- **Low Latency**: cache hai nhịp (client store + SSR/SSG cache), tối ưu truy vấn + timeout.
-- **Data Integrity**: audit chain theo alias/link rút gọn để truy vết nhiệm vụ.
-- **Threat Intelligence**: module tra cứu rủi ro + pipeline AI kiểm duyệt dữ liệu.
-- **Operational Efficiency**: cập nhật tự động qua Git, triển khai on‑prem + hybrid.
+- **Scalability**: Horizontal scaling via load offloading; vertical scaling via RAM/GPU expansion.
+- **Low Latency**: Two-tier caching strategy (client store + SSR/SSG cache), optimized queries, and strict timeout management.
+- **Data Integrity**: Audit chain based on aliases/hashed links to trace data lineage.
+- **Threat Intelligence**: Anomaly detection module + AI pipeline for data sanitization.
+- **Operational Efficiency**: Automated updates via Git, supporting on-premise + hybrid cloud deployment.
 
 ---
 
@@ -31,10 +31,10 @@ Client (Web/App)
 ```
 
 ### Data Pipeline
-- **Ingestion**: nhận nhiệm vụ, minh chứng, log trạng thái.
-- **Normalization**: chuẩn hóa JSON, định danh theo alias.
-- **Verification**: đối soát qua API bên thứ 3 + Image/Video checks.
-- **Settlement**: cộng điểm, đổi dịch vụ, cập nhật trạng thái.
+- **Ingestion**: collect tasks, evidence, and status logs.
+- **Normalization**: normalize JSON and identify by alias.
+- **Verification**: reconcile via third-party APIs + image/video checks.
+- **Settlement**: allocate credits, exchange services, update status.
 
 ---
 
@@ -42,39 +42,39 @@ Client (Web/App)
 
 | Layer | Technology | Role |
 | --- | --- | --- |
-| Frontend | React / Next.js | Dashboard realtime + SEO/SSR public pages. |
-| Mobile | React Native + WebView | Shell native, cập nhật nhanh logic web. |
-| Backend | Node.js / PHP / Go / Python | REST API, job queue, automation, AI utilities. |
-| Storage | MariaDB / MongoDB | Structured + semi‑structured data. |
+| Frontend | React / Next.js | Real-time dashboards + SEO/SSR public pages. |
+| Mobile | React Native + WebView | Native shell with fast web logic updates. |
+| Backend | Node.js / PHP / Go / Python | REST APIs, job queues, automation, AI utilities. |
+| Storage | MariaDB / MongoDB | Structured + semi-structured data. |
 | Infra | Nginx + Cloudflare Tunnel | Gateway, reverse proxy, IP masking. |
 
 ---
 
 ## Hybrid Frontend Strategy
-**React SPA** xử lý thao tác realtime (dashboard, nhiệm vụ), **Next.js** phục vụ các entry pages cần SEO/SSR. Cả hai dùng chung **data contract** để tránh lệch hành vi.
+**React SPA** handles real-time interactions (dashboards, tasks), while **Next.js** serves entry pages that require SEO/SSR. Both share a **data contract** to prevent behavioral drift.
 
 ```text
 render(view) -> state.sync(...) -> ui.update(...)
 ```
 
-**MQTT/WebSocket** giữ pipeline realtime đồng nhất giữa React và Next.
+**MQTT/WebSocket** keeps the real-time pipeline consistent between React and Next.
 
 ---
 
 ## Core Modules
 
 ### Module A — Engagement Boosting
-Module A tăng **Follow / Like / View** theo mô hình **Task Distribution**.
+Module A increases **Follow / Like / View** via **Task Distribution**.
 
 Flow:
-1) **Task Atomization**: chia chiến dịch thành micro-tasks  
-2) **Distribution Queue**: phân phối theo level, uy tín thiết bị  
-3) **Execution & Proof**: worker thao tác + gửi minh chứng  
-4) **Dual Verification**: API bên thứ 3 + kiểm tra hình ảnh  
-5) **Settlement**: cập nhật trạng thái, cộng điểm thưởng  
+1) **Task Atomization**: split campaigns into micro-tasks  
+2) **Distribution Queue**: distribute by level and device reputation  
+3) **Execution & Proof**: workers execute and submit evidence  
+4) **Dual Verification**: third-party API + image checks  
+5) **Settlement**: update status, allocate credits  
 
 ### Module B — Rating with Evidence
-Module B tăng **rating/vote** kèm minh chứng. Thời gian thao tác được làm sạch bằng **IQR Filtering** để loại outlier.
+Module B boosts **rating/vote** with evidence. Execution time is cleaned using **IQR Filtering** to remove outliers.
 
 ```python
 q1 = percentile(sorted_data, 25)
@@ -87,19 +87,19 @@ avg = sum(filtered) / len(filtered)
 ```
 
 ### Module C — Risk & Scam Detection
-Module C cung cấp **Threat Intelligence** theo cơ chế tra cứu + tố cáo:
+Module C provides **Threat Intelligence** via lookup + reporting:
 - Normalize input (phone/bank/social/website)
-- Tra cứu nhanh qua **MongoDB** index
-- Trả hồ sơ chi tiết từ **MariaDB**
-- AI review hai lớp trước khi công khai dữ liệu
+- Fast lookup through **MongoDB** indexes
+- Return detailed records from **MariaDB**
+- Two-layer AI review before publishing data
 
 ---
 
 ## Reward Engine
-Reward Points là **currency nội bộ**:
-- Người dùng B hoàn thành nhiệm vụ → nhận điểm.
-- Điểm dùng để tạo nhiệm vụ mới → tạo vòng lặp tự vận hành.
-- Alias/shortlink được dùng để audit toàn chuỗi giao việc.
+Reward Points are an **internal currency**:
+- Users complete tasks and receive credits.
+- Credits fund new tasks to create a self-sustaining loop.
+- Alias/shortlinks are used to audit the full task chain.
 
 ---
 
@@ -126,9 +126,9 @@ POST https://domain/api/v3
 ---
 
 ## Security & Privacy
-- **API Key** xác thực request, kết hợp rate limiting.
-- **Cloudflare Tunnel** ẩn IP thật, giảm rủi ro DDoS.
-- **Database Hardening**: đổi port mặc định, giới hạn quyền, backup định kỳ.
+- **API Key** authenticates requests with rate limiting.
+- **Cloudflare Tunnel** masks origin IPs to reduce DDoS risk.
+- **Database Hardening**: change default ports, limit privileges, scheduled backups.
 
 ```go
 c.Header("Access-Control-Allow-Origin", "*")
@@ -148,21 +148,21 @@ ingress:
 ---
 
 ## Deployment & Operations
-- **On‑prem** server cho core services, hybrid network qua Cloudflare.
-- **Auto‑restart** theo thứ tự Nginx → Golang → Workers.
-- **Git Auto‑Update** để đồng bộ mã nguồn nhanh, giảm downtime.
+- **On-prem** servers for core services, hybrid networking via Cloudflare.
+- **Auto-restart** sequence: Nginx → Golang → Workers.
+- **Git Auto-Update** for fast sync and reduced downtime.
 
 ---
 
 ## Observability & Reliability
-- **Background QA Jobs** rà soát nhiệm vụ backlog.
-- **Audit Trail** đầy đủ trạng thái nhiệm vụ và lịch sử thao tác.
-- **Alerting** qua Telegram + dashboard theo dõi hệ thống.
+- **Background QA Jobs** review backlog tasks.
+- **Audit Trail** tracks full task status and activity history.
+- **Alerting** via Telegram + system dashboards.
 
 ---
 
 ## Performance Benchmarks
-- **Local API hop**: 0.01–0.05 ms nội bộ.
-- **Timeout Guardrail**: tự hủy tác vụ > 180s để tránh overload.
-- **Cache Strategy**: client store + SSR cache giảm truy vấn lặp.
-- **Hybrid Routing**: entry points SSR nhanh, thao tác realtime mượt.
+- **Local API hop**: 0.01-0.05 ms internal.
+- **Timeout Guardrail**: auto-cancel tasks > 180s to avoid overload.
+- **Cache Strategy**: client store + SSR cache reduce repeated queries.
+- **Hybrid Routing**: fast SSR entry points with smooth real-time interactions.
