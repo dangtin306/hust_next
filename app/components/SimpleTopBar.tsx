@@ -38,7 +38,7 @@ const SimpleTopBar = () => {
   }, []);
 
   if (hideNav) return null;
-  const hideNavControls = latestVersion === "3";
+  const hideNavControls = true;
 
   const handleDomainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
