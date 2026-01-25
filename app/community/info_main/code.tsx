@@ -117,7 +117,7 @@ export default function DevelopmentServicesPage() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/contact"
+                  href="/support"
                   className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700"
                 >
                   Book a Consultation
