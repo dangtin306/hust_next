@@ -13,9 +13,9 @@ import Link from "next/link";
 
 // SỐ LIỆU KHIÊM TỐN - THỰC TẾ
 const stats = [
-  { label: "Active Users", value: "10K+" },
-  { label: "Daily Requests", value: "100K+" }, // Đổi Transactions -> Requests (Kỹ thuật hơn)
-  { label: "Data Points", value: "200K+" },      // Đổi Runs -> Data Points
+  { label: "Active Users", value: "5K+" },
+  { label: "Daily Requests", value: "50K+" }, // Đổi Transactions -> Requests (Kỹ thuật hơn)
+  { label: "Data Points", value: "100K+" },      // Đổi Runs -> Data Points
   { label: "Uptime", value: "99.98%" },
 ];
 
