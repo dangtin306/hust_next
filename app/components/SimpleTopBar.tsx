@@ -112,7 +112,7 @@ const SimpleTopBar = () => {
 
       <a
         href="/"
-        className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70 hover:shadow hover:ring-slate-300"
+        className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70 hover:shadow hover:ring-slate-300"
       >
         {hostname}
       </a>
