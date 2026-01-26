@@ -24,6 +24,7 @@ const SimpleTopBar = () => {
   const [domain, setDomain] = useState("hust");
   const [showDomainSelect, setShowDomainSelect] = useState(false);
   const [hideNav, setHideNav] = useState(false);
+  const [hideNavControls, setHideNavControls] = useState(true);
   const [latestVersion, setLatestVersion] = useState(() => readCookie("latest_version"));
 
   useEffect(() => {
@@ -35,10 +36,14 @@ const SimpleTopBar = () => {
 
     const cookieDomain = readCookie("main_domain");
     if (cookieDomain) setDomain(cookieDomain);
+
+    const cookieLatestVersion = readCookie("latest_version");
+    if (cookieLatestVersion === "1") {
+      setHideNavControls(false);
+    }
   }, []);
 
   if (hideNav) return null;
-  const hideNavControls = true;
 
   const handleDomainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
@@ -54,37 +59,39 @@ const SimpleTopBar = () => {
   return (
     <nav className="sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
 
-      {!hideNavControls && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Toggle menu"
-            className="inline-flex h-7 w-7 items-center justify-center rounded bg-pink-200 text-gray-800 hover:bg-pink-400 md:hidden"
-            onClick={handleMenuToggle}
-          >
-            <span className="flex flex-col gap-0.5">
-              <span className="h-0.5 w-4 bg-purple-500" />
-              <span className="h-0.5 w-4 bg-purple-500" />
-              <span className="h-0.5 w-4 bg-purple-500" />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="rounded-l bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
-            onClick={() => window.history.back()}
-          >
-            Prev
-          </button>
-          <div className="h-6 w-px bg-gray-200" />
-          <button
-            type="button"
-            className="rounded-r bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
-            onClick={() => window.history.forward()}
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="Toggle menu"
+          className="inline-flex h-7 w-7 items-center justify-center rounded bg-pink-200 text-gray-800 hover:bg-pink-400 md:hidden"
+          onClick={handleMenuToggle}
+        >
+          <span className="flex flex-col gap-0.5">
+            <span className="h-0.5 w-4 bg-purple-500" />
+            <span className="h-0.5 w-4 bg-purple-500" />
+            <span className="h-0.5 w-4 bg-purple-500" />
+          </span>
+        </button>
+        {!hideNavControls && (
+          <>
+            <button
+              type="button"
+              className="rounded-l bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
+              onClick={() => window.history.back()}
+            >
+              Prev
+            </button>
+            <div className="h-6 w-px bg-gray-200" />
+            <button
+              type="button"
+              className="rounded-r bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
+              onClick={() => window.history.forward()}
+            >
+              Next
+            </button>
+          </>
+        )}
+      </div>
 
       {showDomainSelect ? (
         <div className="flex items-center gap-1 text-xs text-gray-600">
