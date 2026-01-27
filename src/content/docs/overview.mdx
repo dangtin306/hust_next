@@ -63,15 +63,15 @@ render(view) -> state.sync(...) -> ui.update(...)
 
 ## Core Modules
 
-### Module A — Engagement Boosting
-Module A increases **Follow / Like / View** via **Task Distribution**.
+### Module A — Community Growth
+Facilitates organic interactions (Follow / Like / View) via Smart Matching.
 
-Flow:
-1) **Task Atomization**: split campaigns into micro-tasks  
-2) **Distribution Queue**: distribute by level and device reputation  
-3) **Execution & Proof**: workers execute and submit evidence  
-4) **Dual Verification**: third-party API + image checks  
-5) **Settlement**: update status, allocate credits  
+Workflow:
+- Campaign Optimization: Breaks outreach goals into small interaction steps.
+- Relevant Matching: Pairs content with trusted users by reputation scores.
+- Authentic Interaction: Users engage naturally and confirm activity.
+- Quality Assurance: Verifies results through a transparent dual-check system.
+- Reward Allocation: Updates progress and distributes community credits.
 
 ### Module B — Rating with Evidence
 Module B boosts **rating/vote** with evidence. Execution time is cleaned using **IQR Filtering** to remove outliers.
@@ -86,12 +86,12 @@ filtered = [x for x in sorted_data if lower <= x <= upper]
 avg = sum(filtered) / len(filtered)
 ```
 
-### Module C — Risk & Scam Detection
-Module C provides **Threat Intelligence** via lookup + reporting:
-- Normalize input (phone/bank/social/website)
-- Fast lookup through **MongoDB** indexes
-- Return detailed records from **MariaDB**
-- Two-layer AI review before publishing data
+### Module C — Security & Trust Assurance
+Module C ensures Community Safety via data verification and feedback:
+- Data Standardization: Formats diverse inputs (contacts, links, social profiles) for accuracy.
+- Instant Query: Rapidly retrieves status via optimized MongoDB indexes.
+- Transparent History: Provides comprehensive safety records from MariaDB.
+- AI-Powered Moderation: Validates new reports with a dual-layer AI review system before publishing.
 
 ---
 

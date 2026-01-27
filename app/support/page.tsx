@@ -1,6 +1,26 @@
+"use client";
+
+import { useRef, useState } from "react";
 import { Mail, MapPin, Send, ShieldAlert } from "lucide-react";
 
 export default function SupportPage() {
+  const [submitState, setSubmitState] = useState<"idle" | "sending" | "sent">(
+    "idle"
+  );
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitState === "sending") return;
+    setSubmitState("sending");
+    const formEl = formRef.current;
+
+    window.setTimeout(() => {
+      setSubmitState("sent");
+      formEl?.reset();
+    }, 900);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16">
@@ -12,8 +32,7 @@ export default function SupportPage() {
             How can we help you?
           </h1>
           <p className="max-w-2xl text-lg text-slate-600">
-            Hust Media is dedicated to democratizing AI education and protecting
-            digital sovereignty for Vietnamese users.
+            Do you need assistance with the Hust Media app? Our team is here to support you with any technical issues or inquiries.
           </p>
         </header>
 
@@ -41,7 +60,7 @@ export default function SupportPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Email</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    dangtinn306@gmail.com
+                    contact@hust.media
                   </p>
                 </div>
               </div>
@@ -67,7 +86,12 @@ export default function SupportPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200/70 bg-white p-8 shadow-sm">
-            <form className="space-y-6" suppressHydrationWarning>
+            <form
+              className="space-y-6"
+              onSubmit={handleSubmit}
+              ref={formRef}
+              suppressHydrationWarning
+            >
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">
                   Full Name
@@ -100,9 +124,10 @@ export default function SupportPage() {
                   suppressHydrationWarning
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >
-                  <option>Student AI Package Support</option>
-                  <option>Report Security Incident (Threat Intelligence)</option>
-                  <option>Technical Issues</option>
+                  <option>App Installation Issues</option>
+                  <option>Account & Subscription</option>
+                  <option>Report a Bug</option>
+                  <option>Feature Request</option>
                   <option>Enterprise Partnership</option>
                 </select>
               </div>
@@ -121,11 +146,18 @@ export default function SupportPage() {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/60 transition hover:from-blue-500 hover:to-purple-500"
+                disabled={submitState === "sending"}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-200/60 transition hover:from-blue-500 hover:to-purple-500 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
-                Send
+                {submitState === "sending" ? "Sending..." : "Send"}
               </button>
+
+              {submitState === "sent" && (
+                <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  Message sent. We will get back to you soon.
+                </p>
+              )}
             </form>
           </div>
         </section>
