@@ -52,22 +52,19 @@ export default function AboutPage() {
       <div className="relative overflow-hidden">
         {/* Background nhẹ nhàng hơn */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_12%_12%,rgba(56,189,248,0.1),transparent_60%),radial-gradient(700px_circle_at_85%_18%,rgba(165,180,252,0.1),transparent_55%)]" />
-        
+
         <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16">
           {/* HEADER SECTION */}
           <section className="flex flex-col gap-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-500">
+            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Hust Media
             </p>
-            <div className="max-w-3xl">
-              {/* SỬA: Bỏ span màu mè, để text đen thuần túy */}
-              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
-                Digital Automation & System Monitor
-              </h1>
-              <p className="mt-4 text-base leading-relaxed text-slate-600">
-                Hust Media provides Digital Automation and Data Verification solutions, helping users optimize online performance through an advanced Hybrid Architecture platform.
-              </p>
-            </div>
+            <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
+              Digital Automation & Platform
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              Hust Media creates smart tools for Digital Automation and Data processing. We focus on building reliable, high-quality applications that are readily available on the <span className="font-semibold">Apple App Store</span> and <span className="font-semibold">Google Play</span>.
+            </p>
             {/* Badges: Kỹ thuật & An toàn */}
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm backdrop-blur-sm">
@@ -200,7 +197,7 @@ export default function AboutPage() {
           {/* CTA SECTION */}
           <section className="rounded-3xl bg-slate-900 p-8 text-white shadow-lg overflow-hidden relative">
             <div className="absolute top-0 right-0 p-12 opacity-10">
-               <Atom size={200} />
+              <Atom size={200} />
             </div>
             <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>

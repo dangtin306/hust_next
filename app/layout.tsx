@@ -4,6 +4,7 @@ import "./globals.css";
 import LegacyNavbarShell from "./components/LegacyNavbarShell";
 import DisableDevIndicator from "./components/DisableDevIndicator";
 import SimpleTopBar from "./components/SimpleTopBar";
+import Footer_web from "./components/Footer_web";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,9 +50,10 @@ export default function RootLayout({
                     <div className="app-brand demo" />
                   </div>
                 </aside>
-                <div className="layout-page">
+                <div className="layout-page flex min-h-screen flex-col">
                   <SimpleTopBar />
-                  {children}
+                  <div className="flex-1">{children}</div>
+                  <Footer_web />
                 </div>
               </div>
             </div>
