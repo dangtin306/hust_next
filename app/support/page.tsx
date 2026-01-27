@@ -46,7 +46,7 @@ export default function SupportPage() {
                 <div>
                   <h2 className="text-lg font-semibold">Address</h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    Times City, Hanoi
+                    Park Hill Premium, Times City Complex, 458 Minh Khai St.,<br/> Hai Ba Trung Dist., Hanoi, Vietnam
                   </p>
                 </div>
               </div>

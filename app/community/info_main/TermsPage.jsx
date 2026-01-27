@@ -1,3 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+const COOKIE_NAME = "hm_terms_accepted";
+const COOKIE_DAYS = 30;
+
 const sections = [
   { id: "account-usage", title: "1. Account Usage" },
   { id: "digital-credits", title: "2. Digital Credits Policy" },
@@ -7,7 +14,49 @@ const sections = [
   { id: "contact", title: "6. Contact" },
 ];
 
+const getCookie = (name) => {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(
+    new RegExp(`(?:^|; )${name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1")}=([^;]*)`)
+  );
+  return match ? decodeURIComponent(match[1]) : "";
+};
+
+const setCookie = (name, value, days) => {
+  if (typeof document === "undefined") return;
+  const expires = new Date();
+  expires.setDate(expires.getDate() + days);
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+};
+
+const clearCookie = (name) => {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+};
+
 export default function TermsPage() {
+  const [accepted, setAccepted] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const saved = getCookie(COOKIE_NAME) === "1";
+    setAccepted(saved);
+  }, []);
+
+  const handleToggle = (event) => {
+    const checked = event.target.checked;
+    setAccepted(checked);
+    if (checked) {
+      setCookie(COOKIE_NAME, "1", COOKIE_DAYS);
+      setNotice("Saved. Your acceptance has been recorded.");
+    } else {
+      clearCookie(COOKIE_NAME);
+      setNotice("Acceptance removed.");
+    }
+    window.clearTimeout(handleToggle._timer);
+    handleToggle._timer = window.setTimeout(() => setNotice(""), 2500);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100/80 via-purple-100/80 to-pink-100/80 text-slate-900">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 lg:flex-row">
@@ -143,9 +192,17 @@ export default function TermsPage() {
                 <input
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                  checked={accepted}
+                  onChange={handleToggle}
+                  suppressHydrationWarning
                 />
                 I agree to these Terms.
               </label>
+              {notice && (
+                <div className="mt-3 rounded-xl border border-emerald-200/60 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 shadow-sm">
+                  {notice}
+                </div>
+              )}
             </div>
           </div>
         </main>
