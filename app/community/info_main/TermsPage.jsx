@@ -183,7 +183,7 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold">6. Contact</h2>
               <p className="text-sm text-slate-700">
                 For questions or concerns regarding these Terms, please contact
-                Hust Media Support at: support@hust.media.
+                Hust Media Support at: contact@hust.media.
               </p>
             </section>
 
