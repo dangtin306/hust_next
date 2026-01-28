@@ -39,7 +39,7 @@ export default function FooterWeb() {
             className="hover:opacity-80 transition-opacity"
           >
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg"
+              src="https://hust.media/img/icon/app-store.svg"
               alt="Download on the App Store"
               className="h-[32px] md:h-[36px]"
             />
@@ -53,7 +53,7 @@ export default function FooterWeb() {
             className="hover:opacity-80 transition-opacity"
           >
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg"
+              src="https://hust.media/img/icon/google-play.svg"
               alt="Get it on Google Play"
               className="h-[32px] md:h-[36px]"
             />
