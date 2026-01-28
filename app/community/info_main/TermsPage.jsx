@@ -89,7 +89,7 @@ export default function TermsPage() {
                 Terms of Service
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Last updated: 2025-01-08
+                Last updated: 2025-12-22
               </p>
               <p className="mt-4 text-sm text-slate-600">
                 These Terms of Service ("Terms") govern your access to and use
