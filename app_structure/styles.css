@@ -1,0 +1,25 @@
+.hust-media-text {
+  font-weight: bold;
+  font-size: 18px;
+  color: #ffffff;
+  text-shadow: 2px 2px #f472b6; /* trạng thái đậm ban đầu */
+  -webkit-text-stroke: 1px #f472b6;
+  text-stroke: 1px #f472b6;
+  background-color: transparent;
+  background-image: linear-gradient(to right, #fcd0e7 50%, transparent 50%);
+  background-size: 200% 100%;
+  background-position: 100%;
+  transition: background-position 0.5s ease;
+  animation: neon 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes neon {
+  from {
+    text-shadow: 2px 2px #f472b6, -2px -2px #f472b6, 2px -2px #f472b6, -2px 2px #f472b6; /* đậm ban đầu */
+    background-position: 100%; /* giữ nguyên chiều thanh */
+  }
+  to {
+    text-shadow: none; /* nhạt khi kết thúc */
+    background-position: 0 100%; /* thanh vẫn trượt như cũ */
+  }
+}

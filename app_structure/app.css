@@ -1,0 +1,30 @@
+@media (max-width: 1199.98px) {
+  .layout-navbar .navbar-nav .nav-item.dropdown .dropdown-menu {
+    position: absolute;
+  }
+  .layout-navbar .navbar-nav .nav-item.dropdown .dropdown-menu .last-login {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 767.98px) {
+  .layout-navbar .navbar-nav .nav-item.dropdown {
+    position: static;
+    float: left;
+  }
+  .layout-navbar .navbar-nav .nav-item.dropdown .badge-notifications {
+    top: auto;
+  }
+  .layout-navbar .navbar-nav .nav-item.dropdown .dropdown-menu {
+    position: absolute;
+    left: 0.9rem;
+    min-width: auto;
+    width: 92%;
+  }
+}
+
+@media (max-width: 1199.98px) {
+  .layout-navbar {
+    z-index: 1080;
+  }
+}
+

@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @source "../../react_app/src/**/*.{js,jsx,ts,tsx}";
+@import "../app_structure/index.css";
+@import "../app_structure/styles.css";
+@import "../app_structure/app.css";
 
 :root {
   --background: #ffffff;
