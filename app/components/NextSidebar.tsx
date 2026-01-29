@@ -162,7 +162,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
   const lang = payload.national_market || "vi";
   useEffect(() => {
     const hostname = window.location.hostname;
-    setDisplayHostname(hostname === "tecom.pro" ? "hust.media" : hostname);
+    setDisplayHostname(hostname.includes("tecom.pro") ? "hust.media" : hostname);
   }, []);
 
   useEffect(() => {
