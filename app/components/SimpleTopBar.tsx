@@ -29,7 +29,7 @@ const SimpleTopBar = () => {
 
   useEffect(() => {
     const host = window.location.hostname;
-    setHostname(host === "tecom.pro" ? "hust.media" : host);
+    setHostname(host.includes("tecom.pro") ? "hust.media" : host);
     setShowDomainSelect(host === "localhost");
     setHideNav(window.location.href.includes("shownav=NO"));
     setLatestVersion(readCookie("latest_version"));
