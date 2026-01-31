@@ -46,4 +46,4 @@ f:["$","$L25",null,{"children":["$","$26",null,{"name":"Next.MetadataOutlet","ch
 29:[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]
 2c:I[6869,[],"IconMark"]
 27:null
-2b:[["$","title","0",{"children":"About Hust Media | Security & Automation Platform"}],["$","meta","1",{"name":"description","content":"Learn about Hust Media's mission, hybrid architecture, AI-driven verification, and the team behind the security intelligence platform."}],["$","link","2",{"rel":"icon","href":"/favicon.ico"}],["$","$L2c","3",{}]]
+2b:[["$","title","0",{"children":"About Hust Media | Security & Tech Lab"}],["$","meta","1",{"name":"description","content":"Learn about Hust Media's mission, hybrid architecture, AI-driven verification, and the team behind the security intelligence platform."}],["$","link","2",{"rel":"icon","href":"/favicon.ico"}],["$","$L2c","3",{}]]
