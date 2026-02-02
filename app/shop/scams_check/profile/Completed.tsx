@@ -1,5 +1,5 @@
 import React from "react";
-import { copy_native } from "../../AppContext";
+import { copy_native } from "../../../AppContext";
 import Profile_images from "./profile_images";
 
 // --- Helper: Hàm che thông tin (Masking) ---
