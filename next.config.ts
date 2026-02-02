@@ -48,6 +48,10 @@ const nextConfig: NextConfig = {
         destination: "/shop/hustadmin/:path*",
       },
       {
+        source: "/check/:slug",
+        destination: "/shop/scams_check/profile/:slug",
+      },
+      {
         source: "/check/:path*",
         destination: "/shop/scams_check/:path*",
       },

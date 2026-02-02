@@ -54,7 +54,7 @@ const Profile_images = ({ profile_info }: { profile_info: any }) => {
       {/* Evidence Section */}
       <div className="p-1 bg-pink-50">
         <div className="flex text-center flex-nowrap justify-start overflow-x-auto px-1 gap-0">
-          {profile_info.images_data.map((image: any) => (
+          {(Array.isArray(profile_info?.images_data) ? profile_info.images_data : []).map((image: any) => (
             // <div key={image.id} className="p-1 flex-shrink-0">
             <div key={image.id} className="p-1 shrink-0">
               <img
