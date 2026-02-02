@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/check/:path*",
-        destination: "/shop/checkscam/:path*",
+        destination: "/shop/scams_check/:path*",
       },
     ];
   },
