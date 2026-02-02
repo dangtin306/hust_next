@@ -72,7 +72,17 @@ const IconLink = () => (
   </svg>
 );
 
-const Completed = ({ profile_info, currentUrl, onCopy, navigate }) => {
+const Completed = ({
+  profile_info,
+  currentUrl,
+  onCopy,
+  navigate,
+}: {
+  profile_info: any;
+  currentUrl: any;
+  onCopy: any;
+  navigate: any;
+}) => {
   // --- KỸ THUẬT ALIASING ---
   const {
     description_scam: dataContent,
@@ -85,7 +95,8 @@ const Completed = ({ profile_info, currentUrl, onCopy, navigate }) => {
       {/* Container Chính */}
       <div className="max-w-5xl mx-auto bg-white/95 backdrop-blur-xl shadow-sm rounded-xl overflow-hidden border border-white relative">
         {/* Thanh màu định danh (Mỏng hơn) */}
-        <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+        {/* <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div> */}
+        <div className="h-0.5 w-full bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
         <div className="flex flex-col md:flex-row">
           {/* --- CỘT TRÁI: ĐỊNH DANH (Thu hẹp padding) --- */}
