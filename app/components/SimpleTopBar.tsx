@@ -104,6 +104,7 @@ const SimpleTopBar = () => {
           >
             <option value="hust">HUST</option>
             <option value="tecom">TECOM</option>
+            <option value="nofake">NOFAKE</option>
           </select>
         </div>
       ) : (

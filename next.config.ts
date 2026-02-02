@@ -21,6 +21,38 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+  async rewrites() {
+    return [
+      {
+        source: "/services/development",
+        destination: "/community/services/development",
+      },
+      {
+        source: "/features",
+        destination: "/community/features",
+      },
+      {
+        source: "/docs",
+        destination: "/community/docs",
+      },
+      {
+        source: "/docs/:path*",
+        destination: "/community/docs/:path*",
+      },
+      {
+        source: "/hustadmin",
+        destination: "/shop/hustadmin",
+      },
+      {
+        source: "/hustadmin/:path*",
+        destination: "/shop/hustadmin/:path*",
+      },
+      {
+        source: "/check/:path*",
+        destination: "/shop/checkscam/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

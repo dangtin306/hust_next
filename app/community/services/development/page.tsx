@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import DevelopmentServicesPage from "../../community/info_main/code";
+import DevelopmentServicesPage from "../../info_main/code";
 
 export const metadata: Metadata = {
   title: "Development Services | Hust Media",
