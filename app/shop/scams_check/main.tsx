@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { alert_error, alert_success } from '../../../AppContext';
+import { alert_error, alert_success } from '../../AppContext';
 import { ClipLoader } from 'react-spinners';
 import { Helmet } from 'react-helmet';
 
