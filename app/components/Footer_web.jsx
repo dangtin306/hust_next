@@ -22,6 +22,17 @@ export default function FooterWeb() {
               Privacy Policy
             </span>
           </a>
+          <a
+            href="https://hust.media/api/sitemap/hust_media.xml"
+            target="_blank"
+            rel="noreferrer"
+            className="group hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.45)] transition-all duration-200"
+            style={{ textDecoration: "none" }}
+          >
+            <span className="text-white leading-none group-hover:text-white transition-colors duration-200">
+              Site Map
+            </span>
+          </a>
         </div>
 
         {/* 2. Bản quyền (Ở giữa) */}
