@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NextSidebar from "./NextSidebar";
+import NextSidebar from "./sidebar_main";
 
 const LegacyNavbarShell = () => {
   const [isOpen, setIsOpen] = useState(false);

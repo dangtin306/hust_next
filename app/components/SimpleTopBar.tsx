@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useState } from "react";
+import NavDown from "./nav_down";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -20,28 +21,32 @@ const writeCookie = (name: string, value: string) => {
 };
 
 const SimpleTopBar = () => {
-  const [hostname, setHostname] = useState("");
-  const [domain, setDomain] = useState("hust");
-  const [showDomainSelect, setShowDomainSelect] = useState(false);
-  const [hideNav, setHideNav] = useState(false);
-  const [hideNavControls, setHideNavControls] = useState(true);
-  const [latestVersion, setLatestVersion] = useState(() => readCookie("latest_version"));
-
-  useEffect(() => {
-    const host = window.location.hostname;
-    setHostname(host.includes("tecom.pro") ? "hust.media" : host);
-    setShowDomainSelect(host === "localhost");
-    setHideNav(window.location.href.includes("shownav=NO"));
-    setLatestVersion(readCookie("latest_version"));
-
-    const cookieDomain = readCookie("main_domain");
-    if (cookieDomain) setDomain(cookieDomain);
-
-    const cookieLatestVersion = readCookie("latest_version");
-    if (cookieLatestVersion === "1") {
-      setHideNavControls(false);
-    }
-  }, []);
+  const [domain, setDomain] = useState(() => readCookie("main_domain") || "hust");
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+  const latestVersion = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => {};
+      const handler = () => onStoreChange();
+      window.addEventListener("latest-version-updated", handler);
+      const timer = window.setInterval(handler, 300);
+      return () => {
+        window.removeEventListener("latest-version-updated", handler);
+        window.clearInterval(timer);
+      };
+    },
+    () => readCookie("latest_version"),
+    () => ""
+  );
+  const showDomainSelect =
+    hydrated && typeof window !== "undefined" && window.location.hostname === "localhost";
+  const hideNav =
+    hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
+  const hasLatestVersion = latestVersion !== "";
+  const hideNavControls = latestVersion === "3";
 
   if (hideNav) return null;
 
@@ -72,7 +77,7 @@ const SimpleTopBar = () => {
             <span className="h-0.5 w-4 bg-purple-500" />
           </span>
         </button>
-        {!hideNavControls && (
+        {hasLatestVersion && !hideNavControls && (
           <>
             <button
               type="button"
@@ -111,12 +116,13 @@ const SimpleTopBar = () => {
         <span className="text-xs text-gray-500" />
       )}
 
-      <a
-        href="/reactapp/"
-        className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70 hover:shadow hover:ring-slate-300"
-      >
-        {hostname}
-      </a>
+      {hydrated ? (
+        <NavDown />
+      ) : (
+        <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
+          localhost
+        </span>
+      )}
     </nav>
   );
 };

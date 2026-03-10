@@ -144,6 +144,7 @@ const thesisFiguresBase = [
     title: "Figure 2.10 — Backend overview",
     description:
       "Service layout showing modular responsibilities across Node.js/PHP/Go/Python with shared API endpoints.",
+    slug: "backend-overview",
   },
   {
     src: featuresImage("p2p_main.png"),
@@ -162,12 +163,14 @@ const thesisFiguresBase = [
     title: "Figure 4.2 — Current release architecture",
     description:
       "Current deployment model with a React Native shell, WebView core, deep links, and runtime updates.",
+    slug: "current-release-architecture",
   },
   {
     src: featuresImage("performance.png"),
     title: "Figure 4.5 — Performance monitoring overview",
     description:
       "Operational monitoring of CPU/RAM/disk/network combined with simple alerts to support stability.",
+    slug: "performance-monitoring",
   },
   {
     src: featuresImage("admin.png"),
@@ -500,6 +503,7 @@ export default function FeaturesPage() {
             {thesisFigures.map((diagram) => (
               <figure
                 key={`${diagram.title}-${diagram.src}`}
+                id={diagram.slug}
                 className={`${cardBase} flex flex-col`}
               >
                 <div className={imageFrame}>
