@@ -243,13 +243,13 @@ export default function SeoMediaPage() {
                 />
               </button>
               <div
-                className={`absolute left-0 top-full z-[70] mt-3 w-[min(23rem,calc(100vw-2.5rem))] rounded-3xl border border-white/90 bg-white/75 p-3 shadow-[0_24px_60px_rgba(30,41,59,0.22)] backdrop-blur-xl transition-all duration-200 ${
+                className={`absolute left-1/2 top-full z-[70] mt-3 w-[min(23rem,calc(100vw-1.5rem))] -translate-x-1/2 rounded-3xl border border-white/90 bg-white/75 p-3 shadow-[0_24px_60px_rgba(30,41,59,0.22)] backdrop-blur-xl transition-all duration-200 sm:left-0 sm:w-[min(23rem,calc(100vw-2.5rem))] sm:translate-x-0 ${
                   showConsultants
                     ? "pointer-events-auto translate-y-0 opacity-100"
                     : "pointer-events-none -translate-y-1 opacity-0"
                 }`}
               >
-                <div className="absolute -top-2 left-8 h-4 w-4 rotate-45 border-l border-t border-white/90 bg-white/80" />
+                <div className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 border-l border-t border-white/90 bg-white/80 sm:left-8 sm:translate-x-0" />
                 <div className="mb-2 flex items-center gap-2 px-2">
                   <Sparkles className="h-4 w-4 text-indigo-600" />
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">
@@ -271,13 +271,13 @@ export default function SeoMediaPage() {
                           <advisor.Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="text-base font-semibold text-slate-800">{advisor.name}</p>
-                            <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
+                            <p className="text-[15px] sm:text-base font-semibold text-slate-800 leading-snug">{advisor.name}</p>
+                            <span className="inline-flex w-fit rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
                               {advisor.badge}
                             </span>
                           </div>
-                          <p className="mt-0.5 text-sm text-slate-600">{advisor.role}</p>
+                          <p className="mt-1 text-sm leading-7 sm:leading-relaxed text-slate-600">{advisor.role}</p>
                         </div>
                         <ChevronRight className="h-4 w-4 text-slate-400 transition-colors group-hover:text-indigo-600" />
                       </div>
