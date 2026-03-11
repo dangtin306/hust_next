@@ -56,6 +56,7 @@ const getInitialSupportLinks = () => {
 };
 
 const SupportButton = () => {
+  const [isMounted, setIsMounted] = useState(false);
   const [hienDanhSach, setHienDanhSach] = useState(false);
   const [linksSupport, setLinksSupport] = useState(() => getInitialSupportLinks());
 
@@ -88,6 +89,10 @@ const SupportButton = () => {
     scale: hienDanhSach ? 1 : 0,
     config: { tension: 180, friction: 16 },
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const mainDomain =
@@ -154,6 +159,8 @@ const SupportButton = () => {
       window.location.assign(link.router);
     }
   };
+
+  if (!isMounted) return null;
 
   return (
     <>
