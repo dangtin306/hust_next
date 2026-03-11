@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronRight,
   Megaphone,
-  MessageCircle,
   MessageSquare,
   Rocket,
   Sparkles,
@@ -205,23 +204,16 @@ export default function SeoMediaPage() {
 
   const consultants = [
     {
-      key: "thuy",
-      name: lang === "vi" ? "Liên hệ bạn Thúy" : "Contact Ms. Thuy",
-      role: lang === "vi" ? "Tư vấn chiến lược media" : "Media strategy consultant",
+      key: "technical",
+      name: lang === "vi" ? "Liên hệ bộ phận kỹ thuật" : "Contact technical team",
+      role:
+        lang === "vi"
+          ? "Tư vấn chiến lược vận hàng và tối ưu chiến dịch"
+          : "Strategy and campaign optimization consulting",
       badge: lang === "vi" ? "Sẵn sàng" : "Available",
-      href: "https://t.me/Cogicuhoidi",
+      href: "https://m.me/111762821141440",
       Icon: MessageSquare,
       iconBg: "bg-indigo-100 text-indigo-700",
-      cardBg: "from-fuchsia-50/90 via-white to-pink-50/90",
-    },
-    {
-      key: "huyen",
-      name: lang === "vi" ? "Liên hệ bạn Huyền" : "Contact Ms. Huyen",
-      role: lang === "vi" ? "Vận hành & tối ưu chiến dịch" : "Campaign ops and optimization",
-      badge: lang === "vi" ? "Sẵn sàng" : "Available",
-      href: "https://t.me/xuzinxikgai",
-      Icon: MessageCircle,
-      iconBg: "bg-fuchsia-100 text-fuchsia-700",
       cardBg: "from-fuchsia-50/90 via-white to-pink-50/90",
     },
   ] as const;
@@ -261,7 +253,7 @@ export default function SeoMediaPage() {
                 <div className="mb-2 flex items-center gap-2 px-2">
                   <Sparkles className="h-4 w-4 text-indigo-600" />
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700">
-                    {lang === "vi" ? "Chọn chuyên viên" : "Choose a consultant"}
+                    {lang === "vi" ? "Liên hệ hỗ trợ" : "Support contact"}
                   </p>
                 </div>
                 <div className="space-y-2">
