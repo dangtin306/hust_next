@@ -6,6 +6,9 @@ import axios from "axios";
 
 const CACHE_KEY = "support_chat";
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const SUPPORT_QUERY_BASE = "app_structure.app_fontend.support_chat";
+
+const normalizeDomain = (value) => String(value || "").trim().toLowerCase();
 
 const readCookie = (name) => {
   if (typeof document === "undefined") return "";
@@ -22,14 +25,41 @@ const getMainDomainFromHost = () => {
   return parts.length > 2 ? parts[parts.length - 2] : parts[0] || "hust";
 };
 
-const isCacheValid = (store, payload, nationalMarket, currentDomain) => {
+const isCacheValid = (store, payload, nationalMarket, currentDomain, mainDomain) => {
   return (
     store &&
     Date.now() - Number(store.timestamp || 0) < CACHE_TTL_MS &&
     JSON.stringify(store.payload) === JSON.stringify(payload) &&
     currentDomain !== "localhost" &&
-    String(nationalMarket || "") === String(store.national_market || "")
+    String(nationalMarket || "") === String(store.national_market || "") &&
+    normalizeDomain(store.main_domain) === normalizeDomain(mainDomain)
   );
+};
+
+const filterLinksByDomain = (links, mainDomain) => {
+  if (!Array.isArray(links)) return [];
+  const currentDomain = normalizeDomain(mainDomain);
+  return links.filter((link) => {
+    const domainsRaw = link?.domain;
+    if (!domainsRaw) return true;
+    const domains = Array.isArray(domainsRaw) ? domainsRaw : [domainsRaw];
+    return domains.map(normalizeDomain).includes(currentDomain);
+  });
+};
+
+const resolveLinksByDomain = (mongoResults, mainDomain) => {
+  if (Array.isArray(mongoResults)) {
+    return filterLinksByDomain(mongoResults, mainDomain);
+  }
+  if (mongoResults && typeof mongoResults === "object") {
+    const domainKey = normalizeDomain(mainDomain);
+    const keyedData = mongoResults[domainKey] || mongoResults[mainDomain];
+    if (Array.isArray(keyedData)) return keyedData;
+    if (Array.isArray(mongoResults.data)) {
+      return filterLinksByDomain(mongoResults.data, mainDomain);
+    }
+  }
+  return [];
 };
 
 const getInitialSupportLinks = () => {
@@ -42,13 +72,13 @@ const getInitialSupportLinks = () => {
   const nationalMarket = readCookie("national_market") || "en";
   const currentDomain = window.location.hostname;
   const payload = {
-    query: `app_structure.app_fontend.support_chat.${mainDomain}`,
+    query: SUPPORT_QUERY_BASE,
   };
 
   const raw = localStorage.getItem(CACHE_KEY);
   const store = raw ? JSON.parse(raw) : null;
 
-  if (isCacheValid(store, payload, nationalMarket, currentDomain) && Array.isArray(store.data)) {
+  if (isCacheValid(store, payload, nationalMarket, currentDomain, mainDomain) && Array.isArray(store.data)) {
     return store.data;
   }
 
@@ -56,9 +86,13 @@ const getInitialSupportLinks = () => {
 };
 
 const SupportButton = () => {
-  const [isMounted, setIsMounted] = useState(false);
   const [hienDanhSach, setHienDanhSach] = useState(false);
   const [linksSupport, setLinksSupport] = useState(() => getInitialSupportLinks());
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   const lang = useSyncExternalStore(
     () => () => {},
@@ -91,10 +125,6 @@ const SupportButton = () => {
   });
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
     const mainDomain =
       window.location.hostname !== "localhost"
         ? readCookie("main_domain") || getMainDomainFromHost() || "hust"
@@ -103,13 +133,13 @@ const SupportButton = () => {
     const currentDomain = window.location.hostname;
     const nationalMarket = readCookie("national_market") || "en";
     const payload = {
-      query: `app_structure.app_fontend.support_chat.${mainDomain}`,
+      query: SUPPORT_QUERY_BASE,
     };
 
     const raw = localStorage.getItem(CACHE_KEY);
     const store = raw ? JSON.parse(raw) : null;
 
-    if (isCacheValid(store, payload, nationalMarket, currentDomain)) {
+    if (isCacheValid(store, payload, nationalMarket, currentDomain, mainDomain)) {
       return;
     }
 
@@ -128,8 +158,23 @@ const SupportButton = () => {
 
       axios
         .request(config)
-        .then((response) => {
-          const results = response?.data?.api_results?.mongo_results;
+        .then(async (response) => {
+          let results = resolveLinksByDomain(response?.data?.api_results?.mongo_results, mainDomain);
+          let payloadUsed = payload;
+
+          // Fallback cho cấu trúc cũ support_chat.<domain>
+          if (!Array.isArray(results) || results.length === 0) {
+            const legacyPayload = {
+              query: `${SUPPORT_QUERY_BASE}.${mainDomain}`,
+            };
+            const legacyResponse = await axios.request({
+              ...config,
+              data: JSON.stringify(legacyPayload),
+            });
+            results = resolveLinksByDomain(legacyResponse?.data?.api_results?.mongo_results, mainDomain);
+            payloadUsed = legacyPayload;
+          }
+
           if (!Array.isArray(results)) return;
 
           setLinksSupport(results);
@@ -138,7 +183,8 @@ const SupportButton = () => {
             JSON.stringify({
               timestamp: Date.now(),
               data: results,
-              payload,
+              payload: payloadUsed,
+              main_domain: mainDomain,
               national_market: nationalMarket,
             }),
           );
