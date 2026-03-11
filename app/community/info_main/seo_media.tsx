@@ -205,6 +205,16 @@ export default function SeoMediaPage() {
 
   const consultants = [
     {
+      key: "thuy",
+      name: lang === "vi" ? "Liên hệ bạn Thúy" : "Contact Ms. Thuy",
+      role: lang === "vi" ? "Tư vấn chiến lược media" : "Media strategy consultant",
+      badge: lang === "vi" ? "Sẵn sàng" : "Available",
+      href: "https://t.me/Cogicuhoidi",
+      Icon: MessageSquare,
+      iconBg: "bg-indigo-100 text-indigo-700",
+      cardBg: "from-fuchsia-50/90 via-white to-pink-50/90",
+    },
+    {
       key: "huyen",
       name: lang === "vi" ? "Liên hệ bạn Huyền" : "Contact Ms. Huyen",
       role: lang === "vi" ? "Vận hành & tối ưu chiến dịch" : "Campaign ops and optimization",
@@ -212,16 +222,6 @@ export default function SeoMediaPage() {
       href: "https://t.me/xuzinxikgai",
       Icon: MessageCircle,
       iconBg: "bg-fuchsia-100 text-fuchsia-700",
-      cardBg: "from-fuchsia-50/90 via-white to-pink-50/90",
-    },
-    {
-      key: "thuy",
-      name: lang === "vi" ? "Liên hệ bạn Thúy" : "Contact Ms. Thuy",
-      role: lang === "vi" ? "Tư vấn chiến lược media" : "Media strategy consultant",
-      badge: lang === "vi" ? "Sẵn sàng" : "Available",
-      href: "/support?advisor=thuy",
-      Icon: MessageSquare,
-      iconBg: "bg-indigo-100 text-indigo-700",
       cardBg: "from-fuchsia-50/90 via-white to-pink-50/90",
     },
   ] as const;
