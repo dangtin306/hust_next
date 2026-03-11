@@ -40,6 +40,14 @@ const nextConfig: NextConfig = {
         destination: "/community/docs/:path*",
       },
       {
+        source: "/convert_national_market",
+        destination: "/community/services/national_market",
+      },
+      {
+        source: "/support",
+        destination: "/community/services/support_page",
+      },
+      {
         source: "/hustadmin",
         destination: "/shop/hustadmin",
       },

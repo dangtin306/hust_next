@@ -84,7 +84,7 @@ export default function ConvertNationalMarketPage() {
   const [loading, setLoading] = useState(false);
 
   const processPage = () => {
-    window.location.href = "/next/";
+    window.location.href = "/reactapp/";
   };
 
   useEffect(() => {
@@ -160,7 +160,7 @@ export default function ConvertNationalMarketPage() {
   return (
     <div className="flex items-center justify-center py-8 px-3">
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md text-center space-y-6">
-        <h2 className="text-xl font-semibold">Select region (Chọn thị trường)</h2>
+        <h2 className="text-xl font-semibold text-slate-900">Select region (Chọn thị trường)</h2>
 
         <div className="flex flex-col sm:flex-row w-full sm:space-x-6 space-y-4 sm:space-y-0">
           {marketData.map((item) => (
@@ -193,4 +193,3 @@ export default function ConvertNationalMarketPage() {
     </div>
   );
 }
-

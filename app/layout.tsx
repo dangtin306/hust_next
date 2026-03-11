@@ -5,6 +5,7 @@ import LegacyNavbarShell from "./components/LegacyNavbarShell";
 import DisableDevIndicator from "./components/DisableDevIndicator";
 import SimpleTopBar from "./components/SimpleTopBar";
 import Footer_web from "./components/Footer_web";
+import SupportButton from "./community/services/SupportButton";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({
             </div>
           </div>
         </div>
+        <SupportButton />
       </body>
     </html>
   );
