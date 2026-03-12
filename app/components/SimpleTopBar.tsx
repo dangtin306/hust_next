@@ -20,8 +20,24 @@ const writeCookie = (name: string, value: string) => {
   )}; max-age=${ONE_YEAR_SECONDS}; path=/`;
 };
 
-const SimpleTopBar = () => {
-  const [domain, setDomain] = useState(() => readCookie("main_domain") || "hust");
+type SimpleTopBarProps = {
+  initialHost?: string;
+};
+
+const normalizeHost = (host: string) =>
+  String(host || "")
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "");
+
+const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
+  const [domainOverride, setDomainOverride] = useState<string | null>(null);
+  const cookieDomain = useSyncExternalStore(
+    () => () => {},
+    () => readCookie("main_domain") || "hust",
+    () => "hust"
+  );
+  const domain = domainOverride ?? cookieDomain;
   const hydrated = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -47,12 +63,16 @@ const SimpleTopBar = () => {
     hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
   const hasLatestVersion = latestVersion !== "";
   const hideNavControls = latestVersion === "3";
+  const initialHostLabel = normalizeHost(initialHost);
+  const fallbackDomainLabel =
+    initialHostLabel ||
+    (domain === "tecom" ? "hust.media" : domain === "hust" ? "hust.media" : domain);
 
   if (hideNav) return null;
 
   const handleDomainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const value = event.target.value;
-    setDomain(value);
+    setDomainOverride(value);
     writeCookie("main_domain", value);
   };
 
@@ -120,7 +140,7 @@ const SimpleTopBar = () => {
         <NavDown />
       ) : (
         <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
-          localhost
+          {fallbackDomainLabel}
         </span>
       )}
     </nav>

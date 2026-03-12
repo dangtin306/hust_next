@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import LegacyNavbarShell from "./components/LegacyNavbarShell";
@@ -26,11 +27,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerStore = await headers();
+  const initialHost =
+    headerStore.get("x-forwarded-host") ||
+    headerStore.get("host") ||
+    "";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -52,7 +59,7 @@ export default function RootLayout({
                   </div>
                 </aside>
                 <div className="layout-page flex min-h-screen flex-col">
-                  <SimpleTopBar />
+                  <SimpleTopBar initialHost={initialHost} />
                   <div className="flex-1">{children}</div>
                   <Footer_web />
                 </div>
