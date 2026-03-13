@@ -208,10 +208,15 @@ export default function TermsPage() {
             <section id="contact" className="mt-6 space-y-3">
               <h2 className="text-xl font-semibold">9. Contact</h2>
               <p className="text-sm text-slate-700">For questions regarding these Terms, please contact:</p>
+              <p className="text-sm text-slate-700">Hust Media</p>
               <p className="text-sm text-slate-700">
-                Hust Media
-                <br />
-                Email: contact@hust.media
+                Email:{" "}
+                <a
+                  href="mailto:contact@hust.media"
+                  className="font-medium text-slate-800 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+                >
+                  contact@hust.media
+                </a>
               </p>
             </section>
 
