@@ -31,19 +31,19 @@ const techStack = [
 
 const values = [
   {
-    title: "Transparency",
+    title: "Clarity",
     description:
-      "Operational transparency in audit logs and task distribution, allowing partners to verify system efficiency in real-time.",
+      "We present technical topics in a simple, structured way so they remain accessible and useful.",
   },
   {
-    title: "Security",
+    title: "Accuracy",
     description:
-      "Security is our top priority, implemented from the infrastructure layer down to data validation mechanisms.",
+      "We aim to keep our technical content clear, grounded, and reliable for reference.",
   },
   {
-    title: "Sustainability", // Đổi Community -> Sustainability (Bền vững)
+    title: "Sustainability",
     description:
-      "Building a sustainable technical ecosystem where users contribute to system stability and data integrity.",
+      "We build a lasting technical library through original writing, organized topics, and regular updates.",
   },
 ];
 
@@ -60,7 +60,7 @@ export default function AboutPage() {
             <p className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
               Hust Media
             </p>
-            <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
+            <h1 className="text-2xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
               Technical Documentation & System Architecture
             </h1>
             <p className="mt-4 text-base leading-relaxed text-slate-600">
@@ -109,24 +109,24 @@ export default function AboutPage() {
             <div className="rounded-3xl border border-white bg-white/80 p-8 shadow-sm backdrop-blur-sm">
               <h2 className="text-xl font-bold text-slate-800">Our Mission</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                We help businesses and individuals simplify their work through secure automation. Our focus is on saving time, keeping data safe, and making sure every process is clear and reliable.              </p>
+                We help readers and technical users better understand modern systems through clear, practical documentation. Our focus is on making architecture, deployment, and implementation details easier to follow and more useful in real projects.              </p>
               <div className="mt-6 grid gap-4 text-sm text-slate-600">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-500 flex-shrink-0" />
                   <span>
-                    <strong>Unified Experience:</strong> ReactJS + NextJS Hybrid Core ensures synchronized performance across public web and internal dashboards.
+                    <strong>Clarity:</strong> Structured articles and diagrams make technical topics easier to read and understand.
                   </span>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-500 flex-shrink-0" />
                   <span>
-                    <strong>Consistency:</strong> Automated Verification ensures data is validated consistently, reducing manual errors.
+                    <strong>Consistency:</strong> Related topics are organized in a clear library, helping readers connect ideas across the site.
                   </span>
                 </div>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-500 flex-shrink-0" />
                   <span>
-                    <strong>Flexibility:</strong> Hybrid Architecture allows for flexible deployment on Cloud or On-premise infrastructure based on security needs.
+                    <strong>Practicality:</strong> The content focuses on real implementation, deployment, monitoring, and backend workflows.
                   </span>
                 </div>
               </div>
@@ -162,7 +162,7 @@ export default function AboutPage() {
               </div>
               <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 <Users className="h-3 w-3" />
-                Enterprise-grade Ready
+                Practical by Design
               </div>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
