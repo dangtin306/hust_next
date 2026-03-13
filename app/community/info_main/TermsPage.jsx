@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 const COOKIE_NAME = "hm_terms_accepted";
 const COOKIE_DAYS = 30;
@@ -38,17 +38,15 @@ const clearCookie = (name) => {
 };
 
 export default function TermsPage() {
-  const [accepted, setAccepted] = useState(false);
+  const accepted = useSyncExternalStore(
+    () => () => {},
+    () => getCookie(COOKIE_NAME) === "1",
+    () => false,
+  );
   const [notice, setNotice] = useState("");
-
-  useEffect(() => {
-    const saved = getCookie(COOKIE_NAME) === "1";
-    setAccepted(saved);
-  }, []);
 
   const handleToggle = (event) => {
     const checked = event.target.checked;
-    setAccepted(checked);
     if (checked) {
       setCookie(COOKIE_NAME, "1", COOKIE_DAYS);
       setNotice("Saved. Your acceptance has been recorded.");
@@ -95,9 +93,9 @@ export default function TermsPage() {
                 Last updated: 2026-02-08
               </p>
               <p className="mt-4 text-sm text-slate-600">
-                These Terms of Use ("Terms") govern your access to and use of the Hust Media website,
+                These Terms of Use (&quot;Terms&quot;) govern your access to and use of the Hust Media website,
                 including its technical articles, diagrams, documentation pages, and related content
-                (collectively, the "Site"). By accessing or using the Site, you agree to these Terms.
+                (collectively, the &quot;Site&quot;). By accessing or using the Site, you agree to these Terms.
               </p>
             </header>
 
@@ -151,7 +149,7 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold">4. Content Accuracy and Technical Reference</h2>
               <p className="text-sm text-slate-700">
                 We aim to provide clear, practical, and accurate technical content. However, the Site is
-                provided on an "as is" and "as available" basis. Technical articles may contain errors,
+                provided on an &quot;as is&quot; and &quot;as available&quot; basis. Technical articles may contain errors,
                 omissions, simplified examples, or information that may become outdated over time.
               </p>
               <p className="text-sm text-slate-700">

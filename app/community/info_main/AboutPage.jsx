@@ -14,10 +14,10 @@ import Link from "next/link";
 
 // SỐ LIỆU KHIÊM TỐN - THỰC TẾ
 const stats = [
-  { label: "Active Users", value: "1000+" },
-  { label: "Daily Requests", value: "10K+" }, // Đổi Transactions -> Requests (Kỹ thuật hơn)
-  { label: "Data Points", value: "50K+" },      // Đổi Runs -> Data Points
-  { label: "Uptime", value: "99.98%" },
+  { label: "Original Content", value: "Self-Written" },
+  { label: "System Focus", value: "Web • Mobile • API" },
+  { label: "Technical Scope", value: "Architecture • Ops" },
+  { label: "Publishing Status", value: "Updated Regularly" },
 ];
 
 const techStack = [
@@ -61,10 +61,10 @@ export default function AboutPage() {
               Hust Media
             </p>
             <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
-              Digital Automation & Platform
+              Technical Documentation & System Architecture
             </h1>
             <p className="mt-4 text-base leading-relaxed text-slate-600">
-              Hust Media creates smart tools for Digital Automation and Data processing. We focus on building reliable, high-quality applications that are readily available on the <span className="font-semibold">Apple App Store</span> and <span className="font-semibold">Google Play</span>.
+              Hust Media publishes original technical articles on Web, Mobile, and API systems, with a focus on architecture, deployment, monitoring, and practical implementation.
             </p>
             {/* Badges: Kỹ thuật & An toàn */}
             <div className="flex flex-wrap items-center gap-3">
@@ -98,7 +98,7 @@ export default function AboutPage() {
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
                   {stat.label}
                 </p>
-                <p className="mt-2 text-2xl font-bold text-slate-800">{stat.value}</p>
+                <p className="mt-2 text-[1.45rem] font-medium text-slate-800">{stat.value}</p>
               </div>
             ))}
           </section>
