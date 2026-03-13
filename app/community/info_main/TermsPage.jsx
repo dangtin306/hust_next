@@ -6,12 +6,15 @@ const COOKIE_NAME = "hm_terms_accepted";
 const COOKIE_DAYS = 30;
 
 const sections = [
-  { id: "account-usage", title: "1. Account Usage" },
-  { id: "digital-credits", title: "2. Digital Credits Policy" },
-  { id: "user-conduct", title: "3. User Conduct" },
-  { id: "disclaimer", title: "4. Disclaimer and Moderation" },
-  { id: "changes", title: "5. Changes to Terms" },
-  { id: "contact", title: "6. Contact" },
+  { id: "purpose", title: "1. Purpose of the Site" },
+  { id: "acceptable-use", title: "2. Acceptable Use" },
+  { id: "intellectual-property", title: "3. Intellectual Property" },
+  { id: "content-accuracy", title: "4. Content Accuracy and Technical Reference" },
+  { id: "external-links", title: "5. External Links and Third-Party Resources" },
+  { id: "availability", title: "6. Availability and Changes" },
+  { id: "liability", title: "7. Limitation of Liability" },
+  { id: "changes-to-terms", title: "8. Changes to These Terms" },
+  { id: "contact", title: "9. Contact" },
 ];
 
 const getCookie = (name) => {
@@ -86,104 +89,131 @@ export default function TermsPage() {
                 Hust Media
               </p>
               <h1 className="mt-3 text-3xl font-semibold sm:text-4xl">
-                Terms of Service
+                Terms of Use
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Last updated: 2025-12-22
+                Last updated: 2026-02-08
               </p>
               <p className="mt-4 text-sm text-slate-600">
-                These Terms of Service ("Terms") govern your access to and use
-                of the Hust Media platform, including all web, mobile, and
-                related services (collectively, the "Services"). By accessing or
-                using the Services, you agree to be bound by these Terms.
+                These Terms of Use ("Terms") govern your access to and use of the Hust Media website,
+                including its technical articles, diagrams, documentation pages, and related content
+                (collectively, the "Site"). By accessing or using the Site, you agree to these Terms.
               </p>
             </header>
 
-            <section id="account-usage" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">1. Account Usage</h2>
+            <section id="purpose" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">1. Purpose of the Site</h2>
               <p className="text-sm text-slate-700">
-                You are responsible for maintaining the confidentiality of your
-                account credentials and for all activities that occur under your
-                account. You must provide accurate identification information
-                and promptly update it if it changes. Hust Media may use
-                security intelligence and risk signals, including checkscam and
-                anti-abuse systems, to protect users, prevent misuse, and enforce
-                these Terms.
-              </p>
-              <p className="text-sm text-slate-700">
-                You agree to notify us immediately of any unauthorized access or
-                suspected security breach related to your account.
+                Hust Media provides technical content for informational and reference purposes. The Site may
+                include articles, architecture notes, deployment guides, monitoring workflows, API references,
+                and related technical materials intended to support learning, research, and practical
+                implementation.
               </p>
             </section>
 
-            <section id="digital-credits" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">
-                2. Digital Credits Policy
-              </h2>
+            <section id="acceptable-use" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">2. Acceptable Use</h2>
               <p className="text-sm text-slate-700">
-                The Services may provide "Digital Credits" as an internal
-                utility unit that can be used to access or redeem Micro-Services
-                on the platform. Digital Credits are not legal tender, do not
-                represent any fiat currency, and have no cash or monetary value.
-                Digital Credits cannot be converted to cash, transferred outside
-                the platform, or used for any unlawful activity.
+                You may use the Site only for lawful purposes. You agree not to:
               </p>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
+                <li>misuse, disrupt, or interfere with the Site or its infrastructure;</li>
+                <li>
+                  attempt unauthorized access to any part of the Site, server, or connected systems;
+                </li>
+                <li>
+                  copy, scrape, reproduce, or redistribute large portions of the Site in a way that harms
+                  its operation or ownership;
+                </li>
+                <li>use the Site to distribute malicious code, spam, or abusive traffic.</li>
+              </ul>
               <p className="text-sm text-slate-700">
-                The purchase, sale, barter, or unauthorized transfer of Digital
-                Credits is strictly prohibited. Hust Media may suspend or revoke
-                Digital Credits and related access if it detects fraud, abuse, or
-                violation of these Terms.
-              </p>
-            </section>
-
-            <section id="user-conduct" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">3. User Conduct</h2>
-              <p className="text-sm text-slate-700">
-                You agree not to engage in any activity that undermines the
-                integrity of the Services, including but not limited to fraud,
-                spam, manipulation of tasks, use of bots or hacking tools, or
-                attempts to bypass verification mechanisms. Anti-fraud systems
-                may apply penalties, including removal of credits, restriction
-                of access, or account suspension.
-              </p>
-              <p className="text-sm text-slate-700">
-                You are solely responsible for all content you submit, and you
-                must comply with applicable laws and regulations.
+                We reserve the right to restrict access if we detect misuse, abuse, or activity that
+                threatens the security or stability of the platform.
               </p>
             </section>
 
-            <section id="disclaimer" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">
-                4. Disclaimer and Moderation
-              </h2>
+            <section id="intellectual-property" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">3. Intellectual Property</h2>
               <p className="text-sm text-slate-700">
-                The Services may include user-generated content ("UGC"). Hust
-                Media does not endorse UGC and is not responsible for the
-                accuracy, legality, or appropriateness of UGC posted by users.
+                Unless otherwise stated, all content on the Site, including text, diagrams, layout,
+                graphics, and original technical materials, is owned by or licensed to Hust Media and
+                protected by applicable intellectual property laws.
               </p>
               <p className="text-sm text-slate-700">
-                To maintain a safe environment, Hust Media employs AI-driven
-                content moderation and verification workflows. We reserve the
-                right to remove content, restrict access, or take enforcement
-                actions when content violates our policies or these Terms.
+                You may read, reference, and share links to the content for personal, educational, or
+                informational use. You may not republish, reproduce, modify, or commercially distribute Site
+                content without prior written permission, except where permitted by law.
               </p>
             </section>
 
-            <section id="changes" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">5. Changes to Terms</h2>
+            <section id="content-accuracy" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">4. Content Accuracy and Technical Reference</h2>
               <p className="text-sm text-slate-700">
-                We may update these Terms from time to time to reflect changes
-                in the Services, legal requirements, or operational practices.
-                Continued use of the Services after changes become effective
-                constitutes your acceptance of the updated Terms.
+                We aim to provide clear, practical, and accurate technical content. However, the Site is
+                provided on an "as is" and "as available" basis. Technical articles may contain errors,
+                omissions, simplified examples, or information that may become outdated over time.
+              </p>
+              <p className="text-sm text-slate-700">
+                The content on the Site does not constitute professional engineering, legal, security,
+                financial, or compliance advice. You are responsible for reviewing, testing, and validating
+                any implementation before using it in a production environment.
+              </p>
+            </section>
+
+            <section id="external-links" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">5. External Links and Third-Party Resources</h2>
+              <p className="text-sm text-slate-700">
+                The Site may reference third-party tools, frameworks, platforms, documentation, or external
+                websites for context and technical explanation. Hust Media is not responsible for the
+                content, availability, or policies of third-party resources.
+              </p>
+              <p className="text-sm text-slate-700">
+                Access to any third-party service is at your own discretion and subject to its own terms and
+                policies.
+              </p>
+            </section>
+
+            <section id="availability" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">6. Availability and Changes</h2>
+              <p className="text-sm text-slate-700">
+                We may update, revise, remove, or reorganize any part of the Site at any time, including
+                articles, diagrams, categories, navigation, and supporting pages, without prior notice.
+              </p>
+              <p className="text-sm text-slate-700">
+                We do not guarantee uninterrupted availability of the Site and are not liable for downtime,
+                temporary errors, or technical interruptions.
+              </p>
+            </section>
+
+            <section id="liability" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">7. Limitation of Liability</h2>
+              <p className="text-sm text-slate-700">
+                To the fullest extent permitted by law, Hust Media shall not be liable for any indirect,
+                incidental, consequential, or special damages arising from or related to your use of, or
+                inability to use, the Site or its content.
+              </p>
+              <p className="text-sm text-slate-700">
+                Your use of any information from the Site is at your own risk.
+              </p>
+            </section>
+
+            <section id="changes-to-terms" className="mt-6 space-y-3">
+              <h2 className="text-xl font-semibold">8. Changes to These Terms</h2>
+              <p className="text-sm text-slate-700">
+                We may update these Terms from time to time to reflect changes in the Site, legal
+                requirements, or operational practices. Continued use of the Site after updated Terms are
+                posted constitutes your acceptance of those changes.
               </p>
             </section>
 
             <section id="contact" className="mt-6 space-y-3">
-              <h2 className="text-xl font-semibold">6. Contact</h2>
+              <h2 className="text-xl font-semibold">9. Contact</h2>
+              <p className="text-sm text-slate-700">For questions regarding these Terms, please contact:</p>
               <p className="text-sm text-slate-700">
-                For questions or concerns regarding these Terms, please contact
-                Hust Media Support at: contact@hust.media.
+                Hust Media
+                <br />
+                Email: contact@hust.media
               </p>
             </section>
 
