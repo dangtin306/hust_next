@@ -35,7 +35,7 @@
     "sweetalert2": "^11.26.18"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -44,7 +44,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "nodemon": "^3.1.4",
-    "tailwindcss": "^4",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5"
   }
 }

@@ -1,0 +1,41 @@
+#	Ngôn ngữ	Mã	Dùng chính ở
+1	English	en	Anh, Mỹ, Canada, Úc, New Zealand
+2	Chinese (Simplified)	zhs	Trung Quốc, Singapore
+3	Chinese (Traditional)	zht	Đài Loan, Hong Kong, Macau
+4	Hindi	hi	Ấn Độ
+5	Spanish	es	Tây Ban Nha, Mexico, phần lớn Mỹ Latinh
+6	Arabic	ar	Ả Rập Saudi, UAE, Ai Cập, Iraq, Jordan và nhiều nước Ả Rập
+7	French	fr	Pháp, Bỉ, Thụy Sĩ, Canada, nhiều nước châu Phi
+8	Bengali	bn	Bangladesh, Ấn Độ
+9	Portuguese	pt	Bồ Đào Nha, Brazil, Angola, Mozambique
+10	Russian	ru	Nga, Belarus, Kazakhstan, Kyrgyzstan
+11	Urdu	ur	Pakistan, Ấn Độ
+12	Indonesian	id	Indonesia
+13	German	de	Đức, Áo, Thụy Sĩ
+14	Japanese	ja	Nhật Bản
+15	Marathi	mr	Ấn Độ
+16	Vietnamese	vi	Việt Nam
+17	Turkish	tr	Thổ Nhĩ Kỳ, Bắc Síp
+18	Swahili	sw	Tanzania, Kenya, Uganda, CHDC Congo
+19	Hausa	ha	Nigeria, Niger
+20	Filipino	fil	Philippines
+21	Korean	ko	Hàn Quốc, Triều Tiên
+22	Persian	fa	Iran, Afghanistan, Tajikistan
+23	Punjabi	pa	Pakistan, Ấn Độ
+24	Amharic	am	Ethiopia
+25	Thai	th	Thái Lan
+26	Javanese	jv	Indonesia
+27	Italian	it	Ý, Thụy Sĩ
+28	Yoruba	yo	Nigeria, Benin, Togo
+29	Malay	ms	Malaysia, Brunei, Singapore
+30	Polish	pl	Ba Lan
+31	Ukrainian	uk	Ukraine
+32	Dutch	nl	Hà Lan, Bỉ, Suriname
+33	Pashto	ps	Afghanistan, Pakistan
+34	Romanian	ro	Romania, Moldova
+35	Burmese	my	Myanmar
+36	Oromo	om	Ethiopia, Kenya
+37	Somali	so	Somalia, Djibouti, Ethiopia
+38	Nepali	ne	Nepal, Ấn Độ
+39	Azerbaijani	az	Azerbaijan, Iran
+40	Malagasy	mg	Madagascar

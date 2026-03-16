@@ -26,7 +26,58 @@
   "headers": [],
   "rewrites": {
     "beforeFiles": [],
-    "afterFiles": [],
+    "afterFiles": [
+      {
+        "source": "/next/services/development",
+        "destination": "/next/community/services/development",
+        "regex": "^/next/services/development(?:/)?$"
+      },
+      {
+        "source": "/next/features",
+        "destination": "/next/community/features",
+        "regex": "^/next/features(?:/)?$"
+      },
+      {
+        "source": "/next/docs",
+        "destination": "/next/community/docs",
+        "regex": "^/next/docs(?:/)?$"
+      },
+      {
+        "source": "/next/docs/:path*",
+        "destination": "/next/community/docs/:path*",
+        "regex": "^/next/docs(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/convert_national_market",
+        "destination": "/next/community/services/national_market",
+        "regex": "^/next/convert_national_market(?:/)?$"
+      },
+      {
+        "source": "/next/support",
+        "destination": "/next/community/services/support_page",
+        "regex": "^/next/support(?:/)?$"
+      },
+      {
+        "source": "/next/hustadmin",
+        "destination": "/next/shop/hustadmin",
+        "regex": "^/next/hustadmin(?:/)?$"
+      },
+      {
+        "source": "/next/hustadmin/:path*",
+        "destination": "/next/shop/hustadmin/:path*",
+        "regex": "^/next/hustadmin(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/check/:slug",
+        "destination": "/next/shop/scams_check/profile/:slug",
+        "regex": "^/next/check(?:/([^/]+?))(?:/)?$"
+      },
+      {
+        "source": "/next/check/:path*",
+        "destination": "/next/shop/scams_check/:path*",
+        "regex": "^/next/check(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ],
     "fallback": []
   },
   "dynamicRoutes": [
@@ -47,12 +98,28 @@
       "namedRegex": "^/community/docs/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
-      "page": "/docs/[slug]",
-      "regex": "^/docs/([^/]+?)(?:/)?$",
+      "page": "/community/services/[service]",
+      "regex": "^/community/services/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPservice": "nxtPservice"
+      },
+      "namedRegex": "^/community/services/(?<nxtPservice>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/shop/scams_check/profile/[slug]",
+      "regex": "^/shop/scams_check/profile/([^/]+?)(?:/)?$",
       "routeKeys": {
         "nxtPslug": "nxtPslug"
       },
-      "namedRegex": "^/docs/(?<nxtPslug>[^/]+?)(?:/)?$"
+      "namedRegex": "^/shop/scams_check/profile/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/shop/scams_check/[slug]",
+      "regex": "^/shop/scams_check/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/shop/scams_check/(?<nxtPslug>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [
@@ -75,28 +142,22 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
-      "page": "/docs",
-      "regex": "^/docs(?:/)?$",
+      "page": "/community/features",
+      "regex": "^/community/features(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/docs(?:/)?$"
+      "namedRegex": "^/community/features(?:/)?$"
+    },
+    {
+      "page": "/community/services/development",
+      "regex": "^/community/services/development(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/community/services/development(?:/)?$"
     },
     {
       "page": "/favicon.ico",
       "regex": "^/favicon\\.ico(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/favicon\\.ico(?:/)?$"
-    },
-    {
-      "page": "/features",
-      "regex": "^/features(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/features(?:/)?$"
-    },
-    {
-      "page": "/hustadmin/scheduler",
-      "regex": "^/hustadmin/scheduler(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/hustadmin/scheduler(?:/)?$"
     },
     {
       "page": "/info/about_us",
@@ -111,16 +172,34 @@
       "namedRegex": "^/info/private_policy(?:/)?$"
     },
     {
+      "page": "/info/seo_media",
+      "regex": "^/info/seo_media(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/info/seo_media(?:/)?$"
+    },
+    {
       "page": "/info/terms_service",
       "regex": "^/info/terms_service(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/info/terms_service(?:/)?$"
     },
     {
-      "page": "/support",
-      "regex": "^/support(?:/)?$",
+      "page": "/shop/hustadmin/scheduler",
+      "regex": "^/shop/hustadmin/scheduler(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/support(?:/)?$"
+      "namedRegex": "^/shop/hustadmin/scheduler(?:/)?$"
+    },
+    {
+      "page": "/tabs_nav/navConfig.json",
+      "regex": "^/tabs_nav/navConfig\\.json(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tabs_nav/navConfig\\.json(?:/)?$"
+    },
+    {
+      "page": "/tabs_nav/tabs_nav.json",
+      "regex": "^/tabs_nav/tabs_nav\\.json(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tabs_nav/tabs_nav\\.json(?:/)?$"
     }
   ],
   "dataRoutes": [],
