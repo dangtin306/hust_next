@@ -1,0 +1,939 @@
+[
+    {
+        "category": "wallet_seller",
+        "items": [
+            {
+                "slug_1": "coins",
+                "label": {
+                    "vi": "Trang chủ",
+                    "en": "Home"
+                },
+                "path": "/shop/e-commerce/coins/home"
+            },
+            {
+                "slug_1": "seller",
+                "label": {
+                    "vi": "Bán, rút Coins",
+                    "en": "Sell, withdraw Coins"
+                },
+                "path": "/shop/e-commerce/seller/orders",
+                "children": [
+                    {
+                        "slug_2": "orders",
+                        "label": {
+                            "vi": "Thêm đơn",
+                            "en": "Orders"
+                        },
+                        "path": "/shop/e-commerce/seller/orders"
+                    },
+                    {
+                        "slug_2": "pay_home",
+                        "label": {
+                            "vi": "Nhận tiền",
+                            "en": "Withdraw money"
+                        },
+                        "path": "/shop/e-commerce/seller/pay_home"
+                    },
+                    {
+                        "slug_2": "cash_diary",
+                        "label": {
+                            "vi": "Nhật ký bán",
+                            "en": "Sales history"
+                        },
+                        "path": "/shop/e-commerce/seller/cash_diary"
+                    },
+                    {
+                        "slug_2": "guide",
+                        "label": {
+                            "vi": "Hướng dẫn",
+                            "en": "Guide"
+                        },
+                        "path": "/shop/e-commerce/seller/guide"
+                    }
+                ]
+            },
+            {
+                "slug_1": "partner",
+                "label": {
+                    "vi": "Mua Coins",
+                    "en": "Buy Coins"
+                },
+                "path": "/shop/e-commerce/partner/orders",
+                "children": [
+                    {
+                        "slug_2": "orders",
+                        "label": {
+                            "vi": "Donate",
+                            "en": "Donate"
+                        },
+                        "path": "/shop/e-commerce/partner/orders"
+                    },
+                    {
+                        "slug_2": "guide",
+                        "label": {
+                            "vi": "Hướng dẫn",
+                            "en": "Guide"
+                        },
+                        "path": "/shop/e-commerce/partner/guide"
+                    }
+                ]
+            },
+            {
+                "slug_1": "exchange",
+                "label": {
+                    "vi": "Log giao dịch",
+                    "en": "Trade log"
+                },
+                "path": "/shop/e-commerce/exchange"
+            }
+        ]
+    },
+    {
+        "category": "wallet_savings",
+        "items": [
+            {
+                "slug_1": "home",
+                "label": {
+                    "vi": "Home",
+                    "en": "Home"
+                },
+                "path": "/shop/savings/home"
+            },
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Gửi",
+                    "en": "Send"
+                },
+                "path": "/shop/savings/orders"
+            },
+            {
+                "slug_1": "plans",
+                "label": {
+                    "vi": "Tính tiền nhận",
+                    "en": "Sell Coins"
+                },
+                "path": "/shop/savings/plans/savings_checking"
+            },
+            {
+                "slug_1": "history",
+                "label": {
+                    "vi": "Lịch sử",
+                    "en": "History"
+                },
+                "path": "/shop/savings/history/home",
+                "children": [
+                    {
+                        "slug_2": "home",
+                        "label": {
+                            "vi": "Tiền gửi",
+                            "en": "Home"
+                        },
+                        "path": "/shop/savings/history/home"
+                    },
+                    {
+                        "slug_2": "cash_diary",
+                        "label": {
+                            "vi": "Danh sách nhận",
+                            "en": "List Coins"
+                        },
+                        "path": "/shop/savings/history/cash_diary"
+                    },
+                    {
+                        "slug_2": "withdraw",
+                        "label": {
+                            "vi": "Rút tiền",
+                            "en": "Withdraw money"
+                        },
+                        "path": "/shop/e-commerce/seller/pay_home"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "category": "videos_maker",
+        "items": [
+            {
+                "slug_1": "home_videos",
+                "label": {
+                    "vi": "Home",
+                    "en": "Home"
+                },
+                "path": "/reactapp/videos_maker/home_videos"
+            },
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Thêm videos",
+                    "en": "Add videos"
+                },
+                "path": "/reactapp/videos_maker/orders"
+            },
+            {
+                "slug_1": "cash_diary",
+                "label": {
+                    "vi": "Nhật ký",
+                    "en": "History"
+                },
+                "path": "/reactapp/videos_maker/cash_diary"
+            },
+            {
+                "slug_1": "exchange",
+                "label": {
+                    "vi": "Hướng dẫn",
+                    "en": "Guide"
+                },
+                "path": "/reactapp/videos_maker/exchange",
+                "children": [
+                    {
+                        "slug_2": "lists",
+                        "label": {
+                            "vi": "Tham khảo",
+                            "en": "Exchange"
+                        },
+                        "path": "/reactapp/videos_maker/exchange/lists"
+                    },
+                    {
+                        "slug_2": "tricks",
+                        "label": {
+                            "vi": "Thủ thuật",
+                            "en": "Tricks"
+                        },
+                        "path": "/reactapp/videos_maker/exchange/tricks"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "category": "check_scam_1",
+        "items": [
+            {
+                "slug_1": "home",
+                "label": {
+                    "vi": "Tổng quan",
+                    "en": "Overview"
+                },
+                "path": "/shop/check/home"
+            },
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Quản lý hồ sơ",
+                    "en": "My Cases"
+                },
+                "path": "/shop/check/orders/posts",
+                "children": [
+                    {
+                        "slug_2": "posts",
+                        "label": {
+                            "vi": "Gửi báo cáo mới",
+                            "en": "Submit Incident"
+                        },
+                        "path": "/shop/check/orders/posts"
+                    },
+                    {
+                        "slug_2": "nhatkyorders",
+                        "label": {
+                            "vi": "Theo dõi trạng thái",
+                            "en": "Case History"
+                        },
+                        "path": "/shop/check/orders/nhatkyorders"
+                    }
+                ]
+            },
+            {
+                "slug_1": "lists",
+                "label": {
+                    "vi": "Cơ sở dữ liệu",
+                    "en": "Threat DB"
+                },
+                "path": "/shop/check/lists/exchange",
+                "children": [
+                    {
+                        "slug_2": "exchange",
+                        "label": {
+                            "vi": "Danh sách cảnh báo",
+                            "en": "Threat List"
+                        },
+                        "path": "/shop/check/lists/exchange"
+                    },
+                    {
+                        "slug_2": "search",
+                        "label": {
+                            "vi": "Tra cứu định danh",
+                            "en": "Entity Lookup"
+                        },
+                        "path": "/shop/check/lists/search/home",
+                        "children": [
+                            {
+                                "slug_3": "home",
+                                "label": {
+                                    "vi": "Trung tâm tra cứu",
+                                    "en": "Dashboard"
+                                },
+                                "path": "/shop/check/lists/search/home"
+                            },
+                            {
+                                "slug_3": "number",
+                                "label": {
+                                    "vi": "Tài chính & SĐT",
+                                    "en": "Financial & Telecom"
+                                },
+                                "path": "/shop/check/lists/search/number"
+                            },
+                            {
+                                "slug_3": "social",
+                                "label": {
+                                    "vi": "Định danh xã hội",
+                                    "en": "Digital Footprint"
+                                },
+                                "path": "/shop/check/lists/search/social"
+                            },
+                            {
+                                "slug_3": "website",
+                                "label": {
+                                    "vi": "Tình báo tên miền",
+                                    "en": "Domain Intelligence"
+                                },
+                                "path": "/shop/check/lists/search/website"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "slug_1": "log",
+                "label": {
+                    "vi": "Nhật ký hệ thống",
+                    "en": "System Logs"
+                },
+                "path": "/shop/check/log"
+            }
+        ]
+    },
+    {
+        "category": "check_scam_2",
+        "items": [
+            {
+                "slug_1": "home",
+                "label": {
+                    "vi": "Tổng quan",
+                    "en": "Overview"
+                },
+                "path": "/shop/check/home"
+            },
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Quản lý hồ sơ",
+                    "en": "My Cases"
+                },
+                "path": "/shop/check/orders/posts",
+                "children": [
+                    {
+                        "slug_2": "posts",
+                        "label": {
+                            "vi": "Gửi dữ liệu",
+                            "en": "Submit Data"
+                        },
+                        "path": "/shop/check/orders/posts"
+                    },
+                    {
+                        "slug_2": "nhatkyorders",
+                        "label": {
+                            "vi": "Theo dõi trạng thái",
+                            "en": "Case History"
+                        },
+                        "path": "/shop/check/orders/nhatkyorders"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "category": "phone_sms",
+        "items": [
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Orders",
+                    "en": "Orders"
+                },
+                "path": "/shop/phone/sms/orders"
+            },
+            {
+                "slug_1": "history",
+                "label": {
+                    "vi": "Nhật ký thuê số",
+                    "en": "History"
+                },
+                "path": "/shop/phone/sms/history"
+            }
+        ]
+    },
+    {
+        "category": "referrals",
+        "items": [
+            {
+                "slug_1": "home",
+                "label": {
+                    "vi": "Home",
+                    "en": "Home"
+                },
+                "path": "/shop/referrals/home"
+            },
+            {
+                "slug_1": "lists",
+                "label": {
+                    "vi": "Danh sách",
+                    "en": "Lists"
+                },
+                "path": "/shop/referrals/lists/history_vip_1",
+                "children": [
+                    {
+                        "slug_2": "history_vip_1",
+                        "label": {
+                            "vi": "Tuyến 1",
+                            "en": "First-level"
+                        },
+                        "path": "/shop/referrals/lists/history_vip_1"
+                    },
+                    {
+                        "slug_2": "history_vip_2",
+                        "label": {
+                            "vi": "Tuyến 2",
+                            "en": "Second-level"
+                        },
+                        "path": "/shop/referrals/lists/history_vip_2"
+                    },
+                    {
+                        "slug_2": "history_vip_3",
+                        "label": {
+                            "vi": "Tuyến 3",
+                            "en": "Third-level"
+                        },
+                        "path": "/shop/referrals/lists/history_vip_3"
+                    },
+                    {
+                        "slug_2": "cash_diary",
+                        "label": {
+                            "vi": "Nhật ký nhận coins",
+                            "en": "History get coins"
+                        },
+                        "path": "/shop/referrals/lists/cash_diary"
+                    }
+                ]
+            },
+            {
+                "slug_1": "pay",
+                "label": {
+                    "vi": "Rút coins",
+                    "en": "Withdraw coins"
+                },
+                "path": "/shop/referrals/pay"
+            },
+            {
+                "slug_1": "guide",
+                "label": {
+                    "vi": "Tính Coins",
+                    "en": "Guide"
+                },
+                "path": "/shop/referrals/guide"
+            }
+        ]
+    },
+    {
+        "category": "auto_tools",
+        "items": [
+            {
+                "slug_1": "home_tools",
+                "label": {
+                    "vi": "Home",
+                    "en": "Home"
+                },
+                "path": "/shop/auto_tools/home_tools"
+            },
+            {
+                "slug_1": "orders",
+                "label": {
+                    "vi": "Gia hạn",
+                    "en": "Extend"
+                },
+                "path": "/shop/auto_tools/orders"
+            },
+            {
+                "slug_1": "history",
+                "label": {
+                    "vi": "Lịch sử",
+                    "en": "History"
+                },
+                "path": "/shop/auto_tools/history"
+            }
+        ]
+    },
+    {
+        "category": "ai_utility",
+        "items": [
+            {
+                "slug_1": "home",
+                "label": {
+                    "vi": "Home",
+                    "en": "Home"
+                },
+                "path": "/ai/home"
+            },
+            {
+                "slug_1": [
+                    "utility",
+                    "history",
+                    "plans"
+                ],
+                "label": {
+                    "vi": "Dịch vụ",
+                    "en": "Service"
+                },
+                "path": "/ai/utility/home_vip",
+                "children": [
+                    {
+                        "slug_1": [
+                            "utility",
+                            "plans"
+                        ],
+                        "label": {
+                            "vi": "Orders",
+                            "en": "Orders"
+                        },
+                        "path": "/ai/utility/home_vip"
+                    },
+                    {
+                        "slug_1": "history",
+                        "label": {
+                            "vi": "Nhật ký",
+                            "en": "History"
+                        },
+                        "path": "/ai/history/home"
+                    }
+                ]
+            },
+            {
+                "slug_1": "partner",
+                "label": {
+                    "vi": "Hướng dẫn",
+                    "en": "Hướng dẫn"
+                },
+                "path": "/ai/home"
+            }
+        ]
+    },
+    {
+        "category": "mmo_p2p_shop",
+        "items": [
+            {
+                "slug_1": "mmo",
+                "label": {
+                    "vi": "p2p MMO",
+                    "en": "P2P MMO"
+                },
+                "path": "/shop/p2p/mmo/main",
+                "children": [
+                    {
+                        "slug_2": "main",
+                        "label": {
+                            "vi": "home",
+                            "en": "Home"
+                        },
+                        "path": "/shop/p2p/mmo/main"
+                    },
+                    {
+                        "slug_2": [
+                            "orders",
+                            "cilent"
+                        ],
+                        "label": {
+                            "vi": "Sàn p2p mmo",
+                            "en": "P2P MMO Marketplace"
+                        },
+                        "path": "/shop/p2p/mmo/orders/home",
+                        "children": [
+                            {
+                                "slug_3": "vip",
+                                "label": {
+                                    "vi": "Thêm nhiệm vụ",
+                                    "en": "Add Task"
+                                },
+                                "path": "/shop/p2p/mmo/orders/vip"
+                            },
+                            {
+                                "slug_3": [
+                                    "rollup",
+                                    "option_view",
+                                    "p2p_mmo"
+                                ],
+                                "label": {
+                                    "vi": "Xem nhiệm vụ",
+                                    "en": "View Tasks"
+                                },
+                                "path": "/shop/p2p/mmo/cilent/p2p_mmo?webappmode=showadview"
+                            }
+                        ]
+                    },
+                    {
+                        "slug_2": "history",
+                        "label": {
+                            "vi": "Nhật ký",
+                            "en": "History"
+                        },
+                        "path": "/shop/p2p/mmo/history/home",
+                        "children": [
+                            {
+                                "slug_3": "nhatkyorders",
+                                "label": {
+                                    "vi": "Đơn hàng",
+                                    "en": "Orders"
+                                },
+                                "path": "/shop/p2p/mmo/history/nhatkyorders"
+                            },
+                            {
+                                "slug_3": "accept",
+                                "label": {
+                                    "vi": "Người làm",
+                                    "en": "Workers"
+                                },
+                                "path": "/shop/p2p/mmo/history/accept/home",
+                                "children": [
+                                    {
+                                        "slug_4": "home",
+                                        "label": {
+                                            "vi": "Home",
+                                            "en": "Home"
+                                        },
+                                        "path": "/shop/p2p/mmo/history/accept/home"
+                                    },
+                                    {
+                                        "slug_4": "approve",
+                                        "label": {
+                                            "vi": "Duyệt đơn",
+                                            "en": "Approve Orders"
+                                        },
+                                        "path": "/shop/p2p/mmo/history/accept/approve"
+                                    },
+                                    {
+                                        "slug_4": "history",
+                                        "label": {
+                                            "vi": "Lịch sử",
+                                            "en": "History"
+                                        },
+                                        "path": "/shop/p2p/mmo/history/accept/history"
+                                    }
+                                ]
+                            },
+                            {
+                                "slug_3": "cash_diary",
+                                "label": {
+                                    "vi": "Làm đơn",
+                                    "en": "Process Orders"
+                                },
+                                "path": "/shop/p2p/mmo/history/cash_diary"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "slug_1": [
+                    "product"
+                ],
+                "label": {
+                    "vi": "Product",
+                    "en": "Product"
+                },
+                "path": "/shop/accounts/product/home",
+                "children": [
+                    {
+                        "slug_2": "home",
+                        "label": {
+                            "vi": "home",
+                            "en": "Home"
+                        },
+                        "path": "/shop/accounts/product/home"
+                    },
+                    {
+                        "slug_2": [
+                            "play",
+                            "support",
+                            "search",
+                            "accounts_history"
+                        ],
+                        "label": {
+                            "vi": "Kho MMO",
+                            "en": "MMO Resources"
+                        },
+                        "path": "/shop/accounts/product/play",
+                        "children": [
+                            {
+                                "slug_2": "play",
+                                "label": {
+                                    "vi": "Dịch vụ",
+                                    "en": "Services"
+                                },
+                                "path": "/shop/accounts/product/play"
+                            },
+                            {
+                                "slug_2": "search",
+                                "label": {
+                                    "vi": "Tìm kiếm",
+                                    "en": "Search"
+                                },
+                                "path": "/shop/accounts/product/search"
+                            },
+                            {
+                                "slug_2": "support",
+                                "label": {
+                                    "vi": "Hưỡng dẫn",
+                                    "en": "Guide"
+                                },
+                                "path": "/shop/accounts/product/support"
+                            },
+                            {
+                                "slug_2": "accounts_history",
+                                "label": {
+                                    "vi": "Nhật ký",
+                                    "en": "History"
+                                },
+                                "path": "/shop/accounts/product/accounts_history"
+                            }
+                        ]
+                    },
+                    {
+                        "slug_2": "api",
+                        "label": {
+                            "vi": "Api",
+                            "en": "API"
+                        },
+                        "path": "/shop/accounts/product/api",
+                        "children": [
+                            {
+                                "slug_3": "services",
+                                "label": {
+                                    "vi": "Danh sách sản phẩm",
+                                    "en": "Product List"
+                                },
+                                "path": "/shop/accounts/product/api/services"
+                            },
+                            {
+                                "slug_3": "orders",
+                                "label": {
+                                    "vi": "Mua sản phẩm",
+                                    "en": "Buy Products"
+                                },
+                                "path": "/shop/accounts/product/api/orders"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "slug_1": "sellers",
+                "label": {
+                    "vi": "Đăng bán",
+                    "en": "Sell"
+                },
+                "path": "/shop/accounts/sellers/home",
+                "children": [
+                    {
+                        "slug_2": "home",
+                        "label": {
+                            "vi": "home",
+                            "en": "Home"
+                        },
+                        "path": "/shop/accounts/sellers/home"
+                    },
+                    {
+                        "slug_2": "settings",
+                        "label": {
+                            "vi": "Profile",
+                            "en": "Profile"
+                        },
+                        "path": "/shop/accounts/sellers/settings/home",
+                        "children": [
+                            {
+                                "slug_3": "home",
+                                "label": {
+                                    "vi": "home",
+                                    "en": "home"
+                                },
+                                "path": "/shop/accounts/sellers/settings/home"
+                            },
+                            {
+                                "slug_3": "edit",
+                                "label": {
+                                    "vi": "edit",
+                                    "en": "edit"
+                                },
+                                "path": "/shop/accounts/sellers/settings/edit"
+                            }
+                        ]
+                    },
+                    {
+                        "slug_2": "shop",
+                        "label": {
+                            "vi": "Kho hàng",
+                            "en": "Inventory"
+                        },
+                        "path": "/shop/accounts/sellers/shop/home",
+                        "children": [
+                            {
+                                "slug_3": "home",
+                                "label": {
+                                    "vi": "home",
+                                    "en": "Home"
+                                },
+                                "path": "/shop/accounts/sellers/shop/home"
+                            },
+                            {
+                                "slug_3": "services",
+                                "label": {
+                                    "vi": "Sản phẩm",
+                                    "en": "Products"
+                                },
+                                "path": "/shop/accounts/sellers/shop/services/lists",
+                                "children": [
+                                    {
+                                        "slug_4": "lists",
+                                        "label": {
+                                            "vi": "Danh sách",
+                                            "en": "List"
+                                        },
+                                        "path": "/shop/accounts/sellers/shop/services/lists"
+                                    },
+                                    {
+                                        "slug_4": "orders",
+                                        "label": {
+                                            "vi": "Thêm mới",
+                                            "en": "Add New"
+                                        },
+                                        "path": "/shop/accounts/sellers/shop/services/orders"
+                                    }
+                                ]
+                            },
+                            {
+                                "slug_3": "orders",
+                                "label": {
+                                    "vi": "Tài nguyên",
+                                    "en": "Resources"
+                                },
+                                "path": "/shop/accounts/sellers/shop/orders",
+                                "children": [
+                                    {
+                                        "slug_4": "local",
+                                        "label": {
+                                            "vi": "Bán trong kho",
+                                            "en": "Sell from Inventory"
+                                        },
+                                        "path": "/shop/accounts/sellers/shop/orders/local"
+                                    },
+                                    {
+                                        "slug_4": "api",
+                                        "label": {
+                                            "vi": "Bán theo api",
+                                            "en": "Sell via API"
+                                        },
+                                        "path": "/shop/accounts/sellers/shop/orders/api"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "slug_2": "history",
+                        "label": {
+                            "vi": "Lịch sử",
+                            "en": "History"
+                        },
+                        "path": "/shop/accounts/sellers/history/home",
+                        "children": [
+                            {
+                                "slug_3": "home",
+                                "label": {
+                                    "vi": "home",
+                                    "en": "Home"
+                                },
+                                "path": "/shop/accounts/sellers/history/home"
+                            },
+                            {
+                                "slug_3": "orders",
+                                "label": {
+                                    "vi": "Lịch sử bán",
+                                    "en": "Sales History"
+                                },
+                                "path": "/shop/accounts/sellers/history/orders"
+                            },
+                            {
+                                "slug_3": "lists",
+                                "label": {
+                                    "vi": "Thống kê coins",
+                                    "en": "Coin Statistics"
+                                },
+                                "path": "/shop/accounts/sellers/history/lists"
+                            }
+                        ]
+                    },
+                    {
+                        "slug_2": "api",
+                        "label": {
+                            "vi": "Api",
+                            "en": "API"
+                        },
+                        "path": "/shop/accounts/sellers/api",
+                        "children": [
+                            {
+                                "slug_3": "lists",
+                                "label": {
+                                    "vi": "Thông tin",
+                                    "en": "Information"
+                                },
+                                "path": "/shop/accounts/sellers/api/lists"
+                            },
+                            {
+                                "slug_3": "settings",
+                                "label": {
+                                    "vi": "Cài đặt",
+                                    "en": "Settings"
+                                },
+                                "path": "/shop/accounts/sellers/api/settings"
+                            },
+                            {
+                                "slug_3": "guide",
+                                "label": {
+                                    "vi": "Hướng dẫn",
+                                    "en": "Guide"
+                                },
+                                "path": "/shop/accounts/sellers/api/guide",
+                                "children": [
+                                    {
+                                        "slug_4": "orders",
+                                        "label": {
+                                            "vi": "Bán qua api",
+                                            "en": "Sell via API"
+                                        },
+                                        "path": "/shop/accounts/sellers/api/guide/orders"
+                                    },
+                                    {
+                                        "slug_4": "history",
+                                        "label": {
+                                            "vi": "Lịch sử bán",
+                                            "en": "Sales History"
+                                        },
+                                        "path": "/shop/accounts/sellers/api/guide/history"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]
