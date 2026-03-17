@@ -171,7 +171,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
           flex flex-col h-full overflow-y-auto
           bg-gradient-to-r from-indigo-100 via-purple-200 to-pink-200
           px-4 py-4 fixed top-0 left-0
-          w-[66vw] min-w-[240px] max-w-[320px] md:w-[280px] md:min-w-[280px] md:max-w-[280px]
+          w-[75vw] min-w-[240px] max-w-[320px] md:w-[280px] md:min-w-[280px] md:max-w-[280px]
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
         `}
