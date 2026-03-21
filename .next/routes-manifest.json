@@ -82,6 +82,14 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/accounts/product/play/[slug]",
+      "regex": "^/accounts/product/play/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/accounts/product/play/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/features-image/[...asset]",
       "regex": "^/api/features\\-image/(.+?)(?:/)?$",
       "routeKeys": {
@@ -104,6 +112,30 @@
         "nxtPservice": "nxtPservice"
       },
       "namedRegex": "^/community/services/(?<nxtPservice>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/resource/product/play/[slug]",
+      "regex": "^/resource/product/play/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/resource/product/play/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/resources/play/[slug]",
+      "regex": "^/resources/play/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/resources/play/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/resources/[[...segments]]",
+      "regex": "^/resources(?:/(.+?))?(?:/)?$",
+      "routeKeys": {
+        "nxtPsegments": "nxtPsegments"
+      },
+      "namedRegex": "^/resources(?:/(?<nxtPsegments>.+?))?(?:/)?$"
     },
     {
       "page": "/shop/scams_check/profile/[slug]",
@@ -188,6 +220,12 @@
       "regex": "^/shop/hustadmin/scheduler(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/shop/hustadmin/scheduler(?:/)?$"
+    },
+    {
+      "page": "/shop/resources",
+      "regex": "^/shop/resources(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/resources(?:/)?$"
     },
     {
       "page": "/tabs_nav/navConfig.json",

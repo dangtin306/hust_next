@@ -2,7 +2,7 @@
 
 import navConfigRaw from "@/app_structure/tabs_nav/navConfig.json";
 import { TabsUiFrame, TabsUiItem } from "../../../../react_app/src/app_structure/tabs_nav/tabs_ui.jsx";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 type SlugValue = string | string[] | undefined;
 
@@ -23,6 +23,14 @@ type NavCategory = {
 
 const navConfig = navConfigRaw as NavCategory[];
 
+const readCookie = (name: string) => {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split("=")[1]) : "";
+};
+
 const matchesSlug = (configValue: SlugValue, currentValue: string) => {
   if (!configValue) return false;
   if (Array.isArray(configValue)) return configValue.includes(currentValue);
@@ -31,7 +39,39 @@ const matchesSlug = (configValue: SlugValue, currentValue: string) => {
 
 const pickLabel = (label?: Record<string, string>, lang = "en") => {
   if (!label) return "";
-  return label[lang] || label.en || label.vi || "";
+  const normalizedLang = String(lang || "").trim().toLowerCase();
+  const baseLang = normalizedLang.split("-")[0];
+  return (
+    label[normalizedLang] ||
+    label[baseLang] ||
+    label.en ||
+    label.vi ||
+    Object.values(label)[0] ||
+    ""
+  );
+};
+
+const normalizeMarketLang = (value: string) => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) return "vi";
+
+  const aliasMap: Record<string, string> = {
+    "en-us": "en",
+    "en-gb": "en",
+    "vi-vn": "vi",
+    "zh-cn": "zhs",
+    "zh-sg": "zhs",
+    "zh-hans": "zhs",
+    "zh-tw": "zht",
+    "zh-hk": "zht",
+    "zh-mo": "zht",
+    "zh-hant": "zht",
+  };
+
+  return aliasMap[normalized] || normalized;
 };
 
 const isEmptySlug = (value: unknown) => value === null || value === undefined || value === "";
@@ -57,16 +97,72 @@ const getSub2Key = (sub2: NavNode, idx: number) => String(sub2.slug_4 ?? sub2.sl
 
 type ProfileNavProps = {
   slug: string;
+  initialSlug1?: string;
+  initialSlug2?: string;
+  initialSlug3?: string;
+  initialSlug4?: string;
 };
 
-export default function ProfileNav({ slug }: ProfileNavProps) {
+const BASE_PATH = "/next";
+
+const PRODUCT_PREFIX = "/shop/accounts/product/";
+const SELLERS_PREFIX = "/shop/accounts/sellers/";
+const MMO_PREFIX = "/shop/p2p/mmo/";
+
+const mapLegacyToResourcesPath = (path: string, currentSlug: string) => {
+  const [rawPath, rawQuery] = path.split("?");
+  let mapped = rawPath;
+
+  if (rawPath.startsWith(PRODUCT_PREFIX)) {
+    const rest = rawPath.slice(PRODUCT_PREFIX.length);
+    if (
+      (rest === "play" || rest === "search" || rest === "support") &&
+      currentSlug
+    ) {
+      mapped = `/resources/${rest}/${encodeURIComponent(currentSlug)}`;
+    } else {
+      mapped = `/resources/${rest}`;
+    }
+  } else if (rawPath.startsWith(SELLERS_PREFIX)) {
+    const rest = rawPath.slice(SELLERS_PREFIX.length);
+    mapped = `/resources/sellers/${rest}`;
+  } else if (rawPath.startsWith(MMO_PREFIX)) {
+    const rest = rawPath.slice(MMO_PREFIX.length);
+    mapped = `/resources/mmo/${rest}`;
+  }
+
+  if (mapped.startsWith("/resources")) {
+    mapped = `${BASE_PATH}${mapped}`;
+  }
+
+  return rawQuery ? `${mapped}?${rawQuery}` : mapped;
+};
+
+export default function ProfileNav({
+  slug,
+  initialSlug1 = "product",
+  initialSlug2 = "play",
+  initialSlug3 = "",
+  initialSlug4 = "",
+}: ProfileNavProps) {
   const categoryConfig = navConfig.find((cat) => cat.category === "mmo_p2p_shop");
   const items = categoryConfig?.items || [];
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  const [activeSlug1, setActiveSlug1] = useState("product");
-  const [activeSlug2, setActiveSlug2] = useState("play");
-  const [activeSlug3, setActiveSlug3] = useState("");
-  const [activeSlug4, setActiveSlug4] = useState("");
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const lang = useSyncExternalStore(
+    () => () => {},
+    () => normalizeMarketLang(readCookie("national_market")),
+    () => "vi"
+  );
+
+  const [activeSlug1, setActiveSlug1] = useState(initialSlug1);
+  const [activeSlug2, setActiveSlug2] = useState(initialSlug2);
+  const [activeSlug3, setActiveSlug3] = useState(initialSlug3);
+  const [activeSlug4, setActiveSlug4] = useState(initialSlug4);
 
   const pickPrimarySlug = (value?: SlugValue) => {
     if (Array.isArray(value)) return String(value[0] || "");
@@ -79,7 +175,7 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
       window.open(path, "_blank", "noopener,noreferrer");
       return;
     }
-    window.location.href = path;
+    window.location.assign(mapLegacyToResourcesPath(path, slug));
   };
 
   const clickLevel1 = (item: NavNode) => {
@@ -143,15 +239,25 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
     return false;
   };
 
-  return (
-    <div className="mx-auto w-full max-w-4xl px-3 py-4" data-product-slug={slug}>
+  if (!isHydrated) {
+    return (
       <TabsUiFrame>
-        <div className="flex space-x-4 justify-center">
+        <div className="flex items-center justify-center py-5" aria-label="Loading navigation">
+          <span className="inline-block h-7 w-7 animate-spin rounded-full border-[3px] border-emerald-200 border-t-pink-400" />
+        </div>
+      </TabsUiFrame>
+    );
+  }
+
+  return (
+    <TabsUiFrame>
+      <div className="flex flex-col gap-2" data-product-slug={slug}>
+        <div className="flex items-center justify-center gap-4">
           {items.map((item, idx) => (
             <TabsUiItem
               key={getItemKey(item, idx)}
               active={matchesSlug(item.slug_1, activeSlug1)}
-              label={pickLabel(item.label, "en")}
+              label={pickLabel(item.label, lang)}
               onClick={() => clickLevel1(item)}
             />
           ))}
@@ -159,13 +265,13 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
 
         {items.map((item, idx) =>
           item.children && matchesSlug(item.slug_1, activeSlug1) ? (
-            <div key={`${getItemKey(item, idx)}-lv2`} className="flex flex-col space-y-2 mt-2 items-center w-full">
-              <div className="flex space-x-4 justify-center w-full">
+            <div key={`${getItemKey(item, idx)}-lv2`} className="flex w-full flex-col items-center gap-2">
+              <div className="flex w-full items-center justify-center gap-4">
                 {item.children.map((child, childIdx) => (
                   <TabsUiItem
                     key={getChildKey(child, childIdx)}
                     active={matchesChildSlug(child, activeSlug2, activeSlug1)}
-                    label={pickLabel(child.label, "en")}
+                    label={pickLabel(child.label, lang)}
                     onClick={() => clickLevel2(child)}
                   />
                 ))}
@@ -173,13 +279,13 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
 
               {item.children.map((child, childIdx) =>
                 child.children && matchesChildSlug(child, activeSlug2, activeSlug1) ? (
-                  <div key={`${getChildKey(child, childIdx)}-lv3`} className="flex flex-col space-y-2 mt-2 items-center w-full">
-                    <div className="flex space-x-4 justify-center w-full">
+                  <div key={`${getChildKey(child, childIdx)}-lv3`} className="flex w-full flex-col items-center gap-2">
+                    <div className="flex w-full items-center justify-center gap-4">
                       {child.children.map((sub, subIdx) => (
                         <TabsUiItem
                           key={getSubKey(sub, subIdx)}
                           active={isSubActive(sub)}
-                          label={pickLabel(sub.label, "en")}
+                          label={pickLabel(sub.label, lang)}
                           onClick={() => clickLevel3(sub)}
                         />
                       ))}
@@ -187,12 +293,12 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
 
                     {child.children.map((sub, subIdx) =>
                       sub.children && isSubActive(sub) ? (
-                        <div key={`${getSubKey(sub, subIdx)}-lv4`} className="flex space-x-4 mt-2 justify-center w-full">
+                        <div key={`${getSubKey(sub, subIdx)}-lv4`} className="flex w-full items-center justify-center gap-4">
                           {sub.children.map((sub2, sub2Idx) => (
                             <TabsUiItem
                               key={getSub2Key(sub2, sub2Idx)}
                               active={isSub2Active(sub2)}
-                              label={pickLabel(sub2.label, "en")}
+                              label={pickLabel(sub2.label, lang)}
                               onClick={() => clickLevel4(sub2)}
                             />
                           ))}
@@ -205,7 +311,7 @@ export default function ProfileNav({ slug }: ProfileNavProps) {
             </div>
           ) : null
         )}
-      </TabsUiFrame>
-    </div>
+      </div>
+    </TabsUiFrame>
   );
 }
