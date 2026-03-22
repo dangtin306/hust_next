@@ -1,7 +1,7 @@
 "use client";
 
-import { FaSync } from "react-icons/fa";
-import { SlHome } from "react-icons/sl";
+import NavDownUI from "../../../react_app/src/app_structure/app_fontend/nav_down_ui.jsx";
+import CountryFlagsUI from "../../../react_app/src/app_structure/app_fontend/country_flags_ui.jsx";
 
 const readCookie = (name: string) => {
   if (typeof document === "undefined") return "";
@@ -16,6 +16,12 @@ const removeCookie = (name: string) => {
   document.cookie = `${name}=; max-age=0; path=/`;
 };
 
+const writeCookie = (name: string, value: string, maxAgeSeconds?: number) => {
+  if (typeof document === "undefined") return;
+  const maxAgePart = typeof maxAgeSeconds === "number" ? `; max-age=${maxAgeSeconds}` : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/${maxAgePart}`;
+};
+
 const translations = {
   vi: {
     home: "Trang chủ",
@@ -27,18 +33,18 @@ const translations = {
   },
 } as const;
 
-const countryFlags: Record<string, { emoji: string; label: string }> = {
-  en: { emoji: "🇺🇸", label: "United States" },
-  vi: { emoji: "🇻🇳", label: "Vietnam" },
-};
-
 const NavDown = () => {
   const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const displayHostname = hostname.includes("tecom.pro") ? "hust.media" : hostname;
-  const lang = readCookie("national_market") === "en" ? "en" : "vi";
-  const currentFlag = countryFlags[readCookie("national_market") || "vi"];
+  const marketCode = String(readCookie("national_market") || "").toLowerCase();
+  const lang = marketCode === "en" ? "en" : "vi";
+  const setNationalUriChangeCookie = (uri: string) => {
+    writeCookie("national_uri_change", uri, 600);
+  };
 
   const changeNational = async () => {
+    const currentUri = `${window.location.pathname}${window.location.search}${window.location.hash}` || "/";
+    setNationalUriChangeCookie(currentUri);
     removeCookie("national_market");
 
     try {
@@ -65,40 +71,15 @@ const NavDown = () => {
       window.alert("Error changing national market");
     }
   };
-
   return (
-    <details className="relative inline-block [&_summary::-webkit-details-marker]:hidden [&_summary::marker]:hidden">
-      <summary className="cursor-pointer list-none rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70 hover:shadow hover:ring-slate-300">
-        {displayHostname}
-      </summary>
-
-      <div className="absolute right-2 mt-1 w-44 rounded-lg border border-gray-200 bg-white shadow-lg z-50">
-        <a
-          href="/reactapp/"
-          className="flex items-center gap-2 px-4 py-2 text-sm text-black no-underline hover:bg-gray-100"
-        >
-          <span className="leading-none">{translations[lang].home}</span>
-          <SlHome className="text-sm leading-none" />
-        </a>
-        <button
-          type="button"
-          onClick={changeNational}
-          className="flex w-full items-center gap-2 px-4 py-2 text-sm text-black no-underline hover:bg-gray-100"
-        >
-          <span className="leading-none">{translations[lang].region}</span>
-          {currentFlag ? (
-            <span
-              role="img"
-              aria-label={currentFlag.label}
-              className="inline-flex items-center justify-center text-lg leading-none"
-            >
-              {currentFlag.emoji}
-            </span>
-          ) : null}
-          <FaSync className="text-sm leading-none" />
-        </button>
-      </div>
-    </details>
+    <NavDownUI
+      displayHostname={displayHostname}
+      homeText={translations[lang].home}
+      regionText={translations[lang].region}
+      homeHref="/reactapp/"
+      onRegionClick={changeNational}
+      regionFlag={<CountryFlagsUI marketCode={marketCode} fallbackCode="vi" />}
+    />
   );
 };
 

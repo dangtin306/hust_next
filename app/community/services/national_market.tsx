@@ -23,7 +23,8 @@ export default function ConvertNationalMarketPage() {
   const [loading, setLoading] = useState(false);
 
   const processPage = () => {
-    window.location.href = "/reactapp/";
+    const redirectUri = readCookie("national_uri_change") || "/reactapp/";
+    window.location.href = redirectUri;
   };
 
   useEffect(() => {
