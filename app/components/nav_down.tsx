@@ -37,7 +37,7 @@ const NavDown = () => {
   const hostname = typeof window !== "undefined" ? window.location.hostname : "";
   const displayHostname = hostname.includes("tecom.pro") ? "hust.media" : hostname;
   const marketCode = String(readCookie("national_market") || "").toLowerCase();
-  const lang = marketCode === "en" ? "en" : "vi";
+  const lang = marketCode === "vi" ? "vi" : "en";
   const setNationalUriChangeCookie = (uri: string) => {
     writeCookie("national_uri_change", uri, 600);
   };
@@ -78,7 +78,7 @@ const NavDown = () => {
       regionText={translations[lang].region}
       homeHref="/reactapp/"
       onRegionClick={changeNational}
-      regionFlag={<CountryFlagsUI marketCode={marketCode} fallbackCode="vi" />}
+      regionFlag={<CountryFlagsUI marketCode={marketCode} fallbackCode="en" />}
     />
   );
 };

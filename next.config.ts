@@ -63,6 +63,14 @@ const nextConfig: NextConfig = {
         source: "/check/:path*",
         destination: "/shop/scams_check/:path*",
       },
+      {
+        source: "/orders_once/:slug_2",
+        destination: "/shop/ai?slug_2=:slug_2",
+      },
+      {
+        source: "/shop/ai/:slug_2",
+        destination: "/shop/ai?slug_2=:slug_2",
+      },
     ];
   },
 };
