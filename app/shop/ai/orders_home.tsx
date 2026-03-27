@@ -489,6 +489,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 {lang === "vi" ? "Nhập văn bản để tạo giọng đọc" : "Enter text to generate narration"}
               </label>
               <textarea
+                suppressHydrationWarning
                 value={ttsInput}
                 onChange={(e) => setTtsInput(e.target.value)}
                 placeholder={lang === "vi" ? "Ví dụ: Mô tả sản phẩm, hướng dẫn..." : "Example: Product description, guide..."}
