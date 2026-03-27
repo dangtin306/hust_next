@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useMemo, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { alert_error, alert_success } from "@/app/AppContext";
+import { ALLOWED_TOOLS, contentByTool, seoByTool, toolTabs, type Lang, type ToolKey } from "./orders_data";
 
-type Lang = "en" | "vi";
-type ToolKey = "text_speech" | "speech_text" | "image_text";
-const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text"] as const);
 type OrdersHomeProps = {
   slug_1?: string;
   slug_2?: string;
+};
+type TtsApiResponse = {
+  status?: number | string;
+  message?: string;
+  voice?: string;
 };
 
 const readCookie = (name: string) => {
@@ -54,6 +58,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [ttsInput, setTtsInput] = useState("");
   const [ocrInput, setOcrInput] = useState("");
   const [actionMessage, setActionMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedVoiceUrl, setGeneratedVoiceUrl] = useState("");
 
   const lang = useSyncExternalStore<Lang>(
     subscribeLang,
@@ -61,223 +67,38 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     () => "en"
   );
 
-  const seoByTool: Record<ToolKey, Record<Lang, { title: string; description: string; keywords: string }>> = {
-    text_speech: {
-      en: {
-        title: "Text to Speech (TTS) — AI Voice Generator",
-        description: "Convert text into natural-sounding speech for narration, learning, and accessibility.",
-        keywords: "text to speech, TTS, AI voice, voice generator, narration, accessibility, Vietnamese TTS",
-      },
-      vi: {
-        title: "Chuyển văn bản thành giọng nói (Text to Speech)",
-        description: "Công cụ chuyển văn bản thành giọng nói phục vụ thuyết minh nội dung, học tập và trợ năng.",
-        keywords: "chuyển văn bản thành giọng nói, text to speech, TTS, giọng nói AI, đọc văn bản, trợ năng, tiếng Việt",
-      },
-    },
-    speech_text: {
-      en: {
-        title: "Speech to Text (STT) — Audio Transcription",
-        description: "Transcribe speech into text to speed up note-taking, reporting, and content editing.",
-        keywords: "speech to text, STT, transcription, audio to text, voice to text, meeting notes, Vietnamese STT",
-      },
-      vi: {
-        title: "Chuyển giọng nói thành văn bản (Speech to Text)",
-        description: "Công cụ chuyển giọng nói thành văn bản giúp ghi chú nhanh, tạo báo cáo và chỉnh sửa nội dung.",
-        keywords: "chuyển giọng nói thành văn bản, speech to text, STT, phiên âm, ghi chú, audio to text, tiếng Việt",
-      },
-    },
-    image_text: {
-      en: {
-        title: "Image to Text (OCR) — Extract Text from Images",
-        description:
-          "Extract readable text from images and screenshots (OCR) to reduce manual typing and support verification.",
-        keywords: "image to text, OCR, extract text, screenshot to text, document OCR, receipt OCR, text recognition",
-      },
-      vi: {
-        title: "Trích xuất chữ từ hình ảnh (OCR)",
-        description: "Công cụ OCR trích xuất chữ từ ảnh và ảnh chụp màn hình, hỗ trợ nhập liệu nhanh và kiểm chứng thông tin.",
-        keywords: "OCR, chuyển hình ảnh sang chữ, trích xuất chữ, nhận dạng ký tự, ảnh chụp màn hình, tài liệu",
-      },
-    },
-  };
-
-  const contentByTool: Record<
-    ToolKey,
-    Record<
-      Lang,
-      {
-        heading: string;
-        summary: string[];
-        audience: string[];
-        examples: string[];
-        related: Array<{ label: string; href: string }>;
-      }
-    >
-  > = {
-    text_speech: {
-      en: {
-        heading: "About this AI module",
-        summary: [
-          "This module converts plain text into speech so teams can publish narrated content faster and improve accessibility for users who prefer listening.",
-          "It is designed as a practical utility inside the Hust workflow, where creators, students, and operations teams need quick voice output for guides, product descriptions, and task documentation.",
-          "In production use, this helps reduce repetitive recording work and keeps voice quality consistent across different campaigns.",
-        ],
-        audience: [
-          "Content creators writing tutorials and explainer posts.",
-          "Support teams producing short voice guides for onboarding.",
-          "Students and mobile users who prefer listening over reading.",
-        ],
-        examples: [
-          "Input: Product description paragraph. Output: playable narration for social posts.",
-          "Input: Task instructions. Output: short voice briefing for collaborators.",
-        ],
-        related: [
-          { label: "Accessibility basics for content teams", href: "/community/features" },
-          { label: "Support workflow guidelines", href: "/support" },
-        ],
-      },
-      vi: {
-        heading: "Giới thiệu mô-đun AI",
-        summary: [
-          "Mô-đun này chuyển văn bản thành giọng nói để đội vận hành và người tạo nội dung xuất bản bản đọc nhanh hơn, đồng thời cải thiện trợ năng cho người dùng thích nghe hơn đọc.",
-          "Công cụ được thiết kế theo hướng tiện ích thực dụng trong luồng Hust: mô tả sản phẩm, hướng dẫn, nội dung nhiệm vụ và thông tin hỗ trợ đều có thể tạo bản audio ngắn.",
-          "Khi dùng thực tế, công cụ giúp giảm thao tác thu âm lặp lại và giữ chất lượng giọng đọc ổn định giữa nhiều chiến dịch.",
-        ],
-        audience: [
-          "Người làm nội dung cần tạo giọng đọc cho bài hướng dẫn.",
-          "Team CSKH cần audio onboarding hoặc hướng dẫn nhanh.",
-          "Người dùng mobile/sinh viên muốn tiếp nhận nội dung bằng nghe.",
-        ],
-        examples: [
-          "Input: Mô tả sản phẩm dài. Output: File đọc để gắn vào bài đăng.",
-          "Input: Checklist nhiệm vụ. Output: Bản tóm tắt giọng nói cho cộng tác viên.",
-        ],
-        related: [
-          { label: "Tổng quan tính năng cộng đồng", href: "/community/features" },
-          { label: "Trang hỗ trợ kỹ thuật", href: "/support" },
-        ],
-      },
-    },
-    speech_text: {
-      en: {
-        heading: "About this AI module",
-        summary: [
-          "Speech-to-Text turns voice notes into editable text so teams can draft reports and logs faster without heavy typing.",
-          "This is useful in real operations where users capture audio on mobile and then need structured text for moderation, support, or publishing flows.",
-          "It also improves traceability because spoken updates become searchable records that can be reviewed later.",
-        ],
-        audience: [
-          "Moderators collecting incident notes quickly.",
-          "Operators creating daily reports from voice memos.",
-          "Users with mobile-first workflows.",
-        ],
-        examples: [
-          "Input: 30-second voice note. Output: draft text for report editor.",
-          "Input: customer call summary. Output: searchable transcript for support history.",
-        ],
-        related: [
-          { label: "Development services", href: "/services/development" },
-          { label: "Community docs", href: "/docs" },
-        ],
-      },
-      vi: {
-        heading: "Giới thiệu mô-đun AI",
-        summary: [
-          "Speech-to-Text chuyển ghi âm thành văn bản có thể chỉnh sửa để rút ngắn thời gian nhập liệu trong các luồng báo cáo và vận hành.",
-          "Trong thực tế, người dùng thường ghi âm nhanh trên điện thoại rồi cần chuyển thành văn bản chuẩn để lưu trữ, tìm kiếm và xử lý tiếp.",
-          "Công cụ cũng tăng khả năng truy vết vì thông tin giọng nói được chuyển thành dữ liệu văn bản có thể tìm lại dễ dàng.",
-        ],
-        audience: [
-          "Điều phối viên cần ghi nhận thông tin sự cố nhanh.",
-          "Team vận hành cần tạo báo cáo hằng ngày từ voice note.",
-          "Người dùng làm việc chủ yếu trên mobile.",
-        ],
-        examples: [
-          "Input: Ghi âm 30 giây. Output: Bản nháp văn bản cho editor.",
-          "Input: Tóm tắt cuộc gọi hỗ trợ. Output: Transcript để tìm kiếm lại.",
-        ],
-        related: [
-          { label: "Dịch vụ phát triển", href: "/services/development" },
-          { label: "Kho tài liệu", href: "/docs" },
-        ],
-      },
-    },
-    image_text: {
-      en: {
-        heading: "About this AI module",
-        summary: [
-          "Image-to-Text (OCR) extracts readable text from screenshots and documents, reducing manual typing in proof and verification workflows.",
-          "Teams can convert visual evidence into searchable text, making auditing and review significantly faster.",
-          "This is especially helpful when handling large batches of screenshots that need to be normalized before processing.",
-        ],
-        audience: [
-          "Teams verifying receipts and screenshots.",
-          "Editors digitizing text from images before publishing.",
-          "Support teams checking user-submitted proof files.",
-        ],
-        examples: [
-          "Input: receipt screenshot. Output: extracted amount/date text for verification.",
-          "Input: image of instructions. Output: editable text for article updates.",
-        ],
-        related: [
-          { label: "Feature overview", href: "/features" },
-          { label: "Support page", href: "/support" },
-        ],
-      },
-      vi: {
-        heading: "Giới thiệu mô-đun AI",
-        summary: [
-          "OCR giúp trích xuất chữ từ ảnh, ảnh chụp màn hình và tài liệu để giảm thao tác nhập liệu thủ công trong các bước kiểm chứng.",
-          "Thông tin dạng ảnh sẽ được chuyển thành văn bản có thể tìm kiếm, lọc và tái sử dụng trong quy trình xử lý nội dung.",
-          "Đặc biệt hiệu quả khi xử lý số lượng lớn ảnh minh chứng cần chuẩn hóa trước khi đưa vào các bước vận hành tiếp theo.",
-        ],
-        audience: [
-          "Nhóm kiểm duyệt cần đọc nhanh nội dung từ ảnh minh chứng.",
-          "Editor cần số hóa chữ từ ảnh trước khi biên tập.",
-          "CSKH cần tra cứu thông tin người dùng gửi bằng screenshot.",
-        ],
-        examples: [
-          "Input: Ảnh biên lai. Output: Text số tiền/ngày tháng để đối soát.",
-          "Input: Ảnh hướng dẫn cũ. Output: Văn bản chỉnh sửa để cập nhật bài viết.",
-        ],
-        related: [
-          { label: "Tổng quan tính năng", href: "/features" },
-          { label: "Trang hỗ trợ", href: "/support" },
-        ],
-      },
-    },
-  };
-
   const activeTool = isToolKey(slug_2) ? slug_2 : null;
   const showToolPage = (slug_1 === "plans" || slug_1 === "orders_once") && !!activeTool;
 
   const activeSeo = activeTool ? seoByTool[activeTool][lang] : null;
   const activeContent = activeTool ? contentByTool[activeTool][lang] : null;
   const routeRoot = slug_1 === "plans" ? "plans" : "orders_once";
+  const apiKey = readCookie("apikey");
 
-  const toolTabs: Array<{ key: ToolKey; en: string; vi: string }> = [
-    {
-      key: "text_speech",
-      en: "Text to Speech",
-      vi: "Chuyển văn bản thành giọng nói",
-    },
-    {
-      key: "speech_text",
-      en: "Speech to Text",
-      vi: "Chuyển giọng nói thành văn bản",
-    },
-    {
-      key: "image_text",
-      en: "Image to Text",
-      vi: "Chuyển hình ảnh thành văn bản",
-    },
-  ];
+  useEffect(() => {
+    setGeneratedVoiceUrl("");
+    setActionMessage("");
+  }, [activeTool]);
+
+  useEffect(() => {
+    if (!activeSeo) return;
+    document.title = activeSeo.title;
+    let descriptionTag = document.querySelector('meta[name="description"]');
+    if (!descriptionTag) {
+      descriptionTag = document.createElement("meta");
+      descriptionTag.setAttribute("name", "description");
+      document.head.appendChild(descriptionTag);
+    }
+    descriptionTag.setAttribute("content", activeSeo.description);
+  }, [activeSeo]);
 
   if (!showToolPage || !activeTool || !activeSeo || !activeContent) {
     return null;
   }
 
-  const handleConfirmTool = () => {
+  const handleConfirmTool = async () => {
+    if (isSubmitting) return;
+
     if (activeTool === "text_speech" && !ttsInput.trim()) {
       setActionMessage(
         lang === "vi"
@@ -294,6 +115,76 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           : "Please enter OCR content before confirming."
       );
       return;
+    }
+
+    if (activeTool === "text_speech") {
+      const convertedText = ttsInput.replace(/\n/g, ".").trim();
+      const payload = new URLSearchParams({
+        caption: "",
+        key: apiKey,
+        text: convertedText,
+        thanhcong: "false",
+        social: "viettel-north-women",
+        typeuser: apiKey ? "personal" : "guest",
+        service_name: "",
+        cumfm: "NO",
+      });
+
+      setIsSubmitting(true);
+      setActionMessage(lang === "vi" ? "Đang gửi yêu cầu..." : "Sending request...");
+      setGeneratedVoiceUrl("");
+
+      try {
+        const response = await fetch("https://tecom.pro/truyenthanh/texttovice.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          },
+          body: payload.toString(),
+        });
+
+        const rawText = await response.text();
+        let data: TtsApiResponse = {};
+        try {
+          data = JSON.parse(rawText) as TtsApiResponse;
+        } catch {
+          data = { message: rawText };
+        }
+
+        const statusNum = Number(data?.status ?? 0);
+        const voiceUrl = String(data?.voice || "");
+        const message = String(data?.message || "");
+
+        if (!response.ok) {
+          throw new Error(message || `HTTP ${response.status}`);
+        }
+        if (voiceUrl.includes("lỗi")) {
+          throw new Error(lang === "vi" ? "Tiêu đề đã tồn tại" : "Title already exists");
+        }
+        if (statusNum !== 1 || !voiceUrl) {
+          throw new Error(message || (lang === "vi" ? "Xử lý thất bại." : "Processing failed."));
+        }
+
+        setGeneratedVoiceUrl(voiceUrl);
+        setActionMessage(
+          lang === "vi"
+            ? "Thành công. Bạn có thể phát audio bên dưới."
+            : "Success. You can play the generated audio below."
+        );
+        alert_success(lang === "vi" ? "Thành công" : "Success");
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        setActionMessage(
+          lang === "vi"
+            ? `Lỗi xử lý: ${msg}`
+            : `Processing error: ${msg}`
+        );
+        alert_error(msg);
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
     }
 
     setActionMessage(
@@ -451,14 +342,40 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           <button
             type="button"
             onClick={handleConfirmTool}
-            className="mt-4 w-full rounded-full bg-slate-900 px-5 py-3 text-left text-sm font-semibold text-white transition hover:bg-slate-800"
+            disabled={isSubmitting}
+            className="mt-4 w-full rounded-full bg-slate-900 px-5 py-3 text-left text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {lang === "vi" ? "✔ Xác nhận xử lý" : "✔ Confirm Processing"}
+            {isSubmitting
+              ? lang === "vi"
+                ? "Đang xử lý..."
+                : "Processing..."
+              : lang === "vi"
+                ? "✔ Xác nhận xử lý"
+                : "✔ Confirm Processing"}
             <span className="float-right">➤</span>
           </button>
 
           {actionMessage ? (
             <p className="mt-2 text-xs text-slate-600">{actionMessage}</p>
+          ) : null}
+
+          {activeTool === "text_speech" && generatedVoiceUrl ? (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-xs font-medium text-slate-700">
+                {lang === "vi" ? "Audio đã tạo" : "Generated audio"}
+              </p>
+              <audio controls className="w-full" src={generatedVoiceUrl}>
+                Your browser does not support the audio element.
+              </audio>
+              <a
+                href={generatedVoiceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-xs text-cyan-700 underline"
+              >
+                {lang === "vi" ? "Mở audio ở tab mới" : "Open audio in new tab"}
+              </a>
+            </div>
           ) : null}
         </section>
       </article>
