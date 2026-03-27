@@ -33,19 +33,19 @@ const normalizeHost = (host: string) =>
 const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
   const [domainOverride, setDomainOverride] = useState<string | null>(null);
   const cookieDomain = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => readCookie("main_domain") || "hust",
     () => "hust"
   );
   const domain = domainOverride ?? cookieDomain;
   const hydrated = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false
   );
   const latestVersion = useSyncExternalStore(
     (onStoreChange) => {
-      if (typeof window === "undefined") return () => {};
+      if (typeof window === "undefined") return () => { };
       const handler = () => onStoreChange();
       window.addEventListener("latest-version-updated", handler);
       const timer = window.setInterval(handler, 300);
@@ -82,7 +82,7 @@ const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
   };
 
   return (
-    <nav className="py-1 sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
+    <nav className="sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
 
       <div className="flex items-center gap-2">
         <button
@@ -139,9 +139,11 @@ const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
       {hydrated ? (
         <NavDown />
       ) : (
-        <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
-          {fallbackDomainLabel}
-        </span>
+        <div className="py-2">
+          <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
+            {fallbackDomainLabel}
+          </span>
+        </div>
       )}
     </nav>
   );
