@@ -96,7 +96,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Checklist nhiem vu. Output: Ban tom tat giong noi cho cong tac vien.",
       ],
       related: [
-        { label: "Tong quan tinh nang cong dong", href: "/community/features" },
+        { label: "Dich vu phat trien", href: "/services/development" },
         { label: "Trang ho tro ky thuat", href: "/support" },
       ],
     },
@@ -184,7 +184,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Anh huong dan cu. Output: Van ban chinh sua de cap nhat bai viet.",
       ],
       related: [
-        { label: "Tong quan tinh nang", href: "/features" },
+        { label: "Dich vu phat trien", href: "/services/development" },
         { label: "Trang ho tro", href: "/support" },
       ],
     },
