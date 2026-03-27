@@ -75,7 +75,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Task instructions. Output: short voice briefing for collaborators.",
       ],
       related: [
-        { label: "Accessibility basics for content teams", href: "/community/features" },
+        { label: "Development services", href: "/services/development" },
         { label: "Support workflow guidelines", href: "/support" },
       ],
     },
@@ -163,7 +163,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: image of instructions. Output: editable text for article updates.",
       ],
       related: [
-        { label: "Feature overview", href: "/features" },
+        { label: "Development services", href: "/services/development" },
         { label: "Support page", href: "/support" },
       ],
     },
