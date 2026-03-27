@@ -63,7 +63,7 @@ export default async function RootLayout({
                 <div className="layout-page flex min-h-screen flex-col">
                   <SimpleTopBar initialHost={initialHost} />
                   <div className="flex-1">{children}</div>
-                  <Footer_web />
+                  <Footer_web initialHost={initialHost} />
                 </div>
               </div>
             </div>

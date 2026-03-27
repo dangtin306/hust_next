@@ -1,4 +1,9 @@
-export default function FooterWeb() {
+export default function FooterWeb({ initialHost = "" }) {
+  const normalizedHost = String(initialHost || "").toLowerCase();
+  const siteMapHref = normalizedHost.includes("nofake")
+    ? "https://nginx.nofake.wiki/go/site_map/check_healing.xml"
+    : "https://hust.media/api/sitemap/hust_media.xml";
+
   return (
     <footer className="mt-auto w-full bg-slate-950/40 bg-hust-glass backdrop-blur-md border-t border-white/10 text-white py-0.5 md:py-0.5 text-xs md:text-base leading-none flex-none">
       <div className=" mx-auto px-[12px] py-[16px] max-[480px]:px-2 max-[480px]:py-[12px] flex flex-col md:flex-row justify-between items-center gap-1 md:gap-1 text-[13px] md:text-[15px]">
@@ -23,7 +28,7 @@ export default function FooterWeb() {
             </span>
           </a>
           <a
-            href="https://hust.media/api/sitemap/hust_media.xml"
+            href={siteMapHref}
             target="_blank"
             rel="noreferrer"
             className="group hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.45)] transition-all duration-200"
