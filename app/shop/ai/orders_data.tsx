@@ -105,9 +105,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "Speech-to-Text turns voice notes into editable text so teams can draft reports and logs faster without heavy typing.",
-        "This is useful in real operations where users capture audio on mobile and then need structured text for moderation, support, or publishing flows.",
-        "It also improves traceability because spoken updates become searchable records that can be reviewed later.",
+        "Speech-to-Text turns voice notes into editable text so teams can draft reports and logs faster without heavy typing, in a simple and practical way.",
+        "This is useful in real operations where users capture audio on mobile and then need structured text for moderation, support, or publishing flows with less manual effort.",
+        "It also improves traceability because spoken updates become searchable records that can be reviewed later by relevant team members.",
       ],
       audience: [
         "Moderators collecting incident notes quickly.",
@@ -149,9 +149,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "Image-to-Text (OCR) extracts readable text from screenshots and documents, reducing manual typing in proof and verification workflows.",
-        "Teams can convert visual evidence into searchable text, making auditing and review significantly faster.",
-        "This is especially helpful when handling large batches of screenshots that need to be normalized before processing.",
+        "Image-to-Text (OCR) extracts readable text from screenshots and documents, reducing manual typing in proof and verification workflows in a clean, reliable flow.",
+        "Teams can convert visual evidence into searchable text, making auditing and review significantly faster and easier to manage.",
+        "This is especially helpful when handling large batches of screenshots that need to be normalized before processing across different internal steps.",
       ],
       audience: [
         "Teams verifying receipts and screenshots.",
