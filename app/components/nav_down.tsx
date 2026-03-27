@@ -38,6 +38,8 @@ const NavDown = () => {
   const displayHostname = hostname.includes("tecom.pro") ? "hust.media" : hostname;
   const marketCode = String(readCookie("national_market") || "").toLowerCase();
   const lang = marketCode === "vi" ? "vi" : "en";
+  const latestVersion = String(readCookie("latest_version") || "");
+  const usePillStyle = latestVersion === "3" || latestVersion === "5";
   const setNationalUriChangeCookie = (uri: string) => {
     writeCookie("national_uri_change", uri, 600);
   };
@@ -72,14 +74,17 @@ const NavDown = () => {
     }
   };
   return (
-    <NavDownUI
-      displayHostname={displayHostname}
-      homeText={translations[lang].home}
-      regionText={translations[lang].region}
-      homeHref="/reactapp/"
-      onRegionClick={changeNational}
-      regionFlag={<CountryFlagsUI marketCode={marketCode} fallbackCode="en" />}
-    />
+    <div className="py-1">
+      <NavDownUI
+        displayHostname={displayHostname}
+        homeText={translations[lang].home}
+        regionText={translations[lang].region}
+        homeHref="/reactapp/"
+        onRegionClick={changeNational}
+        regionFlag={<CountryFlagsUI marketCode={marketCode} fallbackCode="en" />}
+        usePillStyle={usePillStyle}
+      />
+    </div>
   );
 };
 

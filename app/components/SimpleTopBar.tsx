@@ -82,7 +82,7 @@ const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
   };
 
   return (
-    <nav className="sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
+    <nav className="py-1 sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
 
       <div className="flex items-center gap-2">
         <button
