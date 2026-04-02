@@ -64,7 +64,7 @@ const ScamAlertMain = ({ onTitleChangea }: { onTitleChangea: any }) => {
   }, [profile_info, onTitleChangea]);
 
   function saochep(value: any) {
-    alert_success("Đã sao chép");
+    alert_success("Copied successfully");
     window.saochepnative(value);
   }
 

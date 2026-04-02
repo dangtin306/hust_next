@@ -289,8 +289,8 @@ const Completed = ({
 
             {/* Nút điều hướng (Nhỏ gọn) */}
             <div className="mt-2 flex justify-end">
-              <button
-                onClick={() => navigate("/shop/check/lists/exchange")}
+              <a
+                href="/shop/check/lists/exchange"
                 className="text-[10px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 px-3 py-1.5 rounded transition-all shadow-sm active:scale-95 flex items-center gap-1"
               >
                 Tra cứu dữ liệu khác
@@ -307,7 +307,7 @@ const Completed = ({
                     d="M17 8l4 4m0 0l-4 4m4-4H3"
                   ></path>
                 </svg>
-              </button>
+              </a>
             </div>
           </div>
         </div>

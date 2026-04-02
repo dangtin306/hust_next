@@ -46,7 +46,7 @@ export const alert_success = (success) => {
 }
 
 export const copy_native = (value) => {
-  alert_success('Đã sao chép');
+  alert_success('Copied successfully');
   window.saochepnative(value);
 };
 

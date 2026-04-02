@@ -53,7 +53,7 @@ export default function ProfileClient({
   }, [slug, initialProfile]);
 
   const handleCopy = (value: string) => {
-    alert_success("Đã sao chép");
+    alert_success("Copied successfully");
     if (typeof window !== "undefined" && (window as any).saochepnative) {
       (window as any).saochepnative(value);
       return;
