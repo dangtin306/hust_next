@@ -450,6 +450,10 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           <h2 className="text-sm font-semibold text-slate-900">
             {activeTool === "text_speech"
               ? "How My Vietnamese Text-to-Speech Module Works on a Flask AI Server"
+              : activeTool === "speech_text"
+                ? "How My Vietnamese Speech-to-Text Module Works on a Flask AI Server"
+                : activeTool === "image_text"
+                  ? "How My Image-to-Text Module Works in a Rule-Based OCR Workflow"
               : (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
           </h2>
           {activeTool === "text_speech" ? (
@@ -502,6 +506,114 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 </ul>
               </div>
             </div>
+          ) : activeTool === "speech_text" ? (
+            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Short description for the article card
+                </div>
+                <div className="mt-1">
+                  This article explains how my Speech-to-Text module processes Vietnamese audio on a Flask AI server, from file input and waveform normalization to transcription output. It also outlines the current model choice, API behavior, and practical runtime limits.
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Article body
+                </div>
+                <div className="mt-1 space-y-2">
+                  <p>
+                    My Speech-to-Text module runs on the same Python Flask AI server used for the other media utilities in this workflow. The main API entry point is GET/POST /wav2vec2, served through Flask on port 8789. In the current version, the endpoint reads an audio path from form data or query parameters, and if no path is provided, it falls back to a default local file. The response returns JSON with status, transcript, and the processed file path.
+                  </p>
+                  <p>
+                    The transcription engine is based on the Hugging Face model khanhld/wav2vec2-base-vietnamese-160h. Both the processor and model are loaded once when the module starts, rather than reloading on every request. The runtime device is selected automatically, using GPU when CUDA is available and CPU otherwise. This keeps repeated requests more stable, although it also means the service keeps a memory footprint while running.
+                  </p>
+                  <p>
+                    For audio processing, the file is loaded with librosa, converted to mono, and resampled to 16 kHz, which matches the model input. A normalized intermediate WAV file can also be written to D:\hustmedia\python\tts\wav2vec2\run.wav for inspection or reuse. Before inference, the waveform is converted to float32, checked to avoid empty input, and normalized by peak amplitude.
+                  </p>
+                  <p>
+                    Once prepared, the audio is tokenized with sampling_rate=16000 and passed through the model under torch.no_grad(). The output logits are decoded with greedy CTC argmax, then converted into text with batch_decode. In its current form, this module does not use beam search, VAD chunking, or language-model rescoring, so long files are still processed in one pass and may increase latency or memory usage.
+                  </p>
+                  <p>
+                    This module is mainly intended for practical Vietnamese transcription tasks such as voice notes, support logs, internal updates, and simple content preparation. It is not designed as a full enterprise ASR platform, but as a working in-house component that I built and maintain for my own workflow.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Technical configuration snapshot
+                </div>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>Server runtime: Flask on port 8789</li>
+                  <li>Main endpoint: GET/POST /wav2vec2</li>
+                  <li>STT model: khanhld/wav2vec2-base-vietnamese-160h</li>
+                  <li>Device selection: automatic GPU / CPU</li>
+                  <li>Input normalization: mono audio, 16 kHz</li>
+                  <li>Intermediate WAV path: D:\hustmedia\python\tts\wav2vec2\run.wav</li>
+                  <li>Decode method: greedy CTC argmax</li>
+                  <li>Inference mode: torch.no_grad()</li>
+                  <li>Current limitation: no chunking, no VAD, no beam search</li>
+                </ul>
+              </div>
+            </div>
+          ) : activeTool === "image_text" ? (
+            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Short description for the article card
+                </div>
+                <div className="mt-1">
+                  This article explains how my Image-to-Text workflow extracts text from screenshots through a local OCR pipeline, from screen capture and region detection to text extraction and post-checking. It also outlines the OCR stack, processing rules, and practical limits.
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Article body
+                </div>
+                <div className="mt-1 space-y-2">
+                  <p>
+                    My current Image-to-Text workflow is built around a local OCR pipeline rather than a general upload-and-read service. In the repo under D:\hustmedia\python, the working path uses local Tesseract OCR, while PaddleOCR and EasyOCR only appear as external service references, not as full OCR logic in this codebase.
+                  </p>
+                  <p>
+                    The flow starts with a Selenium script that opens the target chat interface and saves a screenshot as screenshot.png. A second script then processes that image with pytesseract, using the fixed Tesseract binary at D:\hustmedia\application\Tesseract-OCR\tesseract.exe. Before OCR runs, the image is cropped to the expected chat area, then refined by detecting a gray edge region to isolate the relevant message area.
+                  </p>
+                  <p>
+                    The pipeline detects candidate text boxes using contour detection on an Otsu-thresholded image. The boxes are merged by row and horizontal spacing, then filtered with rules for gray regions, uniform backgrounds, and a LINE_THRESHOLD step that removes noisy rows. Instead of reading the whole image, the script keeps only the lowest valid box, expands it with PAD = 5, and runs OCR on that region with pytesseract.image_to_string(..., --psm 7). The extracted text and coordinates are then written to center.json.
+                  </p>
+                  <p>
+                    This means the current module is not a broad OCR engine for all image types. It is a rule-based OCR workflow designed for a specific chat-style UI, where the goal is to capture the final relevant text line rather than read the full screenshot. That makes it practical for controlled verification tasks, but also dependent on layout consistency.
+                  </p>
+                  <p>
+                    After OCR, the workflow reads center.json, applies a computer-vision check for a red heart icon, and when needed, sends the extracted text into a lightweight classification step before writing the final check_content result back to JSON. This gives the module both an extraction layer and a validation layer.
+                  </p>
+                  <p>
+                    At the current stage, the main Flask AI server does not expose a direct public /ocr or /image2text endpoint. So this module should be understood as a working internal OCR component with specific UI-oriented logic, not yet as a universal OCR API.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Technical configuration snapshot
+                </div>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>OCR stack: local Tesseract OCR</li>
+                  <li>Python wrapper: pytesseract</li>
+                  <li>Tesseract binary: D:\hustmedia\application\Tesseract-OCR\tesseract.exe</li>
+                  <li>Screenshot source: Selenium capture to screenshot.png</li>
+                  <li>Region output: chat_region.png</li>
+                  <li>OCR target: lowest valid filtered text box</li>
+                  <li>Threshold method: Otsu</li>
+                  <li>OCR mode: --psm 7</li>
+                  <li>Padding value: PAD = 5</li>
+                  <li>Output file: center.json</li>
+                  <li>Extra validation: CV rule check + content classification</li>
+                  <li>Current limitation: no direct public OCR endpoint</li>
+                </ul>
+              </div>
+            </div>
           ) : (
             <div className="mt-2 text-sm leading-relaxed text-slate-700">
               {activeContent.related.map((item) => item.label).join(". ")}.
@@ -512,7 +624,11 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
         <section className="mt-4 rounded-2xl border border-indigo-200 bg-white px-4 py-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-900">
-              {lang === "vi" ? "Tạo giọng đọc" : "Voice Generation"}
+              {activeTool === "speech_text"
+                ? (lang === "vi" ? "Chuyển âm thanh thành văn bản" : "Audio Transcription")
+                : activeTool === "image_text"
+                  ? (lang === "vi" ? "Trích xuất văn bản từ ảnh" : "Image Text Extraction")
+                : (lang === "vi" ? "Tạo giọng đọc" : "Voice Generation")}
             </h2>
           </div>
 
@@ -538,13 +654,13 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               <p className="text-sm text-slate-700">
                 {lang === "vi"
-                  ? "Tải lên tệp âm thanh để chuyển đổi thành văn bản."
-                  : "Upload an audio file to convert it into text."}
+                  ? "Tải tệp âm thanh để chuyển thành văn bản."
+                  : "Upload audio to convert it into text"}
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 {lang === "vi"
-                  ? "Hỗ trợ định dạng phổ biến: MP3, WAV, M4A, OGG."
-                  : "Common formats supported: MP3, WAV, M4A, OGG."}
+                  ? "Định dạng hỗ trợ: MP3, WAV, M4A, OGG"
+                  : "Supported formats: MP3, WAV, M4A, OGG"}
               </p>
 
               <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-3">
@@ -579,7 +695,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 <p className="mt-2 text-xs text-slate-600">
                   {sttFile
                     ? (lang === "vi" ? "Đã chọn:" : "Selected:") + ` ${sttFile.name}`
-                    : (lang === "vi" ? "Chưa có tệp nào được chọn." : "No file selected.")}
+                    : (lang === "vi" ? "Chưa có tệp nào được chọn" : "No file selected")}
                 </p>
                 {sttDuration > 0 ? (
                   <p className="mt-1 text-xs text-slate-600">
@@ -635,12 +751,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           {activeTool === "image_text" && (
             <div>
               <label className="mb-1 block text-sm text-slate-700">
-                {lang === "vi" ? "Tải ảnh để nhận diện văn bản (OCR)" : "Upload an image for OCR text recognition"}
+                {lang === "vi" ? "Tải ảnh lên để trích xuất văn bản" : "Upload an image to extract readable text"}
               </label>
               <p className="mb-2 text-xs text-slate-500">
                 {lang === "vi"
-                  ? "Phù hợp cho chứng từ, ảnh chụp màn hình, tài liệu học tập. Vui lòng chỉ tải nội dung bạn có quyền sử dụng."
-                  : "Best for receipts, screenshots, and study documents. Please upload only content you are authorized to use."}
+                  ? "Phù hợp với ảnh chụp màn hình, hóa đơn, biểu mẫu và tài liệu đơn giản. Vui lòng chỉ tải nội dung bạn được phép sử dụng."
+                  : "Best for screenshots, receipts, forms, and simple documents. Please upload only content you are authorized to use."}
               </p>
               <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
                 <input
@@ -658,12 +774,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   htmlFor="ocr-image-file"
                   className="inline-flex cursor-pointer items-center rounded-md border border-slate-300 bg-slate-100 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200"
                 >
-                  {lang === "vi" ? "Tải tệp hình ảnh" : "Upload image file"}
+                  {lang === "vi" ? "Chọn tệp hình ảnh" : "Choose image file"}
                 </label>
                 <p className="mt-2 text-xs text-slate-600">
                   {ocrImageFile
                     ? (lang === "vi" ? "Đã chọn:" : "Selected:") + ` ${ocrImageFile.name}`
-                    : (lang === "vi" ? "Chưa có ảnh nào được chọn." : "No image selected.")}
+                    : (lang === "vi" ? "Chưa có ảnh nào được chọn" : "No image selected")}
                 </p>
                 {ocrPreviewUrl ? (
                   <img
@@ -723,9 +839,11 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               ? lang === "vi"
                 ? "Đang xử lý..."
                 : "Processing..."
-              : lang === "vi"
-                ? "Tạo âm thanh"
-                : "Generate Audio"}
+              : activeTool === "speech_text"
+                ? (lang === "vi" ? "Tạo bản chép lời" : "Generate Transcript")
+                : activeTool === "image_text"
+                  ? (lang === "vi" ? "Trích xuất văn bản" : "Extract Text")
+                : (lang === "vi" ? "Tạo âm thanh" : "Generate Audio")}
             <span className="float-right">➤</span>
           </button>
 

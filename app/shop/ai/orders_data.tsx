@@ -62,8 +62,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       heading: "About this AI module",
       summary: [
         "This Text-to-Speech module is part of the small set of practical tools I maintain for simple media and content work. It turns written text into spoken audio for narration, accessibility, and faster content preparation.",
-        "I first built this utility in an AI-related working environment and later rebuilt it into a more stable version for my own workflow. It now runs on my physical server and supports practical use cases such as guides, product descriptions, short scripts, and task documentation.",
-        "It helps reduce repetitive recording work and makes voice output easier to prepare for simple content formats such as Reels and YouTube Shorts.",
+        "I first built it in an AI-related working environment and later rebuilt it into a more stable version for my own use. It now runs on my physical server and supports guides, product descriptions, short scripts, and task documentation.",
+        "It helps reduce repetitive recording work and makes voice output easier to prepare for Reels and YouTube Shorts.",
       ],
       audience: [
         "Creators working on tutorials, explainers, and short social content.",
@@ -107,18 +107,18 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "This Speech-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and everyday content preparation.",
-        "I use it in workflows where audio is recorded on mobile and later converted into structured text for support, moderation, documentation, or publishing tasks. It helps reduce manual typing and makes spoken updates easier to process.",
-        "For simple content and operations work, it also turns voice recordings into searchable text that can be reviewed, edited, and reused later.",
+        "This Speech-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and content preparation.",
+        "I use it where audio is recorded on mobile and later converted into structured text for support, documentation, moderation, or publishing tasks. It helps reduce manual typing and makes spoken updates easier to handle.",
+        "It also turns voice recordings into searchable text that can be reviewed, edited, and reused later.",
       ],
       audience: [
-        "Moderators collecting incident notes quickly.",
-        "Operators creating daily reports from voice memos.",
-        "Users with mobile-first workflows.",
+        "People who need to turn short voice recordings into editable text.",
+        "Teams handling notes, updates, or simple reporting from audio.",
+        "Mobile users who prefer speaking first and editing later.",
       ],
       examples: [
-        "Input: 30-second voice note. Output: draft text for report editor.",
-        "Input: customer call summary. Output: searchable transcript for support history.",
+        "Input: Short voice note. Output: Draft text for reporting.",
+        "Input: Customer call recording. Output: Searchable transcript for support history.",
       ],
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
@@ -153,18 +153,18 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "Image-to-Text (OCR) extracts readable text from screenshots and documents, reducing manual typing in proof and verification workflows in a clean, reliable flow.",
-        "Teams can convert visual evidence into searchable text, making auditing and review significantly faster and easier to manage.",
-        "This is especially helpful when handling large batches of screenshots that need to be normalized before processing across different internal steps.",
+        "This Image-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It extracts readable text from screenshots and documents for faster verification, note-taking, and content preparation.",
+        "I use it when image files need to be turned into searchable text for review, documentation, or simple processing tasks. It helps reduce manual typing and makes text checking easier.",
+        "It is especially useful for screenshots, receipts, forms, and other image-based records.",
       ],
       audience: [
-        "Teams verifying receipts and screenshots.",
-        "Editors digitizing text from images before publishing.",
-        "Support teams checking user-submitted proof files.",
+        "People who need to extract text from screenshots and documents.",
+        "Teams reviewing receipts, forms, or proof images.",
+        "Editors and support teams working with image-based records.",
       ],
       examples: [
-        "Input: receipt screenshot. Output: extracted amount/date text for verification.",
-        "Input: image of instructions. Output: editable text for article updates.",
+        "Input: Screenshot of a receipt. Output: Readable text for checking details.",
+        "Input: Image of instructions. Output: Editable text for later updates.",
       ],
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
