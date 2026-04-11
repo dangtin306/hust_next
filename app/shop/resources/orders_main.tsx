@@ -77,7 +77,7 @@ const readCookie = (name: string) => {
 const fetchServiceInfo = async (serviceId: string) => {
   const encodedId = encodeURIComponent(serviceId);
   const proxyUrl = `/next/api/resources/services-info?id=${encodedId}`;
-  const directUrl = `https://hust.media/api/orders/account/sellers/services/services_info.php?id=${encodedId}`;
+  const directUrl = `https://nginx.hust.media/services/p2p/resources/info?id=${encodedId}`;
 
   try {
     const proxyRes = await fetch(proxyUrl, { cache: "no-store" });

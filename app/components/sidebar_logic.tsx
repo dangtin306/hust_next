@@ -35,7 +35,8 @@ const readCookie = (name: string) => {
 const pickLabel = (label: MenuLabel | undefined, lang: string) => {
   if (!label) return "";
   if (typeof label === "string") return label;
-  return label[lang] || label.vi || label.en || "";
+  const safeLang = lang === "vi" || lang === "en" ? lang : "en";
+  return label[safeLang] || label.en || label.vi || "";
 };
 
 const normalizeNextHref = (href: string) => {

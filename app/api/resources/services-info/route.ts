@@ -5,7 +5,7 @@ type ServiceInfoResponse = {
 };
 
 const API_ENDPOINT =
-  "https://hust.media/api/orders/account/sellers/services/services_info.php";
+  "https://nginx.hust.media/services/p2p/resources/info";
 
 const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(payload), {

@@ -448,45 +448,78 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
         <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900">
-            {lang === "vi" ? "Ví dụ thực tế (Input/Output)" : "Practical Input/Output Examples"}
+            {activeTool === "text_speech"
+              ? "How My Vietnamese Text-to-Speech Module Works on a Flask AI Server"
+              : (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
           </h2>
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-            {activeContent.examples.map((example, idx) => (
-              <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                {example}
+          {activeTool === "text_speech" ? (
+            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Short description for the article card
+                </div>
+                <div className="mt-1">
+                  This article explains how my Vietnamese Text-to-Speech module works on a Flask-based AI server, from request routing and model selection to waveform generation and MP3 export. It also outlines the current runtime settings, voice generation flow, and a few practical limits in the version I am using now.
+                </div>
               </div>
-            ))}
-          </div>
-        </section>
 
-        <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            {lang === "vi" ? "Bài viết liên quan" : "Related Articles"}
-          </h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {activeContent.related.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-full border border-cyan-300 bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-800 hover:bg-cyan-100"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Article body
+                </div>
+                <div className="mt-1 space-y-2">
+                  <p>
+                    My Text-to-Speech module runs on a Python Flask AI server inside D:\hustmedia\python. The service is exposed on 0.0.0.0:8789, and the main POST /tts route works as a dispatcher between two Vietnamese TTS engines: a local F5-based pipeline and an alternative path based on facebook/mms-tts-vie. The API requires a non-empty text field, reads a servicecode, and falls back to the F5 engine unless the request explicitly asks for the Facebook path. In the current version, the request is processed synchronously and the API returns a success payload rather than streaming the audio directly.
+                  </p>
+                  <p>
+                    The main voice generation path is F5_vie. Before synthesis begins, the module converts numeric strings into Vietnamese words so phone numbers, quantities, and short operational text sound more natural. The server then calls f5-tts_infer-cli with a fixed reference voice file, the F5TTS_Base model, speed 0.5, the vocos vocoder, a local vocabulary file, and the checkpoint model_500000.pt. After inference, the generated WAV file is converted to MP3 with pydub and saved to D:\hustmedia\python\tts\output\output.mp3.
+                  </p>
+                  <p>
+                    Inside the F5 pipeline, the processing flow is more than a simple wrapper call. The CLI loads its config, model backbone, and checkpoint, preprocesses the reference audio by trimming silence and adding about 50 ms of padding, and can infer missing reference text with Whisper. The generation text is then split into batches, normalized, resampled to 24 kHz, and passed through the sampling path before the waveform is decoded by the vocoder. When multiple chunks are produced, they are joined with a default cross-fade of 0.15 seconds to reduce audible breaks.
+                  </p>
+                  <p>
+                    I also keep a second engine based on facebook/mms-tts-vie. In this path, the tokenizer and model are loaded from Hugging Face, the text is converted into a waveform, and the result is exported through the same output pipeline. This version is useful as an alternative engine, but in the current code it reloads the model on each request, so latency and memory usage can vary more than a persistent in-memory design. Both engines also write to the same output MP3 path, which means concurrent requests need tighter output isolation in future revisions.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                  Technical configuration snapshot
+                </div>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  <li>Runtime: Python Flask server on 0.0.0.0:8789</li>
+                  <li>Main route: POST /tts</li>
+                  <li>Default engine: F5_vie</li>
+                  <li>Alternate engine: facebook/mms-tts-vie</li>
+                  <li>Model path: F5TTS_Base</li>
+                  <li>Vocoder: vocos</li>
+                  <li>Checkpoint: model_500000.pt</li>
+                  <li>Speed: 0.5</li>
+                  <li>Audio resample target: 24 kHz</li>
+                  <li>Chunk merge: 0.15 s cross-fade</li>
+                  <li>Export: WAV to MP3 via pydub</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 text-sm leading-relaxed text-slate-700">
+              {activeContent.related.map((item) => item.label).join(". ")}.
+            </div>
+          )}
         </section>
 
         <section className="mt-4 rounded-2xl border border-indigo-200 bg-white px-4 py-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-900">
-              {lang === "vi" ? "Công cụ AI" : "AI Tool"}
+              {lang === "vi" ? "Tạo giọng đọc" : "Voice Generation"}
             </h2>
           </div>
 
           {activeTool === "text_speech" && (
             <div>
               <label className="mb-1 block text-sm text-slate-700">
-                {lang === "vi" ? "Nhập văn bản để tạo giọng đọc" : "Enter text to generate narration"}
+                {lang === "vi" ? "Nhập văn bản để tạo bản đọc" : "Enter text for narration"}
               </label>
               <textarea
                 suppressHydrationWarning
@@ -691,8 +724,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 ? "Đang xử lý..."
                 : "Processing..."
               : lang === "vi"
-                ? "✔ Xác nhận xử lý"
-                : "✔ Confirm Processing"}
+                ? "Tạo âm thanh"
+                : "Generate Audio"}
             <span className="float-right">➤</span>
           </button>
 
@@ -718,6 +751,19 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               </a>
             </div>
           ) : null}
+        </section>
+
+        <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            {lang === "vi" ? "Ví dụ thực tế (Input/Output)" : "Practical Input/Output Examples"}
+          </h2>
+          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+            {activeContent.examples.map((example, idx) => (
+              <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                {example}
+              </div>
+            ))}
+          </div>
         </section>
       </article>
     </>

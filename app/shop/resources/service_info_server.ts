@@ -25,7 +25,7 @@ type ServiceInfoResult = {
 };
 
 const SERVICE_INFO_ENDPOINT =
-  "https://hust.media/api/orders/account/sellers/services/services_info.php";
+  "https://nginx.hust.media/services/p2p/resources/info";
 
 const safeDecode = (value: string) => {
   try {

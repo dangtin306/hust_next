@@ -50,6 +50,46 @@ const isSamePayload = (
   );
 };
 
+const withEnglishFallback = (
+  labelValue: MenuItem["label"],
+  targetLang: string
+): MenuItem["label"] => {
+  if (!labelValue || typeof labelValue === "string") return labelValue;
+
+  const englishLabel = typeof labelValue.en === "string" ? labelValue.en.trim() : "";
+  if (!englishLabel) return labelValue;
+
+  const targetLabel =
+    typeof labelValue[targetLang] === "string" ? labelValue[targetLang].trim() : "";
+  if (targetLabel) return labelValue;
+
+  return {
+    ...labelValue,
+    [targetLang]: englishLabel,
+  };
+};
+
+const normalizeMenuLanguage = (menu: MenuItem[], targetLang: string): MenuItem[] => {
+  if (!Array.isArray(menu)) return [];
+
+  return menu.map((item) => {
+    const nextItem: MenuItem = {
+      ...item,
+      label: withEnglishFallback(item.label, targetLang),
+    };
+
+    if (Array.isArray(item.data)) {
+      nextItem.data = normalizeMenuLanguage(item.data, targetLang);
+    }
+
+    return nextItem;
+  });
+};
+
+const resolveMenuLanguage = (nationalMarket: string) => {
+  return nationalMarket === "vi" || nationalMarket === "en" ? nationalMarket : "en";
+};
+
 const readCachedMenu = (payload: SidebarMenuCache["payload"]): MenuItem[] | null => {
   if (typeof window === "undefined") return null;
   try {
@@ -101,7 +141,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
     return { apikey, main_domain, national_market };
   }, []);
 
-  const lang = payload.national_market || "vi";
+  const lang = resolveMenuLanguage(payload.national_market || "vi");
 
   useEffect(() => {
     const hostname = window.location.hostname;
@@ -121,7 +161,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
 
     const cached = readCachedMenu(payload);
     if (cached && !isLocalhost) {
-      setMenu(cached);
+      setMenu(normalizeMenuLanguage(cached, lang));
       return;
     }
 
@@ -146,8 +186,9 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
         const latestVersion = data.api_results?.latest_version;
 
         if (Array.isArray(sidebarMenu) && sidebarMenu.length > 0) {
-          setMenu(sidebarMenu);
-          storeCachedMenu(payload, sidebarMenu);
+          const normalizedMenu = normalizeMenuLanguage(sidebarMenu, lang);
+          setMenu(normalizedMenu);
+          storeCachedMenu(payload, normalizedMenu);
         }
 
         if (typeof latestVersion === "string" || typeof latestVersion === "number") {
@@ -160,7 +201,7 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
 
     run();
     return () => controller.abort();
-  }, [payload]);
+  }, [payload, lang]);
 
   return (
     <>

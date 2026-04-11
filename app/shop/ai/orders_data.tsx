@@ -61,22 +61,23 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "This module converts plain text into speech so teams can publish narrated content faster and improve accessibility for users who prefer listening.",
-        "It is designed as a practical utility inside the Hust workflow, where creators, students, and operations teams need quick voice output for guides, product descriptions, and task documentation.",
-        "In production use, this helps reduce repetitive recording work and keeps voice quality consistent across different campaigns.",
+        "This Text-to-Speech module is part of the small set of practical tools I maintain for simple media and content work. It turns written text into spoken audio for narration, accessibility, and faster content preparation.",
+        "I first built this utility in an AI-related working environment and later rebuilt it into a more stable version for my own workflow. It now runs on my physical server and supports practical use cases such as guides, product descriptions, short scripts, and task documentation.",
+        "It helps reduce repetitive recording work and makes voice output easier to prepare for simple content formats such as Reels and YouTube Shorts.",
       ],
       audience: [
-        "Content creators writing tutorials and explainer posts.",
-        "Support teams producing short voice guides for onboarding.",
-        "Students and mobile users who prefer listening over reading.",
+        "Creators working on tutorials, explainers, and short social content.",
+        "Support teams that need quick voice output for guides and onboarding.",
+        "Students and mobile users who prefer listening instead of reading.",
       ],
       examples: [
-        "Input: Product description paragraph. Output: playable narration for social posts.",
-        "Input: Task instructions. Output: short voice briefing for collaborators.",
+        "Input: Product description paragraph. Output: Short narrated audio for social posts.",
+        "Input: Task instructions. Output: Short voice summary for collaborators.",
       ],
       related: [
-        { label: "Development services", href: "/services/development" },
-        { label: "Support workflow guidelines", href: "/support" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
     vi: {
@@ -96,8 +97,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Checklist nhiem vu. Output: Ban tom tat giong noi cho cong tac vien.",
       ],
       related: [
-        { label: "Dich vu phat trien", href: "/services/development" },
-        { label: "Trang ho tro ky thuat", href: "/support" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
   },
@@ -105,9 +107,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     en: {
       heading: "About this AI module",
       summary: [
-        "Speech-to-Text turns voice notes into editable text so teams can draft reports and logs faster without heavy typing, in a simple and practical way.",
-        "This is useful in real operations where users capture audio on mobile and then need structured text for moderation, support, or publishing flows with less manual effort.",
-        "It also improves traceability because spoken updates become searchable records that can be reviewed later by relevant team members.",
+        "This Speech-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and everyday content preparation.",
+        "I use it in workflows where audio is recorded on mobile and later converted into structured text for support, moderation, documentation, or publishing tasks. It helps reduce manual typing and makes spoken updates easier to process.",
+        "For simple content and operations work, it also turns voice recordings into searchable text that can be reviewed, edited, and reused later.",
       ],
       audience: [
         "Moderators collecting incident notes quickly.",
@@ -119,8 +121,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: customer call summary. Output: searchable transcript for support history.",
       ],
       related: [
-        { label: "Development services", href: "/services/development" },
-        { label: "Community docs", href: "/docs" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
     vi: {
@@ -140,8 +143,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Tom tat cuoc goi ho tro. Output: Transcript de tim kiem lai.",
       ],
       related: [
-        { label: "Dich vu phat trien", href: "/services/development" },
-        { label: "Kho tai lieu", href: "/docs" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
   },
@@ -163,8 +167,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: image of instructions. Output: editable text for article updates.",
       ],
       related: [
-        { label: "Development services", href: "/services/development" },
-        { label: "Support page", href: "/support" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
     vi: {
@@ -184,8 +189,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Anh huong dan cu. Output: Van ban chinh sua de cap nhat bai viet.",
       ],
       related: [
-        { label: "Dich vu phat trien", href: "/services/development" },
-        { label: "Trang ho tro", href: "/support" },
+        { label: "System Architecture Notes", href: "/community/docs/architecture" },
+        { label: "API Reference Guide", href: "/community/docs/api-reference" },
+        { label: "Technical Overview", href: "/community/docs/overview" },
       ],
     },
   },
