@@ -76,6 +76,16 @@
         "source": "/next/check/:path*",
         "destination": "/next/shop/scams_check/:path*",
         "regex": "^/next/check(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/orders_once/:slug_2",
+        "destination": "/next/shop/ai?slug_2=:slug_2",
+        "regex": "^/next/orders_once(?:/([^/]+?))(?:/)?$"
+      },
+      {
+        "source": "/next/shop/ai/:slug_2",
+        "destination": "/next/shop/ai?slug_2=:slug_2",
+        "regex": "^/next/shop/ai(?:/([^/]+?))(?:/)?$"
       }
     ],
     "fallback": []
@@ -174,6 +184,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/api/resources/services-info",
+      "regex": "^/api/resources/services\\-info(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/resources/services\\-info(?:/)?$"
+    },
+    {
       "page": "/community/features",
       "regex": "^/community/features(?:/)?$",
       "routeKeys": {},
@@ -214,6 +230,12 @@
       "regex": "^/info/terms_service(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/info/terms_service(?:/)?$"
+    },
+    {
+      "page": "/shop/ai",
+      "regex": "^/shop/ai(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/ai(?:/)?$"
     },
     {
       "page": "/shop/hustadmin/scheduler",
