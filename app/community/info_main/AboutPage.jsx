@@ -61,10 +61,10 @@ export default function AboutPage() {
               Hust Media
             </p>
             <h1 className="text-2xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
-              Technical Documentation & System Architecture
+              Scalable Platform Documentation & System Design
             </h1>
             <p className="mt-4 text-base leading-relaxed text-slate-600">
-              Hust Media publishes original technical articles on Web, Mobile, and API systems, with a focus on architecture, deployment, monitoring, and practical implementation.
+              Hust Media publishes original technical documentation on scalable web systems, with a focus on system architecture, deployment, monitoring, system integration, and practical implementation behind stable platform operation.
             </p>
             {/* Badges: Kỹ thuật & An toàn */}
             <div className="flex flex-wrap items-center gap-3">
