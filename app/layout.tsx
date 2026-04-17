@@ -60,7 +60,7 @@ export default async function RootLayout({
                     <div className="app-brand demo" />
                   </div>
                 </aside>
-                <div className="layout-page flex min-h-screen flex-col">
+                <div className="layout-page flex min-h-screen min-h-[100dvh] flex-col">
                   <SimpleTopBar initialHost={initialHost} />
                   <div className="flex-1">{children}</div>
                   <Footer_web initialHost={initialHost} />
