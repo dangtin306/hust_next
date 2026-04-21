@@ -211,13 +211,13 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
           antialiased text-slate-900
           flex flex-col h-full overflow-y-auto
           bg-gradient-to-r from-indigo-100 via-purple-200 to-pink-200
-          px-4 py-4 fixed top-0 left-0
+          px-6 py-6 fixed top-0 left-0
           w-[75vw] min-w-[240px] max-w-[320px] md:w-[280px] md:min-w-[280px] md:max-w-[280px]
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
         `}
       >
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <div className="text-purple-400 text-[20px] font-bold">{displayHostname}</div>
           <button
             type="button"

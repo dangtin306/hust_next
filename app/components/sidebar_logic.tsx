@@ -83,9 +83,9 @@ const SidebarLogic = ({ items, lang, setIsOpen }: SidebarLogicProps) => {
       const isSelected = selectedKey === key;
 
       const rowClassName =
-        `w-full flex items-center justify-between py-1.5 px-3 text-slate-900 visited:text-slate-900 no-underline ` +
-        `${isOpen || isSelected ? "bg-pink-100 border-l-2 border-pink-400 " : "bg-gray-100 "}` +
-        `bg-opacity-50 hover:bg-opacity-75 ` +
+        `w-full flex items-center justify-between py-1.5 px-4 text-slate-900 visited:text-slate-900 no-underline ` +
+        `${isOpen || isSelected ? "bg-pink-100/50 border-l-2 border-pink-400 " : "bg-gray-100/50 "}` +
+        `hover:bg-pink-100/60 ` +
         `${isSelected ? "font-[600]" : ""}`;
 
       const labelText = pickLabel(item.label, lang);
