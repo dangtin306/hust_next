@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 
 const docsDir = path.join(process.cwd(), "src", "content", "docs");
 const defaultOrderMap: Record<string, number> = {
@@ -256,6 +257,7 @@ export default async function DocPage({
               <MDXRemote source={doc.content} />
             </div>
           </article>
+          <DocsHelpfulFeedback />
         </main>
       </div>
     </div>

@@ -6,12 +6,12 @@ description: Hybrid UI core with Unified Data Contract, Dual Routing Mechanism, 
 # Core Engine: Hybrid Architecture (ReactJS + NextJS)
 
 ## Design Philosophy
-Core Engine triển khai **Hybrid UI Architecture** theo nguyên tắc “một logic, hai lớp trình bày”. **ReactJS** đảm nhiệm **high‑interaction workflows** và **real‑time UX**, trong khi **NextJS** xử lý **SSR/SSG entry points** để tối ưu **SEO** và **first paint**. Cả hai lớp UI dùng chung **Unified Data Contract** nên hành vi render thống nhất và không nhân đôi business rules.
+Core Engine implements a **Hybrid UI Architecture** based on the principle of "one logic, two presentation layers." **ReactJS** handles **high-interaction workflows** and **real-time UX**, while **NextJS** serves **SSR/SSG entry points** to optimize **SEO** and **first paint**. Both UI layers share the same **Unified Data Contract**, ensuring consistent rendering behavior without duplicating business rules.
 
 Key principles:
-- **Unified Data Contract** đảm bảo schema JSON ổn định giữa SPA và SSR.
-- **Dual Routing Mechanism** phân luồng public entry vs. micro‑flows.
-- **Shared Components** giảm divergence giữa web admin và web public.
+- **Unified Data Contract** keeps a stable JSON schema across SPA and SSR.
+- **Dual Routing Mechanism** separates public entry points and micro-flows.
+- **Shared Components** reduce divergence between admin web and public web.
 
 Unified Data Contract (sample):
 ```json
@@ -25,7 +25,7 @@ Unified Data Contract (sample):
 ```
 
 ## Data Flow Pipeline
-Luồng dữ liệu đi qua **API Gateway** và **Realtime Bus** (MQTT/WebSocket), được **normalize** trước khi đẩy vào state store để giữ **Real‑time Latency** thấp và đồng bộ UI.
+Data flows through the **API Gateway** and **Realtime Bus** (MQTT/WebSocket), and is **normalized** before entering the state store to maintain low **Real-time Latency** and synchronized UI updates.
 
 ```mermaid
 flowchart LR
@@ -50,9 +50,9 @@ else -> React Router (SPA micro-flows)
 ```
 
 ## Performance Optimization
-Hệ thống áp dụng **2-Layer Caching Strategy** để tối ưu throughput:
-- **Layer 1 (Client Store Cache)**: React cache trong store giúp phản hồi tức thì.
-- **Layer 2 (SSR/Runtime Cache)**: Next cache ở build/runtime giảm tải server.
+The system applies a **2-Layer Caching Strategy** to optimize throughput:
+- **Layer 1 (Client Store Cache)**: React store-level caching enables immediate responses.
+- **Layer 2 (SSR/Runtime Cache)**: Next build/runtime caching reduces server load.
 
 ```text
 cache.l1.get(key) -> render immediate
@@ -60,7 +60,7 @@ cache.l2.get(key) -> warm SSR payload
 ```
 
 Optimization highlights:
-- **Virtual DOM diffing** giảm repaint khi realtime updates.
-- **Route‑level prefetch** tăng tốc **first contentful paint**.
-- **Normalized event payloads** giảm serialization overhead.
-- **Shared schema** loại bỏ duplicate logic, giảm bug surface.
+- **Virtual DOM diffing** reduces repaint during real-time updates.
+- **Route-level prefetch** improves **first contentful paint**.
+- **Normalized event payloads** reduce serialization overhead.
+- **Shared schema** eliminates duplicate logic and lowers bug surface.
