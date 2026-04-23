@@ -50,7 +50,7 @@ const parseSlugs = (pathname: string) => {
 };
 
 const isToolKey = (value: string): value is ToolKey =>
-  ALLOWED_TOOLS.has(value as "speech_text" | "text_speech" | "image_text");
+  ALLOWED_TOOLS.has(value as ToolKey);
 
 const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = {}) => {
   const pathname = usePathname();
@@ -72,6 +72,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedVoiceUrl, setGeneratedVoiceUrl] = useState("");
   const [helpfulVote, setHelpfulVote] = useState<HelpfulVote>("");
+  const [translateInput, setTranslateInput] = useState("");
+  const [translateText, setTranslateText] = useState("");
 
   const lang = useSyncExternalStore<Lang>(
     subscribeLang,
@@ -89,6 +91,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   useEffect(() => {
     setGeneratedVoiceUrl("");
     setActionMessage("");
+    setTranslateText("");
   }, [activeTool]);
 
   useEffect(() => {
@@ -166,6 +169,15 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
         lang === "vi"
           ? "Vui lòng tải file audio trước khi xác nhận."
           : "Please upload an audio file before confirming."
+      );
+      return;
+    }
+
+    if (activeTool === "translate_vi_en" && !translateInput.trim()) {
+      setActionMessage(
+        lang === "vi"
+          ? "Vui lòng nhập nội dung trước khi xác nhận."
+          : "Please enter content before confirming."
       );
       return;
     }
@@ -391,6 +403,68 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
       }
     }
 
+    if (activeTool === "translate_vi_en") {
+      setIsSubmitting(true);
+      setActionMessage(lang === "vi" ? "Đang gửi yêu cầu..." : "Sending request...");
+
+      try {
+        const payload = {
+          action: "add",
+          comments: translateInput.trim(),
+          link: "translate",
+          username: "",
+          quantity: Math.max(1, translateInput.trim().length),
+          national_market: normalizeLang(readCookie("national_market")),
+          service: "899522",
+        };
+
+        const response = await fetch("https://hust.media/api/v3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const rawText = await response.text();
+        let data: TtsApiResponse = {};
+        try {
+          data = JSON.parse(rawText) as TtsApiResponse;
+        } catch {
+          data = { message: rawText };
+        }
+        const apiError = typeof data?.error === "string" ? data.error : "";
+        const message = String(data?.message || "");
+        const text = String(data?.text_vip || data?.text || "");
+        const orderId = data?.order;
+
+        if (!response.ok) {
+          throw new Error(message || `HTTP ${response.status}`);
+        }
+        if (apiError) {
+          throw new Error(apiError);
+        }
+
+        setTranslateText(text);
+        setActionMessage(
+          lang === "vi"
+            ? message || `Thành công. Mã đơn: ${orderId ?? "N/A"}`
+            : message || `Success. Order: ${orderId ?? "N/A"}`
+        );
+        alert_success(lang === "vi" ? "Thành công" : "Success");
+        return;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        setActionMessage(
+          lang === "vi"
+            ? `Lỗi xử lý: ${msg}`
+            : `Processing error: ${msg}`
+        );
+        alert_error(msg);
+        return;
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+
     setActionMessage(
       lang === "vi"
         ? "Đã xác nhận. Yêu cầu đã sẵn sàng xử lý qua API hiện tại."
@@ -426,12 +500,21 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   </Link>
                 );
               })}
+              {(() => {
+                const isTranslateActive = activeTool === "translate_vi_en";
+                return (
               <Link
                 href="/next/orders_once/translate_vi_en"
-                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                  isTranslateActive
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                    : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                }`}
               >
                 Vietnamese to English
               </Link>
+                );
+              })()}
             </div>
           </section>
 
@@ -469,6 +552,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   ? "How My Vietnamese Speech-to-Text Module Works on a Flask AI Server"
                   : activeTool === "image_text"
                     ? "How My Image-to-Text Module Works in a Rule-Based OCR Workflow"
+                    : activeTool === "translate_vi_en"
+                      ? "How My Vietnamese-to-English Module Works on a Flask AI Server"
                 : (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
             </h2>
             {activeTool === "text_speech" ? (
@@ -629,6 +714,65 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 </ul>
               </div>
               </div>
+            ) : activeTool === "translate_vi_en" ? (
+              <div className="mt-2 space-y-3 break-words text-sm leading-relaxed text-slate-700 [overflow-wrap:anywhere]">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    Short description for the article card
+                  </div>
+                  <div className="mt-1">
+                    This article explains how my Vietnamese-to-English module runs on a Flask AI server, from route dispatch and model loading to text and HTML translation output. It also outlines the current translation direction, runtime flow, and practical limits.
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    Article body
+                  </div>
+                  <div className="mt-1 space-y-2">
+                    <p>
+                      My Vietnamese-to-English module runs inside the current Flask server, not as a separate public app. In the repo, the server adds the translate directory to sys.path, and the /translate route dispatches requests through translate_fb(...), which maps to main(...) in translate/server_4.py. The route reads content and category from form or query input and does not parse JSON body data.
+                    </p>
+                    <p>
+                      The wrapper is fixed to Vietnamese-to-English by default. In server_4.py, the main entry uses src_lang=&quot;vi&quot; and tgt_lang=&quot;en&quot;, and the /translate route does not override them. Because of that, requests sent to /translate follow one default direction unless the code is changed.
+                    </p>
+                    <p>
+                      Translation uses facebook/nllb-200-distilled-600M. The tokenizer is loaded globally once, while the model pipeline is lazy-loaded through _get_pipeline() with a lock to avoid race conditions during first initialization. This lets later requests reuse the same pipeline in memory.
+                    </p>
+                    <p>
+                      Language direction is enforced through the NLLB language map and generation settings. Vietnamese maps to vie_Latn, English to eng_Latn, the tokenizer source language is set before generation, and output is forced by forced_bos_token_id. This keeps the module returning English output when the target remains en.
+                    </p>
+                    <p>
+                      For normal text, the module preserves leading and trailing spacing, translates only the stripped core content, and returns the original input unchanged if the text is empty after stripping. For HTML, it parses the document with BeautifulSoup, skips nodes such as script, style, and source, translates valid text nodes in batch, then writes them back while preserving node spacing. If category is not html, the dispatcher falls back to the text path.
+                    </p>
+                    <p>
+                      The translation path also has limits. Input is truncated at max_length=512, output is capped by max_new_tokens=50, and long content can be cut on both sides. Cache and temp paths are moved to drive F: by default, or to HUSTMEDIA_AI_CACHE if that environment variable is set. The model normally stays in memory for faster reuse, but if TRANSLATE_RESET_EACH_CALL=1 is enabled, the pipeline resets and cleans memory after each request.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    Technical configuration snapshot
+                  </div>
+                  <ul className="mt-1 list-disc space-y-1 pl-5">
+                    <li>Server route: /translate</li>
+                    <li>Route input: content, category from form/query</li>
+                    <li>Main wrapper: main(content, src_lang=&quot;vi&quot;, tgt_lang=&quot;en&quot;, category=&quot;text&quot;)</li>
+                    <li>Translation model: facebook/nllb-200-distilled-600M</li>
+                    <li>Source language map: vi -&gt; vie_Latn</li>
+                    <li>Target language map: en -&gt; eng_Latn</li>
+                    <li>Direction control: forced_bos_token_id</li>
+                    <li>Text mode: translate stripped core, preserve outer spacing</li>
+                    <li>HTML mode: BeautifulSoup parse + batch text-node translation</li>
+                    <li>Input limit: max_length=512</li>
+                    <li>Output limit: max_new_tokens=50</li>
+                    <li>Cache path: F: or HUSTMEDIA_AI_CACHE</li>
+                    <li>Optional reset mode: TRANSLATE_RESET_EACH_CALL=1</li>
+                    <li>Current limitation: fixed VI -&gt; EN, no JSON POST parsing, invalid target may return 500</li>
+                  </ul>
+                </div>
+              </div>
             ) : (
               <div className="mt-2 text-sm leading-relaxed text-slate-700">
               {activeContent.related.map((item) => item.label).join(". ")}.
@@ -645,6 +789,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   ? (lang === "vi" ? "Chuyển âm thanh thành văn bản" : "Audio Transcription")
                   : activeTool === "image_text"
                     ? (lang === "vi" ? "Trích xuất văn bản từ ảnh" : "Image Text Extraction")
+                  : activeTool === "translate_vi_en"
+                    ? "Vietnamese to English Translation"
                   : (lang === "vi" ? "Tạo giọng đọc" : "Voice Generation")}
               </h2>
             </div>
@@ -846,6 +992,43 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             </div>
           )}
 
+          {activeTool === "translate_vi_en" && (
+            <div>
+              <label className="mb-1 block text-sm text-slate-700">Enter Vietnamese text to translate</label>
+              <textarea
+                suppressHydrationWarning
+                value={translateInput}
+                onChange={(e) => setTranslateInput(e.target.value)}
+                placeholder="Paste Vietnamese text for English translation..."
+                className="h-28 w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm text-slate-800 outline-none ring-0 focus:border-slate-400"
+              />
+              <p className="mt-2 text-xs text-slate-600">Current characters: {translateInput.length}</p>
+              {translateText ? (
+                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                        Output
+                      </span>
+                      <p className="text-xs font-medium text-slate-700">English Translation</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(translateText)}
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <span>⧉</span>
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <div className="max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white p-2">
+                    <p className="whitespace-pre-wrap break-words text-sm text-slate-700">{translateText}</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleConfirmTool}
@@ -858,11 +1041,13 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 : "Processing..."
               : activeTool === "speech_text"
                 ? (lang === "vi" ? "Tạo bản chép lời" : "Generate Transcript")
-                : activeTool === "image_text"
-                  ? (lang === "vi" ? "Trích xuất văn bản" : "Extract Text")
-                : (lang === "vi" ? "Tạo âm thanh" : "Generate Audio")}
-            <span className="float-right">➤</span>
-          </button>
+                  : activeTool === "image_text"
+                    ? (lang === "vi" ? "Trích xuất văn bản" : "Extract Text")
+                  : activeTool === "translate_vi_en"
+                    ? "Translate to English"
+                    : (lang === "vi" ? "Tạo âm thanh" : "Generate Audio")}
+              <span className="float-right">➤</span>
+            </button>
 
           {actionMessage ? (
             <p className="mt-2 text-xs text-slate-600">{actionMessage}</p>

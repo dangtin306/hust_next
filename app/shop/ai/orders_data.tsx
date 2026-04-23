@@ -1,5 +1,5 @@
 export type Lang = "en" | "vi";
-export type ToolKey = "text_speech" | "speech_text" | "image_text";
+export type ToolKey = "text_speech" | "speech_text" | "image_text" | "translate_vi_en";
 
 export type SeoItem = {
   title: string;
@@ -15,7 +15,7 @@ export type ToolContent = {
   related: Array<{ label: string; href: string }>;
 };
 
-export const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text"] as const);
+export const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en"] as const);
 
 export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
   text_speech: {
@@ -52,6 +52,18 @@ export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
       title: "Trich xuat chu tu hinh anh (OCR)",
       description: "Cong cu OCR trich xuat chu tu anh va anh chup man hinh, ho tro nhap lieu nhanh va kiem chung thong tin.",
       keywords: "OCR, chuyen hinh anh sang chu, trich xuat chu, nhan dang ky tu, anh chup man hinh, tai lieu",
+    },
+  },
+  translate_vi_en: {
+    en: {
+      title: "Vietnamese to English — Translation Utility",
+      description: "Translate Vietnamese text into clear English for practical content workflows.",
+      keywords: "vietnamese to english, translation, ai translation, content workflow",
+    },
+    vi: {
+      title: "Dich tieng Viet sang tieng Anh",
+      description: "Cong cu dich tieng Viet sang tieng Anh de dung trong quy trinh noi dung.",
+      keywords: "dich tieng viet sang tieng anh, translation, ai translation, content workflow",
     },
   },
 };
@@ -193,6 +205,36 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
         { label: "Technical Overview", href: "/community/docs/overview" },
       ],
+    },
+  },
+  translate_vi_en: {
+    en: {
+      heading: "About this AI module",
+      summary: [
+        "This Vietnamese-to-English module is one of the practical utilities I maintain for content work. It translates Vietnamese text into English for articles, documentation, product content, and internal use.",
+        "I use it when Vietnamese notes, drafts, or HTML content need English output without changing the rest of the workflow. It reduces manual rewriting and supports review and publishing.",
+        "In the current version, the module runs on my Flask AI server with a fixed VI-to-EN path. It supports both text and HTML input.",
+      ],
+      audience: [
+        "People turning Vietnamese notes or drafts into English.",
+        "Teams preparing English articles, docs, or support content.",
+        "Users who need a simple VI-to-EN step for review or publishing.",
+      ],
+      examples: [
+        "Input: Vietnamese draft note. Output: English version for review.",
+        "Input: Vietnamese product or support text. Output: English for publishing.",
+      ],
+      related: [{ label: "hello world", href: "/next/orders_once/translate_vi_en" }],
+    },
+    vi: {
+      heading: "Gioi thieu mo-dun AI",
+      summary: ["hello world"],
+      audience: ["hello world"],
+      examples: [
+        "Input: Vietnamese draft note. Output: English version for review.",
+        "Input: Vietnamese product or support text. Output: English for publishing.",
+      ],
+      related: [{ label: "hello world", href: "/next/orders_once/translate_vi_en" }],
     },
   },
 };

@@ -6,46 +6,61 @@ order: 4
 
 # Hust Media Public API v3
 
+## Introduction
+This note documents the current v3 API contract behind the platform utilities. It focuses on the shared gateway structure, service-based request routing, and the response handling rules used by the client so integration and operational behavior stay consistent over time.
+
 ## Authentication
-All requests require an **API Key**. Pass the key as the `key` field in the JSON body.
+All current utilities route through the same `v3` gateway and require an **API Key** in the JSON body. Requests use `Content-Type: application/json`, while routing is handled by `service` and payload structure rather than separate endpoints for each utility.
 
 ## Endpoint
-`POST /api/v3/campaign/create`
+`POST /api/v3`
 
-### Request Body
+This endpoint is the shared submission layer for the current utilities. In the client flow, each request starts with `action: "add"`, `username: ""`, a normalized `national_market` value (`"vi"` or `"en"`), and a utility-specific `service` id.
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| action | string | yes | Action verb. Use `add` to create a campaign. |
-| key | string | yes | API key assigned to your account. |
-| link | string | yes | Target URL for the campaign. |
-| quantity | int | yes | Number of actions to deliver. |
-| service | string | yes | Service identifier for the campaign type. |
-| comments | string[] | no | Optional comment list for comment-based services. |
+## Request Body
+The current client logic uses one common request contract and then adjusts a few fields per utility. Core fields include `action`, `key`, `username`, `national_market`, `service`, `link`, `comments`, and `quantity`.
+The exact payload branch is selected by `service` id together with fields such as `link`, `comments`, or `images_data`.
 
-### Example Request
-```json
-POST /api/v3/campaign/create
+In practice, link, comments, and quantity are reused differently depending on the selected service:
+
+- Text to Speech sends normalized text through `link` with a fixed `quantity`.
+- Speech to Text sends audio as base64 data in `comments.voice_data`, with `quantity` derived from rounded audio duration.
+- Image to Text sends uploaded image data through `images_data`, with a fixed `quantity` of `1`.
+- Vietnamese to English sends trimmed source text through `comments`, with `quantity` based on trimmed character length.
+
+## Response Handling
+The client reads `response.text()` first, then attempts JSON parsing, and falls back to the raw text as a message when parsing fails. A request is treated as successful only when `response.ok` is true and the returned payload does not include an `error` field.
+
+Depending on the service, the client reads result data from `message`, `order`, `voice`, `text_vip`, or `text`. For text-returning utilities, `text_vip` is preferred when both text fields are available.
+
+**Example Request**
+```http
+POST /api/v3
+Content-Type: application/json
+
 {
   "action": "add",
   "comments": ["comment_1", "comment_2"],
   "key": "YOUR_API_KEY",
-  "link": "https://example.com/target",
+  "link": "<SERVICE_LINK_VALUE>",
   "quantity": 1000,
-  "service": "follow"
+  "service": "<SERVICE_ID>"
 }
 ```
 
-### Example Response (Success)
+**Example Response (Success)**
 ```json
 {
   "order": 98412
 }
 ```
 
-### Example Response (Error)
+**Example Response (Error)**
 ```json
 {
   "error": "quantity_less_than_min"
 }
 ```
+
+## Technical Notes
+All current utilities use the same v3 gateway. Requests are separated by service id and payload shape, not by different backend endpoints. The client also blocks repeated submissions at the start of each request flow to reduce duplicate sends.
