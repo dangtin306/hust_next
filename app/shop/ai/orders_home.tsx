@@ -18,6 +18,7 @@ type TtsApiResponse = {
   text?: string;
   text_vip?: string;
 };
+type HelpfulVote = "" | "yes" | "no";
 
 const readCookie = (name: string) => {
   if (typeof document === "undefined") return "";
@@ -70,6 +71,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [actionMessage, setActionMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedVoiceUrl, setGeneratedVoiceUrl] = useState("");
+  const [helpfulVote, setHelpfulVote] = useState<HelpfulVote>("");
 
   const lang = useSyncExternalStore<Lang>(
     subscribeLang,
@@ -398,66 +400,79 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
   return (
     <>
-      <article className="mx-auto max-w-5xl px-2 pb-8 pt-3">
-        <section className="mb-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            {lang === "vi" ? "Chọn công cụ AI" : "Choose AI Tool"}
-          </h2>
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
-            {toolTabs.map((tab) => {
-              const isActive = activeTool === tab.key;
-              return (
-                <Link
-                  key={tab.key}
-                  href={`/${routeRoot}/${tab.key}`}
-                  className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-800"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
-                  }`}
-                >
-                  {lang === "vi" ? tab.vi : tab.en}
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+      <article
+        className="mx-auto mt-3 w-full max-w-[1320px] overflow-x-hidden px-2 pb-8 pt-3 lg:mt-4 lg:px-8 xl:px-12"
+        style={{ "--tool-col": "clamp(215px, 21.5vw, 270px)" } as React.CSSProperties}
+      >
+        <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start">
+          <section className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm lg:w-[var(--tool-col)] lg:flex-none">
+            <h2 className="text-center text-sm font-semibold text-slate-900">
+              {lang === "vi" ? "Chọn công cụ AI" : "Practical AI Utilities"}
+            </h2>
+            <div className="mt-2 flex flex-col gap-2">
+              {toolTabs.map((tab) => {
+                const isActive = activeTool === tab.key;
+                return (
+                  <Link
+                    key={tab.key}
+                    href={`/${routeRoot}/${tab.key}`}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      isActive
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    {lang === "vi" ? tab.vi : tab.en}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/next/orders_once/translate_vi_en"
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              >
+                Vietnamese to English
+              </Link>
+            </div>
+          </section>
 
-        <section className="rounded-2xl border border-white/60 bg-gradient-to-r from-emerald-100/80 via-white/80 to-cyan-100/80 px-4 py-4 shadow-sm backdrop-blur-md">
-          <div className="flex items-start gap-2">
-            <div className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500/90 shadow-sm" />
-            <h1 className="text-base font-semibold leading-snug text-slate-900">{activeContent.heading}</h1>
-          </div>
-          <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
-            {activeContent.summary.map((paragraph, idx) => (
-              <p key={idx}>{paragraph}</p>
-            ))}
-          </div>
-        </section>
+          <div className="min-w-0 flex-1 space-y-2">
+          <section className="w-full min-w-0 rounded-2xl border border-white/60 bg-gradient-to-r from-emerald-100/80 via-white/80 to-cyan-100/80 px-4 py-4 shadow-sm backdrop-blur-md lg:flex-1">
+            <div className="flex items-start gap-2">
+              <div className="mt-1.5 h-2 w-2 rounded-full bg-emerald-500/90 shadow-sm" />
+              <h1 className="text-base font-semibold leading-snug text-slate-900">{activeContent.heading}</h1>
+            </div>
+            <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
+              {activeContent.summary.map((paragraph, idx) => (
+                <p key={idx}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        <div>
+          <section className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {lang === "vi" ? "Ai nên dùng mô-đun này?" : "Who should use this module?"}
+            </h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700 marker:text-emerald-600">
+              {activeContent.audience.map((item, idx) => (
+                <li key={idx}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        </div>
 
-        <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            {lang === "vi" ? "Ai nên dùng mô-đun này?" : "Who should use this module?"}
-          </h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700 marker:text-emerald-600">
-            {activeContent.audience.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            {activeTool === "text_speech"
-              ? "How My Vietnamese Text-to-Speech Module Works on a Flask AI Server"
-              : activeTool === "speech_text"
-                ? "How My Vietnamese Speech-to-Text Module Works on a Flask AI Server"
-                : activeTool === "image_text"
-                  ? "How My Image-to-Text Module Works in a Rule-Based OCR Workflow"
-              : (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
-          </h2>
-          {activeTool === "text_speech" ? (
-            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+        <div>
+          <section className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {activeTool === "text_speech"
+                ? "How My Vietnamese Text-to-Speech Module Works on a Flask AI Server"
+                : activeTool === "speech_text"
+                  ? "How My Vietnamese Speech-to-Text Module Works on a Flask AI Server"
+                  : activeTool === "image_text"
+                    ? "How My Image-to-Text Module Works in a Rule-Based OCR Workflow"
+                : (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
+            </h2>
+            {activeTool === "text_speech" ? (
+              <div className="mt-2 space-y-3 break-words text-sm leading-relaxed text-slate-700 [overflow-wrap:anywhere]">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                   Short description for the article card
@@ -505,9 +520,9 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   <li>Export: WAV to MP3 via pydub</li>
                 </ul>
               </div>
-            </div>
-          ) : activeTool === "speech_text" ? (
-            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+              </div>
+            ) : activeTool === "speech_text" ? (
+              <div className="mt-2 space-y-3 break-words text-sm leading-relaxed text-slate-700 [overflow-wrap:anywhere]">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                   Short description for the article card
@@ -556,9 +571,9 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   <li>Current limitation: no chunking, no VAD, no beam search</li>
                 </ul>
               </div>
-            </div>
-          ) : activeTool === "image_text" ? (
-            <div className="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+              </div>
+            ) : activeTool === "image_text" ? (
+              <div className="mt-2 space-y-3 break-words text-sm leading-relaxed text-slate-700 [overflow-wrap:anywhere]">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
                   Short description for the article card
@@ -613,24 +628,26 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   <li>Current limitation: no direct public OCR endpoint</li>
                 </ul>
               </div>
-            </div>
-          ) : (
-            <div className="mt-2 text-sm leading-relaxed text-slate-700">
+              </div>
+            ) : (
+              <div className="mt-2 text-sm leading-relaxed text-slate-700">
               {activeContent.related.map((item) => item.label).join(". ")}.
-            </div>
-          )}
-        </section>
+              </div>
+            )}
+          </section>
+        </div>
 
-        <section className="mt-4 rounded-2xl border border-indigo-200 bg-white px-4 py-4 shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">
-              {activeTool === "speech_text"
-                ? (lang === "vi" ? "Chuyển âm thanh thành văn bản" : "Audio Transcription")
-                : activeTool === "image_text"
-                  ? (lang === "vi" ? "Trích xuất văn bản từ ảnh" : "Image Text Extraction")
-                : (lang === "vi" ? "Tạo giọng đọc" : "Voice Generation")}
-            </h2>
-          </div>
+        <div className="pt-0.5">
+          <section className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-slate-900">
+                {activeTool === "speech_text"
+                  ? (lang === "vi" ? "Chuyển âm thanh thành văn bản" : "Audio Transcription")
+                  : activeTool === "image_text"
+                    ? (lang === "vi" ? "Trích xuất văn bản từ ảnh" : "Image Text Extraction")
+                  : (lang === "vi" ? "Tạo giọng đọc" : "Voice Generation")}
+              </h2>
+            </div>
 
           {activeTool === "text_speech" && (
             <div>
@@ -851,38 +868,77 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             <p className="mt-2 text-xs text-slate-600">{actionMessage}</p>
           ) : null}
 
-          {activeTool === "text_speech" && generatedVoiceUrl ? (
-            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-medium text-slate-700">
-                {lang === "vi" ? "Audio đã tạo" : "Generated audio"}
-              </p>
-              <audio controls className="w-full" src={generatedVoiceUrl}>
-                Your browser does not support the audio element.
-              </audio>
-              <a
-                href={generatedVoiceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-xs text-cyan-700 underline"
-              >
-                {lang === "vi" ? "Mở audio ở tab mới" : "Open audio in new tab"}
-              </a>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">
-            {lang === "vi" ? "Ví dụ thực tế (Input/Output)" : "Practical Input/Output Examples"}
-          </h2>
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-            {activeContent.examples.map((example, idx) => (
-              <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                {example}
+            {activeTool === "text_speech" && generatedVoiceUrl ? (
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p className="mb-2 text-xs font-medium text-slate-700">
+                  {lang === "vi" ? "Audio đã tạo" : "Generated audio"}
+                </p>
+                <audio controls className="w-full" src={generatedVoiceUrl}>
+                  Your browser does not support the audio element.
+                </audio>
+                <a
+                  href={generatedVoiceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 inline-block text-xs text-cyan-700 underline"
+                >
+                  {lang === "vi" ? "Mở audio ở tab mới" : "Open audio in new tab"}
+                </a>
               </div>
-            ))}
+            ) : null}
+          </section>
+        </div>
+
+        <div>
+          <section className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">
+              {lang === "vi" ? "Ví dụ thực tế (Input/Output)" : "Practical Input/Output Examples"}
+            </h2>
+            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+              {activeContent.examples.map((example, idx) => (
+                <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                  {example}
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="mb-1 rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-lg ring-1 ring-black/5 backdrop-blur-md">
+          <div className="mx-4">
+            {helpfulVote ? (
+              <div className="text-sm font-medium text-slate-700">
+                {helpfulVote === "yes"
+                  ? "Thank you for your feedback! We're glad you found this helpful."
+                  : "Thank you for your feedback! We'll work on improving our content."}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-base font-semibold text-slate-800">
+                  {lang === "vi" ? "Nội dung này có hữu ích với bạn không?" : "Was this content helpful to you?"}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHelpfulVote("yes")}
+                    className="inline-flex h-9 min-w-[88px] items-center justify-center rounded-lg border border-slate-400/70 bg-white px-4 text-base font-medium text-blue-700 transition hover:bg-slate-50"
+                  >
+                    {lang === "vi" ? "Có" : "Yes"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHelpfulVote("no")}
+                    className="inline-flex h-9 min-w-[88px] items-center justify-center rounded-lg border border-slate-400/70 bg-white px-4 text-base font-medium text-blue-700 transition hover:bg-slate-50"
+                  >
+                    {lang === "vi" ? "Không" : "No"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </section>
+        </div>
+          </div>
+        </div>
       </article>
     </>
   );
