@@ -1078,26 +1078,25 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               </section>
             </div>
 
-            <div id="section-feedback" className="mb-1 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-              <div>
-                <div className="space-y-3">
-                  <div>
-                    <h2 className="text-sm font-semibold leading-snug text-slate-900">
-                      {activeContent.readerValueTitle}
-                    </h2>
-                    <p className="mt-1 pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-700">
-                      {activeContent.readerValue}
-                    </p>
-                  </div>
-                  <div id="section-conclusion" className="mt-4 border-t border-slate-200 pt-3">
-                    <h2 className="text-sm font-semibold leading-snug text-slate-900">
-                      {activeContent.conclusionTitle}
-                    </h2>
-                    <p className="mt-1 pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-700">
-                      {activeContent.conclusion}
-                    </p>
-                  </div>
-                </div>
+            <div id="section-feedback" className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">
+              <div className="space-y-2.5">
+                <h2 className="text-sm font-semibold leading-snug text-slate-900">
+                  {activeContent.readerValueTitle}
+                </h2>
+                <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-700">
+                  {activeContent.readerValue}
+                </p>
+              </div>
+
+              <div className="my-5 border-t border-slate-200/70" />
+
+              <div id="section-conclusion" className="space-y-2 mb-1">
+                <h2 className="text-sm font-semibold leading-snug text-slate-900">
+                  {activeContent.conclusionTitle}
+                </h2>
+                <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-600">
+                  {activeContent.conclusion}
+                </p>
               </div>
             </div>
 
