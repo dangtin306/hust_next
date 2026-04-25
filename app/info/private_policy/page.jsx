@@ -13,13 +13,19 @@ const sections = [
     content: (
       <>
         <p>
-          We collect technical data such as Device ID, IP Address, and Browser
-          Fingerprint exclusively for Security Audits and Anomaly Detection.
-          This data is strictly not used for unauthorized personal tracking or
-          purposes outside the scope of system security.
+          We collect limited technical data such as Device ID, IP Address,
+          browser, session, and security log data to support system
+          integrity, abuse prevention, and anomaly detection. This data is
+          collected only for operational security, service stability,
+          fraud-control workflows, and essential platform operations.
+        </p>
+        <p>
+          We do not use this data for unauthorized personal profiling or
+          unrelated tracking.
         </p>
         <div className="rounded-lg border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-xs text-slate-600">
-          Purpose-limited: Security Audit + System Integrity only.
+          Purpose-limited: security audit, system integrity, abuse prevention,
+          and essential platform operations only.
         </div>
       </>
     ),
@@ -30,16 +36,28 @@ const sections = [
     content: (
       <>
         <p>
-          Verification artifacts (images/videos) uploaded by users are processed
-          via a multi-layer security protocol: Data Encryption → Automated
-          Analysis (OCR) → Secure Storage or Scheduled Deletion according to our
-          Data Retention Policy.
+          Verification artifacts such as images, videos, and related evidence
+          files may be processed through a controlled validation flow that
+          includes encryption, automated analysis (including OCR where
+          needed), secure storage, and scheduled deletion under the
+          platform&apos;s data retention rules.
         </p>
         <ul className="list-disc space-y-1 pl-5 text-slate-700">
-          <li>Encryption at rest and strict access control.</li>
-          <li>AI/OCR is used solely for validating verification data.</li>
-          <li>Data deletion cycles are enforced per the retention policy.</li>
+          <li>Encryption at rest and controlled access permissions</li>
+          <li>
+            AI/OCR used only for verification, validation, or operational
+            review
+          </li>
+          <li>
+            Retention and deletion cycles applied under internal data-handling
+            rules
+          </li>
         </ul>
+        <p>
+          Uploaded media is not reused outside the verification or operational
+          scope unless required for security review, support, or legal
+          compliance.
+        </p>
       </>
     ),
   },
@@ -49,10 +67,22 @@ const sections = [
     content: (
       <>
         <p>
-          Hust Media uses cookies to maintain user sessions and synchronize
-          state across modules (Shared Session React-NextJS). Cookies are used
-          solely for session identification and essential operations, not for
-          external tracking.
+          Hust Media uses cookies, session tokens, and related storage
+          mechanisms to maintain user sessions, protect platform integrity, and
+          synchronize state across connected modules, including shared React and
+          NextJS flows.
+        </p>
+        <p>These technologies are used for:</p>
+        <ul className="list-disc space-y-1 pl-5 text-slate-700">
+          <li>session identification and login continuity</li>
+          <li>module state synchronization</li>
+          <li>security checks and abuse prevention</li>
+          <li>essential platform functionality</li>
+        </ul>
+        <p>
+          They are not used for unauthorized external tracking outside
+          the legitimate platform, analytics, security, or advertising purposes
+          described in this policy.
         </p>
       </>
     ),
@@ -63,9 +93,51 @@ const sections = [
     content: (
       <>
         <p>
-          We do not sell user data. We only share anonymized data with
-          analytical partners when strictly necessary to improve system
-          performance and security.
+          We do not sell user data. We may share limited data with trusted
+          infrastructure, security, analytics, advertising, or service
+          providers only when necessary to operate, protect, improve, or
+          monetize the platform.
+        </p>
+        <p>
+          Where possible, shared data is minimized, aggregated, or anonymized.
+          Third-party access is limited to legitimate operational, security,
+          compliance, analytics, advertising, or service-delivery purposes.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "advertising-services",
+    title: "5. Advertising & Google AdSense",
+    content: (
+      <>
+        <p>
+          Hust Media may use Google AdSense and other third-party advertising
+          services to display ads on the platform. These providers, including
+          Google, may use cookies, web beacons, or similar technologies to
+          serve ads, measure ad performance, and improve advertising services.
+        </p>
+        <p>
+          Google and its partners may use advertising cookies to show ads based
+          on a user&apos;s visits to this site and other sites on the Internet.
+        </p>
+        <p>
+          Users can learn more about how Google uses data from sites or apps
+          that use its services through Google&apos;s own policy materials and
+          service disclosures.
+        </p>
+        <p>Users may manage cookie or advertising preferences through:</p>
+        <ul className="list-disc space-y-1 pl-5 text-slate-700">
+          <li>browser privacy and cookie settings</li>
+          <li>consent tools shown on the site, where applicable</li>
+          <li>
+            Google ad settings or provider-specific controls, where available
+          </li>
+        </ul>
+        <p>
+          If personalized advertising is enabled, advertising providers may
+          process data under their own privacy policies and applicable user
+          settings.
         </p>
       </>
     ),
@@ -86,9 +158,17 @@ export default function PrivacyPolicyPage() {
           <p className="mt-2 text-sm text-slate-600">
             Last updated: {lastUpdated}
           </p>
-          <p className="mt-4 text-sm text-slate-600">
-            This policy describes how Hust Media collects, processes, and protects
-            data to ensure system integrity and prevent abuse.
+          <h2 className="mt-4 text-base font-semibold text-slate-900">
+            Introduction
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            This policy describes how Hust Media handles data across the
+            platform, including technical logs, verification media, cookies,
+            session mechanisms, third-party services, and advertising-related
+            technologies where enabled. It outlines how data is collected and
+            processed to maintain security, protect stable operation, support
+            validation and fraud-control workflows, and keep connected platform
+            components running in a controlled and consistent way.
           </p>
         </header>
 
@@ -97,7 +177,7 @@ export default function PrivacyPolicyPage() {
             <details
               key={section.id}
               className="group rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-[0_12px_22px_-20px_rgba(15,23,42,0.25)]"
-              open={index === 0}
+              open
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-slate-900">
                 <span>{section.title}</span>
