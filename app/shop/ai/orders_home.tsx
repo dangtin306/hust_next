@@ -144,6 +144,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     return null;
   }
 
+  const activeContentEn = contentByTool[activeTool].en;
+  const readerValueTitle = "Reader Value";
+  const readerValueText = activeContent.readerValue?.trim() || activeContentEn.readerValue;
+  const conclusionTitle = "Conclusion";
+  const conclusionText = activeContent.conclusion?.trim() || activeContentEn.conclusion;
+
   const handleConfirmTool = async () => {
     if (isSubmitting) return;
 
@@ -1066,10 +1072,10 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             <div>
               <section id="section-examples" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-slate-900">
-                  {lang === "vi" ? "Ví dụ thực tế (Input/Output)" : "Practical Input/Output Examples"}
+                  Practical Input/Output Examples
                 </h2>
                 <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {activeContent.examples.map((example, idx) => (
+                  {activeContentEn.examples.map((example, idx) => (
                     <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
                       {example}
                     </div>
@@ -1079,12 +1085,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             </div>
 
             <div id="section-feedback" className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">
-              <div className="space-y-2.5">
-                <h2 className="text-sm font-semibold leading-snug text-slate-900">
-                  {activeContent.readerValueTitle}
-                </h2>
+                <div className="space-y-2.5">
+                  <h2 className="text-sm font-semibold leading-snug text-slate-900">
+                    {readerValueTitle}
+                  </h2>
                 <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-700">
-                  {activeContent.readerValue}
+                  {readerValueText}
                 </p>
               </div>
 
@@ -1092,10 +1098,10 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
               <div id="section-conclusion" className="space-y-2 mb-1">
                 <h2 className="text-sm font-semibold leading-snug text-slate-900">
-                  {activeContent.conclusionTitle}
+                  {conclusionTitle}
                 </h2>
                 <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-600">
-                  {activeContent.conclusion}
+                  {conclusionText}
                 </p>
               </div>
             </div>
@@ -1111,7 +1117,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                   ) : (
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div className="text-base font-semibold text-slate-800">
-                        {lang === "vi" ? "Nội dung này có hữu ích với bạn không?" : "Was this content helpful to you?"}
+                        Was this content helpful to you?
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -1119,14 +1125,14 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                           onClick={() => setHelpfulVote("yes")}
                           className="inline-flex h-9 min-w-[88px] items-center justify-center rounded-lg border border-slate-400/70 bg-white px-4 text-base font-medium text-blue-700 transition hover:bg-slate-50"
                         >
-                          {lang === "vi" ? "Có" : "Yes"}
+                          Yes
                         </button>
                         <button
                           type="button"
                           onClick={() => setHelpfulVote("no")}
                           className="inline-flex h-9 min-w-[88px] items-center justify-center rounded-lg border border-slate-400/70 bg-white px-4 text-base font-medium text-blue-700 transition hover:bg-slate-50"
                         >
-                          {lang === "vi" ? "Không" : "No"}
+                          No
                         </button>
                       </div>
                     </div>

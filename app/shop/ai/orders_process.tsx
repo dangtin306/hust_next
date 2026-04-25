@@ -52,7 +52,7 @@ const OrdersProcess = ({ lang, activeTool, routeRoot }: OrdersProcessProps) => {
 
       <section className="mt-4 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
         <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
-          {lang === "vi" ? "Chọn công cụ AI" : "Practical AI Utilities"}
+          Practical AI Utilities
         </h2>
         <div className="mt-4 space-y-2">
           {toolProcessCards.map((card) => {
