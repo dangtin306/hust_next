@@ -1,4 +1,5 @@
 import { readFile, readdir } from "fs/promises";
+import { existsSync } from "fs";
 import path from "path";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -6,7 +7,20 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 
-const docsDir = path.join(process.cwd(), "src", "content", "docs");
+const resolveDocsDir = () => {
+  const candidates = [
+    path.join(process.cwd(), "src", "content", "docs"),
+    path.join(process.cwd(), "hust_next", "src", "content", "docs"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return candidates[0];
+};
+
+const docsDir = resolveDocsDir();
 const defaultOrderMap: Record<string, number> = {
   overview: 1,
   architecture: 2,
@@ -219,8 +233,8 @@ export default async function DocPage({
   return (
     <div className="relative min-h-screen bg-slate-950 text-slate-100">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_12%_10%,rgba(236,72,153,0.26),transparent_60%),radial-gradient(900px_circle_at_88%_12%,rgba(59,130,246,0.26),transparent_60%),radial-gradient(700px_circle_at_50%_90%,rgba(56,189,248,0.16),transparent_65%),linear-gradient(135deg,rgba(236,72,153,0.08),rgba(59,130,246,0.08))]" />
-      <div className="mx-auto relative z-10 flex w-full max-w-6xl flex-col gap-6 px-4 py-8 lg:flex-row lg:gap-8 lg:px-6 lg:py-12">
-        <aside className="w-full lg:w-60 lg:shrink-0">
+      <div className="mx-auto relative z-10 flex w-full max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:gap-8 lg:px-6 lg:py-12">
+        <aside className="w-full lg:w-66 lg:shrink-0">
           <div className="lg:sticky lg:top-10">
             <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/70 to-blue-500/10 px-4 py-5 shadow-lg">
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">

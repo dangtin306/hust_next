@@ -1,12 +1,14 @@
 # Hust Media System Overview
 
 ## Introduction & Core Concepts
-Hust Media System Overview is a **Distributed Data Middleware** designed to standardize automated workflows and validate data quality through a **Compute Credits** mechanism. The system operates on a high-performance **Client-Server** model, distinctly separating the **API Gateway**, **Core Services**, **Data Pipeline**, and **Verification Engine** to maintain stable **Real-time Latency** for large-scale processing.
+Hust Media System Overview introduces the **first note in this Supporting Notes section** and provides a broader technical view of how the platform is structured behind the main articles and practical utilities. It is a **distributed data middleware layer** designed to standardize automated workflows and enforce consistent data quality validation through a **Compute Credits** mechanism. The system runs on a high-performance client-server model, where the **API Gateway**, **Core Services**, **Data Pipeline**, and **Verification Engine** are separated into clear layers to support stable operation, lower latency, and more predictable behavior at scale.
 
-Core flow:
-- **Data Ingestion → Execution → Validation → Credit Allocation → Resource Balancing**
-- **Microservices** organized by functional business logic.
-- **Hybrid Delivery**: React for real-time dashboards, Next.js for SEO/SSR documentation.
+Use the Docs panel to open the related notes in this section and continue into more specific implementation topics, including API behavior, threat verification, validation workflow, security, deployment, and day-to-day operations. Together, these notes provide a practical reference layer for system integration and operational consistency across the platform.
+
+Core flow
+- **Data Ingestion** -> **Execution** -> **Validation + Credit Allocation** -> **Resource Balancing**
+- **Microservices** are organized by functional business logic.
+- **Hybrid delivery** uses **React** for real-time dashboards and **Next.js** for SEO/SSR documentation.
 
 ---
 
@@ -166,3 +168,11 @@ ingress:
 - **Timeout Guardrail**: auto-cancel tasks > 180s to avoid overload.
 - **Cache Strategy**: client store + SSR cache reduce repeated queries.
 - **Hybrid Routing**: fast SSR entry points with smooth real-time interactions.
+
+---
+
+## Reader Value
+This system overview brings the API gateway, core services, data pipeline, verification logic, and operational layers into one connected technical reference. Readers can use it to understand how the platform’s core layers fit together before moving into the more specific notes in this section. In practice, that supports clearer system integration and more stable operation across scalable projects.
+
+## Conclusion
+This overview serves as the entry point to the Supporting Notes section and frames the broader technical structure behind the platform. It prepares the context for the deeper implementation notes that follow.

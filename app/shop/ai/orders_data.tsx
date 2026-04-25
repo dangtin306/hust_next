@@ -7,11 +7,25 @@ export type SeoItem = {
   keywords: string;
 };
 
+export type ToolProcessCard = {
+  key: ToolKey;
+  image: string;
+  href: (routeRoot: "plans" | "orders_once") => string;
+  title: Record<Lang, string>;
+  description: Record<Lang, string>;
+  badge: Record<Lang, string>;
+};
+
 export type ToolContent = {
+  title: string;
   heading: string;
   summary: string[];
   audience: string[];
   examples: string[];
+  readerValueTitle: string;
+  readerValue: string;
+  conclusionTitle: string;
+  conclusion: string;
   related: Array<{ label: string; href: string }>;
 };
 
@@ -71,9 +85,10 @@ export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
 export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   text_speech: {
     en: {
+      title: "Text to Speech",
       heading: "About this AI module",
       summary: [
-        "This Text-to-Speech module is part of the small set of practical tools I maintain for simple media and content work. It turns written text into spoken audio for narration, accessibility, and faster content preparation.",
+        "This Text-to-Speech module is one of the practical utilities I maintain for simple media and content work. It turns written text into spoken audio for narration, accessibility, and faster content preparation.",
         "I first built it in an AI-related working environment and later rebuilt it into a more stable version for my own use. It now runs on my physical server and supports guides, product descriptions, short scripts, and task documentation.",
         "It helps reduce repetitive recording work and makes voice output easier to prepare for Reels and YouTube Shorts.",
       ],
@@ -86,6 +101,12 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Product description paragraph. Output: Short narrated audio for social posts.",
         "Input: Task instructions. Output: Short voice summary for collaborators.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue:
+        "Readers can use this module pattern to turn text-based content into a more structured voice workflow for guides, documentation, and short-form media tasks. In real projects, that helps reduce repetitive manual recording, keep output handling more consistent, and support stable operation across integrated content flows.",
+      conclusionTitle: "Conclusion",
+      conclusion:
+        "This Text-to-Speech module combines controlled request handling, reusable model paths, and a practical export flow into one maintainable service layer. It stays aligned with the platform’s broader system integration and stable operation model.",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -93,6 +114,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       ],
     },
     vi: {
+      title: "Chuyen van ban thanh giong noi",
       heading: "Gioi thieu mo-dun AI",
       summary: [
         "Mo-dun nay chuyen van ban thanh giong noi de doi van hanh va nguoi tao noi dung xuat ban ban doc nhanh hon, dong thoi cai thien tro nang cho nguoi dung thich nghe hon doc.",
@@ -108,6 +130,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Mo ta san pham dai. Output: File doc de gan vao bai dang.",
         "Input: Checklist nhiem vu. Output: Ban tom tat giong noi cho cong tac vien.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue: "",
+      conclusionTitle: "Conclusion",
+      conclusion: "",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -117,9 +143,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   },
   speech_text: {
     en: {
+      title: "Speech to Text",
       heading: "About this AI module",
       summary: [
-        "This Speech-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and content preparation.",
+        "This Speech-to-Text module is part of the small set of practical utilities I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and content preparation.",
         "I use it where audio is recorded on mobile and later converted into structured text for support, documentation, moderation, or publishing tasks. It helps reduce manual typing and makes spoken updates easier to handle.",
         "It also turns voice recordings into searchable text that can be reviewed, edited, and reused later.",
       ],
@@ -132,6 +159,12 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Short voice note. Output: Draft text for reporting.",
         "Input: Customer call recording. Output: Searchable transcript for support history.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue:
+        "Readers can use this module pattern to turn spoken updates into a more structured text workflow for reporting, documentation, and support tasks. In real projects, that helps reduce manual note-taking, keep transcription handling more consistent, and support stable operation across integrated content flows.",
+      conclusionTitle: "Conclusion",
+      conclusion:
+        "This Speech-to-Text module combines controlled audio input handling, a reusable transcription path, and practical output processing into one maintainable service layer. It keeps the transcription workflow more consistent within the broader system architecture.",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -139,6 +172,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       ],
     },
     vi: {
+      title: "Chuyen giong noi thanh van ban",
       heading: "Gioi thieu mo-dun AI",
       summary: [
         "Speech-to-Text chuyen ghi am thanh van ban co the chinh sua de rut ngan thoi gian nhap lieu trong cac luong bao cao va van hanh.",
@@ -154,6 +188,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Ghi am 30 giay. Output: Ban nhap van ban cho editor.",
         "Input: Tom tat cuoc goi ho tro. Output: Transcript de tim kiem lai.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue: "",
+      conclusionTitle: "Conclusion",
+      conclusion: "",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -163,9 +201,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   },
   image_text: {
     en: {
+      title: "Image to Text",
       heading: "About this AI module",
       summary: [
-        "This Image-to-Text module is part of the small set of practical tools I maintain for simple media and content work. It extracts readable text from screenshots and documents for faster verification, note-taking, and content preparation.",
+        "This Image-to-Text module is part of the small set of practical utilities I maintain for simple media and content work. It extracts readable text from screenshots and documents for faster verification, note-taking, and content preparation.",
         "I use it when image files need to be turned into searchable text for review, documentation, or simple processing tasks. It helps reduce manual typing and makes text checking easier.",
         "It is especially useful for screenshots, receipts, forms, and other image-based records.",
       ],
@@ -178,6 +217,12 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Screenshot of a receipt. Output: Readable text for checking details.",
         "Input: Image of instructions. Output: Editable text for later updates.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue:
+        "Readers can use this module pattern to turn screenshots, receipts, and image-based records into a more structured text workflow for review, documentation, and verification tasks. In real projects, that helps reduce manual typing, keep extraction handling more consistent, and support stable operation across image-based content flows.",
+      conclusionTitle: "Conclusion",
+      conclusion:
+        "This Image-to-Text module combines a controlled OCR path, rule-based region handling, and post-check processing into one maintainable service layer. It remains a practical internal OCR component aligned with the platform's broader system integration and stable operation model.",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -185,6 +230,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       ],
     },
     vi: {
+      title: "Chuyen hinh anh thanh van ban",
       heading: "Gioi thieu mo-dun AI",
       summary: [
         "OCR giup trich xuat chu tu anh, anh chup man hinh va tai lieu de giam thao tac nhap lieu thu cong trong cac buoc kiem chung.",
@@ -200,6 +246,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Anh bien lai. Output: Text so tien/ngay thang de doi soat.",
         "Input: Anh huong dan cu. Output: Van ban chinh sua de cap nhat bai viet.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue: "",
+      conclusionTitle: "Conclusion",
+      conclusion: "",
       related: [
         { label: "System Architecture Notes", href: "/community/docs/architecture" },
         { label: "API Reference Guide", href: "/community/docs/api-reference" },
@@ -209,6 +259,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   },
   translate_vi_en: {
     en: {
+      title: "Vietnamese to English",
       heading: "About this AI module",
       summary: [
         "This Vietnamese-to-English module is one of the practical utilities I maintain for content work. It translates Vietnamese text into English for articles, documentation, product content, and internal use.",
@@ -224,9 +275,16 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Vietnamese draft note. Output: English version for review.",
         "Input: Vietnamese product or support text. Output: English for publishing.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue:
+        "Readers can use this module pattern to turn Vietnamese notes, drafts, and support content into a more structured English workflow for review and publishing. In real projects, that helps reduce manual rewriting, keep translation handling more consistent, and support stable operation across content-focused workflows.",
+      conclusionTitle: "Conclusion",
+      conclusion:
+        "This Vietnamese-to-English module combines controlled translation routing, fixed language direction, and practical text handling into one maintainable service layer. It remains aligned with the platform's broader system integration and stable operation model.",
       related: [{ label: "hello world", href: "/next/orders_once/translate_vi_en" }],
     },
     vi: {
+      title: "Dich tieng Viet sang tieng Anh",
       heading: "Gioi thieu mo-dun AI",
       summary: ["hello world"],
       audience: ["hello world"],
@@ -234,6 +292,10 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Vietnamese draft note. Output: English version for review.",
         "Input: Vietnamese product or support text. Output: English for publishing.",
       ],
+      readerValueTitle: "Reader Value",
+      readerValue: "",
+      conclusionTitle: "Conclusion",
+      conclusion: "",
       related: [{ label: "hello world", href: "/next/orders_once/translate_vi_en" }],
     },
   },
@@ -254,5 +316,52 @@ export const toolTabs: Array<{ key: ToolKey; en: string; vi: string }> = [
     key: "image_text",
     en: "Image to Text",
     vi: "Chuyen hinh anh thanh van ban",
+  },
+];
+
+export const toolProcessCards: ToolProcessCard[] = [
+  {
+    key: "text_speech",
+    image: "https://hust.media/img/text_speech_thumbnail.png",
+    href: (routeRoot) => `/${routeRoot}/text_speech`,
+    title: { en: "Text to Speech", vi: "Van ban to Giong noi" },
+    description: {
+      en: "Turn written text into natural-sounding audio for narration and accessibility.",
+      vi: "Chuyen van ban thanh am thanh tu nhien de thuyet minh va tro nang.",
+    },
+    badge: { en: "Integration", vi: "Integration" },
+  },
+  {
+    key: "speech_text",
+    image: "https://hust.media/img/speech_text_thumbnail.png",
+    href: (routeRoot) => `/${routeRoot}/speech_text`,
+    title: { en: "Speech to Text", vi: "Giong noi to Van ban" },
+    description: {
+      en: "Transcribe spoken audio into editable text to speed up notes and reporting.",
+      vi: "Phien am giong noi thanh van ban de ghi chu va bao cao nhanh hon.",
+    },
+    badge: { en: "Integration", vi: "Integration" },
+  },
+  {
+    key: "image_text",
+    image: "https://hust.media/img/image_text_thumbnail.png",
+    href: (routeRoot) => `/${routeRoot}/image_text`,
+    title: { en: "Image to Text", vi: "Hinh anh to Van ban" },
+    description: {
+      en: "Extract readable text from images (OCR) to reduce manual typing.",
+      vi: "Trich xuat chu tu anh (OCR) de giam nhap lieu thu cong.",
+    },
+    badge: { en: "Integration", vi: "Integration" },
+  },
+  {
+    key: "translate_vi_en",
+    image: "https://hust.media/img/translate_vi_en_thumb.png",
+    href: () => "/next/orders_once/translate_vi_en",
+    title: { en: "Vietnamese to English", vi: "Dich Viet sang Anh" },
+    description: {
+      en: "Translate Vietnamese text into clear English for docs and content.",
+      vi: "Dich van ban tieng Viet sang tieng Anh ro rang cho noi dung va tai lieu.",
+    },
+    badge: { en: "Integration", vi: "Integration" },
   },
 ];
