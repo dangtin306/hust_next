@@ -6,48 +6,62 @@ order: 3
 
 # Core Engine: Gamification & Anti-Fraud Logic
 
-### 1. Credit Allocation Algorithm
-The platform utilizes **Digital Credits** (aka *Engagement Points*) to drive **User Engagement Metrics**. Credits are minted programmatically when users complete **Micro-Interactions** that successfully pass our multi-layer verification thresholds.
+## Introduction
+This note outlines how the platform combines **credit allocation**, **automated verification**, and **fraud-control logic** into one controlled backend flow. It explains how engagement-related actions are **scored**, **validated**, and **filtered** before they affect credits, trust signals, or reward state.
+
+## Credit Allocation Algorithm
+The platform uses **Digital Credits** (aka *Engagement Points*) to score verified micro-interactions. Credits are minted programmatically only after actions pass the required multi-layer verification thresholds, so scoring stays tied to validated activity instead of raw submission volume.
 
 **Scoring Formula:**
 ```math
-Credit_Grant = Base_Rate * Difficulty_Weight * Quality_Score * Reputation_Multiplier * Time_Decay
+Credit_Grant = Base_Rate * Difficulty_Weight * Quality_Score
 ```
 
 Parameters:
-- **Difficulty_Weight**: interaction type + proof strictness.
-- **Quality_Score**: evidence confidence from verification.
-- **Reputation_Multiplier**: trust tier based on completion history.
-- **Time_Decay**: penalizes abnormal latency or burst patterns.
+- **Difficulty_Weight**: interaction type + proof strictness
+- **Quality_Score**: evidence confidence from verification
+- **Reputation_Multiplier**: trust tier based on completion history
+- **Time_Decay**: penalizes abnormal latency or burst patterns
 
-This model keeps the credit economy stable while scaling engagement.
+This model keeps credit issuance more controlled, reduces low-quality reward inflation, and keeps the credit economy more stable while engagement scales.
 
 ---
 
-### 2. Automated Verification Layer
-The **Automated Verification Worker** validates evidence via AI/OCR and rule-based checks, enforcing deterministic gating before credits are released.
+## Automated Verification Layer
+The **Automated Verification Worker** validates evidence through AI/OCR and rule-based checks before credits are released. The goal is to keep verification deterministic, reviewable, and consistent across repeated actions, so reward state is based on evidence quality rather than unverified submission counts.
 
 ```text
-Evidence -> OCR -> Normalize -> Validate -> Confidence Score -> Credit Grant
+Evidence -> OCR -> Normalize -> Validate -> Confidence Score -> Credit Decision
 ```
 
 Core controls:
-- OCR extraction on screenshots and UI artifacts.
-- Semantic validation of platform identifiers.
-- Cross-check against API telemetry when available.
+- OCR extraction on screenshots and UI artifacts
+- Semantic validation of platform identifiers
+- Cross-check against API telemetry when available
+
+This layer turns raw evidence into a controlled verification result that can be scored, reviewed, and reused across the wider platform workflow.
 
 ---
 
-### 3. Fraud Detection Protocol
-**Anomaly & Fraud Detection Algorithms** detect spam, click farms, and replay attacks:
+## Fraud Detection Protocol
+The fraud-control layer detects spam, replay attacks, burst submissions, and other abnormal patterns before invalid activity affects credit state. It works alongside scoring and verification to keep reward allocation resistant to abuse without interrupting normal execution flow.
 
-- **Rate limiting** per device/account.
-- **Cooldown windows** to prevent burst submissions.
-- **Reputation scoring** tied to dispute ratio.
-- **Post-audit sweeps** to revoke invalid credits.
+Core controls:
+- **Rate limiting** per device or account
+- **Cooldown windows** to prevent burst submissions
+- **Reputation scoring** tied to dispute ratio
+- **Post-audit sweeps** to revoke invalid credits
 
 ```text
 Signals -> Anomaly Scoring -> Quarantine -> Post-Audit -> Finalize
 ```
 
-This protocol protects campaign integrity without degrading real-time UX.
+This protocol protects campaign integrity, limits credit abuse, and helps preserve real-time UX while suspicious activity is isolated and reviewed.
+
+---
+
+## Reader Value
+Readers can use this model to understand how credit scoring, automated verification, and fraud control fit into one backend flow instead of separate checks. In real projects, that makes reward logic easier to manage, keeps scoring rules more traceable, and reduces invalid credit allocation through clearer verification and post-audit control. It also supports more stable operation where engagement signals, trust state, and reward updates stay consistent.
+
+## Conclusion
+This logic combines credit scoring, automated verification, and fraud control into one structured backend layer. It defines how engagement-related actions are scored, validated, filtered, and finalized inside a controlled execution flow. As these rules expand, the model stays aligned with **System Integration** and **Stable Operation**.

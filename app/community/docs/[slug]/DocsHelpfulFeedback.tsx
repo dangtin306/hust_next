@@ -8,7 +8,7 @@ export default function DocsHelpfulFeedback() {
   const [vote, setVote] = useState<HelpfulVote>("");
 
   return (
-    <div className="mt-4 rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900/85 via-blue-950/60 to-slate-900/85 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
+    <div className="mt-5 mb-1 rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900/85 via-blue-950/60 to-slate-900/85 p-4 shadow-2xl backdrop-blur-xl sm:p-5">
       <div className="mx-2">
         {vote ? (
           <div className="text-sm font-medium text-slate-100">

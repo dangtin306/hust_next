@@ -7,9 +7,21 @@ type OrdersProcessProps = {
   lang: Lang;
   activeTool: ToolKey;
   routeRoot: "plans" | "orders_once";
+  showToc?: boolean;
+  showUtilities?: boolean;
+  showUtilitiesOnMobile?: boolean;
+  className?: string;
 };
 
-const OrdersProcess = ({ lang, activeTool, routeRoot }: OrdersProcessProps) => {
+const OrdersProcess = ({
+  lang,
+  activeTool,
+  routeRoot,
+  showToc = true,
+  showUtilities = true,
+  showUtilitiesOnMobile = true,
+  className = "",
+}: OrdersProcessProps) => {
   const tocItems: Array<{ id: string; en: string; vi: string }> = [
     { id: "section-introduction", en: "Introduction", vi: "Introduction" },
     { id: "section-audience", en: "Who This Module Helps", vi: "Who This Module Helps" },
@@ -29,7 +41,8 @@ const OrdersProcess = ({ lang, activeTool, routeRoot }: OrdersProcessProps) => {
   };
 
   return (
-    <div className="w-full lg:w-[var(--tool-col)] lg:flex-none">
+    <div className={`w-full lg:w-[var(--tool-col)] lg:flex-none ${className}`.trim()}>
+      {showToc && (
       <section className="rounded-2xl border border-blue-100/80 bg-blue-50/90 px-4 pb-4 pt-3 text-slate-700 shadow-sm backdrop-blur-md">
         <div className="max-lg:pt-1 lg:pt-4">
           <div className="text-center text-lg font-semibold whitespace-nowrap text-slate-800">
@@ -49,8 +62,10 @@ const OrdersProcess = ({ lang, activeTool, routeRoot }: OrdersProcessProps) => {
           </div>
         </div>
       </section>
+      )}
 
-      <section className="mt-4 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
+      {showUtilities && (
+      <section className={`-mb-2 lg:mb-0 mt-4 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md ${showUtilitiesOnMobile ? "" : "hidden lg:block"}`.trim()}>
         <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
           Practical AI Utilities
         </h2>
@@ -96,6 +111,7 @@ const OrdersProcess = ({ lang, activeTool, routeRoot }: OrdersProcessProps) => {
           })}
         </div>
       </section>
+      )}
     </div>
   );
 };

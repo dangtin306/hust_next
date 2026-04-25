@@ -266,7 +266,7 @@ export default async function DocPage({
         </aside>
 
         <main className="min-w-0 w-full flex-1">
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/80 to-blue-500/10 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/80 to-blue-500/10 py-6 px-3 shadow-2xl backdrop-blur-xl sm:py-8 sm:px-8">
             <div className="prose prose-invert max-w-none">
               <MDXRemote source={doc.content} />
             </div>

@@ -7,7 +7,7 @@ order: 6
 # Core Processing: Validation & Quality Workflow
 
 ## Introduction
-This note outlines how the platform evaluates submission quality before records move deeper into processing. The goal is to keep validation behavior consistent across different service flows, reduce unstable input states, and support more reliable downstream operation.
+This note outlines how the platform evaluates **submission quality** before records move deeper into processing. The goal is to keep validation behavior consistent across different service flows, reduce unstable input states, and support more reliable downstream operation.
 
 ## Input Evaluation Model
 Incoming data is treated as **structured input** inside a controlled workflow rather than as isolated submissions. The evaluation model checks **input category**, **completeness**, **validation confidence**, **timing behavior**, and **submission state** across JSON requests and evidence records from Web flows. In practice, fields such as user ID, task ID, service type, evidence type, metadata, and timestamps must remain consistent before the record moves forward, helping maintain stable processing quality across different flows and service conditions.

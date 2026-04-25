@@ -486,7 +486,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
         style={{ "--tool-col": "clamp(215px, 21.5vw, 280px)" } as React.CSSProperties}
       >
         <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-start">
-          <OrdersProcess lang={lang} activeTool={activeTool} routeRoot={routeRoot} />
+          <OrdersProcess
+            lang={lang}
+            activeTool={activeTool}
+            routeRoot={routeRoot}
+            showUtilitiesOnMobile={false}
+          />
 
           <div className="min-w-0 flex-1 space-y-2">
             <section id="section-introduction" className="w-full min-w-0 rounded-2xl border border-white/60 bg-gradient-to-r from-emerald-100/80 via-white/80 to-cyan-100/80 px-4 py-4 shadow-sm backdrop-blur-md lg:flex-1">
@@ -1106,7 +1111,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               </div>
             </div>
 
-            <div className="mt-4 -mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+            <div className="mt-3 mb-2 lg:mt-4 lg:-mb-2 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
                 <div>
                   {helpfulVote ? (
                     <div className="text-sm font-medium text-slate-700">
@@ -1138,6 +1143,15 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                     </div>
                   )}
                 </div>
+            </div>
+
+            <div className="mt-4 lg:hidden">
+              <OrdersProcess
+                lang={lang}
+                activeTool={activeTool}
+                routeRoot={routeRoot}
+                showToc={false}
+              />
             </div>
           </div>
         </div>
