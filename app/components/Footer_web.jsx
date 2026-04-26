@@ -8,8 +8,10 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
     : "https://hust.media/api/sitemap/hust_media.xml";
 
   return (
-    <footer className="mt-auto w-full bg-slate-950/40 bg-hust-glass backdrop-blur-md border-t border-white/10 text-white py-0.5 md:py-0.5 text-xs md:text-base leading-none flex-none">
-      <div className=" mx-auto px-[12px] py-[16px] max-[480px]:px-2 max-[480px]:py-[12px] flex flex-col md:flex-row justify-between items-center gap-2 md:gap-1 text-[13px] md:text-[15px]">
+    <footer className="mt-auto w-full bg-slate-950/40 bg-hust-glass backdrop-blur-md border-t border-white/10 text-white py-1 md:py-1 text-xs md:text-base leading-none flex-none">
+      <div
+        className={`mx-auto px-[12px] py-[14px] max-[480px]:px-2 ${isLatestVersionThree ? "max-[480px]:py-[8px]" : "max-[480px]:py-[12px]"} flex flex-col md:flex-row justify-between items-center ${isLatestVersionThree ? "gap-1 md:gap-1" : "gap-2 md:gap-1"} text-[13px] md:text-[15px]`}
+      >
         {/* 1. Chính sách (Bên trái PC / Giữa Mobile) */}
         <div className="flex flex-row gap-16 sm:gap-5 text-white w-full md:w-auto justify-center md:justify-start md:flex-1 order-1 md:order-1 font-medium">
           <a
@@ -44,12 +46,14 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
         </div>
 
         {/* 2. Bản quyền (Ở giữa) */}
-        <div className="text-white leading-none text-center w-full md:w-auto md:flex-none order-2 md:order-2 drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]">
+        <div className="mt-0.5 mb-0.5 text-white leading-none text-center w-full md:w-auto md:flex-none order-2 md:order-2 drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]">
           © Hust Media 2021 - 2026
         </div>
 
         {/* 3. Nút tải App (Bên phải PC / Lên đầu Mobile) */}
-        <div className="flex items-center gap-4 w-full md:w-auto justify-center md:justify-end md:flex-1 order-3 md:order-3 min-h-[36px]">
+        <div
+          className={`flex items-center gap-4 w-full md:w-auto justify-center md:justify-end md:flex-1 order-3 md:order-3 ${isLatestVersionThree ? "min-h-0 mt-0 mb-0.5" : "min-h-[36px]"}`}
+        >
           {hasResolvedLatestVersion ? (
             isLatestVersionThree ? (
               <>
