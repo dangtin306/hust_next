@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import LegacyNavbarShell from "./components/LegacyNavbarShell";
@@ -34,10 +34,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const headerStore = await headers();
+  const cookieStore = await cookies();
   const initialHost =
     headerStore.get("x-forwarded-host") ||
     headerStore.get("host") ||
     "";
+  const initialLatestVersion = cookieStore.get("latest_version")?.value || "";
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -63,7 +65,10 @@ export default async function RootLayout({
                 <div className="layout-page flex min-h-screen min-h-[100dvh] flex-col">
                   <SimpleTopBar initialHost={initialHost} />
                   <div className="flex-1">{children}</div>
-                  <Footer_web initialHost={initialHost} />
+                  <Footer_web
+                    initialHost={initialHost}
+                    initialLatestVersion={initialLatestVersion}
+                  />
                 </div>
               </div>
             </div>

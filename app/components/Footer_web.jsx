@@ -1,5 +1,6 @@
-export default function FooterWeb({ initialHost = "" }) {
+export default function FooterWeb({ initialHost = "", initialLatestVersion = "" }) {
   const normalizedHost = String(initialHost || "").toLowerCase();
+  const isLatestVersionThree = String(initialLatestVersion || "") === "3";
   const siteMapHref = normalizedHost.includes("nofake")
     ? "https://nginx.nofake.wiki/go/site_map/check_healing.xml"
     : "https://hust.media/api/sitemap/hust_media.xml";
@@ -47,33 +48,58 @@ export default function FooterWeb({ initialHost = "" }) {
 
         {/* 3. Nút tải App (Bên phải PC / Lên đầu Mobile) */}
         <div className="flex gap-3 w-full md:w-auto justify-center md:justify-end md:flex-1 order-3 md:order-3">
-          {/* App Store */}
-          <a
-            href="https://apps.apple.com/us/app/hust-media/id6444485454"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:opacity-80 transition-opacity"
-          >
-            <img
-              src="https://hust.media/img/icon/app-store.svg"
-              alt="Download on the App Store"
-              className="h-[32px] md:h-[36px]"
-            />
-          </a>
+          {isLatestVersionThree ? (
+            <>
+              <a
+                href="/next/info/about_us"
+                className="group hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.45)] transition-all duration-200"
+                style={{ textDecoration: "none" }}
+              >
+                <span className="text-white leading-none group-hover:text-white transition-colors duration-200">
+                  About Us
+                </span>
+              </a>
+              <a
+                href="/next/support"
+                className="group hover:drop-shadow-[0_0_6px_rgba(255,255,255,0.45)] transition-all duration-200"
+                style={{ textDecoration: "none" }}
+              >
+                <span className="text-white leading-none group-hover:text-white transition-colors duration-200">
+                  Support
+                </span>
+              </a>
+            </>
+          ) : (
+            <>
+              {/* App Store */}
+              <a
+                href="https://apps.apple.com/us/app/hust-media/id6444485454"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="https://hust.media/img/icon/app-store.svg"
+                  alt="Download on the App Store"
+                  className="h-[32px] md:h-[36px]"
+                />
+              </a>
 
-          {/* Google Play */}
-          <a
-            href="https://play.google.com/store/apps/details?id=com.hm.hustmedia"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:opacity-80 transition-opacity"
-          >
-            <img
-              src="https://hust.media/img/icon/google-play.svg"
-              alt="Get it on Google Play"
-              className="h-[32px] md:h-[36px]"
-            />
-          </a>
+              {/* Google Play */}
+              <a
+                href="https://play.google.com/store/apps/details?id=com.hm.hustmedia"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="https://hust.media/img/icon/google-play.svg"
+                  alt="Get it on Google Play"
+                  className="h-[32px] md:h-[36px]"
+                />
+              </a>
+            </>
+          )}
         </div>
       </div>
     </footer>
