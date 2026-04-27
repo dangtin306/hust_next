@@ -52,6 +52,7 @@ const parseSlugs = (pathname: string) => {
 
 const isToolKey = (value: string): value is ToolKey =>
   ALLOWED_TOOLS.has(value as ToolKey);
+const STT_MAX_DURATION_SECONDS = 5 * 60;
 
 const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = {}) => {
   const pathname = usePathname();
@@ -68,6 +69,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [sttDuration, setSttDuration] = useState<number>(0);
   const [sttText, setSttText] = useState("");
   const [sttExpanded, setSttExpanded] = useState(false);
+  const [sttCopied, setSttCopied] = useState(false);
   const [sttPreviewUrl, setSttPreviewUrl] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,6 +95,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     setGeneratedVoiceUrl("");
     setActionMessage("");
     setTranslateText("");
+    setSttCopied(false);
   }, [activeTool]);
 
   useEffect(() => {
@@ -176,6 +179,15 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
         lang === "vi"
           ? "Vui lòng tải file audio trước khi xác nhận."
           : "Please upload an audio file before confirming."
+      );
+      return;
+    }
+
+    if (activeTool === "speech_text" && sttDuration > STT_MAX_DURATION_SECONDS) {
+      setActionMessage(
+        lang === "vi"
+          ? "File audio vượt quá 5 phút. Vui lòng chọn file ngắn hơn."
+          : "Audio is longer than 5 minutes. Please choose a shorter file."
       );
       return;
     }
@@ -279,7 +291,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           username: "",
           quantity: Math.max(1, Math.round(sttDuration || 1)),
           national_market: normalizeLang(readCookie("national_market")),
-          service: "122727",
+          service: "127806",
         };
 
         const response = await fetch("https://hust.media/api/v3", {
@@ -313,6 +325,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
         setSttText(text);
         setSttExpanded(false);
+        setSttCopied(false);
         setActionMessage(
           lang === "vi"
             ? message || `Thành công. Mã đơn: ${orderId ?? "N/A"}`
@@ -825,6 +838,11 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                         ? "Định dạng hỗ trợ: MP3, WAV, M4A, OGG"
                         : "Supported formats: MP3, WAV, M4A, OGG"}
                     </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {lang === "vi"
+                        ? "Giới hạn thời lượng: tối đa 5 phút."
+                        : "Duration limit: up to 5 minutes."}
+                    </p>
 
                     <div className="mt-3 rounded-lg border border-dashed border-slate-300 bg-white p-3">
                       <input
@@ -836,6 +854,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                           const file = e.target.files?.[0] || null;
                           setSttFile(file);
                           setSttText("");
+                          setSttCopied(false);
                           if (!file) {
                             setSttDuration(0);
                             return;
@@ -865,6 +884,13 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                           {lang === "vi" ? "Thời lượng ước tính:" : "Estimated duration:"} {sttDuration}s
                         </p>
                       ) : null}
+                      {sttDuration > STT_MAX_DURATION_SECONDS ? (
+                        <p className="mt-1 text-xs font-medium text-red-600">
+                          {lang === "vi"
+                            ? "Audio đang vượt quá giới hạn 5 phút."
+                            : "This audio exceeds the 5-minute limit."}
+                        </p>
+                      ) : null}
                       {sttFile && sttPreviewUrl ? (
                         <audio controls className="mt-3 w-full" src={sttPreviewUrl}>
                           Your browser does not support the audio element.
@@ -872,21 +898,35 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       ) : null}
                     </div>
                     {sttText ? (
-                      <div className="mt-3 rounded border border-slate-200 bg-white p-3">
-                        <p className="mb-1 text-xs font-medium text-slate-700">
-                          {lang === "vi" ? "Kết quả STT" : "STT Output"}
-                        </p>
+                      <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="inline-flex items-center gap-2">
+                            <span className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                              Output
+                            </span>
+                            <p className="text-xs font-medium text-slate-700">
+                              {lang === "vi" ? "Kết quả Speech to Text" : "Speech to Text Output"}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!sttText.trim()) return;
+                              await navigator.clipboard?.writeText(sttText);
+                              setSttCopied(true);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <span>⧉</span>
+                            <span>{sttCopied ? "Copied" : "Copy"}</span>
+                          </button>
+                        </div>
                         <p className="text-xs text-slate-500">
                           {lang === "vi"
                             ? "Nội dung được tạo tự động, vui lòng kiểm tra lại trước khi sử dụng."
                             : "This output is machine-generated. Please review before using."}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {lang === "vi"
-                            ? "Chỉ dùng để tham khảo. Không tải dữ liệu cá nhân nhạy cảm."
-                            : "For informational use only. Do not upload sensitive personal data."}
-                        </p>
-                        <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2">
+                        <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white p-2">
                           <p className="whitespace-pre-wrap break-words text-sm text-slate-700">
                             {sttExpanded || sttText.length <= 800 ? sttText : `${sttText.slice(0, 800)}...`}
                           </p>
