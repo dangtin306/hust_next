@@ -53,6 +53,9 @@ const parseSlugs = (pathname: string) => {
 const isToolKey = (value: string): value is ToolKey =>
   ALLOWED_TOOLS.has(value as ToolKey);
 const STT_MAX_DURATION_SECONDS = 5 * 60;
+const TRANSLATE_MAX_CHARS = 1000;
+const OCR_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const OCR_ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg"]);
 
 const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = {}) => {
   const pathname = usePathname();
@@ -65,6 +68,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [ocrPreviewUrl, setOcrPreviewUrl] = useState("");
   const [ocrText, setOcrText] = useState("");
   const [ocrExpanded, setOcrExpanded] = useState(false);
+  const [ocrCopied, setOcrCopied] = useState(false);
   const [sttFile, setSttFile] = useState<File | null>(null);
   const [sttDuration, setSttDuration] = useState<number>(0);
   const [sttText, setSttText] = useState("");
@@ -96,6 +100,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     setActionMessage("");
     setTranslateText("");
     setSttCopied(false);
+    setOcrCopied(false);
   }, [activeTool]);
 
   useEffect(() => {
@@ -174,6 +179,23 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
       return;
     }
 
+    if (activeTool === "image_text" && ocrImageFile && ocrImageFile.size > OCR_MAX_IMAGE_BYTES) {
+      setActionMessage(
+        lang === "vi"
+          ? "Ảnh vượt quá 20MB. Vui lòng chọn ảnh nhỏ hơn."
+          : "Image exceeds 20MB. Please choose a smaller image."
+      );
+      return;
+    }
+    if (activeTool === "image_text" && ocrImageFile && !OCR_ALLOWED_MIME_TYPES.has(ocrImageFile.type)) {
+      setActionMessage(
+        lang === "vi"
+          ? "Chỉ hỗ trợ định dạng PNG hoặc JPG."
+          : "Only PNG or JPG formats are supported."
+      );
+      return;
+    }
+
     if (activeTool === "speech_text" && !sttFile) {
       setActionMessage(
         lang === "vi"
@@ -197,6 +219,15 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
         lang === "vi"
           ? "Vui lòng nhập nội dung trước khi xác nhận."
           : "Please enter content before confirming."
+      );
+      return;
+    }
+
+    if (activeTool === "translate_vi_en" && translateInput.length > TRANSLATE_MAX_CHARS) {
+      setActionMessage(
+        lang === "vi"
+          ? "Nội dung vượt quá 1000 ký tự. Vui lòng rút gọn."
+          : "Text exceeds 1000 characters. Please shorten it."
       );
       return;
     }
@@ -369,7 +400,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           username: "",
           quantity: 1,
           national_market: normalizeLang(readCookie("national_market")),
-          service: "93811",
+          service: "909650",
         };
 
         const response = await fetch("https://hust.media/api/v3", {
@@ -402,6 +433,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
         setOcrText(text);
         setOcrExpanded(false);
+        setOcrCopied(false);
         setActionMessage(
           lang === "vi"
             ? message || `Thành công. Mã đơn: ${orderId ?? "N/A"}`
@@ -435,7 +467,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
           username: "",
           quantity: Math.max(1, translateInput.trim().length),
           national_market: normalizeLang(readCookie("national_market")),
-          service: "899522",
+          service: "909649",
         };
 
         const response = await fetch("https://hust.media/api/v3", {
@@ -961,16 +993,44 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                         ? "Phù hợp với ảnh chụp màn hình, hóa đơn, biểu mẫu và tài liệu đơn giản. Vui lòng chỉ tải nội dung bạn được phép sử dụng."
                         : "Best for screenshots, receipts, forms, and simple documents. Please upload only content you are authorized to use."}
                     </p>
+                    <p className="mb-2 text-xs text-slate-500">
+                      {lang === "vi"
+                        ? "Định dạng cho phép: PNG, JPG. Giới hạn dung lượng: tối đa 20MB."
+                        : "Allowed formats: PNG, JPG. File size limit: up to 20MB."}
+                    </p>
                     <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
                       <input
                         id="ocr-image-file"
                         type="file"
-                        accept="image/*"
+                        accept=".png,.jpg,.jpeg,image/png,image/jpeg"
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null;
+                          if (file && !OCR_ALLOWED_MIME_TYPES.has(file.type)) {
+                            setOcrImageFile(null);
+                            setOcrText("");
+                            setOcrCopied(false);
+                            setActionMessage(
+                              lang === "vi"
+                                ? "Chỉ hỗ trợ định dạng PNG hoặc JPG."
+                                : "Only PNG or JPG formats are supported."
+                            );
+                            return;
+                          }
+                          if (file && file.size > OCR_MAX_IMAGE_BYTES) {
+                            setOcrImageFile(null);
+                            setOcrText("");
+                            setOcrCopied(false);
+                            setActionMessage(
+                              lang === "vi"
+                                ? "Ảnh vượt quá 20MB. Vui lòng chọn ảnh nhỏ hơn."
+                                : "Image exceeds 20MB. Please choose a smaller image."
+                            );
+                            return;
+                          }
                           setOcrImageFile(file);
                           setOcrText("");
+                          setOcrCopied(false);
                         }}
                       />
                       <label
@@ -984,6 +1044,11 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                           ? (lang === "vi" ? "Đã chọn:" : "Selected:") + ` ${ocrImageFile.name}`
                           : (lang === "vi" ? "Chưa có ảnh nào được chọn" : "No image selected")}
                       </p>
+                      {ocrImageFile ? (
+                        <p className="mt-1 text-xs text-slate-600">
+                          {lang === "vi" ? "Dung lượng:" : "Size:"} {(ocrImageFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      ) : null}
                       {ocrPreviewUrl ? (
                         <img
                           src={ocrPreviewUrl}
@@ -993,40 +1058,62 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       ) : null}
                     </div>
                     {ocrText ? (
-                      <div className="mt-3 rounded border border-slate-200 bg-white p-3">
-                        <p className="mb-1 text-xs font-medium text-slate-700">
-                          {lang === "vi" ? "Kết quả OCR" : "OCR Output"}
-                        </p>
+                      <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="inline-flex items-center gap-2">
+                            <span className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                              Output
+                            </span>
+                            <p className="text-xs font-medium text-slate-700">
+                              {lang === "vi" ? "Kết quả Image to Text" : "Image to Text Output"}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!ocrText.trim()) return;
+                              await navigator.clipboard?.writeText(ocrText);
+                              setOcrCopied(true);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                          >
+                            <span>⧉</span>
+                            <span>{ocrCopied ? "Copied" : "Copy"}</span>
+                          </button>
+                        </div>
                         <p className="text-xs text-slate-500">
                           {lang === "vi"
                             ? "Nội dung được tạo tự động, vui lòng kiểm tra lại trước khi sử dụng."
                             : "This output is machine-generated. Please review before using."}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {lang === "vi"
-                            ? "Chỉ dùng để tham khảo. Không tải dữ liệu cá nhân nhạy cảm."
-                            : "For informational use only. Do not upload sensitive personal data."}
-                        </p>
-                        <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2">
+                        {ocrText.length > 800 ? (
+                          <div className="mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setOcrExpanded((prev) => !prev)}
+                              className="text-xs font-medium text-cyan-700 underline"
+                            >
+                              {ocrExpanded
+                                ? lang === "vi"
+                                  ? "Thu gọn"
+                                  : "Show less"
+                                : lang === "vi"
+                                  ? "Xem thêm"
+                                  : "Show more"}
+                            </button>
+                          </div>
+                        ) : null}
+                        <div
+                          className={
+                            ocrExpanded
+                              ? "mt-2 rounded-md border border-slate-200 bg-white p-2"
+                              : "mt-2 max-h-44 overflow-y-auto rounded-md border border-slate-200 bg-white p-2"
+                          }
+                        >
                           <p className="whitespace-pre-wrap break-words text-sm text-slate-700">
-                            {ocrExpanded || ocrText.length <= 800 ? ocrText : `${ocrText.slice(0, 800)}...`}
+                            {ocrText}
                           </p>
                         </div>
-                        {ocrText.length > 800 ? (
-                          <button
-                            type="button"
-                            onClick={() => setOcrExpanded((prev) => !prev)}
-                            className="mt-2 text-xs font-medium text-cyan-700 underline"
-                          >
-                            {ocrExpanded
-                              ? lang === "vi"
-                                ? "Thu gọn"
-                                : "Show less"
-                              : lang === "vi"
-                                ? "Xem thêm"
-                                : "Show more"}
-                          </button>
-                        ) : null}
                       </div>
                     ) : null}
                   </div>
@@ -1040,9 +1127,12 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       value={translateInput}
                       onChange={(e) => setTranslateInput(e.target.value)}
                       placeholder="Paste Vietnamese text for English translation..."
+                      maxLength={TRANSLATE_MAX_CHARS}
                       className="h-28 w-full resize-none rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm text-slate-800 outline-none ring-0 focus:border-slate-400"
                     />
-                    <p className="mt-2 text-xs text-slate-600">Current characters: {translateInput.length}</p>
+                    <p className="mt-2 text-xs text-slate-600">
+                      Current characters: {translateInput.length}/{TRANSLATE_MAX_CHARS}
+                    </p>
                     {translateText ? (
                       <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
                         <div className="mb-2 flex items-center justify-between gap-2">
