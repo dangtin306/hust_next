@@ -22,6 +22,7 @@ type SidebarLogicProps = {
   items: MenuItem[];
   lang: string;
   setIsOpen: (value: boolean) => void;
+  latestVersion?: string | number;
 };
 
 const readCookie = (name: string) => {
@@ -43,12 +44,15 @@ const normalizeNextHref = (href: string) => {
   return href.startsWith("/next/") ? href.slice("/next".length) : href;
 };
 
-const SidebarLogic = ({ items, lang, setIsOpen }: SidebarLogicProps) => {
+const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicProps) => {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const latestVersionRaw = readCookie("latest_version");
+  const latestVersionRaw =
+    typeof latestVersion === "string" || typeof latestVersion === "number"
+      ? String(latestVersion)
+      : readCookie("latest_version");
   const latestVersionNumber = Number(latestVersionRaw);
-  const hasLatestVersion = latestVersionRaw !== "";
+  const hasLatestVersion = latestVersionRaw !== "" && latestVersionRaw !== "0";
 
   const toggleKey = (key: string) => {
     setOpenKeys((prev) => {
@@ -64,7 +68,7 @@ const SidebarLogic = ({ items, lang, setIsOpen }: SidebarLogicProps) => {
 
   const matchesLatestVersion = (item: MenuItem) => {
     if (!Array.isArray(item.latest_version)) return true;
-    if (!hasLatestVersion) return false;
+    if (!hasLatestVersion) return true;
     return item.latest_version.some((version) => {
       if (String(version) === latestVersionRaw) return true;
       if (Number.isNaN(latestVersionNumber)) return false;

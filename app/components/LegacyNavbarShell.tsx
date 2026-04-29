@@ -2,8 +2,23 @@
 
 import { useEffect, useState } from "react";
 import NextSidebar from "./sidebar_main";
+import type { MenuItem } from "./sidebar_logic";
 
-const LegacyNavbarShell = () => {
+type LegacyNavbarShellProps = {
+  initialMenu?: MenuItem[];
+  initialLatestVersion?: string | number;
+  initialMarket?: string;
+  initialDisplayHostname?: string;
+  initialApiStatus?: string;
+};
+
+const LegacyNavbarShell = ({
+  initialMenu = [],
+  initialLatestVersion,
+  initialMarket = "vi",
+  initialDisplayHostname = "",
+  initialApiStatus = "success",
+}: LegacyNavbarShellProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -18,7 +33,15 @@ const LegacyNavbarShell = () => {
 
   return (
     <div>
-      <NextSidebar isOpen={isOpen} setIsOpen={setIsOpen} />
+      <NextSidebar
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        initialMenu={initialMenu}
+        initialLatestVersion={initialLatestVersion}
+        initialMarket={initialMarket}
+        initialDisplayHostname={initialDisplayHostname}
+        initialApiStatus={initialApiStatus}
+      />
     </div>
   );
 };

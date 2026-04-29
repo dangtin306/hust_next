@@ -121,13 +121,41 @@ const storeCachedMenu = (payload: SidebarMenuCache["payload"], menu: MenuItem[])
 type NextSidebarProps = {
   isOpen: boolean;
   setIsOpen: (value: boolean) => void;
+  initialMenu?: MenuItem[];
+  initialLatestVersion?: string | number;
+  initialMarket?: string;
+  initialDisplayHostname?: string;
+  initialApiStatus?: string;
 };
 
-const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
-  const [displayHostname, setDisplayHostname] = useState("");
-  const [menu, setMenu] = useState<MenuItem[]>([
-    { label: "Loading data ...", url_redirect: "/reactapp?app=showadview", iconType: "SlHome" },
-  ]);
+const NextSidebar = ({
+  isOpen,
+  setIsOpen,
+  initialMenu = [],
+  initialLatestVersion,
+  initialMarket = "vi",
+  initialDisplayHostname = "",
+  initialApiStatus = "success",
+}: NextSidebarProps) => {
+  const buildErrorMenu = (message: string): MenuItem[] => [
+    {
+      label: message,
+      url_redirect: "/next/support",
+      icon_src: "⚠️",
+    },
+  ];
+  const isInitialSuccess = initialApiStatus === "success";
+  const [displayHostname] = useState(initialDisplayHostname);
+  const [menu, setMenu] = useState<MenuItem[]>(() =>
+    Array.isArray(initialMenu) && initialMenu.length > 0
+      ? initialMenu
+      : isInitialSuccess
+        ? [{ label: "Home", url_redirect: "/reactapp/", iconType: "SlHome" }]
+        : buildErrorMenu("API sidebar error, please ib admin")
+  );
+  const [apiStatus, setApiStatus] = useState<string>(initialApiStatus);
+
+  const [lang, setLang] = useState(resolveMenuLanguage(initialMarket));
 
   const payload = useMemo(() => {
     const host = typeof window !== "undefined" ? window.location.hostname : "";
@@ -141,67 +169,100 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
     return { apikey, main_domain, national_market };
   }, []);
 
-  const lang = resolveMenuLanguage(payload.national_market || "vi");
+  useEffect(() => {
+    if (Array.isArray(initialMenu) && initialMenu.length > 0) {
+      setMenu(normalizeMenuLanguage(initialMenu, lang));
+      setApiStatus("success");
+      return;
+    }
+    if (initialApiStatus !== "success") {
+      setMenu(buildErrorMenu("API sidebar error, please ib admin"));
+      setApiStatus(initialApiStatus);
+    }
+  }, [initialMenu, lang, initialApiStatus]);
 
   useEffect(() => {
-    const hostname = window.location.hostname;
-    setDisplayHostname(hostname.includes("tecom.pro") ? "hust.media" : hostname);
-  }, []);
-
-  useEffect(() => {
+    if (typeof initialLatestVersion === "string" || typeof initialLatestVersion === "number") {
+      writeCookie("latest_version", String(initialLatestVersion), ONE_DAY_SECONDS);
+      return;
+    }
     const cachedLatestVersion = readCookie("latest_version");
     if (cachedLatestVersion) {
       writeCookie("latest_version", cachedLatestVersion, ONE_DAY_SECONDS);
     }
-  }, []);
+  }, [initialLatestVersion]);
 
   useEffect(() => {
-    const host = typeof window !== "undefined" ? window.location.hostname : "";
-    const isLocalhost = host === "localhost";
-
-    const cached = readCachedMenu(payload);
-    if (cached && !isLocalhost) {
-      setMenu(normalizeMenuLanguage(cached, lang));
-      return;
+    const langFromCookie = resolveMenuLanguage(readCookie("national_market") || initialMarket);
+    if (langFromCookie !== lang) {
+      setLang(langFromCookie);
     }
+  }, [initialMarket, lang]);
 
-    const controller = new AbortController();
+  useEffect(() => {
+    // Keep cache hot for quick client transitions.
+    if (Array.isArray(initialMenu) && initialMenu.length > 0) {
+      storeCachedMenu(payload, normalizeMenuLanguage(initialMenu, lang));
+    }
+    const cached = readCachedMenu(payload);
+    if (cached && cached.length > 0) {
+      setMenu(normalizeMenuLanguage(cached, lang));
+      setApiStatus("success");
+    }
+  }, [initialMenu, payload, lang]);
 
-    const run = async () => {
+  useEffect(() => {
+    if (apiStatus === "success") return;
+    let stopped = false;
+
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+      typeof value === "object" && value !== null;
+    const isSidebarApiResponse = (
+      value: unknown
+    ): value is { api_status: string; api_results: { latest_version: string | number; sidebar_menu: MenuItem[] } } => {
+      if (!isRecord(value)) return false;
+      if (typeof value.api_status !== "string") return false;
+      if (!isRecord(value.api_results)) return false;
+      const version = value.api_results.latest_version;
+      if (typeof version !== "string" && typeof version !== "number") return false;
+      if (!Array.isArray(value.api_results.sidebar_menu)) return false;
+      return true;
+    };
+
+    const retry = async () => {
       try {
-        const response = await fetch("https://node_js.hust.media/community/sidebar_menu", {
+        const response = await fetch("/api/sidebar-menu", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          signal: controller.signal,
+          cache: "no-store",
         });
-
-        if (!response.ok) throw new Error(`sidebar_menu http ${response.status}`);
-
-        const data = (await response.json()) as {
-          api_results?: { sidebar_menu?: MenuItem[]; latest_version?: unknown };
-        };
-
-        const sidebarMenu = data.api_results?.sidebar_menu;
-        const latestVersion = data.api_results?.latest_version;
-
-        if (Array.isArray(sidebarMenu) && sidebarMenu.length > 0) {
-          const normalizedMenu = normalizeMenuLanguage(sidebarMenu, lang);
-          setMenu(normalizedMenu);
-          storeCachedMenu(payload, normalizedMenu);
+        if (!response.ok) throw new Error(`http_${response.status}`);
+        const data: unknown = await response.json();
+        if (!isSidebarApiResponse(data) || data.api_status !== "success") {
+          throw new Error("invalid_schema");
         }
-
-        if (typeof latestVersion === "string" || typeof latestVersion === "number") {
-          writeCookie("latest_version", String(latestVersion), ONE_DAY_SECONDS);
+        if (stopped) return;
+        const normalizedMenu = normalizeMenuLanguage(data.api_results.sidebar_menu, lang);
+        setMenu(normalizedMenu.length > 0 ? normalizedMenu : buildErrorMenu("API sidebar error, please ib admin"));
+        if (typeof data.api_results.latest_version === "string" || typeof data.api_results.latest_version === "number") {
+          writeCookie("latest_version", String(data.api_results.latest_version), ONE_DAY_SECONDS);
         }
+        storeCachedMenu(payload, normalizedMenu);
+        setApiStatus("success");
       } catch {
-        // Keep existing menu state (cache/placeholder) if fetch fails.
+        if (stopped) return;
+        setMenu(buildErrorMenu("API sidebar error, please ib admin"));
       }
     };
 
-    run();
-    return () => controller.abort();
-  }, [payload, lang]);
+    retry();
+    const timer = window.setInterval(retry, 5000);
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+    };
+  }, [apiStatus, payload, lang]);
 
   return (
     <>
@@ -230,7 +291,12 @@ const NextSidebar = ({ isOpen, setIsOpen }: NextSidebarProps) => {
         </div>
 
         <div className="flex flex-col border-t-2 border-b-2 border-pink-400">
-          <SidebarLogic items={menu} lang={lang} setIsOpen={setIsOpen} />
+          <SidebarLogic
+            items={menu}
+            lang={lang}
+            setIsOpen={setIsOpen}
+            latestVersion={initialLatestVersion}
+          />
         </div>
       </nav>
 
