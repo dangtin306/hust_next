@@ -22,6 +22,7 @@ const writeCookie = (name: string, value: string) => {
 
 type SimpleTopBarProps = {
   initialHost?: string;
+  initialLatestVersion?: string | number;
 };
 
 const normalizeHost = (host: string) =>
@@ -30,7 +31,7 @@ const normalizeHost = (host: string) =>
     .toLowerCase()
     .replace(/:\d+$/, "");
 
-const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
+const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTopBarProps) => {
   const [domainOverride, setDomainOverride] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const cookieDomain = useSyncExternalStore(
@@ -61,8 +62,10 @@ const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
     hydrated && typeof window !== "undefined" && window.location.hostname === "localhost";
   const hideNav =
     hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
-  const hasLatestVersion = latestVersion !== "";
-  const hideNavControls = latestVersion === "3" || latestVersion === "5";
+  const effectiveLatestVersion =
+    latestVersion !== "" ? latestVersion : String(initialLatestVersion || "");
+  const hasLatestVersion = effectiveLatestVersion !== "";
+  const hideNavControls = effectiveLatestVersion === "3" || effectiveLatestVersion === "5";
   const initialHostLabel = normalizeHost(initialHost);
   const fallbackDomainLabel =
     initialHostLabel ||

@@ -69,9 +69,9 @@ export default async function RootLayout({
   const initialSidebarVersion = sidebarResponse.api_results.latest_version;
   const initialSidebarStatus = sidebarResponse.api_status;
   const resolvedSidebarVersion =
-    initialSidebarVersion !== "" && initialSidebarVersion !== null && initialSidebarVersion !== undefined
-      ? initialSidebarVersion
-      : initialLatestVersion;
+    initialLatestVersion !== "" && initialLatestVersion !== null && initialLatestVersion !== undefined
+      ? initialLatestVersion
+      : initialSidebarVersion;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -101,7 +101,10 @@ export default async function RootLayout({
                   </div>
                 </aside>
                 <div className="layout-page flex min-h-screen min-h-[100dvh] flex-col">
-                  <SimpleTopBar initialHost={initialHost} />
+                  <SimpleTopBar
+                    initialHost={initialHost}
+                    initialLatestVersion={resolvedSidebarVersion}
+                  />
                   <div className="flex-1">{children}</div>
                   <Footer_web
                     initialHost={initialHost}

@@ -183,7 +183,10 @@ const NextSidebar = ({
 
   useEffect(() => {
     if (typeof initialLatestVersion === "string" || typeof initialLatestVersion === "number") {
-      writeCookie("latest_version", String(initialLatestVersion), ONE_DAY_SECONDS);
+      const currentLatestVersion = readCookie("latest_version");
+      if (!currentLatestVersion) {
+        writeCookie("latest_version", String(initialLatestVersion), ONE_DAY_SECONDS);
+      }
       return;
     }
     const cachedLatestVersion = readCookie("latest_version");
