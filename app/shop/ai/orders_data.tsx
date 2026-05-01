@@ -134,7 +134,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Checklist nhiệm vụ. Output: Bản tóm tắt giọng nói cho cộng tác viên.",
       ],
       moduleUsageGuide:
-        "Dùng mô-đun này để chuyển văn bản thành giọng nói cho kịch bản ngắn, mô tả sản phẩm và nội dung hướng dẫn.",
+        "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Text-to-Speech với nội dung ngắn và thực tế.\n\n• Nhập mô tả sản phẩm, ghi chú hướng dẫn, hoặc chỉ dẫn ngắn.\n• Bấm Generate Audio để tạo đầu ra giọng nói.\n• Kiểm tra kết quả về độ rõ, nhịp đọc và tính nhất quán.\n• Dùng các độ dài văn bản khác nhau để xem mô-đun xử lý các dạng nội dung phổ biến.\n\nDùng phần bên dưới để chạy mô-đun trực tiếp. Bắt đầu với một đoạn ngắn, sau đó điều chỉnh nội dung theo nhu cầu workflow của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -196,7 +196,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Tóm tắt cuộc gọi hỗ trợ. Output: Transcript để tìm kiếm lại.",
       ],
       moduleUsageGuide:
-        "Dùng mô-đun này để chuyển ghi âm thành văn bản có thể chỉnh sửa, phù hợp cho báo cáo nhanh và ghi chú vận hành.",
+        "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Speech-to-Text với ghi âm ngắn và tệp âm thanh được hỗ trợ.\n\n• Tải lên tệp MP3, WAV, M4A hoặc OGG trong giới hạn thời lượng.\n• Bấm Generate Transcript để xử lý bản ghi âm.\n• Kiểm tra văn bản trả về về độ rõ, tên riêng và các thuật ngữ quan trọng.\n• Ưu tiên các bản ghi ngắn cho ghi chú, log hỗ trợ hoặc tác vụ báo cáo nhanh.\n\nDùng phần bên dưới để trải nghiệm mô-đun trực tiếp. Bắt đầu với một bản ghi ngắn, sau đó điều chỉnh độ dài tệp theo nhu cầu workflow của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -258,7 +258,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Ảnh hướng dẫn cũ. Output: Văn bản chỉnh sửa để cập nhật bài viết.",
       ],
       moduleUsageGuide:
-        "Dùng mô-đun này để trích xuất chữ từ ảnh PNG/JPG, sau đó rà soát kết quả OCR trước khi tái sử dụng.",
+        "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Image-to-Text với ảnh chụp màn hình, biên lai, biểu mẫu hoặc ảnh tài liệu đơn giản.\n\n• Tải lên ảnh PNG hoặc JPG có chứa chữ rõ ràng, dễ đọc.\n• Bấm Extract Text để xử lý ảnh qua luồng OCR.\n• Kiểm tra kết quả trích xuất để phát hiện thiếu từ, số hoặc lỗi định dạng.\n• Ưu tiên ảnh sạch, chữ rõ để đầu ra ổn định hơn.\n\nDùng phần bên dưới để trải nghiệm mô-đun trực tiếp. Bắt đầu với một ảnh đơn giản, sau đó điều chỉnh dữ liệu đầu vào theo nhu cầu rà soát, tài liệu hóa hoặc kiểm chứng của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -316,7 +316,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Nội dung sản phẩm/hỗ trợ tiếng Việt. Output: Bản tiếng Anh để xuất bản.",
       ],
       moduleUsageGuide:
-        "Dùng mô-đun này để dịch tiếng Việt sang tiếng Anh cho ghi chú, tài liệu và nội dung cần xuất bản nhanh.",
+        "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Vietnamese-to-English với ghi chú ngắn, bản nháp, nội dung sản phẩm hoặc nội dung hỗ trợ.\n\n• Dán văn bản tiếng Việt hoặc đoạn HTML/text đơn giản vào ô nhập liệu.\n• Bấm Translate to English để tạo bản tiếng Anh.\n• Kiểm tra đầu ra về ý nghĩa, tên riêng, thuật ngữ sản phẩm và độ rõ câu.\n• Nên chia nội dung thành đoạn ngắn khi chuẩn bị cho bước rà soát, tài liệu hóa hoặc xuất bản.\n\nDùng phần bên dưới để trải nghiệm mô-đun trực tiếp. Bắt đầu với một bản nháp tiếng Việt ngắn, sau đó điều chỉnh đầu vào theo workflow nội dung của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
