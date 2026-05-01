@@ -157,6 +157,38 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const readerValueText = activeContent.readerValue?.trim() || activeContentEn.readerValue;
   const conclusionTitle = "Conclusion";
   const conclusionText = activeContent.conclusion?.trim() || activeContentEn.conclusion;
+  const moduleUsageGuideText =
+    activeContent.moduleUsageGuide?.trim() || activeContentEn.moduleUsageGuide || "hellow world";
+  const moduleUsageGuideLines = moduleUsageGuideText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const moduleUsageGuideBlocks = (() => {
+    const blocks: Array<
+      | { type: "paragraph"; text: string }
+      | { type: "bullets"; items: string[] }
+    > = [];
+    let currentBullets: string[] = [];
+
+    const flushBullets = () => {
+      if (currentBullets.length > 0) {
+        blocks.push({ type: "bullets", items: currentBullets });
+        currentBullets = [];
+      }
+    };
+
+    moduleUsageGuideLines.forEach((line) => {
+      if (line.startsWith("•")) {
+        currentBullets.push(line.replace(/^•\s*/, ""));
+        return;
+      }
+      flushBullets();
+      blocks.push({ type: "paragraph", text: line });
+    });
+
+    flushBullets();
+    return blocks;
+  })();
 
   const handleConfirmTool = async () => {
     if (isSubmitting) return;
@@ -558,16 +590,16 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
                 <a
                   href="/ai/utility/home_ai"
-                  className="inline-flex shrink-0 items-center rounded-2xl border border-pink-200 bg-pink-50 px-3 py-1.5 text-sm font-semibold text-slate-900 no-underline shadow-sm transition hover:bg-pink-100 hover:no-underline active:scale-[0.98]"
+                  className="inline-flex shrink-0 items-center rounded-2xl border border-pink-200 bg-pink-50 px-3 py-1.5 text-base font-semibold text-slate-900 no-underline shadow-sm transition hover:bg-pink-100 hover:no-underline active:scale-[0.98]"
                 >
                   Back to Suite
                 </a>
               </div>
 
               <div className="mt-3 pl-1 sm:pl-1.5">
-                <h2 className="text-sm font-semibold leading-snug text-slate-800">
+                <div className="text-[15px] font-semibold leading-snug text-slate-800">
                   {activeContent.heading}
-                </h2>
+                </div>
                 <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
                   {activeContent.summary.map((paragraph, idx) => (
                     <p key={idx}>{paragraph}</p>
@@ -577,7 +609,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
             </section>
             <div>
               <section id="section-audience" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-slate-900">
                   {lang === "vi" ? "Ai nên dùng mô-đun này?" : "Who should use this module?"}
                 </h2>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700 marker:text-emerald-600">
@@ -590,7 +622,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
             <div>
               <section id="section-notes" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-slate-900">
                   {activeTool === "text_speech"
                     ? "How My Vietnamese Text-to-Speech Pipeline Runs on a Flask AI Server"
                     : activeTool === "speech_text"
@@ -826,10 +858,36 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               </section>
             </div>
 
+            <div>
+              <section id="section-examples" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900">
+                  Module Usage Guide
+                </h2>
+                <div className="mt-2 space-y-2">
+                  {moduleUsageGuideBlocks.map((block, idx) =>
+                    block.type === "paragraph" ? (
+                      <p key={`guide-p-${idx}`} className="text-sm leading-relaxed text-slate-700">
+                        {block.text}
+                      </p>
+                    ) : (
+                      <ul
+                        key={`guide-ul-${idx}`}
+                        className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-slate-700 marker:text-emerald-600"
+                      >
+                        {block.items.map((item, itemIdx) => (
+                          <li key={`guide-li-${idx}-${itemIdx}`}>{item}</li>
+                        ))}
+                      </ul>
+                    )
+                  )}
+                </div>
+              </section>
+            </div>
+
             <div className="pt-0.5">
               <section id="section-workflow" className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-slate-900">
+                  <h2 className="text-base font-semibold text-slate-900">
                     {activeTool === "speech_text"
                       ? (lang === "vi" ? "Chuyển âm thanh thành văn bản" : "Audio Transcription")
                       : activeTool === "image_text"
@@ -850,7 +908,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       value={ttsInput}
                       onChange={(e) => setTtsInput(e.target.value)}
                       placeholder={lang === "vi" ? "Ví dụ: Mô tả sản phẩm, hướng dẫn..." : "Example: Product description, guide..."}
-                      className="h-36 w-full resize-none rounded-lg border border-slate-300 p-3 text-sm text-slate-800 outline-none ring-0 focus:border-slate-400"
+                      className="h-28 w-full resize-none rounded-lg border border-slate-300 p-3 text-sm text-slate-800 outline-none ring-0 focus:border-slate-400"
                     />
                     <p className="mt-2 text-xs text-slate-600">
                       {lang === "vi" ? "Số ký tự hiện tại:" : "Current characters:"} {ttsInput.length}
@@ -1201,27 +1259,26 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                     </a>
                   </div>
                 ) : null}
-              </section>
-            </div>
 
-            <div>
-              <section id="section-examples" className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Practical Input/Output Examples
-                </h2>
-                <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
-                  {activeContentEn.examples.map((example, idx) => (
-                    <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-                      {example}
-                    </div>
-                  ))}
+                <div className="mt-3">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Sample Inputs
+                  </h3>
+                  <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                    {activeContentEn.examples.map((example, idx) => (
+                      <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        {example}
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
               </section>
             </div>
 
             <div id="section-feedback" className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-5 shadow-sm">
                 <div className="space-y-2.5">
-                  <h2 className="text-sm font-semibold leading-snug text-slate-900">
+                  <h2 className="text-base font-semibold leading-snug text-slate-900">
                     {readerValueTitle}
                   </h2>
                 <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-700">
@@ -1232,7 +1289,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
               <div className="my-5 border-t border-slate-200/70" />
 
               <div id="section-conclusion" className="space-y-2 mb-1">
-                <h2 className="text-sm font-semibold leading-snug text-slate-900">
+                <h2 className="text-base font-semibold leading-snug text-slate-900">
                   {conclusionTitle}
                 </h2>
                 <p className="pl-1 sm:pl-1.5 text-sm leading-relaxed text-slate-600">

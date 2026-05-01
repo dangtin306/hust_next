@@ -18,7 +18,13 @@ const writeCookie = (name: string, value: string, maxAgeSeconds = ONE_YEAR_SECON
   document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${maxAgeSeconds}; path=/`;
 };
 
-export default function ConvertNationalMarketPage() {
+type ConvertNationalMarketPageProps = {
+  limitToCoreMarkets?: boolean;
+};
+
+export default function ConvertNationalMarketPage({
+  limitToCoreMarkets = false,
+}: ConvertNationalMarketPageProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -94,6 +100,7 @@ export default function ConvertNationalMarketPage() {
 
   return (
     <NationalMarketUI
+      limitToCoreMarkets={limitToCoreMarkets}
       selected={selectedChoice}
       loading={loading}
       onSelect={setSelectedChoice}

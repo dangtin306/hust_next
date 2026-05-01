@@ -22,6 +22,7 @@ export type ToolContent = {
   summary: string[];
   audience: string[];
   examples: string[];
+  moduleUsageGuide: string;
   readerValueTitle: string;
   readerValue: string;
   conclusionTitle: string;
@@ -101,6 +102,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Product description paragraph. Output: Short narrated audio for social posts.",
         "Input: Task instructions. Output: Short voice summary for collaborators.",
       ],
+      moduleUsageGuide:
+        "After the technical overview above, this guide explains how to use the Text-to-Speech module with short, practical content.\n\n• Enter a product description, guide note, or short instruction.\n• Click Generate Audio to create the voice output.\n• Review the result for clarity, pacing, and consistency.\n• Use different text lengths to see how the module handles common content types.\n\nUse the section below to try the module directly. Start with a short input, then adjust the text based on your workflow needs.",
       readerValueTitle: "Reader Value",
       readerValue:
         "Readers can use this module pattern to turn text-based content into a more structured voice workflow for guides, documentation, and short-form media tasks. In real projects, that helps reduce repetitive manual recording, keep output handling more consistent, and support stable operation across integrated content flows.",
@@ -130,6 +133,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Mô tả sản phẩm dài. Output: File đọc để gắn vào bài đăng.",
         "Input: Checklist nhiệm vụ. Output: Bản tóm tắt giọng nói cho cộng tác viên.",
       ],
+      moduleUsageGuide:
+        "Dùng mô-đun này để chuyển văn bản thành giọng nói cho kịch bản ngắn, mô tả sản phẩm và nội dung hướng dẫn.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -159,6 +164,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Short voice note. Output: Draft text for reporting.",
         "Input: Customer call recording. Output: Searchable transcript for support history.",
       ],
+      moduleUsageGuide:
+        "After the technical overview above, this guide explains how to use the Speech-to-Text module with short voice recordings and supported audio files.\n\n• Upload an MP3, WAV, M4A, or OGG audio file within the duration limit.\n• Click Generate Transcript to process the recording.\n• Review the returned text for clarity, names, and important terms.\n• Use shorter recordings for notes, support logs, or quick reporting tasks.\n\nUse the section below to experience the module directly. Start with a short recording, then adjust the file length based on your workflow needs.",
       readerValueTitle: "Reader Value",
       readerValue:
         "Readers can use this module pattern to turn spoken updates into a more structured text workflow for reporting, documentation, and support tasks. In real projects, that helps reduce manual note-taking, keep transcription handling more consistent, and support stable operation across integrated content flows.",
@@ -188,6 +195,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Ghi âm 30 giây. Output: Bản nháp văn bản cho editor.",
         "Input: Tóm tắt cuộc gọi hỗ trợ. Output: Transcript để tìm kiếm lại.",
       ],
+      moduleUsageGuide:
+        "Dùng mô-đun này để chuyển ghi âm thành văn bản có thể chỉnh sửa, phù hợp cho báo cáo nhanh và ghi chú vận hành.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -217,6 +226,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Screenshot of a receipt. Output: Readable text for checking details.",
         "Input: Image of instructions. Output: Editable text for later updates.",
       ],
+      moduleUsageGuide:
+        "After the technical overview above, this guide explains how to use the Image-to-Text module with screenshots, receipts, forms, or simple document images.\n\n• Upload a PNG or JPG image that contains clear, readable text.\n• Click Extract Text to process the image through the OCR workflow.\n• Review the extracted result for missing words, numbers, and formatting.\n• Use clean screenshots or document images for more consistent output.\n\nUse the section below to experience the module directly. Start with a simple image, then adjust the input based on your review, documentation, or verification workflow.",
       readerValueTitle: "Reader Value",
       readerValue:
         "Readers can use this module pattern to turn screenshots, receipts, and image-based records into a more structured text workflow for review, documentation, and verification tasks. In real projects, that helps reduce manual typing, keep extraction handling more consistent, and support stable operation across image-based content flows.",
@@ -246,6 +257,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Ảnh biên lai. Output: Text số tiền/ngày tháng để đối soát.",
         "Input: Ảnh hướng dẫn cũ. Output: Văn bản chỉnh sửa để cập nhật bài viết.",
       ],
+      moduleUsageGuide:
+        "Dùng mô-đun này để trích xuất chữ từ ảnh PNG/JPG, sau đó rà soát kết quả OCR trước khi tái sử dụng.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",
@@ -275,6 +288,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Vietnamese draft note. Output: English version for review.",
         "Input: Vietnamese product or support text. Output: English for publishing.",
       ],
+      moduleUsageGuide:
+        "After the technical overview above, this guide explains how to use the Vietnamese-to-English module with short notes, drafts, product text, or support content.\n\n• Paste Vietnamese text or a simple HTML/text snippet into the input field.\n• Click Translate to English to generate the English version.\n• Review the output for meaning, names, product terms, and sentence clarity.\n• Use shorter sections when preparing content for review, documentation, or publishing.\n\nUse the section below to experience the module directly. Start with a short Vietnamese draft, then adjust the input based on your content workflow.",
       readerValueTitle: "Reader Value",
       readerValue:
         "Readers can use this module pattern to turn Vietnamese notes, drafts, and support content into a more structured English workflow for review and publishing. In real projects, that helps reduce manual rewriting, keep translation handling more consistent, and support stable operation across content-focused workflows.",
@@ -300,6 +315,8 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Input: Ghi chú nháp tiếng Việt. Output: Bản tiếng Anh để rà soát.",
         "Input: Nội dung sản phẩm/hỗ trợ tiếng Việt. Output: Bản tiếng Anh để xuất bản.",
       ],
+      moduleUsageGuide:
+        "Dùng mô-đun này để dịch tiếng Việt sang tiếng Anh cho ghi chú, tài liệu và nội dung cần xuất bản nhanh.",
       readerValueTitle: "Giá trị cho người đọc",
       readerValue: "",
       conclusionTitle: "Kết luận",

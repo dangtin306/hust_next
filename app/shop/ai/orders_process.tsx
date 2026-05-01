@@ -26,10 +26,9 @@ const OrdersProcess = ({
     { id: "section-introduction", en: "Introduction", vi: "Introduction" },
     { id: "section-audience", en: "Who This Module Helps", vi: "Who This Module Helps" },
     { id: "section-notes", en: "How This Module Works", vi: "How This Module Works" },
-    { id: "section-workflow", en: "User Interface", vi: "User Interface" },
-    { id: "section-examples", en: "Input/Output Examples", vi: "Input/Output Examples" },
-    { id: "section-feedback", en: "Reader Value", vi: "Reader Value" },
-    { id: "section-conclusion", en: "Conclusion", vi: "Conclusion" },
+    { id: "section-examples", en: "Module Usage Guide", vi: "Module Usage Guide" },
+    { id: "section-workflow", en: "Try the Module", vi: "Try the Module" },
+    { id: "section-feedback", en: "Reader Value & Conclusion", vi: "Reader Value & Conclusion" },
   ];
 
   const scrollToSection = (id: string) => {
