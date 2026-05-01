@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FaArrowCircleLeft } from "react-icons/fa";
 import SidebarLogic, { type MenuItem } from "./sidebar_logic";
 
@@ -155,19 +155,33 @@ const NextSidebar = ({
   );
   const [apiStatus, setApiStatus] = useState<string>(initialApiStatus);
 
-  const [lang, setLang] = useState(resolveMenuLanguage(initialMarket));
+  const nationalMarket = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => { };
+      const handler = () => onStoreChange();
+      const timer = window.setInterval(handler, 300);
+      window.addEventListener("focus", handler);
+      return () => {
+        window.clearInterval(timer);
+        window.removeEventListener("focus", handler);
+      };
+    },
+    () => readCookie("national_market") || initialMarket,
+    () => initialMarket
+  );
+  const lang = resolveMenuLanguage(nationalMarket || initialMarket);
 
   const payload = useMemo(() => {
     const host = typeof window !== "undefined" ? window.location.hostname : "";
     const apikey = readCookie("apikey");
-    const national_market = readCookie("national_market") || "vi";
+    const national_market = nationalMarket || readCookie("national_market") || "vi";
     const main_domain =
       host && host !== "localhost"
         ? readCookie("main_domain") || getMainDomainFromHost(host) || "hust"
         : readCookie("main_domain") || "hust";
 
     return { apikey, main_domain, national_market };
-  }, []);
+  }, [nationalMarket]);
 
   useEffect(() => {
     if (Array.isArray(initialMenu) && initialMenu.length > 0) {
@@ -194,13 +208,6 @@ const NextSidebar = ({
       writeCookie("latest_version", cachedLatestVersion, ONE_DAY_SECONDS);
     }
   }, [initialLatestVersion]);
-
-  useEffect(() => {
-    const langFromCookie = resolveMenuLanguage(readCookie("national_market") || initialMarket);
-    if (langFromCookie !== lang) {
-      setLang(langFromCookie);
-    }
-  }, [initialMarket, lang]);
 
   useEffect(() => {
     // Keep cache hot for quick client transitions.
