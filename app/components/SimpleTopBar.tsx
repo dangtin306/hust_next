@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useState } from "react";
+import { useEffect, useSyncExternalStore, useState } from "react";
 import NavDown from "./nav_down";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -32,17 +32,17 @@ const normalizeHost = (host: string) =>
 
 const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
   const [domainOverride, setDomainOverride] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const cookieDomain = useSyncExternalStore(
     () => () => { },
     () => readCookie("main_domain") || "hust",
     () => "hust"
   );
   const domain = domainOverride ?? cookieDomain;
-  const hydrated = useSyncExternalStore(
-    () => () => { },
-    () => true,
-    () => false
-  );
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
+  }, []);
   const latestVersion = useSyncExternalStore(
     (onStoreChange) => {
       if (typeof window === "undefined") return () => { };
@@ -62,7 +62,7 @@ const SimpleTopBar = ({ initialHost = "" }: SimpleTopBarProps) => {
   const hideNav =
     hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
   const hasLatestVersion = latestVersion !== "";
-  const hideNavControls = latestVersion === "3";
+  const hideNavControls = latestVersion === "3" || latestVersion === "5";
   const initialHostLabel = normalizeHost(initialHost);
   const fallbackDomainLabel =
     initialHostLabel ||
