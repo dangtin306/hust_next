@@ -63,9 +63,10 @@ export default function AboutPage() {
             <h1 className="text-2xl font-semibold leading-tight sm:text-4xl lg:text-5xl text-slate-800">
               Scalable Platform Documentation & System Design
             </h1>
+
             <p className="mt-4 text-base leading-relaxed text-slate-600">
-              Hust Media publishes original technical documentation on scalable web systems, with a focus on system architecture, deployment, monitoring, system integration, and practical implementation behind stable platform operation.
-            </p>
+              Hi everyone, this website brings together the practical notes and articles I have built since I started learning web development in 2020. I studied Electronics and Telecommunications, but I have always been interested in media, so I gradually moved toward building web platforms that can run stably, scale over time, and support real growth. Today, this is where I share what I have learned about architecture, integration, deployment, and stable operation for scalable web systems.
+              The site has three connected parts: technical articles, practical supporting utilities, and deeper technical notes. The articles explain the core foundation of the platform, the utilities apply that knowledge in real workflows, and the notes support architecture, integration, security, deployment, and day-to-day operations.            </p>
             {/* Badges: Kỹ thuật & An toàn */}
             <div className="flex flex-wrap items-center gap-3">
               {/* Thẻ 1: Safe Data (Thay cho Data Integrity) */}
@@ -158,6 +159,9 @@ export default function AboutPage() {
                 <h2 className="text-xl font-bold text-slate-800">Core Technology</h2>
                 <p className="mt-2 text-sm text-slate-600">
                   Built on a solid foundation to keep everything running smoothly and reliably for you.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  The site has three connected parts: technical articles, practical supporting utilities, and deeper technical notes. The articles explain the core foundation of the platform, the utilities apply that knowledge in real workflows, and the notes support architecture, integration, security, deployment, and day-to-day operations.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">

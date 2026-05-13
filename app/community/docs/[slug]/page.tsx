@@ -5,12 +5,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import type { ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 
 const resolveDocsDir = () => {
   const candidates = [
     path.join(process.cwd(), "src", "content", "docs"),
     path.join(process.cwd(), "hust_next", "src", "content", "docs"),
+    path.join(process.cwd(), "..", "hust_next", "src", "content", "docs"),
+    path.join(process.cwd(), "..", "src", "content", "docs"),
   ];
 
   for (const candidate of candidates) {
@@ -24,6 +27,7 @@ const docsDir = resolveDocsDir();
 const defaultOrderMap: Record<string, number> = {
   overview: 1,
   architecture: 2,
+  gamification_logic: 3,
   algorithm: 3,
 };
 
@@ -43,8 +47,32 @@ type DocData = {
 type DocSummary = {
   slug: string;
   title: string;
+  description: string;
   order: number;
+  thumbnail: string;
 };
+
+type TocItem = {
+  id: string;
+  title: string;
+  depth: 2 | 3;
+};
+
+const defaultDocThumbnail = "https://hust.media/img/credit_verification_thumbnail.png";
+const docThumbnailBySlug: Record<string, string> = {
+  overview: "https://hust.media/img/hust_media_system_overview.jpg",
+  architecture: "https://hust.media/img/architecture.jpg",
+  gamification_logic: "https://hust.media/img/gamification_logic.jpg",
+  algorithm: "https://hust.media/img/credit_verification_thumbnail.png",
+  "api-reference": "https://hust.media/img/api_reference.jpg",
+  "public-api-v3": "https://hust.media/img/api_reference.jpg",
+  "security-threat-detection": "https://hust.media/img/community_signal_smaller_still.png",
+  "validation-quality-workflow": "https://hust.media/img/text_speech_thumbnail.png",
+};
+
+function getDocThumbnail(slug: string) {
+  return docThumbnailBySlug[slug] ?? defaultDocThumbnail;
+}
 
 function slugToTitle(slug: string) {
   return slug
@@ -120,6 +148,55 @@ function toPlainText(markdown: string) {
     .trim();
 }
 
+function slugifyHeading(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/["'`]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function getNodeText(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join("");
+  }
+
+  if (node && typeof node === "object" && "props" in node) {
+    const withProps = node as { props?: { children?: ReactNode } };
+    return getNodeText(withProps.props?.children ?? "");
+  }
+
+  return "";
+}
+
+function extractToc(content: string): TocItem[] {
+  const items: TocItem[] = [];
+  const lines = content.split(/\r?\n/);
+
+  for (const line of lines) {
+    const h2 = /^##\s+(.+)$/.exec(line.trim());
+    if (h2) {
+      const title = h2[1].trim();
+      items.push({ id: slugifyHeading(title), title, depth: 2 });
+      continue;
+    }
+
+    const h3 = /^###\s+(.+)$/.exec(line.trim());
+    if (h3) {
+      const title = h3[1].trim();
+      items.push({ id: slugifyHeading(title), title, depth: 3 });
+    }
+  }
+
+  return items;
+}
+
 function getDocOrder(frontmatter: Frontmatter, slug: string) {
   const orderValue = frontmatter.order ?? frontmatter.chapter;
   if (orderValue) {
@@ -161,8 +238,13 @@ async function getDocList(): Promise<DocSummary[]> {
           const { frontmatter, content } = splitFrontmatter(source);
           const title = frontmatter.title?.trim() ||
             extractTitleFromContent(content, slug);
+          const description =
+            frontmatter.description?.trim() ||
+            toPlainText(content).slice(0, 120).trim() ||
+            "Technical note and implementation details.";
           const order = getDocOrder(frontmatter, slug);
-          return { slug, title, order };
+          const thumbnail = getDocThumbnail(slug);
+          return { slug, title, description, order, thumbnail };
         })
     );
 
@@ -229,46 +311,116 @@ export default async function DocPage({
   }
 
   const nav = await getDocList();
+  const tocItems = extractToc(doc.content);
+
+  const mdxComponents = {
+    h2: ({ children, ...props }: { children?: ReactNode }) => {
+      const title = getNodeText(children ?? "");
+      const id = slugifyHeading(title);
+      return (
+        <h2 id={id} {...props}>
+          {children}
+        </h2>
+      );
+    },
+    h3: ({ children, ...props }: { children?: ReactNode }) => {
+      const title = getNodeText(children ?? "");
+      const id = slugifyHeading(title);
+      return (
+        <h3 id={id} {...props}>
+          {children}
+        </h3>
+      );
+    },
+  };
 
   return (
-    <div className="relative min-h-screen bg-slate-950 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_circle_at_12%_10%,rgba(236,72,153,0.26),transparent_60%),radial-gradient(900px_circle_at_88%_12%,rgba(59,130,246,0.26),transparent_60%),radial-gradient(700px_circle_at_50%_90%,rgba(56,189,248,0.16),transparent_65%),linear-gradient(135deg,rgba(236,72,153,0.08),rgba(59,130,246,0.08))]" />
-      <div className="mx-auto relative z-10 flex w-full max-w-7xl flex-col gap-6 px-4 py-8 lg:flex-row lg:gap-8 lg:px-6 lg:py-12">
-        <aside className="w-full lg:w-66 lg:shrink-0">
-          <div className="lg:sticky lg:top-10">
-            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/70 to-blue-500/10 px-4 py-5 shadow-lg">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                Docs
-              </p>
-              <nav className="mt-4 space-y-1">
-                {nav.map((item) => {
-                  const isActive = item.slug === slug;
-                  const baseClass =
-                    "block rounded-lg px-3 py-2 text-sm transition";
+    <div className="relative min-h-screen bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 text-slate-700">
+      <div
+        className="mx-auto relative z-10 flex w-full max-w-[1320px] flex-col gap-3 px-2 py-8 lg:flex-row lg:gap-3 lg:px-8 xl:px-12"
+        style={{ ["--tool-col" as string]: "clamp(215px, 21.5vw, 280px)" }}
+      >
+        <aside className="w-full lg:w-[var(--tool-col)] lg:flex-none">
+          <div className="">
+            <div className="space-y-3">
+              {tocItems.length > 0 && (
+                <section className="rounded-2xl border border-blue-100/80 bg-blue-50/90 px-4 pb-4 pt-3 text-slate-700 shadow-sm backdrop-blur-md">
+                  <div className="max-lg:pt-1 lg:pt-4">
+                    <div className="text-center text-lg font-semibold whitespace-nowrap text-slate-800">
+                      Table of Contents
+                    </div>
+                    <div className="max-lg:mt-3 lg:mt-5 space-y-1.5 sm:mt-4">
+                    {tocItems.map((item) => (
+                      <a
+                        key={item.id}
+                        href={`#${item.id}`}
+                        className="block w-full rounded-lg border border-blue-100/80 bg-blue-200/60 px-3 py-1.5 text-left text-sm font-medium text-black no-underline transition hover:border-blue-400/90 hover:bg-blue-300/65 sm:py-2"
+                      >
+                        {item.title}
+                      </a>
+                    ))}
+                    </div>
+                  </div>
+                </section>
+              )}
 
-                  return (
-                    <Link
-                      key={item.slug}
-                      href={`/community/docs/${item.slug}`}
-                      className={`${baseClass} ${
-                        isActive
-                          ? "bg-gradient-to-r from-pink-500/20 to-blue-500/20 text-white"
-                          : "text-slate-300 hover:bg-slate-800/70 hover:text-white"
-                      }`}
-                    >
-                      {item.title}
-                    </Link>
-                  );
-                })}
-              </nav>
+              <section className="-mb-2 lg:mb-0 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
+                <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
+                  Docs
+                </h2>
+                <nav className="mt-4 space-y-2">
+                  {nav.map((item) => {
+                    const isActive = item.slug === slug;
+                    const baseClass =
+                      "block rounded-xl border p-2.5 no-underline transition";
+
+                    return (
+                      <Link
+                        key={item.slug}
+                        href={`/community/docs/${item.slug}`}
+                        className={`${baseClass} ${
+                          isActive
+                            ? "border-emerald-300/90 bg-emerald-100/55"
+                            : "border-blue-100/80 bg-blue-200/60 hover:border-blue-300/90 hover:bg-blue-200/80"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <img
+                            src={item.thumbnail}
+                            alt={item.title}
+                            loading="lazy"
+                            className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold leading-snug text-black">
+                              {item.title}
+                            </div>
+                            <div
+                              className="mt-1 text-xs leading-relaxed text-slate-500"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {item.description}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </section>
             </div>
           </div>
         </aside>
 
         <main className="min-w-0 w-full flex-1">
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-pink-500/10 via-slate-900/80 to-blue-500/10 py-6 px-3 shadow-2xl backdrop-blur-xl sm:py-8 sm:px-8">
-            <div className="prose prose-invert max-w-none">
-              <MDXRemote source={doc.content} />
+          <article className="rounded-3xl border border-slate-200 bg-white py-6 px-3 shadow-sm sm:py-8 sm:px-8">
+            <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700">
+              <MDXRemote source={doc.content} components={mdxComponents} />
             </div>
           </article>
           <DocsHelpfulFeedback />

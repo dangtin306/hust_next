@@ -24,6 +24,7 @@ const OrdersProcess = ({
 }: OrdersProcessProps) => {
   const tocItems: Array<{ id: string; en: string; vi: string }> = [
     { id: "section-introduction", en: "Introduction", vi: "Introduction" },
+    { id: "section-practical-notes", en: "Practical Notes", vi: "Practical Notes" },
     { id: "section-audience", en: "Who This Module Helps", vi: "Who This Module Helps" },
     { id: "section-notes", en: "How This Module Works", vi: "How This Module Works" },
     { id: "section-examples", en: "Module Usage Guide", vi: "Module Usage Guide" },

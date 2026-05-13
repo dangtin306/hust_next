@@ -19,6 +19,7 @@ export type ToolProcessCard = {
 export type ToolContent = {
   title: string;
   heading: string;
+  practical?: string;
   summary: string[];
   audience: string[];
   examples: string[];
@@ -87,16 +88,16 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   text_speech: {
     en: {
       title: "Text to Speech",
-      heading: "About this AI module",
+      heading: "Introduction",
+      practical: "Practical Notes",
       summary: [
-        "This Text-to-Speech module is one of the practical utilities I maintain for simple media and content work. It turns written text into spoken audio for narration, accessibility, and faster content preparation.",
-        "I first built it in an AI-related working environment and later rebuilt it into a more stable version for my own use. It now runs on my physical server and supports guides, product descriptions, short scripts, and task documentation.",
-        "It helps reduce repetitive recording work and makes voice output easier to prepare for Reels and YouTube Shorts.",
+        "This Text-to-Speech (TTS) module is engineered as a high-performance microservice within the HUST Media ecosystem. Designed for scalable web platforms, it ensures high stability and low latency. As a core component of larger media pipelines, it converts technical documentation into natural audio for production environments.",
+        "The implementation leverages advanced speech synthesis models on a dedicated Flask AI server. For deployment, it utilizes standardized server structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a practical blueprint for developers integrating AI-driven media processing into high-traffic, scalable architectures.",
       ],
       audience: [
-        "Creators working on tutorials, explainers, and short social content.",
-        "Support teams that need quick voice output for guides and onboarding.",
-        "Students and mobile users who prefer listening instead of reading.",
+        "Developers integrating automated audio narration into high-traffic media pipelines.",
+        "Architects seeking a production-ready TTS microservice for technical platforms.",
+        "Engineering teams optimizing content delivery with stable, low-latency voice synthesis.",
       ],
       examples: [
         "Input: Product description paragraph. Output: Short narrated audio for social posts.",
@@ -149,16 +150,16 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   speech_text: {
     en: {
       title: "Speech to Text",
-      heading: "About this AI module",
+      heading: "Introduction",
+      practical: "Practical Notes",
       summary: [
-        "This Speech-to-Text module is part of the small set of practical utilities I maintain for simple media and content work. It turns spoken audio into editable text for faster transcription, note-taking, and content preparation.",
-        "I use it where audio is recorded on mobile and later converted into structured text for support, documentation, moderation, or publishing tasks. It helps reduce manual typing and makes spoken updates easier to handle.",
-        "It also turns voice recordings into searchable text that can be reviewed, edited, and reused later.",
+        "This Speech-to-Text (STT) module is engineered as a high-performance microservice within the HUST Media ecosystem. Designed for scalable platforms, it converts unstructured audio into accurate, structured text. As a core component of data pipelines, it automates transcription and indexing for production environments.",
+        "The implementation leverages advanced speech recognition on a dedicated Flask AI server. It utilizes standardized server-side structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a blueprint for developers integrating AI-driven transcription into high-traffic, scalable architectures.",
       ],
       audience: [
-        "People who need to turn short voice recordings into editable text.",
-        "Teams handling notes, updates, or simple reporting from audio.",
-        "Mobile users who prefer speaking first and editing later.",
+        "Developers integrating automated audio transcription into high-traffic data pipelines.",
+        "Architects seeking a production-ready STT microservice for scalable content management.",
+        "Engineering teams optimizing unstructured audio processing with stable, low-latency AI models.",
       ],
       examples: [
         "Input: Short voice note. Output: Draft text for reporting.",
@@ -211,16 +212,16 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   image_text: {
     en: {
       title: "Image to Text",
-      heading: "About this AI module",
+      heading: "Introduction",
+      practical: "Practical Notes",
       summary: [
-        "This Image-to-Text module is part of the small set of practical utilities I maintain for simple media and content work. It extracts readable text from screenshots and documents for faster verification, note-taking, and content preparation.",
-        "I use it when image files need to be turned into searchable text for review, documentation, or simple processing tasks. It helps reduce manual typing and makes text checking easier.",
-        "It is especially useful for screenshots, receipts, forms, and other image-based records.",
+        "This Image-to-Text (OCR) microservice is engineered for the HUST Media ecosystem. Designed for scalable platforms, it extracts structured text from unstructured image data. As a core pipeline component, it automates document processing and indexing for production environments.",
+        "Leveraging advanced OCR models on a dedicated Flask AI server, the module uses standardized server-side structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a blueprint for integrating AI-driven analysis into high-traffic, scalable architectures.",
       ],
       audience: [
-        "People who need to extract text from screenshots and documents.",
-        "Teams reviewing receipts, forms, or proof images.",
-        "Editors and support teams working with image-based records.",
+        "Developers integrating automated OCR capabilities into high-traffic document processing pipelines.",
+        "Architects seeking a production-ready Image-to-Text microservice for scalable data verification.",
+        "Engineering teams optimizing unstructured image data extraction with stable, low-latency AI models.",
       ],
       examples: [
         "Input: Screenshot of a receipt. Output: Readable text for checking details.",
@@ -273,16 +274,16 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
   translate_vi_en: {
     en: {
       title: "Vietnamese to English",
-      heading: "About this AI module",
+      heading: "Introduction",
+      practical: "Practical Notes",
       summary: [
-        "This Vietnamese-to-English module is one of the practical utilities I maintain for content work. It translates Vietnamese text into English for articles, documentation, product content, and internal use.",
-        "I use it when Vietnamese notes, drafts, or HTML content need English output without changing the rest of the workflow. It reduces manual rewriting and supports review and publishing.",
-        "In the current version, the module runs on my Flask AI server with a fixed VI-to-EN path. It supports both text and HTML input.",
+        "This VI-to-EN translation module is a high-performance microservice in the HUST Media ecosystem. Built for scalable platforms, it translates Vietnamese text and HTML content into English. As a core pipeline component, it automates content localization for production environments.",
+        "Implementation leverages advanced translation models via a dedicated Flask AI server. It utilizes standardized server structures (e.g., /opt/hustmedia/python) and supports both raw text and HTML parsing. This setup serves as a blueprint for integrating AI-driven localization into high-traffic, scalable architectures.",
       ],
       audience: [
-        "People turning Vietnamese notes or drafts into English.",
-        "Teams preparing English articles, docs, or support content.",
-        "Users who need a simple VI-to-EN step for review or publishing.",
+        "Developers integrating automated VI-to-EN translation into high-traffic content pipelines.",
+        "Architects seeking a production-ready localization microservice for scalable web platforms.",
+        "Engineering teams optimizing multilingual content delivery with stable AI models.",
       ],
       examples: [
         "Input: Vietnamese draft note. Output: English version for review.",

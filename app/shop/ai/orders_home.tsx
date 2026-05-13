@@ -602,7 +602,14 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                 </div>
                 <div className="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
                   {activeContent.summary.map((paragraph, idx) => (
-                    <p key={idx}>{paragraph}</p>
+                    <React.Fragment key={idx}>
+                      {idx === 1 && activeContent.practical ? (
+                        <div id="section-practical-notes" className="mt-1 text-[15px] font-semibold leading-snug text-slate-800">
+                          {activeContent.practical}
+                        </div>
+                      ) : null}
+                      <p>{paragraph}</p>
+                    </React.Fragment>
                   ))}
                 </div>
               </div>
@@ -650,10 +657,10 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       </div>
                       <div className="mt-1 space-y-2">
                         <p>
-                          My Text-to-Speech module runs on a Python Flask AI server inside D:\hustmedia\python. The service is exposed on 0.0.0.0:8789, and the main POST /tts route works as a dispatcher between two Vietnamese TTS engines: a local F5-based pipeline and an alternative path based on facebook/mms-tts-vie. The API requires a non-empty text field, reads a servicecode, and falls back to the F5 engine unless the request explicitly asks for the Facebook path. In the current version, the request is processed synchronously and the API returns a success payload rather than streaming the audio directly.
+                          My Text-to-Speech module runs on a Python Flask AI server inside /opt/hustmedia/python/. The service is exposed on 0.0.0.0:8789, and the main POST /tts route works as a dispatcher between two Vietnamese TTS engines: a local F5-based pipeline and an alternative path based on facebook/mms-tts-vie. The API requires a non-empty text field, reads a servicecode, and falls back to the F5 engine unless the request explicitly asks for the Facebook path. In the current version, the request is processed synchronously and the API returns a success payload rather than streaming the audio directly.
                         </p>
                         <p>
-                          The main voice generation path is F5_vie. Before synthesis begins, the module converts numeric strings into Vietnamese words so phone numbers, quantities, and short operational text sound more natural. The server then calls f5-tts_infer-cli with a fixed reference voice file, the F5TTS_Base model, speed 0.5, the vocos vocoder, a local vocabulary file, and the checkpoint model_500000.pt. After inference, the generated WAV file is converted to MP3 with pydub and saved to D:\hustmedia\python\tts\output\output.mp3.
+                          The main voice generation path is F5_vie. Before synthesis begins, the module converts numeric strings into Vietnamese words so phone numbers, quantities, and short operational text sound more natural. The server then calls f5-tts_infer-cli with a fixed reference voice file, the F5TTS_Base model, speed 0.5, the vocos vocoder, a local vocabulary file, and the checkpoint model_500000.pt. After inference, the generated WAV file is converted to MP3 with pydub and saved to /opt/hustmedia/python/tts/output/output.mp3.
                         </p>
                         <p>
                           Inside the F5 pipeline, the processing flow is more than a simple wrapper call. The CLI loads its config, model backbone, and checkpoint, preprocesses the reference audio by trimming silence and adding about 50 ms of padding, and can infer missing reference text with Whisper. The generation text is then split into batches, normalized, resampled to 24 kHz, and passed through the sampling path before the waveform is decoded by the vocoder. When multiple chunks are produced, they are joined with a default cross-fade of 0.15 seconds to reduce audible breaks.
@@ -706,7 +713,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                           The transcription engine is based on the Hugging Face model khanhld/wav2vec2-base-vietnamese-160h. Both the processor and model are loaded once when the module starts, rather than reloading on every request. The runtime device is selected automatically, using GPU when CUDA is available and CPU otherwise. This keeps repeated requests more stable, although it also means the service keeps a memory footprint while running.
                         </p>
                         <p>
-                          For audio processing, the file is loaded with librosa, converted to mono, and resampled to 16 kHz, which matches the model input. A normalized intermediate WAV file can also be written to D:\hustmedia\python\tts\wav2vec2\run.wav for inspection or reuse. Before inference, the waveform is converted to float32, checked to avoid empty input, and normalized by peak amplitude.
+                          For audio processing, the file is loaded with librosa, converted to mono, and resampled to 16 kHz, which matches the model input. A normalized intermediate WAV file can also be written to /opt/hustmedia/python/tts/wav2vec2/run.wav for inspection or reuse. Before inference, the waveform is converted to float32, checked to avoid empty input, and normalized by peak amplitude.
                         </p>
                         <p>
                           Once prepared, the audio is tokenized with sampling_rate=16000 and passed through the model under torch.no_grad(). The output logits are decoded with greedy CTC argmax, then converted into text with batch_decode. In its current form, this module does not use beam search, VAD chunking, or language-model rescoring, so long files are still processed in one pass and may increase latency or memory usage.
@@ -727,7 +734,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                         <li>STT model: khanhld/wav2vec2-base-vietnamese-160h</li>
                         <li>Device selection: automatic GPU / CPU</li>
                         <li>Input normalization: mono audio, 16 kHz</li>
-                        <li>Intermediate WAV path: D:\hustmedia\python\tts\wav2vec2\run.wav</li>
+                        <li>Intermediate WAV path: /opt/hustmedia/python/tts/wav2vec2/run.wav</li>
                         <li>Decode method: greedy CTC argmax</li>
                         <li>Inference mode: torch.no_grad()</li>
                         <li>Current limitation: no chunking, no VAD, no beam search</li>
@@ -751,10 +758,10 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       </div>
                       <div className="mt-1 space-y-2">
                         <p>
-                          My current Image-to-Text workflow is built around a local OCR pipeline rather than a general upload-and-read service. In the repo under D:\hustmedia\python, the working path uses local Tesseract OCR, while PaddleOCR and EasyOCR only appear as external service references, not as full OCR logic in this codebase.
+                          My current Image-to-Text workflow is built around a local OCR pipeline rather than a general upload-and-read service. In the repo under /opt/hustmedia/python/, the working path uses local Tesseract OCR, while PaddleOCR and EasyOCR only appear as external service references, not as full OCR logic in this codebase.
                         </p>
                         <p>
-                          The flow starts with a Selenium script that opens the target chat interface and saves a screenshot as screenshot.png. A second script then processes that image with pytesseract, using the fixed Tesseract binary at D:\hustmedia\application\Tesseract-OCR\tesseract.exe. Before OCR runs, the image is cropped to the expected chat area, then refined by detecting a gray edge region to isolate the relevant message area.
+                          The flow starts with a Selenium script that opens the target chat interface and saves a screenshot as screenshot.png. A second script then processes that image with pytesseract, using the fixed Tesseract binary at /opt/hustmedia/application/Tesseract-OCR/tesseract.exe. Before OCR runs, the image is cropped to the expected chat area, then refined by detecting a gray edge region to isolate the relevant message area.
                         </p>
                         <p>
                           The pipeline detects candidate text boxes using contour detection on an Otsu-thresholded image. The boxes are merged by row and horizontal spacing, then filtered with rules for gray regions, uniform backgrounds, and a LINE_THRESHOLD step that removes noisy rows. Instead of reading the whole image, the script keeps only the lowest valid box, expands it with PAD = 5, and runs OCR on that region with pytesseract.image_to_string(..., --psm 7). The extracted text and coordinates are then written to center.json.
@@ -778,7 +785,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
                       <ul className="mt-1 list-disc space-y-1 pl-5">
                         <li>OCR stack: local Tesseract OCR</li>
                         <li>Python wrapper: pytesseract</li>
-                        <li>Tesseract binary: D:\hustmedia\application\Tesseract-OCR\tesseract.exe</li>
+                        <li>Tesseract binary: /opt/hustmedia/application/Tesseract-OCR/tesseract.exe</li>
                         <li>Screenshot source: Selenium capture to screenshot.png</li>
                         <li>Region output: chat_region.png</li>
                         <li>OCR target: lowest valid filtered text box</li>
