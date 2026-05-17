@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 
 const resolveDocsDir = () => {
@@ -312,9 +312,34 @@ export default async function DocPage({
 
   const nav = await getDocList();
   const tocItems = extractToc(doc.content);
+  const docDescription = doc.frontmatter.description?.trim() ?? "";
+  const docTitle = doc.frontmatter.title?.trim() ?? "";
 
   const mdxComponents = {
-    h2: ({ children, ...props }: { children?: ReactNode }) => {
+    h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => {
+      const headingText = getNodeText(children ?? "").trim();
+      const shouldShowDescription =
+        Boolean(docDescription) && (!docTitle || headingText === docTitle);
+      const headingClass = [
+        props.className,
+        "!mt-3 !mb-0 text-[30px] font-bold leading-[1.12] tracking-tight sm:text-[30px]",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return (
+        <>
+          <h1 {...props} className={headingClass}>
+            {children}
+          </h1>
+          {shouldShowDescription ? (
+            <p className="mt-3 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
+              {docDescription}
+            </p>
+          ) : null}
+        </>
+      );
+    },
+    h2: ({ children, ...props }: ComponentPropsWithoutRef<"h2">) => {
       const title = getNodeText(children ?? "");
       const id = slugifyHeading(title);
       return (
@@ -323,7 +348,7 @@ export default async function DocPage({
         </h2>
       );
     },
-    h3: ({ children, ...props }: { children?: ReactNode }) => {
+    h3: ({ children, ...props }: ComponentPropsWithoutRef<"h3">) => {
       const title = getNodeText(children ?? "");
       const id = slugifyHeading(title);
       return (
@@ -332,6 +357,27 @@ export default async function DocPage({
         </h3>
       );
     },
+    pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
+      <pre
+        {...props}
+        className={[
+          props.className,
+          "max-h-[280px] overflow-y-auto text-[12px] leading-5",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {children}
+      </pre>
+    ),
+    img: ({ alt, ...props }: ComponentPropsWithoutRef<"img">) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        {...props}
+        alt={alt ?? ""}
+        className={[props.className, "mx-auto my-3 w-[92%] max-w-[92%]"].filter(Boolean).join(" ")}
+      />
+    ),
   };
 
   return (
@@ -419,7 +465,7 @@ export default async function DocPage({
 
         <main className="min-w-0 w-full flex-1">
           <article className="rounded-3xl border border-slate-200 bg-white py-6 px-3 shadow-sm sm:py-8 sm:px-8">
-            <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700">
+            <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-7 prose-h3:mb-2.5 prose-hr:my-4 prose-pre:my-3 prose-pre:py-3 prose-pre:px-3 prose-img:my-3 prose-p:my-2.5 prose-ul:my-2.5 prose-ol:my-2.5 prose-li:my-1.5 prose-code:text-[12px]">
               <MDXRemote source={doc.content} components={mdxComponents} />
             </div>
           </article>

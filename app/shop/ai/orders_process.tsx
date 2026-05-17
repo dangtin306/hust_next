@@ -67,7 +67,7 @@ const OrdersProcess = ({
       {showUtilities && (
       <section className={`-mb-2 lg:mb-0 mt-4 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md ${showUtilitiesOnMobile ? "" : "hidden lg:block"}`.trim()}>
         <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
-          Practical AI Utilities
+          Related Insights
         </h2>
         <div className="mt-4 space-y-2">
           {toolProcessCards.map((card) => {

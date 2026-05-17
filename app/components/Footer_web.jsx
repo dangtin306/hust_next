@@ -3,6 +3,8 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
   const resolvedLatestVersion = String(initialLatestVersion || "");
   const hasResolvedLatestVersion = resolvedLatestVersion !== "";
   const isLatestVersionThree = resolvedLatestVersion === "3";
+  const isLatestVersionFive = resolvedLatestVersion === "5";
+  const shouldHideStoreBadges = isLatestVersionThree || isLatestVersionFive;
   const siteMapHref = normalizedHost.includes("nofake")
     ? "https://nginx.nofake.wiki/go/site_map/check_healing.xml"
     : "https://hust.media/api/sitemap/hust_media.xml";
@@ -10,7 +12,7 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
   return (
     <footer className="mt-auto w-full bg-slate-950/40 bg-hust-glass backdrop-blur-md border-t border-white/10 text-white py-1 md:py-1 text-xs md:text-base leading-none flex-none">
       <div
-        className={`mx-auto px-[12px] py-[14px] max-[480px]:px-2 ${isLatestVersionThree ? "max-[480px]:py-[8px]" : "max-[480px]:py-[12px]"} flex flex-col md:flex-row justify-between items-center ${isLatestVersionThree ? "gap-1 md:gap-1" : "gap-2 md:gap-1"} text-[13px] md:text-[15px]`}
+        className={`mx-auto px-[12px] py-[14px] max-[480px]:px-2 ${shouldHideStoreBadges ? "max-[480px]:py-[8px]" : "max-[480px]:py-[12px]"} flex flex-col md:flex-row justify-between items-center ${shouldHideStoreBadges ? "gap-1 md:gap-1" : "gap-2 md:gap-1"} text-[13px] md:text-[15px]`}
       >
         {/* 1. Chính sách (Bên trái PC / Giữa Mobile) */}
         <div className="flex flex-row gap-16 sm:gap-5 text-white w-full md:w-auto justify-center md:justify-start md:flex-1 order-1 md:order-1 font-medium">
@@ -52,10 +54,10 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
 
         {/* 3. Nút tải App (Bên phải PC / Lên đầu Mobile) */}
         <div
-          className={`flex items-center gap-4 w-full md:w-auto justify-center md:justify-end md:flex-1 order-3 md:order-3 ${isLatestVersionThree ? "min-h-0 mt-0 mb-0.5" : "min-h-[36px]"}`}
+          className={`flex items-center gap-4 w-full md:w-auto justify-center md:justify-end md:flex-1 order-3 md:order-3 ${shouldHideStoreBadges ? "min-h-0 mt-0 mb-0.5" : "min-h-[36px]"}`}
         >
           {hasResolvedLatestVersion ? (
-            isLatestVersionThree ? (
+            shouldHideStoreBadges ? (
               <>
                 <a
                   href="/next/info/about_us"
