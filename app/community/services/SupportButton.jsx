@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { animated, useSpring } from "@react-spring/web";
-import axios from "axios";
 
 const CACHE_KEY = "support_chat";
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
@@ -145,54 +144,76 @@ const SupportButton = () => {
 
     localStorage.removeItem(CACHE_KEY);
 
-    const timer = window.setTimeout(() => {
-      const config = {
-        method: "post",
-        maxBodyLength: Infinity,
-        url: "https://node_js.hust.media/main_1/mongo_1/api/mongo_get_query_api",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: JSON.stringify(payload),
-      };
+    let cancelled = false;
+    let delayTimer = null;
 
-      axios
-        .request(config)
-        .then(async (response) => {
-          let results = resolveLinksByDomain(response?.data?.api_results?.mongo_results, mainDomain);
-          let payloadUsed = payload;
+    const run = async () => {
+      try {
+        const endpoint = "https://node_js.hust.media/main_1/mongo_1/api/mongo_get_query_api";
+        const request = async (bodyPayload) => {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(bodyPayload),
+            cache: "no-store",
+          });
+          if (!response.ok) return null;
+          return response.json();
+        };
 
-          // Fallback cho cấu trúc cũ support_chat.<domain>
-          if (!Array.isArray(results) || results.length === 0) {
-            const legacyPayload = {
-              query: `${SUPPORT_QUERY_BASE}.${mainDomain}`,
-            };
-            const legacyResponse = await axios.request({
-              ...config,
-              data: JSON.stringify(legacyPayload),
-            });
-            results = resolveLinksByDomain(legacyResponse?.data?.api_results?.mongo_results, mainDomain);
-            payloadUsed = legacyPayload;
-          }
+        const first = await request(payload);
+        let results = resolveLinksByDomain(first?.api_results?.mongo_results, mainDomain);
+        let payloadUsed = payload;
 
-          if (!Array.isArray(results)) return;
+        // Fallback cho cấu trúc cũ support_chat.<domain>
+        if (!Array.isArray(results) || results.length === 0) {
+          const legacyPayload = {
+            query: `${SUPPORT_QUERY_BASE}.${mainDomain}`,
+          };
+          const legacy = await request(legacyPayload);
+          results = resolveLinksByDomain(legacy?.api_results?.mongo_results, mainDomain);
+          payloadUsed = legacyPayload;
+        }
 
-          setLinksSupport(results);
-          localStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              timestamp: Date.now(),
-              data: results,
-              payload: payloadUsed,
-              main_domain: mainDomain,
-              national_market: nationalMarket,
-            }),
-          );
-        })
-        .catch(() => {});
-    }, 2000);
+        if (!Array.isArray(results)) return;
 
-    return () => window.clearTimeout(timer);
+        if (cancelled) return;
+        setLinksSupport(results);
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: results,
+            payload: payloadUsed,
+            main_domain: mainDomain,
+            national_market: nationalMarket,
+          }),
+        );
+      } catch {
+        // ignore
+      }
+    };
+
+    const startBackgroundFetch = () => {
+      if (cancelled) return;
+      // Run chat bootstrap after full page load, then delay a bit more
+      // so it does not compete with critical rendering/network tasks.
+      delayTimer = window.setTimeout(() => {
+        run();
+      }, 900);
+    };
+
+    if (document.readyState === "complete") {
+      startBackgroundFetch();
+    } else {
+      window.addEventListener("load", startBackgroundFetch, { once: true });
+    }
+
+    return () => {
+      cancelled = true;
+      if (delayTimer) window.clearTimeout(delayTimer);
+      window.removeEventListener("load", startBackgroundFetch);
+    };
   }, []);
 
   const chuyenDoiDanhSach = () => {
