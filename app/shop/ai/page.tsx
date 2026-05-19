@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import OrdersHome from "@/app/shop/ai/orders_home";
-import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { seoByTool } from "./orders_data";
 
@@ -18,18 +17,6 @@ const normalizeSlug2 = (value: string | string[] | undefined) => {
 
 const normalizeLang = (value: string) =>
   String(value || "").toLowerCase() === "vi" ? "vi" : "en";
-
-const isLocalDevHost = (rawHost: string) => {
-  const host = String(rawHost || "")
-    .split(",")[0]
-    .trim()
-    .toLowerCase();
-  return (
-    /^localhost(?::\d+)?$/.test(host) ||
-    /^127(?:\.\d{1,3}){3}(?::\d+)?$/.test(host) ||
-    /^\[?::1\]?(?::\d+)?$/.test(host)
-  );
-};
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const query = await searchParams;
@@ -64,23 +51,5 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
   if (!ALLOWED_TOOLS.has(slug_2)) {
     notFound();
   }
-
-  const headerStore = await headers();
-  const host =
-    headerStore.get("x-forwarded-host") ||
-    headerStore.get("host") ||
-    "";
-  const shouldUseCache = !isLocalDevHost(host);
-
-  const initialPostsApiData = await getOrdersPostMeta(slug_2, {
-    useCache: shouldUseCache,
-  });
-
-  return (
-    <OrdersHome
-      slug_1="orders_once"
-      slug_2={slug_2}
-      initialPostsApiData={initialPostsApiData}
-    />
-  );
+  return <OrdersHome slug_1="orders_once" slug_2={slug_2} />;
 }

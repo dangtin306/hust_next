@@ -68,6 +68,40 @@ const STT_MAX_DURATION_SECONDS = 5 * 60;
 const TRANSLATE_MAX_CHARS = 1000;
 const OCR_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const OCR_ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg"]);
+const POSTS_CACHE_PREFIX = "orders_posts_cache_";
+const POSTS_CACHE_TTL_MS = 60 * 60 * 1000;
+
+const isLocalHostClient = () => {
+  if (typeof window === "undefined") return false;
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+};
+
+const readCachedPostsData = (uri: string): PostsApiItem | null => {
+  if (typeof window === "undefined" || !uri) return null;
+  try {
+    const raw = window.sessionStorage.getItem(`${POSTS_CACHE_PREFIX}${uri}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { timestamp?: number; data?: PostsApiItem };
+    const expired = !parsed?.timestamp || Date.now() - parsed.timestamp > POSTS_CACHE_TTL_MS;
+    if (expired || !parsed?.data) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedPostsData = (uri: string, data: PostsApiItem) => {
+  if (typeof window === "undefined" || !uri || !data) return;
+  try {
+    window.sessionStorage.setItem(
+      `${POSTS_CACHE_PREFIX}${uri}`,
+      JSON.stringify({ timestamp: Date.now(), data })
+    );
+  } catch {
+    // ignore storage quota errors
+  }
+};
 
 const OrdersHome = ({
   slug_1: slug1Prop,
@@ -97,7 +131,7 @@ const OrdersHome = ({
   const [helpfulVote, setHelpfulVote] = useState<HelpfulVote>("");
   const [translateInput, setTranslateInput] = useState("");
   const [translateText, setTranslateText] = useState("");
-  const postsApiData = initialPostsApiData;
+  const [postsApiData, setPostsApiData] = useState<PostsApiItem | null>(initialPostsApiData);
 
   const lang = useSyncExternalStore<Lang>(
     subscribeLang,
@@ -169,6 +203,51 @@ const OrdersHome = ({
     ogTitleTag.setAttribute("content", activeSeo.title);
     ogDescriptionTag.setAttribute("content", activeSeo.description);
   }, [activeSeo]);
+
+  useEffect(() => {
+    if (!activeTool) return;
+    const uri = String(activeTool).trim();
+    if (!uri) return;
+
+    const useCache = !isLocalHostClient();
+    const cached = useCache ? readCachedPostsData(uri) : null;
+    if (cached) {
+      setPostsApiData(cached);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchPostsData = async () => {
+      try {
+        const response = await fetch(
+          `https://hust.media/api/content/getdata.php?uri=${encodeURIComponent(uri)}&mode=posts`,
+          { cache: "no-store" }
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = (await response.json()) as { data?: PostsApiItem | null };
+        const nextData = payload?.data || null;
+        if (cancelled) return;
+        setPostsApiData(nextData);
+        if (nextData && useCache) {
+          saveCachedPostsData(uri, nextData);
+        }
+      } catch {
+        if (cancelled) return;
+        if (!cached && !postsApiData) {
+          alert_error(
+            lang === "vi"
+              ? "Đã xảy ra lỗi API, vui lòng liên hệ admin"
+              : "API error occurred, please contact admin"
+          );
+        }
+      }
+    };
+
+    fetchPostsData();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTool, lang]);
 
   const activeContentEn = activeTool ? contentByTool[activeTool].en : contentByTool.text_speech.en;
   const moduleUsageGuideText =
