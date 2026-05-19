@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import axios from "axios";
 import { alert_error, alert_success } from "@/app/AppContext";
 import { ALLOWED_TOOLS, contentByTool, seoByTool, toolNotesByKey, type Lang, type ToolKey } from "./orders_data";
+import type { PostsApiItem } from "./orders_api_data";
 import OrdersProcess from "./orders_process";
 import OrdersContent from "./orders_content";
 
 type OrdersHomeProps = {
   slug_1?: string;
   slug_2?: string;
+  initialPostsApiData?: PostsApiItem | null;
 };
 type TtsApiResponse = {
   error?: string;
@@ -19,11 +20,6 @@ type TtsApiResponse = {
   voice?: string;
   text?: string;
   text_vip?: string;
-};
-type PostsApiItem = {
-  title?: string;
-  description?: string;
-  createdate?: string;
 };
 type HelpfulVote = "" | "yes" | "no";
 
@@ -72,36 +68,12 @@ const STT_MAX_DURATION_SECONDS = 5 * 60;
 const TRANSLATE_MAX_CHARS = 1000;
 const OCR_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const OCR_ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg"]);
-const POSTS_CACHE_PREFIX = "orders_posts_cache_";
-const POSTS_CACHE_TTL_MS = 10 * 60 * 1000;
 
-const readCachedPostsData = (uri: string): PostsApiItem | null => {
-  if (typeof window === "undefined" || !uri) return null;
-  try {
-    const raw = window.sessionStorage.getItem(`${POSTS_CACHE_PREFIX}${uri}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { timestamp?: number; data?: PostsApiItem };
-    const expired = !parsed?.timestamp || Date.now() - parsed.timestamp > POSTS_CACHE_TTL_MS;
-    if (expired || !parsed?.data) return null;
-    return parsed.data;
-  } catch {
-    return null;
-  }
-};
-
-const saveCachedPostsData = (uri: string, data: PostsApiItem) => {
-  if (typeof window === "undefined" || !uri || !data) return;
-  try {
-    window.sessionStorage.setItem(
-      `${POSTS_CACHE_PREFIX}${uri}`,
-      JSON.stringify({ timestamp: Date.now(), data })
-    );
-  } catch {
-    // ignore storage quota errors
-  }
-};
-
-const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = {}) => {
+const OrdersHome = ({
+  slug_1: slug1Prop,
+  slug_2: slug2Prop,
+  initialPostsApiData = null,
+}: OrdersHomeProps = {}) => {
   const pathname = usePathname();
   const parsedSlugs = useMemo(() => parseSlugs(pathname || ""), [pathname]);
   const slug_1 = slug1Prop || parsedSlugs.slug_1;
@@ -125,23 +97,15 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const [helpfulVote, setHelpfulVote] = useState<HelpfulVote>("");
   const [translateInput, setTranslateInput] = useState("");
   const [translateText, setTranslateText] = useState("");
-  const [postsApiData, setPostsApiData] = useState<PostsApiItem | null>(null);
-  const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const postsApiData = initialPostsApiData;
 
   const lang = useSyncExternalStore<Lang>(
     subscribeLang,
     () => normalizeLang(readCookie("national_market")),
     () => "en"
   );
-  const langRef = useRef(lang);
 
   const activeTool = isToolKey(slug_2) ? slug_2 : null;
-  const uriFromPath = useMemo(() => {
-    const parts = String(pathname || "")
-      .split("/")
-      .filter(Boolean);
-    return parts[parts.length - 1] || "";
-  }, [pathname]);
   const showToolPage = (slug_1 === "plans" || slug_1 === "orders_once") && !!activeTool;
 
   const activeSeo = activeTool ? seoByTool[activeTool][lang] : null;
@@ -149,8 +113,8 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const activeNotes = activeTool ? toolNotesByKey[activeTool] : null;
   const routeRoot = slug_1 === "plans" ? "plans" : "orders_once";
   const writtenDateLabel = lang === "vi" ? "Ngày viết:" : "Written date:";
-  const articleTitle = String(postsApiData?.title || "");
-  const articleDescription = String(postsApiData?.description || "");
+  const articleTitle = String(postsApiData?.title || activeContent?.title || "");
+  const articleDescription = String(postsApiData?.description || activeSeo?.description || "");
   const writtenDateValue = formatUsDateTime(String(postsApiData?.createdate || "").trim());
 
   useEffect(() => {
@@ -206,47 +170,6 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     ogDescriptionTag.setAttribute("content", activeSeo.description);
   }, [activeSeo]);
 
-  useEffect(() => {
-    langRef.current = lang;
-  }, [lang]);
-
-  useEffect(() => {
-    const fetchPostsData = async (uri: string) => {
-      if (!uri) {
-        setIsPostsLoading(false);
-        setPostsApiData(null);
-        return;
-      }
-      const cached = readCachedPostsData(uri);
-      if (cached) {
-        setPostsApiData(cached);
-        setIsPostsLoading(false);
-      } else {
-        setIsPostsLoading(true);
-        setPostsApiData(null);
-      }
-      try {
-        const response = await axios.get(
-          `https://hust.media/api/content/getdata.php?uri=${uri}&mode=posts`
-        );
-        const nextData = (response?.data?.data || null) as PostsApiItem | null;
-        setPostsApiData(nextData);
-        if (nextData) saveCachedPostsData(uri, nextData);
-      } catch {
-        alert_error(
-          langRef.current === "vi"
-            ? "Đã xảy ra lỗi API, vui lòng liên hệ admin"
-            : "API error occurred, please contact admin"
-        );
-        if (!cached) setPostsApiData(null);
-      } finally {
-        setIsPostsLoading(false);
-      }
-    };
-
-    fetchPostsData(uriFromPath);
-  }, [uriFromPath]);
-
   const activeContentEn = activeTool ? contentByTool[activeTool].en : contentByTool.text_speech.en;
   const moduleUsageGuideText =
     activeContent?.moduleUsageGuide?.trim() || activeContentEn?.moduleUsageGuide || "hellow world";
@@ -283,19 +206,6 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
 
   if (!showToolPage || !activeTool || !activeSeo || !activeContent) {
     return null;
-  }
-
-  if (isPostsLoading) {
-    return (
-      <article
-        className="mx-auto mt-4 w-full max-w-[1320px] overflow-x-hidden px-2 pb-8 pt-3 lg:mt-4 lg:px-8 xl:px-12"
-        style={{ "--tool-col": "clamp(215px, 21.5vw, 280px)" } as React.CSSProperties}
-      >
-        <div className="rounded-3xl border border-slate-200/70 bg-white/85 px-4 py-16 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
-        </div>
-      </article>
-    );
   }
 
   const readerValueTitle = "Reader Value";

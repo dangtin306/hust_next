@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
+import TocNavClient from "./TocNavClient";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -211,6 +212,16 @@ function extractToc(content: string): TocItem[] {
       const title = h3[1].trim();
       items.push({ id: slugifyHeading(title), title, depth: 3 });
     }
+  }
+
+  const hasClosingAnchor = /\bid=["']reader-value-conclusion["']/.test(content);
+  const hasClosingTocItem = items.some((item) => item.id === "reader-value-conclusion");
+  if (hasClosingAnchor && !hasClosingTocItem) {
+    items.push({
+      id: "reader-value-conclusion",
+      title: "Reader Value & Conclusion",
+      depth: 2,
+    });
   }
 
   return items;
@@ -479,17 +490,7 @@ export default async function DocPage({
                     <div className="text-center text-lg font-semibold whitespace-nowrap text-slate-800">
                       Table of Contents
                     </div>
-                    <div className="max-lg:mt-3 lg:mt-5 space-y-1.5 sm:mt-4">
-                    {tocItems.map((item) => (
-                      <a
-                        key={item.id}
-                        href={`#${item.id}`}
-                        className="block w-full rounded-lg border border-blue-100/80 bg-blue-200/60 px-3 py-1.5 text-left text-sm font-medium text-black no-underline transition hover:border-blue-400/90 hover:bg-blue-300/65 sm:py-2"
-                      >
-                        {item.title}
-                      </a>
-                    ))}
-                    </div>
+                    <TocNavClient items={tocItems} />
                   </div>
                 </section>
               )}

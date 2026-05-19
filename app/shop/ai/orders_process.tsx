@@ -76,6 +76,7 @@ const OrdersProcess = ({
               <Link
                 key={card.key}
                 href={card.href(routeRoot)}
+                prefetch={false}
                 className={`block no-underline rounded-xl border p-2.5 transition ${
                   isActive
                     ? "border-emerald-300/90 bg-emerald-100/55"
@@ -87,6 +88,8 @@ const OrdersProcess = ({
                     src={card.image}
                     alt={card.title[lang]}
                     loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
                     className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
                   />
                   <div className="min-w-0 flex-1">
