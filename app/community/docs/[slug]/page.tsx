@@ -58,6 +58,11 @@ type TocItem = {
   depth: 2 | 3;
 };
 
+type PostMeta = {
+  createdate?: string;
+  tips_hash_name?: string;
+};
+
 const defaultDocThumbnail = "https://hust.media/img/credit_verification_thumbnail.png";
 const docThumbnailBySlug: Record<string, string> = {
   overview: "https://hust.media/img/hust_media_system_overview.jpg",
@@ -67,7 +72,11 @@ const docThumbnailBySlug: Record<string, string> = {
   "api-reference": "https://hust.media/img/api_reference.jpg",
   "public-api-v3": "https://hust.media/img/api_reference.jpg",
   "security-threat-detection": "https://hust.media/img/community_signal_smaller_still.png",
-  "validation-quality-workflow": "https://hust.media/img/text_speech_thumbnail.png",
+  "validation-workflow": "https://hust.media/img/text_speech_thumbnail.png",
+};
+
+const docSlugAlias: Record<string, string> = {
+  gamification: "validation-workflow",
 };
 
 function getDocThumbnail(slug: string) {
@@ -158,6 +167,16 @@ function slugifyHeading(input: string) {
     .replace(/-+/g, "-");
 }
 
+function formatUsDateTime(value: string) {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+  if (match) {
+    const [, yyyy, mm, dd, hh, mi, ss] = match;
+    return `${mm}/${dd}/${yyyy} ${hh}:${mi}:${ss}`;
+  }
+  return raw;
+}
+
 function getNodeText(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") {
     return String(node);
@@ -215,7 +234,8 @@ function getDocOrder(frontmatter: Frontmatter, slug: string) {
 }
 
 async function getDocBySlug(slug: string): Promise<DocData | null> {
-  const filePath = path.join(docsDir, `${slug}.mdx`);
+  const normalizedSlug = docSlugAlias[slug] ?? slug;
+  const filePath = path.join(docsDir, `${normalizedSlug}.mdx`);
 
   try {
     const source = await readFile(filePath, "utf8");
@@ -254,6 +274,25 @@ async function getDocList(): Promise<DocSummary[]> {
     });
   } catch {
     return [];
+  }
+}
+
+async function getPostMetaByUri(uri: string): Promise<PostMeta | null> {
+  if (!uri) return null;
+  try {
+    const response = await fetch(
+      `https://hust.media/api/content/getdata.php?uri=${encodeURIComponent(uri)}&mode=posts`,
+      { cache: "no-store" }
+    );
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      data?: PostMeta;
+      status?: number;
+    };
+    if (payload?.status !== 1 || !payload?.data) return null;
+    return payload.data;
+  } catch {
+    return null;
   }
 }
 
@@ -312,8 +351,12 @@ export default async function DocPage({
 
   const nav = await getDocList();
   const tocItems = extractToc(doc.content);
+  const postMeta = await getPostMetaByUri(slug);
   const docDescription = doc.frontmatter.description?.trim() ?? "";
   const docTitle = doc.frontmatter.title?.trim() ?? "";
+  const writtenDateLabel = "Written date:";
+  const writtenDateValue = formatUsDateTime(String(postMeta?.createdate || "").trim());
+  const categoryLabel = String(postMeta?.tips_hash_name || "").trim() || "Hust Media";
 
   const mdxComponents = {
     h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => {
@@ -322,7 +365,7 @@ export default async function DocPage({
         Boolean(docDescription) && (!docTitle || headingText === docTitle);
       const headingClass = [
         props.className,
-        "!mt-3 !mb-0 text-[30px] font-bold leading-[1.12] tracking-tight sm:text-[30px]",
+        "min-w-0 flex-1 text-balance text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl !mt-0 !mb-0",
       ]
         .filter(Boolean)
         .join(" ");
@@ -332,9 +375,42 @@ export default async function DocPage({
             {children}
           </h1>
           {shouldShowDescription ? (
-            <p className="mt-3 text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
+            <p className="mt-2 line-clamp-3 text-pretty text-sm leading-relaxed text-slate-600 sm:text-base">
               {docDescription}
             </p>
+          ) : null}
+          {(writtenDateValue || categoryLabel) ? (
+            <div className="mb-9 mt-3 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
+              {writtenDateValue ? (
+                <span className="inline-flex min-w-0 flex-1 items-start gap-2 rounded-full bg-slate-100 px-3 py-1 sm:flex-none sm:w-auto">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-slate-500"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M7 3v2M17 3v2M4 8h16M6 12h4m-4 4h6m9-8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="min-w-0 whitespace-normal break-words leading-tight">
+                    {writtenDateLabel}{" "}
+                    <span className="font-medium text-slate-700">{writtenDateValue}</span>
+                  </span>
+                </span>
+              ) : null}
+              {categoryLabel ? (
+                <span className="inline-flex max-w-[44%] shrink-0 items-center whitespace-nowrap rounded-full border border-[#D8E0E8] bg-[#EEF2F6] px-2.5 py-1 font-semibold text-[#5E6B7A] sm:max-w-none">
+                  {categoryLabel}
+                </span>
+              ) : null}
+            </div>
           ) : null}
         </>
       );
@@ -358,32 +434,40 @@ export default async function DocPage({
       );
     },
     pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
-      <pre
-        {...props}
-        className={[
+      (() => {
+        const rawCode = getNodeText(children ?? "").trim();
+        const isSingleLine = rawCode.length > 0 && !rawCode.includes("\n");
+        const preClass = [
           props.className,
           "max-h-[280px] overflow-y-auto text-[12px] leading-5",
+          isSingleLine ? "py-1.5" : "py-2.5",
         ]
           .filter(Boolean)
-          .join(" ")}
+          .join(" ");
+        return (
+      <pre
+        {...props}
+        className={preClass}
       >
         {children}
       </pre>
+        );
+      })()
     ),
     img: ({ alt, ...props }: ComponentPropsWithoutRef<"img">) => (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         {...props}
         alt={alt ?? ""}
-        className={[props.className, "mx-auto my-3 w-[92%] max-w-[92%]"].filter(Boolean).join(" ")}
+        className={[props.className, "mx-auto my-2 w-[92%] max-w-[92%]"].filter(Boolean).join(" ")}
       />
     ),
   };
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 text-slate-700">
+    <div className="relative min-h-screen bg-transparent text-slate-700">
       <div
-        className="mx-auto relative z-10 flex w-full max-w-[1320px] flex-col gap-3 px-2 py-8 lg:flex-row lg:gap-3 lg:px-8 xl:px-12"
+        className="mx-auto relative z-10 mt-4 flex w-full max-w-[1320px] flex-col gap-3 overflow-x-hidden px-2 pb-8 pt-3 lg:mt-4 lg:flex-row lg:gap-3 lg:px-8 xl:px-12"
         style={{ ["--tool-col" as string]: "clamp(215px, 21.5vw, 280px)" }}
       >
         <aside className="w-full lg:w-[var(--tool-col)] lg:flex-none">
@@ -464,9 +548,11 @@ export default async function DocPage({
         </aside>
 
         <main className="min-w-0 w-full flex-1">
-          <article className="rounded-3xl border border-slate-200 bg-white py-6 px-3 shadow-sm sm:py-8 sm:px-8">
-            <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:mt-7 prose-h2:mb-3 prose-h3:mt-7 prose-h3:mb-2.5 prose-hr:my-4 prose-pre:my-3 prose-pre:py-3 prose-pre:px-3 prose-img:my-3 prose-p:my-2.5 prose-ul:my-2.5 prose-ol:my-2.5 prose-li:my-1.5 prose-code:text-[12px]">
-              <MDXRemote source={doc.content} components={mdxComponents} />
+          <article className="rounded-3xl border border-slate-200/70 bg-white/85 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
+            <div className="max-lg:px-1 lg:px-7 pb-4 pt-0 sm:pb-4 max-lg:pt-7 lg:pt-12">
+              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+                <MDXRemote source={doc.content} components={mdxComponents} />
+              </div>
             </div>
           </article>
           <DocsHelpfulFeedback />

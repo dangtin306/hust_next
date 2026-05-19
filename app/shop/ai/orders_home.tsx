@@ -27,6 +27,16 @@ type PostsApiItem = {
 };
 type HelpfulVote = "" | "yes" | "no";
 
+function formatUsDateTime(value: string) {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/);
+  if (match) {
+    const [, yyyy, mm, dd, hh, mi, ss] = match;
+    return `${mm}/${dd}/${yyyy} ${hh}:${mi}:${ss}`;
+  }
+  return raw;
+}
+
 const readCookie = (name: string) => {
   if (typeof document === "undefined") return "";
   const match = document.cookie
@@ -141,7 +151,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
   const writtenDateLabel = lang === "vi" ? "Ngày viết:" : "Written date:";
   const articleTitle = String(postsApiData?.title || "");
   const articleDescription = String(postsApiData?.description || "");
-  const writtenDateValue = String(postsApiData?.createdate || "").trim();
+  const writtenDateValue = formatUsDateTime(String(postsApiData?.createdate || "").trim());
 
   useEffect(() => {
     setGeneratedVoiceUrl("");
@@ -237,7 +247,7 @@ const OrdersHome = ({ slug_1: slug1Prop, slug_2: slug2Prop }: OrdersHomeProps = 
     fetchPostsData(uriFromPath);
   }, [uriFromPath]);
 
-  const activeContentEn = activeTool ? contentByTool[activeTool].en : null;
+  const activeContentEn = activeTool ? contentByTool[activeTool].en : contentByTool.text_speech.en;
   const moduleUsageGuideText =
     activeContent?.moduleUsageGuide?.trim() || activeContentEn?.moduleUsageGuide || "hellow world";
   const moduleUsageGuideBlocks = useMemo(() => {

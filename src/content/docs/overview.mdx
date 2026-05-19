@@ -1,3 +1,9 @@
+---
+title: Hust Media System Overview
+description: Introduction to the platform architecture, core processing flow, and integration layers across API gateway, services, data pipeline, and verification engine.
+order: 1
+---
+
 # Hust Media System Overview
 
 ## Introduction & Core Concepts
@@ -14,27 +20,28 @@ Hust Media System Overview introduces the **first note in this Supporting Notes 
   </div>
 </div>
 
-Use the Docs panel to open the related notes in this section and continue into more specific implementation topics, including API behavior, threat verification, validation workflow, security, deployment, and day-to-day operations. Together, these notes provide a practical reference layer for system integration and operational consistency across the platform.
+This overview also shows how the main notes connect across the platform. Use the Docs panel to continue into more specific implementation topics, including API behavior, threat verification, validation workflow, security, deployment, and day-to-day operations. Together, these notes provide a practical reference layer for system integration and operational consistency across the platform.
 
-Core flow
+**Core flow:**
+
 - **Data Ingestion** -> **Execution** -> **Validation + Credit Allocation** -> **Resource Balancing**
 - **Microservices** are organized by functional business logic.
 - **Hybrid delivery** uses **React** for real-time dashboards and **Next.js** for SEO/SSR documentation.
 
----
-
 ## System Design Goals
+The system is designed around predictable scaling, low-latency processing, cleaner data flow, and stable operational behavior. These goals help the platform remain usable as more services, reports, and workflow records move through the same architecture.
+
 - **Scalability**: Horizontal scaling via load offloading; vertical scaling via RAM/GPU expansion.
-- **Low Latency**: Two-tier caching strategy (client store + SSR/SSG cache), optimized queries, and strict timeout management.
-- **Data Integrity**: Audit chain based on aliases/hashed links to trace data lineage.
-- **Threat Intelligence**: Anomaly detection module + AI pipeline for data sanitization.
-- **Operational Efficiency**: Automated updates via Git, supporting on-premise + hybrid cloud deployment.
+- **Low Latency**: Two-tier caching strategy with client store and SSR/SSG cache, optimized queries, and strict timeout management.
+- **Data Integrity**: Audit chain based on aliases and hashed links to trace data lineage.
+- **Threat Intelligence**: Anomaly detection module plus AI pipeline for data sanitization.
+- **Operational Efficiency**: Automated updates via Git, supporting on-premise and hybrid cloud deployment.
 
----
+## Architecture & Delivery Model
+The architecture separates user-facing interfaces, gateway routing, service logic, storage, and external integrations. This makes the platform easier to maintain because each layer has a clearer role and can be optimized without forcing the entire system to change at once.
 
-## Architecture Overview
+**Logical topology:**
 
-### Logical Topology
 ```text
 Client (Web/App)
   -> API Gateway (Nginx / Go / Node)
@@ -43,15 +50,7 @@ Client (Web/App)
         -> Integrations (MQTT, Cloudflare, Provider APIs)
 ```
 
-### Data Pipeline
-- **Ingestion**: collect tasks, evidence, and status logs.
-- **Normalization**: normalize JSON and identify by alias.
-- **Verification**: reconcile via third-party APIs + image/video checks.
-- **Settlement**: allocate credits, exchange services, update status.
-
----
-
-## Technology Stack
+**Technology stack:**
 
 | Layer | Technology | Role |
 | --- | --- | --- |
@@ -61,32 +60,43 @@ Client (Web/App)
 | Storage | MariaDB / MongoDB | Structured + semi-structured data. |
 | Infra | Nginx + Cloudflare Tunnel | Gateway, reverse proxy, IP masking. |
 
----
+**Hybrid frontend strategy:**
 
-## Hybrid Frontend Strategy
-**React SPA** handles real-time interactions (dashboards, tasks), while **Next.js** serves entry pages that require SEO/SSR. Both share a **data contract** to prevent behavioral drift.
+React SPA handles real-time interactions such as dashboards and tasks, while Next.js serves entry pages that require SEO/SSR. Both share a data contract to prevent behavioral drift.
 
 ```text
 render(view) -> state.sync(...) -> ui.update(...)
 ```
 
-**MQTT/WebSocket** keeps the real-time pipeline consistent between React and Next.
+MQTT/WebSocket keeps the real-time pipeline consistent between React and Next.
 
----
+## Data Pipeline & Verification Flow
+The data pipeline organizes incoming tasks, evidence, and status logs before they move deeper into verification and settlement. This makes each record easier to inspect, trace, and reuse across connected services.
 
-## Core Modules
+- Ingestion: collect tasks, evidence, and status logs.
+- Normalization: normalize JSON and identify by alias.
+- Verification: reconcile via third-party APIs and image/video checks.
+- Settlement: allocate credits, exchange services, and update status.
 
-### Module A — Community Growth
-Facilitates organic interactions (Follow / Like / View) via Smart Matching.
+This pipeline is important because the platform does not treat input as isolated records. Each item can move through validation, verification, reward allocation, and operational tracking while keeping enough context for later review.
+
+## Core Modules & Reward Logic
+The platform is divided into core modules that handle community growth, evidence-based rating, safety verification, and internal reward flow. Each module has a focused role, but they all connect back to the same data and verification model.
+
+**Module A — Community Growth**
+
+Facilitates organic interactions such as Follow, Like, and View through Smart Matching.
 
 Workflow:
+
 - Campaign Optimization: Breaks outreach goals into small interaction steps.
 - Relevant Matching: Pairs content with trusted users by reputation scores.
 - Authentic Interaction: Users engage naturally and confirm activity.
 - Quality Assurance: Verifies results through a transparent dual-check system.
 - Reward Allocation: Updates progress and distributes community credits.
 
-### Module B — Rating with Evidence
+**Module B — Rating with Evidence**
+
 Module B boosts **rating/vote** with evidence. Execution time is cleaned using **IQR Filtering** to remove outliers.
 
 ```python
@@ -99,26 +109,30 @@ filtered = [x for x in sorted_data if lower <= x <= upper]
 avg = sum(filtered) / len(filtered)
 ```
 
-### Module C — Security & Trust Assurance
-Module C ensures Community Safety via data verification and feedback:
-- Data Standardization: Formats diverse inputs (contacts, links, social profiles) for accuracy.
+**Module C — Security & Trust Assurance**
+
+Module C ensures Community Safety through data verification and feedback:
+
+- Data Standardization: Formats diverse inputs such as contacts, links, and social profiles for accuracy.
 - Instant Query: Rapidly retrieves status via optimized MongoDB indexes.
 - Transparent History: Provides comprehensive safety records from MariaDB.
 - AI-Powered Moderation: Validates new reports with a dual-layer AI review system before publishing.
 
----
+**Reward Engine**
 
-## Reward Engine
 Reward Points are an **internal currency**:
+
 - Users complete tasks and receive credits.
 - Credits fund new tasks to create a self-sustaining loop.
 - Alias/shortlinks are used to audit the full task chain.
 
----
+## API, Security & Integration
+The API layer connects service creation, data contracts, authentication, and infrastructure protection. This section groups request behavior and security controls together because both are part of the same integration boundary.
 
-## API & Data Contract
+**API & Data Contract**
 
-### Mission Creation (P2P)
+Mission Creation uses the P2P API flow:
+
 ```json
 POST https://domain/api/v3
 {
@@ -131,17 +145,17 @@ POST https://domain/api/v3
 }
 ```
 
-### Response
+Response:
+
 ```json
 { "order": 98412 }
 ```
 
----
+**Security & Privacy**
 
-## Security & Privacy
 - **API Key** authenticates requests with rate limiting.
 - **Cloudflare Tunnel** masks origin IPs to reduce DDoS risk.
-- **Database Hardening**: change default ports, limit privileges, scheduled backups.
+- **Database Hardening** includes changing default ports, limiting privileges, and scheduled backups.
 
 ```go
 c.Header("Access-Control-Allow-Origin", "*")
@@ -158,32 +172,34 @@ ingress:
   - service: http_status:404
 ```
 
----
+## Operations & Reliability
+Operational design keeps the system stable after deployment. This includes server setup, restart behavior, audit tracking, monitoring, and performance guardrails.
 
-## Deployment & Operations
-- **On-prem** servers for core services, hybrid networking via Cloudflare.
-- **Auto-restart** sequence: Nginx → Golang → Workers.
-- **Git Auto-Update** for fast sync and reduced downtime.
+**Deployment & Operations**
 
----
+- On-prem servers for core services, hybrid networking via Cloudflare.
+- Auto-restart sequence: Nginx -> Golang -> Workers.
+- Git Auto-Update for fast sync and reduced downtime.
 
-## Observability & Reliability
-- **Background QA Jobs** review backlog tasks.
-- **Audit Trail** tracks full task status and activity history.
-- **Alerting** via Telegram + system dashboards.
+**Observability & Reliability**
 
----
+- Background QA Jobs review backlog tasks.
+- Audit Trail tracks full task status and activity history.
+- Alerting via Telegram and system dashboards.
 
-## Performance Benchmarks
-- **Local API hop**: 0.01-0.05 ms internal.
-- **Timeout Guardrail**: auto-cancel tasks > 180s to avoid overload.
-- **Cache Strategy**: client store + SSR cache reduce repeated queries.
-- **Hybrid Routing**: fast SSR entry points with smooth real-time interactions.
+**Performance Benchmarks**
 
----
+- Local API hop: 0.01-0.05 ms internal.
+- Timeout Guardrail: auto-cancel tasks over 180s to avoid overload.
+- Cache Strategy: client store plus SSR cache reduce repeated queries.
+- Hybrid Routing: fast SSR entry points with smooth real-time interactions.
 
-## Reader Value
-This system overview brings the API gateway, core services, data pipeline, verification logic, and operational layers into one connected technical reference. Readers can use it to understand how the platform’s core layers fit together before moving into the more specific notes in this section. In practice, that supports clearer system integration and more stable operation across scalable projects.
+## Reader Value & Conclusion
 
-## Conclusion
+**Reader Value**
+
+This system overview brings the API gateway, core services, data pipeline, verification logic, and operational layers into one connected technical reference. Readers can use it to understand how the platform's core layers fit together before moving into the more specific notes in this section. In practice, that supports clearer system integration and more stable operation across scalable projects.
+
+**Conclusion**
+
 This overview serves as the entry point to the Supporting Notes section and frames the broader technical structure behind the platform. It prepares the context for the deeper implementation notes that follow.

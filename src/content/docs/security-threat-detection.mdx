@@ -14,25 +14,27 @@ This section outlines the **Threat Analysis** pipeline used to detect **Maliciou
 ## Data Ingestion (Community Signals)
 **Community Signals** are ingested from user reports and external feeds, then converted into structured cases for verification and lookup across phone numbers, bank accounts, websites, social profiles, emails, URLs, and evidence. The diagram below shows the main verification and indexing flow for those signals.
 
+All examples in this note use synthetic or masked indicator references. They are included only to explain the validation workflow and do not represent real personal, financial, or account data.
+
 <div style={{ marginTop: "0.75rem" }}>
   <img
     src="https://hust.media/img/icon/check_process.png"
     alt="Threat Signal Process"
-    style={{ width: "92%", display: "block", margin: "0 auto" }}
+    style={{ width: "90%", display: "block", margin: "0 auto" }}
   />
   <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
     <em>How threat signals move through verification and indexing</em>
   </div>
 </div>
 
-**Indicators**: phone numbers, bank accounts, bank names, websites, social handles, emails, URLs.
+**Indicators**: `sample_phone_ref`, `sample_bank_ref`, `sample_social_ref`, `sample_domain_ref`, `sample_email_ref`, URLs.
 **Evidence**: screenshots, chat logs, payment proof, media files, report descriptions.
 **Normalization**: Vietnamese phone numbers use canonical +84, aliases are mapped, and duplicated identifiers are checked.
 **Storage**: new cases enter SQL with Processing status before search exposure.
 
 ```php
-$phone_number = $phone_number[0] == '0' ? '+84'.substr($phone_number, 1) : $phone_number;
-INSERT INTO scam_check SET phone_number='$phone_number', status='Processing';
+$phone_ref = normalize_indicator_ref($phone_ref);
+INSERT INTO scam_check SET indicator_ref='$phone_ref', status='Processing';
 ```
 
 External feeds use a **crawler pipeline**. Python loads report lists, downloads detail pages, stores raw HTML, then parses identifiers, phone numbers, accounts, bank names, descriptions, images, and update time into JSON. PHP reads the JSON, checks duplicates, creates SQL case records, maps image paths, and queues the case for AI verification.
@@ -45,7 +47,7 @@ Community Signals / External Feeds
   -> Queue for AI verification
 ```
 
-[Insert system diagram here: user reports + crawler feeds → normalization → SQL case storage → queue → AI verification]
+The full flow connects user reports, crawler feeds, normalization, SQL case storage, queue handling, and AI verification.
 
 ---
 
@@ -64,16 +66,17 @@ Valid reports enter orders with `category_code = scams_check` and **Processing**
 
 ```json
 {
-  "signal_type": "bank_account",
-  "indicator": "0123456789",
+  "signal_type": "bank_account_reference",
+  "indicator_ref": "sample_bank_ref_001",
   "evidence": {
-    "ocr_text": "BANK: ABC | ACCOUNT: 0123456789",
-    "semantic_score": 0.92
+    "source_type": "ocr_image",
+    "ocr_text": "SAMPLE OCR CONTENT - ACCOUNT REFERENCE MASKED",
+    "semantic_score": 0.82
   },
   "review": {
     "status": "validated",
-    "category": "payment_fraud"
-  },
+    "category": "payment_risk_signal"
+  }
 }
 ```
 
@@ -93,7 +96,10 @@ Each worker updates its own **process flag**.
 If `scam_url` is empty but the description is valid, AI extracts links and stores normalized JSON in `scam_description_1.scam_url`.
 
 ```sql
-SELECT * FROM scam_process WHERE process_scam_url='0' LIMIT 4;
+SELECT *
+FROM scan_process
+WHERE indicator_hash = 'sample_indicator_hash'
+LIMIT 4;
 ```
 
 ```php
@@ -102,9 +108,9 @@ $text_vip = get_link_ai($description_scam);
 
 Parsed indicators are mapped into **lookup indexes**:
 
-**Website/domain** → MongoDB website index.
-**Email** → normalized email index.
-**Facebook/YouTube/Telegram** → resolved social ID.
+**Website/domain** → `sample-domain.test` in MongoDB website index.
+**Email** → `user@example.com` in normalized email index.
+**Facebook/YouTube/Telegram** → `sample_social_profile` resolved to stable social ID.
 MongoDB stores `id_scam_check` for traceability.
 MySQL keeps full case details, descriptions, account data, status, and audit history.
 
@@ -124,9 +130,9 @@ MongoDB keeps **lookup** fast, while SQL stores the full record for **review**, 
 ## Threat Analysis Outcomes
 Validated reports are promoted into a **Threat Intelligence index** for **real-time lookup**. A PHP rule engine classifies input before selecting the lookup path.
 
-**Website/email**: normalize domain or email, then find linked `id_scam_check` in MongoDB.
-**Social**: resolve Facebook, YouTube, or Telegram into a stable social ID.
-**Phone/account**: normalize phone number and match SQL fields such as phone, account, bank, name, and URL.
+**Website/email**: normalize `sample-domain.test` or `user@example.com`, then find linked `id_scam_check` in MongoDB.
+**Social**: resolve `sample_social_profile` into a stable social ID.
+**Phone/account**: normalize `masked_indicator_ref` and match SQL fields such as phone/account reference, bank reference, name reference, and URL.
 **Response**: return only **Completed** cases and mask sensitive fields before public output.
 
 ```php
@@ -137,8 +143,24 @@ $account_name = substr($account_name, 0, 5) . '***';
 
 Validated signals support **real-time lookup** for suspicious phone numbers, accounts, domains, emails, and social profiles. The system keeps traceable case history through `id_scam_check`, reduces false positives through **AI review**, and exposes only **masked, verified data** for stable platform operation.
 
-## Reader Value
-Readers can use this pattern to organize community signals, external feeds, and OCR evidence into a cleaner validation flow for their own projects over time. In practice, it helps reduce noisy submissions, speed up review, and improve lookup reliability for stable operation in scalable web systems.
+<div className="mt-3.5 rounded-lg border border-slate-200/70 bg-white/70 px-3.5 py-3">
+  <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
+    CLOSING NOTES
+  </div>
 
-## Conclusion
-This threat detection design combines structured ingestion, AI-assisted verification, post-audit control, and indexed lookup into one consistent monitoring layer. It strengthens system integration and supports stable operation across connected platform components.
+  <h3 className="mt-1.5 text-[1.08rem] font-semibold leading-snug text-slate-900">
+    Reader Value
+  </h3>
+  <div className="mt-1 text-slate-700">
+    Readers can use this pattern to organize community signals, external feeds, and OCR evidence into a cleaner validation flow for their own projects over time. In practice, it helps reduce noisy submissions, speed up review, and improve lookup reliability for stable operation in scalable web systems.
+  </div>
+
+  <hr className="my-2.5 border-slate-200/70" />
+
+  <h3 className="text-[1.08rem] font-semibold leading-snug text-slate-900">
+    Conclusion
+  </h3>
+  <div className="mt-1 text-slate-700">
+    This threat detection design combines structured ingestion, AI-assisted verification, post-audit control, and indexed lookup into one consistent monitoring layer. It strengthens system integration and supports stable operation across connected platform components.
+  </div>
+</div>
