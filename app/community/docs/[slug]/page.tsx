@@ -8,6 +8,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 import TocNavClient from "./TocNavClient";
+import { getDocPostMeta } from "./docs_api_data";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -59,30 +60,11 @@ type TocItem = {
   depth: 2 | 3;
 };
 
-type PostMeta = {
-  createdate?: string;
-  tips_hash_name?: string;
-};
-
 const defaultDocThumbnail = "https://hust.media/img/credit_verification_thumbnail.png";
-const docThumbnailBySlug: Record<string, string> = {
-  overview: "https://hust.media/img/hust_media_system_overview.jpg",
-  architecture: "https://hust.media/img/architecture.jpg",
-  gamification_logic: "https://hust.media/img/gamification_logic.jpg",
-  algorithm: "https://hust.media/img/credit_verification_thumbnail.png",
-  "api-reference": "https://hust.media/img/api_reference.jpg",
-  "public-api-v3": "https://hust.media/img/api_reference.jpg",
-  "security-threat-detection": "https://hust.media/img/community_signal_smaller_still.png",
-  "validation-workflow": "https://hust.media/img/text_speech_thumbnail.png",
-};
 
 const docSlugAlias: Record<string, string> = {
   gamification: "validation-workflow",
 };
-
-function getDocThumbnail(slug: string) {
-  return docThumbnailBySlug[slug] ?? defaultDocThumbnail;
-}
 
 function slugToTitle(slug: string) {
   return slug
@@ -267,14 +249,20 @@ async function getDocList(): Promise<DocSummary[]> {
           const slug = entry.name.replace(/\.mdx$/, "");
           const source = await readFile(path.join(docsDir, entry.name), "utf8");
           const { frontmatter, content } = splitFrontmatter(source);
-          const title = frontmatter.title?.trim() ||
+          const apiMeta = await getDocPostMeta(slug);
+          const title =
+            String(apiMeta?.title || "").trim() ||
+            frontmatter.title?.trim() ||
             extractTitleFromContent(content, slug);
           const description =
+            String(apiMeta?.description || "").trim() ||
             frontmatter.description?.trim() ||
             toPlainText(content).slice(0, 120).trim() ||
             "Technical note and implementation details.";
           const order = getDocOrder(frontmatter, slug);
-          const thumbnail = getDocThumbnail(slug);
+          const thumbnail =
+            String(apiMeta?.thumbnail_image || apiMeta?.image || "").trim() ||
+            defaultDocThumbnail;
           return { slug, title, description, order, thumbnail };
         })
     );
@@ -288,25 +276,6 @@ async function getDocList(): Promise<DocSummary[]> {
   }
 }
 
-async function getPostMetaByUri(uri: string): Promise<PostMeta | null> {
-  if (!uri) return null;
-  try {
-    const response = await fetch(
-      `https://hust.media/api/content/getdata.php?uri=${encodeURIComponent(uri)}&mode=posts`,
-      { cache: "no-store" }
-    );
-    if (!response.ok) return null;
-    const payload = (await response.json()) as {
-      data?: PostMeta;
-      status?: number;
-    };
-    if (payload?.status !== 1 || !payload?.data) return null;
-    return payload.data;
-  } catch {
-    return null;
-  }
-}
-
 export async function generateMetadata({
   params,
 }: {
@@ -314,11 +283,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const doc = await getDocBySlug(slug);
+  const postMeta = await getDocPostMeta(slug);
   const frontmatter = doc?.frontmatter ?? {};
   const content = doc?.content ?? "";
   const fallbackTitle = extractTitleFromContent(content, slug);
-  const title = frontmatter.title?.trim() || fallbackTitle;
-  let description = frontmatter.description?.trim() ?? "";
+  const title = String(postMeta?.title || "").trim() || frontmatter.title?.trim() || fallbackTitle;
+  let description = String(postMeta?.description || "").trim() || frontmatter.description?.trim() || "";
 
   if (!description) {
     const plainText = toPlainText(content);
@@ -362,9 +332,12 @@ export default async function DocPage({
 
   const nav = await getDocList();
   const tocItems = extractToc(doc.content);
-  const postMeta = await getPostMetaByUri(slug);
-  const docDescription = doc.frontmatter.description?.trim() ?? "";
-  const docTitle = doc.frontmatter.title?.trim() ?? "";
+  const postMeta = await getDocPostMeta(slug);
+  const apiTitle = String(postMeta?.title || "").trim();
+  const docDescription =
+    String(postMeta?.description || "").trim() || doc.frontmatter.description?.trim() || "";
+  const docTitle =
+    apiTitle || doc.frontmatter.title?.trim() || "";
   const writtenDateLabel = "Written date:";
   const writtenDateValue = formatUsDateTime(String(postMeta?.createdate || "").trim());
   const categoryLabel = String(postMeta?.tips_hash_name || "").trim() || "Hust Media";
@@ -373,7 +346,7 @@ export default async function DocPage({
     h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => {
       const headingText = getNodeText(children ?? "").trim();
       const shouldShowDescription =
-        Boolean(docDescription) && (!docTitle || headingText === docTitle);
+        Boolean(docDescription) && (!docTitle || headingText === docTitle || Boolean(apiTitle));
       const headingClass = [
         props.className,
         "min-w-0 flex-1 text-balance text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl !mt-0 !mb-0",
@@ -383,7 +356,7 @@ export default async function DocPage({
       return (
         <>
           <h1 {...props} className={headingClass}>
-            {children}
+            {apiTitle || children}
           </h1>
           {shouldShowDescription ? (
             <p className="mt-2 line-clamp-3 text-pretty text-sm leading-relaxed text-slate-600 sm:text-base">
