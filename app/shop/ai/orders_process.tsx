@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { toolProcessCards, type Lang, type ToolKey } from "./orders_data";
+import type { Lang, ToolKey } from "./orders_data";
+import type { RelatedPostItem } from "./orders_api_data";
 
 type OrdersProcessProps = {
   lang: Lang;
   activeTool: ToolKey;
   routeRoot: "plans" | "orders_once";
+  relatedInsights?: RelatedPostItem[];
   showToc?: boolean;
   showUtilities?: boolean;
   showUtilitiesOnMobile?: boolean;
@@ -17,6 +19,7 @@ const OrdersProcess = ({
   lang,
   activeTool,
   routeRoot,
+  relatedInsights = [],
   showToc = true,
   showUtilities = true,
   showUtilitiesOnMobile = true,
@@ -70,12 +73,19 @@ const OrdersProcess = ({
           Related Insights
         </h2>
         <div className="mt-4 space-y-2">
-          {toolProcessCards.map((card) => {
-            const isActive = activeTool === card.key;
+          {relatedInsights.map((item) => {
+            const uri = String(item?.uri || "").trim();
+            if (!uri) return null;
+            const title = String(item?.title || "").trim();
+            const description = String(item?.description || "").trim();
+            const image = String(item?.thumbnail_image || item?.image || "").trim();
+            const isActive = activeTool === uri;
+            const href = routeRoot === "orders_once" ? `/next/orders_once/${uri}` : `/ai/plans/${uri}`;
+            const key = String(item?.id || uri);
             return (
               <Link
-                key={card.key}
-                href={card.href(routeRoot)}
+                key={key}
+                href={href}
                 prefetch={false}
                 className={`block no-underline rounded-xl border p-2.5 transition ${
                   isActive
@@ -84,17 +94,19 @@ const OrdersProcess = ({
                 }`}
               >
                 <div className="flex items-start gap-2.5">
-                  <img
-                    src={card.image}
-                    alt={card.title[lang]}
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
-                  />
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={title || "related insight"}
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                      className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
+                    />
+                  ) : null}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold leading-snug text-black">
-                      {card.title[lang]}
+                      {title}
                     </div>
                     <div
                       className="mt-1 text-xs leading-relaxed text-slate-500"
@@ -105,7 +117,7 @@ const OrdersProcess = ({
                         overflow: "hidden",
                       }}
                     >
-                      {card.description[lang]}
+                      {description}
                     </div>
                   </div>
                 </div>

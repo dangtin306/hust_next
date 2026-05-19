@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import OrdersHome from "@/app/shop/ai/orders_home";
+import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { seoByTool } from "./orders_data";
@@ -51,5 +52,13 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
   if (!ALLOWED_TOOLS.has(slug_2)) {
     notFound();
   }
-  return <OrdersHome slug_1="orders_once" slug_2={slug_2} />;
+  const initialPostsApiData = await getOrdersPostMeta(slug_2);
+
+  return (
+    <OrdersHome
+      slug_1="orders_once"
+      slug_2={slug_2}
+      initialPostsApiData={initialPostsApiData}
+    />
+  );
 }

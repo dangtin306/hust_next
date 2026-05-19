@@ -159,11 +159,11 @@ const NextSidebar = ({
     (onStoreChange) => {
       if (typeof window === "undefined") return () => { };
       const handler = () => onStoreChange();
-      const timer = window.setInterval(handler, 300);
       window.addEventListener("focus", handler);
+      window.addEventListener("visibilitychange", handler);
       return () => {
-        window.clearInterval(timer);
         window.removeEventListener("focus", handler);
+        window.removeEventListener("visibilitychange", handler);
       };
     },
     () => readCookie("national_market") || initialMarket,

@@ -1,7 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useSyncExternalStore, useState } from "react";
-import NavDown from "./nav_down";
+
+const NavDown = dynamic(() => import("./nav_down"), {
+  ssr: false,
+});
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -49,10 +53,12 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
       if (typeof window === "undefined") return () => { };
       const handler = () => onStoreChange();
       window.addEventListener("latest-version-updated", handler);
-      const timer = window.setInterval(handler, 300);
+      window.addEventListener("focus", handler);
+      window.addEventListener("visibilitychange", handler);
       return () => {
         window.removeEventListener("latest-version-updated", handler);
-        window.clearInterval(timer);
+        window.removeEventListener("focus", handler);
+        window.removeEventListener("visibilitychange", handler);
       };
     },
     () => readCookie("latest_version"),
