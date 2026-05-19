@@ -47,6 +47,8 @@ export default async function OrdersOnceToolPage({ params }: PageProps) {
 
   const headerStore = await headers();
   const host = headerStore.get("x-forwarded-host") || headerStore.get("host") || "";
+  const cookieStore = await cookies();
+  const initialLang = normalizeLang(cookieStore.get("national_market")?.value || "en");
   const initialPostsApiData = await getOrdersPostMeta(slug_2, { useCache: !isLocalHost(host) });
 
   return (
@@ -54,6 +56,7 @@ export default async function OrdersOnceToolPage({ params }: PageProps) {
       slug_1="orders_once"
       slug_2={slug_2}
       initialPostsApiData={initialPostsApiData}
+      initialLang={initialLang}
     />
   );
 }

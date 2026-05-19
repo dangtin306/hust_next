@@ -127,49 +127,49 @@ export default function OrdersContent(props: OrdersContentProps) {
       <section id="section-introduction" className="w-full min-w-0 rounded-3xl border border-slate-200/70 bg-white/85 shadow-2xl ring-1 ring-black/5 backdrop-blur-md lg:flex-1">
         <div className="max-lg:px-3 lg:px-7 pb-2 max-lg:pt-6 lg:pt-10">
           <div className="mb-2 mt-1 flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="min-w-0 flex-1 text-balance text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                 {articleTitle}
               </h1>
-              <div className="mt-3 line-clamp-3 text-pretty text-sm leading-relaxed text-slate-600 sm:text-base">
-                {articleDescription}
-              </div>
-
-              <div className="mt-3 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
-                <span className="inline-flex min-w-0 flex-1 items-start gap-2 rounded-full bg-slate-100 px-3 py-1 sm:flex-none sm:w-auto">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    className="text-slate-500"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M7 3v2M17 3v2M4 8h16M6 12h4m-4 4h6m9-8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="min-w-0 whitespace-normal break-words leading-tight">
-                    {writtenDateLabel}{" "}
-                    <span className="font-medium text-slate-700">{writtenDateValue}</span>
-                  </span>
-                </span>
-                <span className="inline-flex max-w-[44%] shrink-0 items-center whitespace-nowrap rounded-full border border-[#D8E0E8] bg-[#EEF2F6] px-2.5 py-1 font-semibold text-[#5E6B7A] sm:max-w-none">
-                  Digital Suite
-                </span>
-              </div>
             </div>
 
             <a
               href="/ai/utility/home_ai"
-              className="inline-flex shrink-0 items-center no-underline rounded-2xl border border-pink-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-pink-50 hover:no-underline active:scale-[0.98]"
+              className="inline-flex shrink-0 items-center no-underline rounded-2xl border border-pink-200 bg-pink-50 px-3 py-1.5 text-[14.5px] font-semibold text-slate-900 shadow-sm transition hover:bg-pink-100 hover:no-underline active:scale-[0.98]"
             >
               Back to Suite
             </a>
+          </div>
+          <div className="mt-3 w-full text-sm leading-relaxed text-slate-600 sm:text-base">
+            {articleDescription}
+          </div>
+
+          <div className="mt-3 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
+            <span className="inline-flex min-w-0 flex-1 items-start gap-2 rounded-full bg-slate-100 px-3 py-1 sm:flex-none sm:w-auto">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-slate-500"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7 3v2M17 3v2M4 8h16M6 12h4m-4 4h6m9-8v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="min-w-0 whitespace-normal break-words leading-tight">
+                {writtenDateLabel}{" "}
+                <span className="font-medium text-slate-700">{writtenDateValue}</span>
+              </span>
+            </span>
+            <span className="inline-flex max-w-[44%] shrink-0 items-center whitespace-nowrap rounded-full border border-[#D8E0E8] bg-[#EEF2F6] px-2.5 py-1 font-semibold text-[#5E6B7A] sm:max-w-none">
+              Digital Suite
+            </span>
           </div>
 
           <div className="mt-8">

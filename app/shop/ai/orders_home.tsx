@@ -11,6 +11,7 @@ type OrdersHomeProps = {
   slug_1?: string;
   slug_2?: string;
   initialPostsApiData?: OrdersPostMetaResponse | null;
+  initialLang?: Lang;
 };
 type TtsApiResponse = {
   error?: string;
@@ -55,6 +56,7 @@ const OrdersHome = ({
   slug_1: slug1Prop,
   slug_2: slug2Prop,
   initialPostsApiData = null,
+  initialLang = "en",
 }: OrdersHomeProps = {}) => {
   const slug_1 = slug1Prop || "";
   const slug_2 = slug2Prop || "";
@@ -81,7 +83,7 @@ const OrdersHome = ({
   const postsApiData = postsMetaData?.post || null;
   const relatedInsights = postsMetaData?.relatedPosts || [];
 
-  const [lang, setLang] = useState<Lang>(() => normalizeLang(readCookie("national_market")));
+  const [lang, setLang] = useState<Lang>(() => normalizeLang(initialLang));
 
   useEffect(() => {
     const syncLang = () => setLang(normalizeLang(readCookie("national_market")));

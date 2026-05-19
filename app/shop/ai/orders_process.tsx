@@ -86,7 +86,6 @@ const OrdersProcess = ({
               <Link
                 key={key}
                 href={href}
-                prefetch={false}
                 className={`block no-underline rounded-xl border p-2.5 transition ${
                   isActive
                     ? "border-emerald-300/90 bg-emerald-100/55"

@@ -3,7 +3,7 @@ import OrdersHome from "@/app/shop/ai/orders_home";
 import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { seoByTool } from "./orders_data";
+import { seoByTool } from "@/app/shop/ai/orders_data";
 
 type PageProps = {
   searchParams: Promise<{ slug_2?: string | string[] }>;
@@ -27,9 +27,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const query = await searchParams;
   const slug_2 = normalizeSlug2(query.slug_2);
 
-  if (!ALLOWED_TOOLS.has(slug_2)) {
-    return {};
-  }
+  if (!ALLOWED_TOOLS.has(slug_2)) return {};
 
   const cookieStore = await cookies();
   const lang = normalizeLang(cookieStore.get("national_market")?.value || "en");
@@ -58,6 +56,8 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
   }
   const headerStore = await headers();
   const host = headerStore.get("x-forwarded-host") || headerStore.get("host") || "";
+  const cookieStore = await cookies();
+  const initialLang = normalizeLang(cookieStore.get("national_market")?.value || "en");
   const initialPostsApiData = await getOrdersPostMeta(slug_2, { useCache: !isLocalHost(host) });
 
   return (
@@ -65,6 +65,7 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
       slug_1="orders_once"
       slug_2={slug_2}
       initialPostsApiData={initialPostsApiData}
+      initialLang={initialLang}
     />
   );
 }
