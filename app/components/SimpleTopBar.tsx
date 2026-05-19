@@ -1,11 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useSyncExternalStore, useState } from "react";
-
-const NavDown = dynamic(() => import("./nav_down"), {
-  ssr: false,
-});
+import NavDown from "./nav_down";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
