@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import OrdersHome from "@/app/shop/ai/orders_home";
 import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { seoByTool } from "./orders_data";
 
@@ -18,6 +18,10 @@ const normalizeSlug2 = (value: string | string[] | undefined) => {
 
 const normalizeLang = (value: string) =>
   String(value || "").toLowerCase() === "vi" ? "vi" : "en";
+const isLocalHost = (host: string) => {
+  const value = String(host || "").toLowerCase();
+  return value.includes("localhost") || value.includes("127.0.0.1") || value.includes("::1");
+};
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const query = await searchParams;
@@ -52,7 +56,9 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
   if (!ALLOWED_TOOLS.has(slug_2)) {
     notFound();
   }
-  const initialPostsApiData = await getOrdersPostMeta(slug_2);
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") || headerStore.get("host") || "";
+  const initialPostsApiData = await getOrdersPostMeta(slug_2, { useCache: !isLocalHost(host) });
 
   return (
     <OrdersHome

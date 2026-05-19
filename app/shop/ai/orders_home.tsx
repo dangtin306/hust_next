@@ -21,6 +21,7 @@ type TtsApiResponse = {
   text_vip?: string;
 };
 type HelpfulVote = "" | "yes" | "no";
+const CLIENT_META_CACHE_TTL_MS = 60 * 60 * 1000;
 
 function formatUsDateTime(value: string) {
   const raw = String(value || "").trim();
@@ -76,8 +77,9 @@ const OrdersHome = ({
   const [helpfulVote, setHelpfulVote] = useState<HelpfulVote>("");
   const [translateInput, setTranslateInput] = useState("");
   const [translateText, setTranslateText] = useState("");
-  const postsApiData = initialPostsApiData?.post || null;
-  const relatedInsights = initialPostsApiData?.relatedPosts || [];
+  const [postsMetaData, setPostsMetaData] = useState<OrdersPostMetaResponse | null>(initialPostsApiData);
+  const postsApiData = postsMetaData?.post || null;
+  const relatedInsights = postsMetaData?.relatedPosts || [];
 
   const [lang, setLang] = useState<Lang>(() => normalizeLang(readCookie("national_market")));
 
@@ -91,6 +93,50 @@ const OrdersHome = ({
       window.removeEventListener("visibilitychange", syncLang);
     };
   }, []);
+
+  useEffect(() => {
+    setPostsMetaData(initialPostsApiData);
+  }, [initialPostsApiData, slug_1, slug_2]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!slug_2) return;
+    const host = window.location.hostname.toLowerCase();
+    const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    if (isLocalHost) return;
+
+    const cacheKey = `orders_post_meta:${slug_1 || "orders_once"}:${slug_2}`;
+
+    if ((!postsMetaData?.post || !String(postsMetaData?.post?.title || "").trim()) && window.sessionStorage) {
+      try {
+        const raw = window.sessionStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { at?: number; data?: OrdersPostMetaResponse };
+          const age = Date.now() - Number(parsed?.at || 0);
+          if (parsed?.data && age >= 0 && age <= CLIENT_META_CACHE_TTL_MS) {
+            setPostsMetaData(parsed.data);
+            return;
+          }
+          window.sessionStorage.removeItem(cacheKey);
+        }
+      } catch {
+        window.sessionStorage.removeItem(cacheKey);
+      }
+    }
+
+    if (!postsMetaData?.post) return;
+    try {
+      window.sessionStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          at: Date.now(),
+          data: postsMetaData,
+        })
+      );
+    } catch {
+      // Ignore storage quota failures.
+    }
+  }, [postsMetaData, slug_1, slug_2]);
 
   const activeTool = isToolKey(slug_2) ? slug_2 : null;
   const showToolPage = (slug_1 === "plans" || slug_1 === "orders_once") && !!activeTool;
