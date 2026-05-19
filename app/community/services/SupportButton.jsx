@@ -142,6 +142,11 @@ const SupportButton = () => {
       return;
     }
 
+    // If cache was already loaded into state on first render, do not delay.
+    if (Array.isArray(linksSupport) && linksSupport.length > 0) {
+      return;
+    }
+
     localStorage.removeItem(CACHE_KEY);
 
     let cancelled = false;
@@ -214,7 +219,7 @@ const SupportButton = () => {
       if (delayTimer) window.clearTimeout(delayTimer);
       window.removeEventListener("load", startBackgroundFetch);
     };
-  }, []);
+  }, [linksSupport]);
 
   const chuyenDoiDanhSach = () => {
     setHienDanhSach((prev) => !prev);
