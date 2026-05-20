@@ -359,12 +359,12 @@ export default async function DocPage({
             <h1 {...props} className={headingClass}>
               {apiTitle || children}
             </h1>
-            <Link
+            <a
               href="/ai/utility/home_notes"
               className="not-prose inline-flex shrink-0 items-center rounded-2xl border border-pink-200 bg-pink-50 !px-3 !py-1.5 !text-[14.5px] !leading-5 font-semibold !text-slate-900 no-underline shadow-sm transition hover:bg-pink-100 hover:!text-slate-900 hover:no-underline active:scale-[0.98]"
             >
               Back to Notes
-            </Link>
+            </a>
           </div>
           {shouldShowDescription ? (
             <p className="mt-3 w-full text-sm leading-relaxed text-slate-600 sm:text-base">
