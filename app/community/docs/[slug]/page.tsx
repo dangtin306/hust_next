@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
+import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
 
@@ -456,6 +457,58 @@ export default async function DocPage({
     ),
   };
 
+  const docsPanel = (
+    <section className="rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
+      <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
+        Docs
+      </h2>
+      <nav className="mt-4 space-y-2">
+        {nav.map((item) => {
+          const isActive = item.slug === slug;
+          const baseClass =
+            "block rounded-xl border p-2.5 no-underline transition";
+
+          return (
+            <Link
+              key={item.slug}
+              href={`/community/docs/${item.slug}`}
+              className={`${baseClass} ${
+                isActive
+                  ? "border-emerald-300/90 bg-emerald-100/55"
+                  : "border-blue-100/80 bg-blue-200/60 hover:border-blue-300/90 hover:bg-blue-200/80"
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                <img
+                  src={item.thumbnail}
+                  alt={item.title}
+                  loading="lazy"
+                  className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold leading-snug text-black">
+                    {item.title}
+                  </div>
+                  <div
+                    className="mt-1 text-xs leading-relaxed text-slate-500"
+                    style={{
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {item.description}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+      </nav>
+    </section>
+  );
+
   return (
     <div className="relative min-h-screen bg-transparent text-slate-700">
       <div
@@ -476,55 +529,9 @@ export default async function DocPage({
                 </section>
               )}
 
-              <section className="-mb-2 lg:mb-0 rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
-                <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
-                  Docs
-                </h2>
-                <nav className="mt-4 space-y-2">
-                  {nav.map((item) => {
-                    const isActive = item.slug === slug;
-                    const baseClass =
-                      "block rounded-xl border p-2.5 no-underline transition";
-
-                    return (
-                      <Link
-                        key={item.slug}
-                        href={`/community/docs/${item.slug}`}
-                        className={`${baseClass} ${
-                          isActive
-                            ? "border-emerald-300/90 bg-emerald-100/55"
-                            : "border-blue-100/80 bg-blue-200/60 hover:border-blue-300/90 hover:bg-blue-200/80"
-                        }`}
-                      >
-                        <div className="flex items-start gap-2.5">
-                          <img
-                            src={item.thumbnail}
-                            alt={item.title}
-                            loading="lazy"
-                            className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold leading-snug text-black">
-                              {item.title}
-                            </div>
-                            <div
-                              className="mt-1 text-xs leading-relaxed text-slate-500"
-                              style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {item.description}
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </nav>
-              </section>
+              <div className="hidden lg:block">
+                {docsPanel}
+              </div>
             </div>
           </div>
         </aside>
@@ -532,11 +539,20 @@ export default async function DocPage({
         <main className="min-w-0 w-full flex-1">
           <article className="rounded-3xl border border-slate-200/70 bg-white/85 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
             <div className="max-lg:px-1 lg:px-7 pb-4 pt-0 sm:pb-4 max-lg:pt-7 lg:pt-12">
-              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
                 <MDXRemote source={doc.content} components={mdxComponents} />
               </div>
+              <DocsArticleActions
+                writtenDateLabel={writtenDateLabel}
+                writtenDateValue={writtenDateValue}
+                title={docTitle || apiTitle || "Hust Media"}
+                description={docDescription}
+              />
             </div>
           </article>
+          <div className="mt-2 lg:hidden">
+            {docsPanel}
+          </div>
           <DocsHelpfulFeedback />
         </main>
       </div>
