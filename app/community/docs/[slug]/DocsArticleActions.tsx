@@ -62,7 +62,7 @@ export default function DocsArticleActions({
   };
 
   return (
-    <div className="mt-2 mb-3 flex w-full flex-wrap items-center justify-between gap-2.5 pt-3">
+    <div className="mt-2 mb-2.5 flex w-full flex-wrap items-center justify-between gap-2.5 pt-3">
       <div className="inline-flex max-w-full items-center self-center rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-5 text-slate-500 sm:text-[13px]">
           <span className="font-medium text-slate-700">By Hust Media</span>{" "}
