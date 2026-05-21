@@ -747,7 +747,7 @@ export default function OrdersContent(props: OrdersContentProps) {
           </p>
         </div>
 
-        <div className="mt-1 mb-2 flex w-full flex-wrap items-center justify-between gap-2.5 border-t border-slate-200 pt-3">
+        <div className="mt-2 mb-1 flex w-full flex-wrap items-center justify-between gap-2.5 border-t border-slate-300/90 pt-3">
           <div className="mt-1 inline-flex max-w-full items-center self-center rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-5 text-slate-500 sm:text-[13px]">
               <span className="font-medium text-slate-700">By Hust Media</span>{" "}
