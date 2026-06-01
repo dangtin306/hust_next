@@ -368,12 +368,12 @@ export default async function DocPage({
             </a>
           </div>
           {shouldShowDescription ? (
-            <p className="mt-3 w-full text-sm leading-relaxed text-slate-600 sm:text-base">
+            <div className="mt-3 w-full text-sm leading-relaxed text-slate-600 sm:text-base">
               {docDescription}
-            </p>
+            </div>
           ) : null}
           {(writtenDateValue || categoryLabel) ? (
-            <div className="mb-9 mt-3 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
+            <div className="mb-9 mt-3.5 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
               {writtenDateValue ? (
                 <span className="inline-flex min-w-0 flex-1 items-start gap-2 rounded-full bg-slate-100 px-3 py-1 sm:flex-none sm:w-auto">
                   <svg
@@ -411,8 +411,11 @@ export default async function DocPage({
     h2: ({ children, ...props }: ComponentPropsWithoutRef<"h2">) => {
       const title = getNodeText(children ?? "");
       const id = slugifyHeading(title);
+      const headingClass = [props.className, "!text-[1.2175rem] !font-semibold"]
+        .filter(Boolean)
+        .join(" ");
       return (
-        <h2 id={id} {...props}>
+        <h2 id={id} {...props} className={headingClass}>
           {children}
         </h2>
       );
@@ -539,7 +542,7 @@ export default async function DocPage({
         <main className="min-w-0 w-full flex-1">
           <article className="rounded-3xl border border-slate-200/70 bg-white/85 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
             <div className="max-lg:px-1 lg:px-7 pb-4 pt-0 sm:pb-4 max-lg:pt-7 lg:pt-12">
-              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
                 <MDXRemote source={doc.content} components={mdxComponents} />
               </div>
               <DocsArticleActions

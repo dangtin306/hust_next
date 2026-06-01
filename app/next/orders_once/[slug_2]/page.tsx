@@ -9,7 +9,7 @@ type PageProps = {
   params: Promise<{ slug_2: string }>;
 };
 
-const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en"]);
+const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en", "text_workflow"]);
 const normalizeLang = (value: string) =>
   String(value || "").toLowerCase() === "vi" ? "vi" : "en";
 const isLocalHost = (host: string) => {

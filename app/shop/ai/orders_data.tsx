@@ -1,5 +1,5 @@
 export type Lang = "en" | "vi";
-export type ToolKey = "text_speech" | "speech_text" | "image_text" | "translate_vi_en";
+export type ToolKey = "text_speech" | "speech_text" | "image_text" | "translate_vi_en" | "text_workflow";
 
 export type SeoItem = {
   title: string;
@@ -38,7 +38,7 @@ export type ToolNoteContent = {
   technicalSnapshot: string[];
 };
 
-export const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en"] as const);
+export const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en", "text_workflow"] as const);
 
 export const toolNotesByKey: Record<ToolKey, ToolNoteContent> = {
   text_speech: {
@@ -144,6 +144,22 @@ export const toolNotesByKey: Record<ToolKey, ToolNoteContent> = {
       "Current limitation: fixed VI -> EN, no JSON POST parsing, invalid target may return 500",
     ],
   },
+  text_workflow: {
+    title: "Hello World Workflow Note",
+    shortDescription:
+      "A lightweight example note used to validate route wiring, article rendering, and footer actions end-to-end.",
+    articleBody: [
+      "Hello world from text_workflow. This note exists to verify that the new URI route is correctly connected in the Orders Once flow.",
+      "The page reuses the same layout, section structure, TOC behavior, and related action footer used by other tools, so no separate rendering logic is needed.",
+      "In practice, this is a safe smoke-test entry for validating navigation, metadata fallback, and client-side interactions before adding a full production article.",
+    ],
+    technicalSnapshot: [
+      "Route: /next/orders_once/text_workflow",
+      "Type: content and routing smoke test",
+      "Rendering: shared OrdersHome + OrdersContent pipeline",
+      "Persistence: localStorage-based footer like action",
+    ],
+  },
 };
 
 export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
@@ -193,6 +209,18 @@ export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
       title: "Dịch tiếng Việt sang tiếng Anh",
       description: "Công cụ dịch tiếng Việt sang tiếng Anh để dùng trong quy trình nội dung.",
       keywords: "dịch tiếng việt sang tiếng anh, translation, ai translation, content workflow",
+    },
+  },
+  text_workflow: {
+    en: {
+      title: "Text Workflow — Hello World Note",
+      description: "A simple hello-world note used to validate orders_once route and article rendering flow.",
+      keywords: "text workflow, hello world, route test, article rendering, orders_once",
+    },
+    vi: {
+      title: "Text Workflow — Ghi chú Hello World",
+      description: "Ghi chú hello world đơn giản để kiểm tra route orders_once và luồng hiển thị bài viết.",
+      keywords: "text workflow, hello world, kiểm tra route, hiển thị bài viết, orders_once",
     },
   },
 };
@@ -438,6 +466,62 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       related: [{ label: "Tổng quan dịch Việt - Anh", href: "/next/orders_once/translate_vi_en" }],
     },
   },
+  text_workflow: {
+    en: {
+      title: "Text Workflow",
+      heading: "Introduction",
+      practical: "Practical Notes",
+      summary: [
+        "Hello world. This article is a compact workflow note used to confirm that the text_workflow route is connected and rendered correctly in the Orders Once system.",
+        "It follows the same article architecture as other modules, including metadata, documentation notes, footer actions, and helpful feedback placement.",
+      ],
+      audience: [
+        "Developers validating route mapping and page wiring.",
+        "Integrators checking shared article template behavior.",
+        "Operators running a quick sanity test before publishing new tools.",
+      ],
+      examples: [
+        "Input: open /next/orders_once/text_workflow. Output: article renders with title, summary, and footer actions.",
+        "Input: click footer like/share. Output: local actions work without backend dependency.",
+      ],
+      moduleUsageGuide:
+        "This hello-world workflow note is intentionally minimal and stable.\n\n• Open the route and verify title, summary, and article sections render.\n• Check TOC and related insights behavior.\n• Confirm footer actions (like/share) respond correctly.\n• Use this as a baseline when adding new orders_once tool routes.",
+      readerValueTitle: "Reader Value",
+      readerValue:
+        "This note gives teams a fast, low-risk baseline for validating routing and shared article UI behavior before expanding into full feature content.",
+      conclusionTitle: "Conclusion",
+      conclusion:
+        "The text_workflow entry proves the new route is integrated correctly and can be extended into a full technical article whenever needed.",
+      related: [{ label: "Technical Overview", href: "/community/docs/overview" }],
+    },
+    vi: {
+      title: "Text Workflow",
+      heading: "Giới thiệu",
+      practical: "Ghi chú thực tế",
+      summary: [
+        "Hello world. Đây là bài ghi chú ngắn để xác nhận route text_workflow đã được nối đúng trong hệ thống Orders Once.",
+        "Bài viết dùng cùng kiến trúc hiển thị với các mô-đun khác: metadata, phần ghi chú, footer action và khối phản hồi người đọc.",
+      ],
+      audience: [
+        "Developer cần kiểm tra map route và wiring trang.",
+        "Team tích hợp cần kiểm tra template bài viết dùng chung.",
+        "Vận hành cần smoke-test nhanh trước khi thêm bài hoàn chỉnh.",
+      ],
+      examples: [
+        "Input: mở /next/orders_once/text_workflow. Output: hiển thị bài với tiêu đề, mô tả, section đầy đủ.",
+        "Input: bấm tim/share ở footer. Output: hành vi local chạy đúng không cần backend.",
+      ],
+      moduleUsageGuide:
+        "Ghi chú hello-world này được thiết kế tối giản và ổn định.\n\n• Mở route và kiểm tra tiêu đề, mô tả, các section hiển thị đúng.\n• Kiểm tra TOC và khu vực related insights.\n• Xác nhận footer action (tim/share) hoạt động bình thường.\n• Dùng làm mốc chuẩn khi thêm route tool mới cho orders_once.",
+      readerValueTitle: "Giá trị cho người đọc",
+      readerValue:
+        "Ghi chú này cung cấp mốc kiểm tra nhanh, ít rủi ro để xác nhận route và UI bài viết dùng chung trước khi mở rộng nội dung kỹ thuật đầy đủ.",
+      conclusionTitle: "Kết luận",
+      conclusion:
+        "Entry text_workflow xác nhận route mới đã tích hợp đúng và có thể mở rộng thành bài kỹ thuật đầy đủ khi cần.",
+      related: [{ label: "Tổng quan kỹ thuật", href: "/community/docs/overview" }],
+    },
+  },
 };
 
 export const toolTabs: Array<{ key: ToolKey; en: string; vi: string }> = [
@@ -500,6 +584,17 @@ export const toolProcessCards: ToolProcessCard[] = [
     description: {
       en: "Translate Vietnamese text into clear English for docs and content.",
       vi: "Dịch văn bản tiếng Việt sang tiếng Anh rõ ràng cho nội dung và tài liệu.",
+    },
+    badge: { en: "Integration", vi: "Tích hợp" },
+  },
+  {
+    key: "text_workflow",
+    image: "https://hust.media/img/text_speech_thumbnail.png",
+    href: () => "/next/orders_once/text_workflow",
+    title: { en: "Text Workflow", vi: "Text Workflow" },
+    description: {
+      en: "Hello-world workflow note used to validate route and article rendering.",
+      vi: "Ghi chú hello-world dùng để kiểm tra route và hiển thị bài viết.",
     },
     badge: { en: "Integration", vi: "Tích hợp" },
   },

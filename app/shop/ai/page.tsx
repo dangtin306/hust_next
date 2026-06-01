@@ -9,7 +9,7 @@ type PageProps = {
   searchParams: Promise<{ slug_2?: string | string[] }>;
 };
 
-const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en"]);
+const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en", "text_workflow"]);
 
 const normalizeSlug2 = (value: string | string[] | undefined) => {
   if (Array.isArray(value)) return value[0] || "";
