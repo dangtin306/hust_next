@@ -358,7 +358,7 @@ export default async function DocPage({
         <>
           <div className="flex items-start justify-between gap-3">
             <h1 {...props} className={headingClass}>
-              {apiTitle || children}
+              {children}
             </h1>
             <a
               href="/ai/utility/home_notes"

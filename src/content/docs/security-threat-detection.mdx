@@ -7,15 +7,17 @@ order: 5
 # Threat Signal Verification and Risk Indexing
 
 ## Introduction
-Risk Signal Verification & Indexing belongs to the **Validation & Monitoring Layer** of a web platform. It is positioned after signal intake and before lookup or monitoring. You usually meet this topic when a website receives many reports or external data sources that need filtering, review, and lookup.
+Threat Signal Verification & Indexing belongs to the Validation & Monitoring Layer of a web platform. It sits after signal intake and before lookup or monitoring. You usually meet this topic when a website receives many reports or external data sources for filtering, review, and lookup.
 
-<span style={{ fontWeight: 700 }}>- Technical context:</span> This workflow includes signal ingestion, evidence verification, post-audit review, and risk indexing before lookup or monitoring.
+<span style={{ fontWeight: 700 }}>- Technical context:</span> This workflow includes signal ingestion, evidence verification, post-audit review, and risk indexing.
 
-<span style={{ fontWeight: 700 }}>- Technical benefit:</span> This structure improves evidence quality, reduces repeated review work, and makes risk records easier to search, audit, and monitor.
+<span style={{ fontWeight: 700 }}>- Technical benefit:</span> It improves evidence quality, reduces repeated review work, and makes risk records easier to search, audit, and monitor.
 
 ---
 
 ## Practical Notes
+
+In 2021, I faced a weak XAMPP exposure: the website database was deleted, and the attacker demanded 100 USD to return access. After recovery, I reinstalled Windows Server 2019, renewed passwords across data storage points, mapped key data locations, and used GoCron to export the database every two days. After that, the system stayed stable. Readers may meet this topic when a website gets suspicious reports or repeated signals that need review before lookup. The notes below explain threat verification and risk indexing.
 
 ---
 

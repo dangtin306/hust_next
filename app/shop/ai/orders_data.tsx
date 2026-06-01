@@ -232,13 +232,13 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       heading: "Introduction",
       practical: "Practical Notes",
       summary: [
-        "This Text-to-Speech (TTS) module is engineered as a high-performance microservice within the HUST Media ecosystem. Designed for scalable web platforms, it ensures high stability and low latency. As a core component of larger media pipelines, it converts technical documentation into natural audio for production environments.",
-        "The implementation leverages advanced speech synthesis models on a dedicated Flask AI server. For deployment, it utilizes standardized server structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a practical blueprint for developers integrating AI-driven media processing into high-traffic, scalable architectures.",
+        "Text-to-Speech (TTS) is a Digital Suite module that converts text into natural-sounding audio for documentation, guides, narration, and workflow output. It sits after text preparation and before audio export, helping websites reuse content for accessibility, media tasks, and structured delivery.\n\n- Technical context: This workflow includes text input, request handling, model processing, and audio export.\n\n- Technical benefit: It reduces manual recording work, keeps audio output consistent, and makes written content easier to reuse.",
+        "In 2024, after joining a media company project, I built this Text-to-Speech module for practical audio generation. It used speech synthesis models on a dedicated Flask AI server, standardized paths like /opt/hustmedia/python, and environment-based configurations, later serving as a blueprint for AI-driven media processing in scalable architectures. Common use cases come next.",
       ],
       audience: [
-        "Developers integrating automated audio narration into high-traffic media pipelines.",
-        "Architects seeking a production-ready TTS microservice for technical platforms.",
-        "Engineering teams optimizing content delivery with stable, low-latency voice synthesis.",
+        "People who want to turn written content into clear audio for websites, guides, or notes.",
+        "Teams that need voice output for tutorials, support pages, or internal content.",
+        "Anyone building a web workflow where text can be reused as speech.",
       ],
       examples: [
         "Input: Product description paragraph. Output: Short narrated audio for social posts.",
@@ -261,15 +261,15 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     vi: {
       title: "Chuyển văn bản thành giọng nói",
       heading: "Giới thiệu mô-đun AI",
+      practical: "Ghi chú thực tế",
       summary: [
-        "Mô-đun này chuyển văn bản thành giọng nói để đội vận hành và người tạo nội dung xuất bản bản đọc nhanh hơn, đồng thời cải thiện trợ năng cho người dùng thích nghe hơn đọc.",
-        "Công cụ được thiết kế theo hướng tiện ích thực dụng trong luồng Hust: mô tả sản phẩm, hướng dẫn, nội dung nhiệm vụ và thông tin hỗ trợ đều có thể tạo bản audio ngắn.",
-        "Khi dùng thực tế, công cụ giúp giảm thao tác thu âm lặp lại và giữ chất lượng giọng đọc ổn định giữa nhiều chiến dịch.",
+        "Text-to-Speech (TTS) là một mô-đun Digital Suite chuyển văn bản thành âm thanh tự nhiên cho tài liệu, hướng dẫn, thuyết minh và đầu ra workflow. Nó nằm sau bước chuẩn bị văn bản và trước bước xuất âm thanh, giúp website tái sử dụng nội dung cho trợ năng, tác vụ media và phân phối có cấu trúc.\n\n- Bối cảnh kỹ thuật: Workflow này gồm nhập văn bản, xử lý request, xử lý bằng model và xuất âm thanh.\n\n- Lợi ích kỹ thuật: Nó giảm công việc thu âm thủ công, giữ đầu ra âm thanh nhất quán và giúp nội dung văn bản dễ tái sử dụng hơn.",
+        "Năm 2024, sau khi tham gia một dự án media company, tôi xây dựng mô-đun Text-to-Speech này để tạo âm thanh thực tế. Mô-đun dùng các model tổng hợp giọng nói trên một Flask AI server riêng, các path chuẩn như /opt/hustmedia/python và cấu hình theo môi trường, sau đó trở thành blueprint cho xử lý media bằng AI trong kiến trúc có khả năng mở rộng. Các use case phổ biến nằm ở phần tiếp theo.",
       ],
       audience: [
-        "Người làm nội dung cần tạo giọng đọc cho bài hướng dẫn.",
-        "Team CSKH cần audio onboarding hoặc hướng dẫn nhanh.",
-        "Người dùng mobile/sinh viên muốn tiếp nhận nội dung bằng nghe.",
+        "Những người muốn chuyển nội dung viết thành audio rõ ràng cho website, hướng dẫn hoặc ghi chú.",
+        "Các team cần đầu ra giọng nói cho tutorial, trang hỗ trợ hoặc nội dung nội bộ.",
+        "Bất kỳ ai đang xây dựng web workflow nơi văn bản có thể được tái sử dụng thành giọng nói.",
       ],
       examples: [
         "Input: Mô tả sản phẩm dài. Output: File đọc để gắn vào bài đăng.",
@@ -278,9 +278,11 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       moduleUsageGuide:
         "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Text-to-Speech với nội dung ngắn và thực tế.\n\n• Nhập mô tả sản phẩm, ghi chú hướng dẫn, hoặc chỉ dẫn ngắn.\n• Bấm Generate Audio để tạo đầu ra giọng nói.\n• Kiểm tra kết quả về độ rõ, nhịp đọc và tính nhất quán.\n• Dùng các độ dài văn bản khác nhau để xem mô-đun xử lý các dạng nội dung phổ biến.\n\nDùng phần bên dưới để chạy mô-đun trực tiếp. Bắt đầu với một đoạn ngắn, sau đó điều chỉnh nội dung theo nhu cầu workflow của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
-      readerValue: "",
+      readerValue:
+        "Người đọc có thể dùng pattern mô-đun này để biến nội dung văn bản thành workflow giọng nói có cấu trúc hơn cho hướng dẫn, tài liệu và các tác vụ media ngắn. Trong dự án thực tế, cách này giúp giảm việc thu âm thủ công lặp lại, giữ quá trình xử lý đầu ra nhất quán hơn và hỗ trợ vận hành ổn định trên các luồng nội dung tích hợp.",
       conclusionTitle: "Kết luận",
-      conclusion: "",
+      conclusion:
+        "Mô-đun Text-to-Speech này kết hợp xử lý request có kiểm soát, path model có thể tái sử dụng và luồng xuất âm thanh thực tế vào một service layer dễ bảo trì. Nó vẫn phù hợp với mô hình tích hợp hệ thống và vận hành ổn định rộng hơn của nền tảng.",
       related: [
         { label: "Ghi chú kiến trúc hệ thống", href: "/community/docs/architecture" },
         { label: "Hướng dẫn tham chiếu API", href: "/community/docs/api-reference" },
@@ -294,13 +296,13 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       heading: "Introduction",
       practical: "Practical Notes",
       summary: [
-        "This Speech-to-Text (STT) module is engineered as a high-performance microservice within the HUST Media ecosystem. Designed for scalable platforms, it converts unstructured audio into accurate, structured text. As a core component of data pipelines, it automates transcription and indexing for production environments.",
+        "Speech-to-Text (STT) is a Digital Suite module that converts audio into structured text for notes, reports, support logs, and searchable records. It sits after audio upload and before text review or reuse, helping websites turn voice input into cleaner output for documentation and workflow support.\n\n- Technical context: This workflow includes audio input, speech recognition, text cleanup, and transcript export.\n\n- Technical benefit: It reduces manual note-taking, improves review, and makes spoken information reusable.",
         "The implementation leverages advanced speech recognition on a dedicated Flask AI server. It utilizes standardized server-side structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a blueprint for developers integrating AI-driven transcription into high-traffic, scalable architectures.",
       ],
       audience: [
-        "Developers integrating automated audio transcription into high-traffic data pipelines.",
-        "Architects seeking a production-ready STT microservice for scalable content management.",
-        "Engineering teams optimizing unstructured audio processing with stable, low-latency AI models.",
+        "Users who need clear text from voice recordings for notes or records.",
+        "Teams that reuse audio from notes, meetings, or support work.",
+        "Web projects that need a simple speech-to-text workflow for content processing.",
       ],
       examples: [
         "Input: Short voice note. Output: Draft text for reporting.",
@@ -323,15 +325,15 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
     vi: {
       title: "Chuyển giọng nói thành văn bản",
       heading: "Giới thiệu mô-đun AI",
+      practical: "Ghi chú thực tế",
       summary: [
-        "Speech-to-Text chuyển ghi âm thành văn bản có thể chỉnh sửa để rút ngắn thời gian nhập liệu trong các luồng báo cáo và vận hành.",
-        "Trong thực tế, người dùng thường ghi âm nhanh trên điện thoại rồi cần chuyển thành văn bản chuẩn để lưu trữ, tìm kiếm và xử lý tiếp.",
-        "Công cụ cũng tăng khả năng truy vết vì thông tin giọng nói được chuyển thành dữ liệu văn bản có thể tìm lại dễ dàng.",
+        "Speech-to-Text (STT) là một mô-đun Digital Suite chuyển âm thanh thành văn bản có cấu trúc cho ghi chú, báo cáo, support log và bản ghi có thể tìm kiếm. Nó nằm sau bước upload âm thanh và trước bước review hoặc tái sử dụng văn bản, giúp website biến đầu vào giọng nói thành đầu ra sạch hơn cho tài liệu và hỗ trợ workflow.\n\n- Bối cảnh kỹ thuật: Workflow này gồm đầu vào âm thanh, nhận dạng giọng nói, làm sạch văn bản và xuất transcript.\n\n- Lợi ích kỹ thuật: Nó giảm việc ghi chú thủ công, cải thiện bước review và giúp thông tin nói có thể tái sử dụng.",
+        "Phần triển khai dùng nhận dạng giọng nói nâng cao trên một Flask AI server riêng. Nó sử dụng cấu trúc server-side chuẩn như /opt/hustmedia/python và cấu hình theo môi trường. Thiết lập này đóng vai trò như một blueprint cho developer tích hợp transcription bằng AI vào kiến trúc có lưu lượng cao và khả năng mở rộng.",
       ],
       audience: [
-        "Điều phối viên cần ghi nhận thông tin sự cố nhanh.",
-        "Team vận hành cần tạo báo cáo hằng ngày từ voice note.",
-        "Người dùng làm việc chủ yếu trên mobile.",
+        "Người dùng cần văn bản rõ ràng từ bản ghi âm để ghi chú hoặc lưu hồ sơ.",
+        "Các team tái sử dụng audio từ ghi chú, cuộc họp hoặc công việc hỗ trợ.",
+        "Các dự án web cần một workflow speech-to-text đơn giản để xử lý nội dung.",
       ],
       examples: [
         "Input: Ghi âm 30 giây. Output: Bản nháp văn bản cho editor.",
@@ -340,9 +342,11 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       moduleUsageGuide:
         "Sau phần tổng quan kỹ thuật ở trên, mục này hướng dẫn cách dùng mô-đun Speech-to-Text với ghi âm ngắn và tệp âm thanh được hỗ trợ.\n\n• Tải lên tệp MP3, WAV, M4A hoặc OGG trong giới hạn thời lượng.\n• Bấm Generate Transcript để xử lý bản ghi âm.\n• Kiểm tra văn bản trả về về độ rõ, tên riêng và các thuật ngữ quan trọng.\n• Ưu tiên các bản ghi ngắn cho ghi chú, log hỗ trợ hoặc tác vụ báo cáo nhanh.\n\nDùng phần bên dưới để trải nghiệm mô-đun trực tiếp. Bắt đầu với một bản ghi ngắn, sau đó điều chỉnh độ dài tệp theo nhu cầu workflow của bạn.",
       readerValueTitle: "Giá trị cho người đọc",
-      readerValue: "",
+      readerValue:
+        "Người đọc có thể dùng pattern mô-đun này để biến cập nhật bằng giọng nói thành workflow văn bản có cấu trúc hơn cho báo cáo, tài liệu và tác vụ hỗ trợ. Trong dự án thực tế, cách này giúp giảm ghi chú thủ công, giữ việc xử lý transcription nhất quán hơn và hỗ trợ vận hành ổn định trên các luồng nội dung tích hợp.",
       conclusionTitle: "Kết luận",
-      conclusion: "",
+      conclusion:
+        "Mô-đun Speech-to-Text này kết hợp xử lý đầu vào âm thanh có kiểm soát, path transcription có thể tái sử dụng và xử lý đầu ra thực tế vào một service layer dễ bảo trì. Nó giúp workflow transcription nhất quán hơn trong kiến trúc hệ thống rộng hơn.",
       related: [
         { label: "Ghi chú kiến trúc hệ thống", href: "/community/docs/architecture" },
         { label: "Hướng dẫn tham chiếu API", href: "/community/docs/api-reference" },

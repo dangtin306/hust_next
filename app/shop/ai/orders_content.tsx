@@ -71,6 +71,33 @@ type OrdersContentProps = {
   conclusionText: string;
 };
 
+function renderTextBlocks(text: string) {
+  return text
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block, index) => {
+      const labelMatch =
+        /^(- (?:Technical (?:context|benefit)|Bối cảnh kỹ thuật|Lợi ích kỹ thuật):)(.*)$/.exec(block);
+
+      return (
+        <p
+          key={`${block.slice(0, 24)}-${index}`}
+          className={index === 0 ? "pl-0.5 sm:pl-1" : "mt-0.5 pl-0.5 sm:pl-1"}
+        >
+          {labelMatch ? (
+            <>
+              <span style={{ fontWeight: 600 }}>{labelMatch[1]}</span>
+              {labelMatch[2]}
+            </>
+          ) : (
+            block
+          )}
+        </p>
+      );
+    });
+}
+
 export default function OrdersContent(props: OrdersContentProps) {
   const {
     activeContent,
@@ -223,13 +250,13 @@ export default function OrdersContent(props: OrdersContentProps) {
               {activeContent.heading}
             </div>
             <div className="mt-2 text-[16px] leading-[1.7] text-slate-700">
-              <p className="pl-0.5 sm:pl-1">{activeContent.summary[0] || ""}</p>
+              {renderTextBlocks(activeContent.summary[0] || "")}
               {activeContent.practical && activeContent.summary[1] ? (
                 <div id="section-practical-notes" className="mt-4 border-t border-slate-200/80 pt-3">
                   <div className="text-lg font-bold leading-snug text-slate-900">
                     {activeContent.practical}
                   </div>
-                  <p className="mt-2 pl-0.5 sm:pl-1">{activeContent.summary[1]}</p>
+                  <div className="mt-2">{renderTextBlocks(activeContent.summary[1])}</div>
                 </div>
               ) : null}
             </div>
