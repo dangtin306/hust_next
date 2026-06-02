@@ -49,12 +49,12 @@ INSERT INTO scam_check SET indicator_ref='$phone_ref', status='Processing';
 
 External feeds use a **crawler pipeline**. Python loads report lists, downloads detail pages, stores raw HTML, then parses identifiers, phone numbers, accounts, bank names, descriptions, images, and update time into JSON. PHP reads the JSON, checks duplicates, creates SQL case records, maps image paths, and queues the case for AI verification.
 
-```text
+```flow
 Community Signals / External Feeds
-  -> Normalize phone, bank, social, website, email
-  -> Check duplicate identifier
-  -> Save SQL case + evidence
-  -> Queue for AI verification
+-> Normalize phone, bank, social, website, email
+-> Check duplicate identifier
+-> Save SQL case + evidence
+-> Queue for AI verification
 ```
 
 The full flow connects user reports, crawler feeds, normalization, SQL case storage, queue handling, and AI verification.
@@ -124,13 +124,13 @@ Parsed indicators are mapped into **lookup indexes**:
 MongoDB stores `id_scam_check` for traceability.
 MySQL keeps full case details, descriptions, account data, status, and audit history.
 
-```text
+```flow
 Signals
-  -> Extract links
-  -> Normalize JSON indicators
-  -> Map website / email / social
-  -> Index in MongoDB
-  -> Keep full case in MySQL
+-> Extract links
+-> Normalize JSON indicators
+-> Map website / email / social
+-> Index in MongoDB
+-> Keep full case in MySQL
 ```
 
 MongoDB keeps **lookup** fast, while SQL stores the full record for **review**, **masking**, and **audit**.

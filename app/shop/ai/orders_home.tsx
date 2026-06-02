@@ -12,6 +12,7 @@ type OrdersHomeProps = {
   slug_2?: string;
   initialPostsApiData?: OrdersPostMetaResponse | null;
   initialLang?: Lang;
+  textWorkflowSetupGuide?: string;
 };
 type TtsApiResponse = {
   error?: string;
@@ -57,6 +58,7 @@ const OrdersHome = ({
   slug_2: slug2Prop,
   initialPostsApiData = null,
   initialLang = "en",
+  textWorkflowSetupGuide = "",
 }: OrdersHomeProps = {}) => {
   const slug_1 = slug1Prop || "";
   const slug_2 = slug2Prop || "";
@@ -654,6 +656,7 @@ const OrdersHome = ({
               readerValueText={readerValueText}
               conclusionTitle={conclusionTitle}
               conclusionText={conclusionText}
+              textWorkflowSetupGuide={textWorkflowSetupGuide}
             />
 
             <div className="mt-4 mb-2 rounded-2xl border border-slate-200/75 bg-white/80 px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">

@@ -42,7 +42,7 @@ The architecture separates user-facing interfaces, gateway routing, service logi
 
 **Logical topology:**
 
-```text
+```flow
 Client (Web/App)
   -> API Gateway (Nginx / Go / Node)
     -> Core Services (PHP / Go / Python)
@@ -64,7 +64,7 @@ Client (Web/App)
 
 React SPA handles real-time interactions such as dashboards and tasks, while Next.js serves entry pages that require SEO/SSR. Both share a data contract to prevent behavioral drift.
 
-```text
+```flow
 render(view) -> state.sync(...) -> ui.update(...)
 ```
 

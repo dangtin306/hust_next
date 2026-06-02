@@ -34,6 +34,16 @@ const OrdersProcess = ({
     { id: "section-workflow", en: "Try the Module", vi: "Try the Module" },
     { id: "section-feedback", en: "Reader Value & Conclusion", vi: "Reader Value & Conclusion" },
   ];
+  const displayTocItems =
+    activeTool === "text_workflow"
+      ? [
+          tocItems[0],
+          tocItems[1],
+          tocItems[2],
+          { id: "section-setup-guide", en: "Module Setup Guide", vi: "Module Setup Guide" },
+          ...tocItems.slice(3),
+        ]
+      : tocItems;
 
   const scrollToSection = (id: string) => {
     if (typeof window === "undefined") return;
@@ -52,7 +62,7 @@ const OrdersProcess = ({
             Table of Contents
           </div>
           <div className="max-lg:mt-3 lg:mt-5 space-y-1.5 sm:mt-4">
-            {tocItems.map((item) => (
+            {displayTocItems.map((item) => (
               <button
                 key={item.id}
                 type="button"

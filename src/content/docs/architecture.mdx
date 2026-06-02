@@ -47,7 +47,7 @@ flowchart LR
 ```
 
 **Dual Routing Mechanism**:
-```text
+```flow
 if (route.public) -> Next Router (SSR/SSG)
 else -> React Router (SPA micro-flows)
 ```
@@ -57,7 +57,7 @@ The system applies a **2-Layer Caching Strategy** to optimize throughput:
 - **Layer 1 (Client Store Cache)**: React store-level caching enables immediate responses.
 - **Layer 2 (SSR/Runtime Cache)**: Next build/runtime caching reduces server load.
 
-```text
+```flow
 cache.l1.get(key) -> render immediate
 cache.l2.get(key) -> warm SSR payload
 ```

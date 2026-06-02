@@ -30,7 +30,7 @@ This model keeps credit issuance more controlled, reduces low-quality reward inf
 ## Automated Verification Layer
 The **Automated Verification Worker** validates evidence through AI/OCR and rule-based checks before credits are released. The goal is to keep verification deterministic, reviewable, and consistent across repeated actions, so reward state is based on evidence quality rather than unverified submission counts.
 
-```text
+```flow
 Evidence -> OCR -> Normalize -> Validate -> Confidence Score -> Credit Decision
 ```
 
@@ -52,7 +52,7 @@ Core controls:
 - **Reputation scoring** tied to dispute ratio
 - **Post-audit sweeps** to revoke invalid credits
 
-```text
+```flow
 Signals -> Anomaly Scoring -> Quarantine -> Post-Audit -> Finalize
 ```
 

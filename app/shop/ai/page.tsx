@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import OrdersHome from "@/app/shop/ai/orders_home";
 import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
+import { getTextWorkflowSetup } from "@/app/shop/ai/text_workflow_setup";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { seoByTool } from "@/app/shop/ai/orders_data";
@@ -59,6 +60,8 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
   const cookieStore = await cookies();
   const initialLang = normalizeLang(cookieStore.get("national_market")?.value || "en");
   const initialPostsApiData = await getOrdersPostMeta(slug_2, { useCache: !isLocalHost(host) });
+  const textWorkflowSetupGuide =
+    slug_2 === "text_workflow" ? await getTextWorkflowSetup() : "";
 
   return (
     <OrdersHome
@@ -66,6 +69,7 @@ export default async function ShopAiPage({ searchParams }: PageProps) {
       slug_2={slug_2}
       initialPostsApiData={initialPostsApiData}
       initialLang={initialLang}
+      textWorkflowSetupGuide={textWorkflowSetupGuide}
     />
   );
 }

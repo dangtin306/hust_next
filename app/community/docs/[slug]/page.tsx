@@ -5,11 +5,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { cloneElement, isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
+import DocsCodeBlock from "./DocsCodeBlock";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -116,6 +117,47 @@ function splitFrontmatter(source: string): {
     frontmatter,
     content: lines.slice(endIndex + 1).join("\n"),
   };
+}
+
+function trimCodeBlockChildren(children: ReactNode) {
+  if (!isValidElement<{ children?: ReactNode; className?: string }>(children)) {
+    return children;
+  }
+
+  const rawChildren = children.props.children;
+  const normalizedClassName = [
+    children.props.className,
+    "m-0 block border-0 bg-transparent p-0 text-inherit before:content-none after:content-none",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (typeof rawChildren === "string") {
+    return cloneElement(children, {
+      className: normalizedClassName,
+      children: rawChildren.replace(/^\n+|\n+$/g, ""),
+    });
+  }
+
+  if (Array.isArray(rawChildren)) {
+    const normalizedChildren = rawChildren
+      .map((child, index) => {
+      if (typeof child !== "string") return child;
+      if (index === 0) return child.replace(/^\n+/, "");
+      if (index === rawChildren.length - 1) return child.replace(/\n+$/, "");
+      return child;
+      })
+      .filter((child, index, array) => !(typeof child === "string" && child.length === 0 && (index === 0 || index === array.length - 1)));
+
+    return cloneElement(children, {
+      className: normalizedClassName,
+      children: normalizedChildren,
+    });
+  }
+
+  return cloneElement(children, {
+    className: normalizedClassName,
+  });
 }
 
 function extractTitleFromContent(content: string, slug: string) {
@@ -433,20 +475,23 @@ export default async function DocPage({
       (() => {
         const rawCode = getNodeText(children ?? "").trim();
         const isSingleLine = rawCode.length > 0 && !rawCode.includes("\n");
-        const preClass = [
-          props.className,
-          "max-h-[280px] overflow-y-auto text-[12px] leading-5",
-          isSingleLine ? "py-1.5" : "py-2.5",
-        ]
-          .filter(Boolean)
-          .join(" ");
+        const normalizedChildren = trimCodeBlockChildren(children);
+        const codeClassName =
+          isValidElement<{ className?: string }>(children) && typeof children.props.className === "string"
+            ? children.props.className
+            : "";
+        const languageMatch = /(?:^|\s)language-([a-zA-Z0-9_-]+)/.exec(codeClassName);
+        const language = languageMatch?.[1]?.trim() || "";
         return (
-      <pre
-        {...props}
-        className={preClass}
-      >
-        {children}
-      </pre>
+          <DocsCodeBlock
+            {...props}
+            className={props.className}
+            code={rawCode}
+            language={language}
+            isSingleLine={isSingleLine}
+          >
+            {normalizedChildren}
+          </DocsCodeBlock>
         );
       })()
     ),
@@ -542,7 +587,7 @@ export default async function DocPage({
         <main className="min-w-0 w-full flex-1">
           <article className="rounded-3xl border border-slate-200/70 bg-white/85 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
             <div className="max-lg:px-1 lg:px-7 pb-4 pt-0 sm:pb-4 max-lg:pt-7 lg:pt-12">
-              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-2.5 prose-pre:py-2.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+              <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
                 <MDXRemote source={doc.content} components={mdxComponents} />
               </div>
               <DocsArticleActions

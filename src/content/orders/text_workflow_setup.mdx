@@ -1,0 +1,19 @@
+---
+title: Text Workflow Setup Guide
+---
+
+This setup note exists only for the `text_workflow` route. It gives the page one extra documentation section without changing the shared article structure used by the other Orders Once modules.
+
+### Suggested setup
+
+- Keep the route slug fixed as `text_workflow` so related links and page wiring stay predictable.
+- Reuse the same metadata, article shell, and feedback layout already used by the rest of the suite.
+- Store setup-only notes in this standalone MDX file so we can edit the documentation without touching the shared UI every time.
+
+### Rendering note
+
+The page reads this MDX file on the server, removes the frontmatter, and renders the remaining content inside the `Module Setup Guide` section.
+
+### Why this is useful
+
+It gives the route a clean place for setup instructions, loose implementation notes, and temporary documentation while the tool is still evolving.

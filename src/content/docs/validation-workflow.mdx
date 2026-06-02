@@ -15,7 +15,7 @@ Incoming data is treated as **structured input** inside a controlled workflow ra
 
 A simplified evaluation model can be represented as:
 
-```text
+```formula
 input_score = base_value
             * input_weight
             * validation_score
@@ -52,7 +52,7 @@ Typical validation stages include:
 
 A simplified flow can be described as:
 
-```text
+```flow
 Evidence -> Extract -> Normalize -> Validate -> Confidence Result
 ```
 
@@ -82,7 +82,7 @@ Quality-control measures may include:
 
 A simplified control path looks like this:
 
-```text
+```flow
 Input -> Validation Check -> Quality Filter -> Review Queue -> Final Result
 ```
 

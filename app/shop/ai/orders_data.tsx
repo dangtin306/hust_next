@@ -480,9 +480,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "It follows the same article architecture as other modules, including metadata, documentation notes, footer actions, and helpful feedback placement.",
       ],
       audience: [
-        "Developers validating route mapping and page wiring.",
-        "Integrators checking shared article template behavior.",
-        "Operators running a quick sanity test before publishing new tools.",
+        "People who need clearer writing for websites, notes, or documentation.",
+        "People building automatic support replies for web pages or online services.",
+        "Anyone using a web workflow where text needs rewriting, summarizing, cleaning, or formatting.",
       ],
       examples: [
         "Input: open /next/orders_once/text_workflow. Output: article renders with title, summary, and footer actions.",
@@ -507,9 +507,9 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
         "Bài viết dùng cùng kiến trúc hiển thị với các mô-đun khác: metadata, phần ghi chú, footer action và khối phản hồi người đọc.",
       ],
       audience: [
-        "Developer cần kiểm tra map route và wiring trang.",
-        "Team tích hợp cần kiểm tra template bài viết dùng chung.",
-        "Vận hành cần smoke-test nhanh trước khi thêm bài hoàn chỉnh.",
+        "Những người cần nội dung rõ ràng hơn cho website, ghi chú hoặc tài liệu.",
+        "Những người xây dựng phản hồi hỗ trợ tự động cho trang web hoặc dịch vụ online.",
+        "Bất kỳ ai dùng web workflow nơi văn bản cần viết lại, tóm tắt, làm sạch hoặc định dạng.",
       ],
       examples: [
         "Input: mở /next/orders_once/text_workflow. Output: hiển thị bài với tiêu đề, mô tả, section đầy đủ.",

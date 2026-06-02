@@ -69,6 +69,7 @@ type OrdersContentProps = {
   readerValueText: string;
   conclusionTitle: string;
   conclusionText: string;
+  textWorkflowSetupGuide: string;
 };
 
 function renderTextBlocks(text: string) {
@@ -96,6 +97,73 @@ function renderTextBlocks(text: string) {
         </p>
       );
     });
+}
+
+function renderMarkdownSection(text: string) {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const blocks: Array<
+    | { type: "heading"; text: string }
+    | { type: "paragraph"; text: string }
+    | { type: "list"; items: string[] }
+  > = [];
+  let currentList: string[] = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      blocks.push({ type: "list", items: currentList });
+      currentList = [];
+    }
+  };
+
+  lines.forEach((line) => {
+    if (line.startsWith("### ")) {
+      flushList();
+      blocks.push({ type: "heading", text: line.replace(/^###\s+/, "") });
+      return;
+    }
+
+    if (line.startsWith("- ")) {
+      currentList.push(line.replace(/^-\s+/, ""));
+      return;
+    }
+
+    flushList();
+    blocks.push({ type: "paragraph", text: line });
+  });
+
+  flushList();
+
+  return blocks.map((block, index) => {
+    if (block.type === "heading") {
+      return (
+        <h3 key={`setup-heading-${index}`} className="pt-1 text-base font-bold text-slate-900">
+          {block.text}
+        </h3>
+      );
+    }
+
+    if (block.type === "list") {
+      return (
+        <ul
+          key={`setup-list-${index}`}
+          className="list-disc space-y-1.5 pl-6 sm:pl-7 text-[16px] leading-[1.7] text-slate-700 marker:text-sky-600"
+        >
+          {block.items.map((item, itemIndex) => (
+            <li key={`setup-list-item-${index}-${itemIndex}`}>{item}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p key={`setup-paragraph-${index}`} className="text-[16px] leading-[1.7] text-slate-700">
+        {block.text}
+      </p>
+    );
+  });
 }
 
 export default function OrdersContent(props: OrdersContentProps) {
@@ -148,8 +216,11 @@ export default function OrdersContent(props: OrdersContentProps) {
     readerValueText,
     conclusionTitle,
     conclusionText,
+    textWorkflowSetupGuide,
   } = props;
   const [isLiked, setIsLiked] = useState(false);
+  const showTextWorkflowSetupGuide =
+    activeTool === "text_workflow" && textWorkflowSetupGuide.trim().length > 0;
 
   const getArticleUriTail = () => {
     try {
@@ -272,6 +343,17 @@ export default function OrdersContent(props: OrdersContentProps) {
               ))}
             </ul>
           </div>
+
+          {showTextWorkflowSetupGuide ? (
+            <div id="section-setup-guide" className="mt-4 border-t border-slate-200/80 pt-3">
+              <h2 className="text-lg font-bold text-slate-900">
+                Module Setup Guide
+              </h2>
+              <div className="mt-2 space-y-3 pl-0.5 sm:pl-1">
+                {renderMarkdownSection(textWorkflowSetupGuide)}
+              </div>
+            </div>
+          ) : null}
 
           <div id="section-notes" className="mt-4 border-t border-slate-200/80 pt-3">
             <h2 className="text-lg font-bold text-slate-900">
