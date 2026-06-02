@@ -62,7 +62,7 @@ export default function DocsCodeBlock({
   };
 
   return (
-    <div className="my-2.5 overflow-hidden rounded-xl border border-slate-300/80 bg-white/70 text-slate-900 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
+    <div className="mx-4 my-2.5 overflow-hidden rounded-xl border border-slate-300/80 bg-white/70 text-slate-900 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
       <div
         className={[
           "flex items-center justify-between gap-3 border-b border-slate-300/80 px-[9px]",
