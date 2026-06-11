@@ -9,6 +9,8 @@ export type RelatedPostItem = {
   uri?: string;
   title?: string;
   description?: string;
+  createdate?: string;
+  tips_hash_name?: string;
   thumbnail_image?: string;
   image?: string;
 };
@@ -57,6 +59,9 @@ export async function getOrdersPostMeta(
         uri: typeof item?.uri === "string" ? item.uri : "",
         title: typeof item?.title === "string" ? item.title : "",
         description: typeof item?.description === "string" ? item.description : "",
+        createdate: typeof item?.createdate === "string" ? item.createdate : "",
+        tips_hash_name:
+          typeof item?.tips_hash_name === "string" ? item.tips_hash_name : "",
         thumbnail_image: typeof item?.thumbnail_image === "string" ? item.thumbnail_image : "",
         image: typeof item?.image === "string" ? item.image : "",
       }))

@@ -1,0 +1,159 @@
+---
+title: How the Text-to-Speech Logic Works for Vietnamese
+---
+
+## Module Setup Guide
+
+AI modules can be built in many ways. This section uses only `module_tts` as a simple example, so the setup flow is easier to understand. It covers environment setup, module building, model preparation, and service launch.
+
+### Step 1: Set up the module environment
+
+This article focuses on the `Text-to-Speech` workflow, so environment setup is covered briefly. For full backend setup, refer to the related guide. The `module_tts` service uses a separate `Conda` environment with `Torch`, `Transformers`, and other `TTS` runtime dependencies.
+
+```bash
+conda create -n module_tts python=3.11 -y
+conda activate module_tts
+```
+
+Next, install the `Python` packages needed for `Flask` service handling and `F5-TTS` processing.
+
+```bash
+pip install flask flask-cors python-dotenv torch pydub
+```
+
+After this step, the environment is ready for building the `Flask` module.
+
+### Step 2: Build the module
+
+After the environment is ready, place the demo package in your project directory and configure its local settings. It includes the `Flask` structure, the `F5-TTS` handler, runtime configuration, and the `/module_tts` route.
+
+The demo package for this module is available as the `module_tts.zip` package.
+
+First, extract the package into your selected project directory, then open the module folder and create a local `.env` file from the sample configuration.
+
+```bash
+unzip module_tts.zip -d <Project_Path>
+cd <Project_Path>/module_tts
+cp .env.example .env
+```
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/text_speech_1.png"
+    alt="Text to speech module package setup"
+    className="rounded-xl"
+    style={{ width: "80%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Package extraction and local .env setup for the module.
+  </figcaption>
+</figure>
+
+Then, update `.env` with your own project path, cache path, output path, `F5 CLI` path, reference audio path, checkpoint path, vocab path, and available service port.
+
+```dotenv
+MODULE_TTS_HOST=0.0.0.0
+MODULE_TTS_PORT=<YOUR_PORT>
+MODULE_TTS_CONDA_ENV=<YOUR_CONDA_ENV_PATH>
+MODULE_TTS_F5_CLI=<YOUR_CONDA_ENV_PATH>\Scripts\f5-tts_infer-cli.exe
+MODULE_TTS_CACHE=<YOUR_MODEL_CACHE_PATH>
+MODULE_TTS_OUTPUT_DIR=<Project_Path>\module_tts\output
+MODULE_TTS_F5_REF_AUDIO=<Project_Path>\tts\F5_vie\ref_4.wav
+MODULE_TTS_F5_VOCAB_FILE=<Project_Path>\tts\F5_vie\data\your_training_dataset\vocab.txt
+MODULE_TTS_F5_CKPT_FILE=<Project_Path>\tts\F5_vie\ckpts\your_training_dataset\model_500000.pt
+MODULE_TTS_F5_SPEED=0.5
+```
+
+After these values match your machine, the module is ready to be launched as a local backend service.
+
+### Step 3: Start the Module Service
+
+From the module folder, start the service with the main entry file, or use the helper runner when you want the module to launch through the configured runtime.
+
+```bash
+python home.py   # starts the Flask module service directly
+# or
+python run.py    # starts the module through the configured runtime settings
+```
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/text_speech_2.png"
+    alt="Text to speech module service startup"
+    className="rounded-xl"
+    style={{ width: "80%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Starting the module service through the configured runtime.
+  </figcaption>
+</figure>
+
+When the service is running, test the `/module_tts` endpoint with a simple request.
+
+```bash
+curl "http://127.0.0.1:<YOUR_PORT>/module_tts?text=hello"
+```
+
+If the response returns a valid `JSON` result with generated `wav_path` and `mp3_path`, the backend module is ready to connect with the frontend.
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/text_speech_3.png"
+    alt="Text to speech module endpoint test"
+    className="rounded-xl"
+    style={{ width: "85%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Verifying the module tts endpoint in Postman.
+  </figcaption>
+</figure>
+
+## Short description for the article card
+
+This article explains how my current `text-to-speech` pipeline works, from request validation and text normalization to `F5-TTS` inference, waveform generation, and `MP3` export. It focuses on the AI synthesis logic, local runtime assets, and practical limits of the current version, with Vietnamese used as the working example. The diagram below shows the AI TTS logic.
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.tecom.pro/img/tip_news/text_speech_5.png"
+    alt="Text-to-Speech AI logic diagram"
+    className="rounded-xl"
+    style={{ width: "90%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Text-to-Speech AI logic and runtime flow.
+  </figcaption>
+</figure>
+
+## Article body
+
+My current `TTS` module runs inside `<Project_Path>/demo/module_run/module_tts/` and exposes a single `GET` or `POST` `/module_tts` endpoint on `0.0.0.0:<YOUR_PORT>`. `Flask` works as a thin transport layer: it receives text from query parameters, form data, or `JSON`, validates that the input is not empty, calls the synthesis function, and returns a `JSON` payload with the generated audio file paths. The request is processed synchronously, so this version does not stream audio directly or use a background queue.
+
+The actual synthesis path is `F5_vie` only. Before the AI runtime starts, the module rewrites numeric strings into Vietnamese words so short notes, quantities, and operational text sound more natural. For example, `Xin chào 123` is prepared as `Xin chào một trăm hai mươi ba` before it reaches voice generation. This simple preprocessing improves pronunciation because the model receives text closer to spoken Vietnamese instead of raw numeric tokens.
+
+After normalization, the service resolves the `f5-tts_infer-cli` executable from `MODULE_TTS_F5_CLI`, the configured `Conda` environment, or the active `Python` environment. It then launches the `F5` runtime with `F5TTS_Base`, the `vocos` vocoder, speed `0.5`, a fixed local reference audio file, fixed reference text, `vocab.txt`, and the `model_500000.pt` checkpoint. The reference audio and reference text provide speaker conditioning, while the normalized request text becomes the generation target. The result is written as `WAV` in the configured output directory, then converted to `MP3` through `pydub`.
+
+Inside the AI runtime, the process is deeper than a shell wrapper. The CLI-side stack loads the model definition, vocabulary, checkpoint, and vocoder backend; applies speaker conditioning; prepares the generation text; runs the sampling path; and decodes the final waveform from the acoustic representation. In the broader `F5` stack, text segmentation, conditioning, vocoder decoding, and waveform assembly are all part of the synthesis logic, even though this module exposes them through a single CLI call. The main tradeoff is that this build depends on local runtime assets and fixed output filenames, so concurrent requests would need stronger output isolation in a future revision.
+
+## Technical configuration snapshot
+
+- Runtime: `Python` `Flask` server on `0.0.0.0:<YOUR_PORT>`
+- Main route: `GET` or `POST` `/module_tts`
+- Voice engine: `F5_vie` only
+- CLI: `f5-tts_infer-cli`
+- Model: `F5TTS_Base`
+- Vocoder: `vocos`
+- Speed: `0.5`
+- Reference audio: `ref_4.wav`
+- Reference text: fixed local conditioning text
+- Vocabulary: `vocab.txt`
+- Checkpoint: `model_500000.pt`
+- Export: `WAV` to `MP3` via `pydub`
+- Output: `JSON` with `wav_path` and `mp3_path`

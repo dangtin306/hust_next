@@ -9,6 +9,7 @@ type OrdersProcessProps = {
   activeTool: ToolKey;
   routeRoot: "plans" | "orders_once";
   relatedInsights?: RelatedPostItem[];
+  hasSetupGuide?: boolean;
   showToc?: boolean;
   showUtilities?: boolean;
   showUtilitiesOnMobile?: boolean;
@@ -20,6 +21,7 @@ const OrdersProcess = ({
   activeTool,
   routeRoot,
   relatedInsights = [],
+  hasSetupGuide = false,
   showToc = true,
   showUtilities = true,
   showUtilitiesOnMobile = true,
@@ -35,7 +37,7 @@ const OrdersProcess = ({
     { id: "section-feedback", en: "Reader Value & Conclusion", vi: "Reader Value & Conclusion" },
   ];
   const displayTocItems =
-    activeTool === "text_workflow"
+    hasSetupGuide
       ? [
           tocItems[0],
           tocItems[1],
@@ -89,6 +91,16 @@ const OrdersProcess = ({
             const title = String(item?.title || "").trim();
             const description = String(item?.description || "").trim();
             const image = String(item?.thumbnail_image || item?.image || "").trim();
+            const hashName =
+              String(item?.tips_hash_name || "").trim() || "Hust Media";
+            const dateRaw = String(item?.createdate || "").trim();
+            const dateLabel = dateRaw
+              ? (() => {
+                  const parsed = new Date(dateRaw.replace(" ", "T"));
+                  if (Number.isNaN(parsed.getTime())) return dateRaw;
+                  return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+                })()
+              : "";
             const isActive = activeTool === uri;
             const href = routeRoot === "orders_once" ? `/next/orders_once/${uri}` : `/ai/plans/${uri}`;
             const key = String(item?.id || uri);
@@ -129,6 +141,49 @@ const OrdersProcess = ({
                       {description}
                     </div>
                   </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  {dateLabel ? (
+                    <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="mr-1 shrink-0"
+                      >
+                        <path
+                          d="M7.5 2.75v2.5M16.5 2.75v2.5M3.75 8.75h16.5M6 4.75h12A2.25 2.25 0 0 1 20.25 7v11A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V7A2.25 2.25 0 0 1 6 4.75Z"
+                          stroke="currentColor"
+                          strokeWidth="1.7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      {dateLabel}
+                    </span>
+                  ) : null}
+                  <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className="mr-1 shrink-0"
+                    >
+                      <path
+                        d="M10.25 4.75H6.75A2.25 2.25 0 0 0 4.5 7v4.043a2.25 2.25 0 0 0 .659 1.591l5.707 5.707a2.25 2.25 0 0 0 3.182 0l4.293-4.293a2.25 2.25 0 0 0 0-3.182l-5.909-5.909a2.25 2.25 0 0 0-1.591-.659Z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="8.25" cy="8.25" r="1.1" fill="currentColor" />
+                    </svg>
+                    {hashName}
+                  </span>
                 </div>
               </Link>
             );

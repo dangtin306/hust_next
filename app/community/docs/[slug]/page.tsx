@@ -5,12 +5,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { cloneElement, isValidElement, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
-import DocsCodeBlock from "./DocsCodeBlock";
+import { DocsMdxPre } from "./DocsCodeBlock";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -54,6 +54,8 @@ type DocSummary = {
   description: string;
   order: number;
   thumbnail: string;
+  createdate: string;
+  tips_hash_name: string;
 };
 
 type TocItem = {
@@ -117,47 +119,6 @@ function splitFrontmatter(source: string): {
     frontmatter,
     content: lines.slice(endIndex + 1).join("\n"),
   };
-}
-
-function trimCodeBlockChildren(children: ReactNode) {
-  if (!isValidElement<{ children?: ReactNode; className?: string }>(children)) {
-    return children;
-  }
-
-  const rawChildren = children.props.children;
-  const normalizedClassName = [
-    children.props.className,
-    "m-0 block border-0 bg-transparent p-0 text-inherit before:content-none after:content-none",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  if (typeof rawChildren === "string") {
-    return cloneElement(children, {
-      className: normalizedClassName,
-      children: rawChildren.replace(/^\n+|\n+$/g, ""),
-    });
-  }
-
-  if (Array.isArray(rawChildren)) {
-    const normalizedChildren = rawChildren
-      .map((child, index) => {
-      if (typeof child !== "string") return child;
-      if (index === 0) return child.replace(/^\n+/, "");
-      if (index === rawChildren.length - 1) return child.replace(/\n+$/, "");
-      return child;
-      })
-      .filter((child, index, array) => !(typeof child === "string" && child.length === 0 && (index === 0 || index === array.length - 1)));
-
-    return cloneElement(children, {
-      className: normalizedClassName,
-      children: normalizedChildren,
-    });
-  }
-
-  return cloneElement(children, {
-    className: normalizedClassName,
-  });
 }
 
 function extractTitleFromContent(content: string, slug: string) {
@@ -306,7 +267,9 @@ async function getDocList(): Promise<DocSummary[]> {
           const thumbnail =
             String(apiMeta?.thumbnail_image || apiMeta?.image || "").trim() ||
             defaultDocThumbnail;
-          return { slug, title, description, order, thumbnail };
+          const createdate = String(apiMeta?.createdate || "").trim();
+          const tips_hash_name = String(apiMeta?.tips_hash_name || "").trim() || "Hust Media";
+          return { slug, title, description, order, thumbnail, createdate, tips_hash_name };
         })
     );
 
@@ -472,28 +435,7 @@ export default async function DocPage({
       );
     },
     pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
-      (() => {
-        const rawCode = getNodeText(children ?? "").trim();
-        const isSingleLine = rawCode.length > 0 && !rawCode.includes("\n");
-        const normalizedChildren = trimCodeBlockChildren(children);
-        const codeClassName =
-          isValidElement<{ className?: string }>(children) && typeof children.props.className === "string"
-            ? children.props.className
-            : "";
-        const languageMatch = /(?:^|\s)language-([a-zA-Z0-9_-]+)/.exec(codeClassName);
-        const language = languageMatch?.[1]?.trim() || "";
-        return (
-          <DocsCodeBlock
-            {...props}
-            className={props.className}
-            code={rawCode}
-            language={language}
-            isSingleLine={isSingleLine}
-          >
-            {normalizedChildren}
-          </DocsCodeBlock>
-        );
-      })()
+      <DocsMdxPre {...props}>{children}</DocsMdxPre>
     ),
     img: ({ alt, ...props }: ComponentPropsWithoutRef<"img">) => (
       // eslint-disable-next-line @next/next/no-img-element
@@ -507,14 +449,21 @@ export default async function DocPage({
 
   const docsPanel = (
     <section className="rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
-      <h2 className="mt-2 text-center text-lg font-semibold text-slate-800">
-        Docs
+      <h2 className="mt-2 mb-2 text-center text-lg font-semibold text-slate-800">
+        Related Insights
       </h2>
       <nav className="mt-4 space-y-2">
         {nav.map((item) => {
           const isActive = item.slug === slug;
           const baseClass =
             "block rounded-xl border p-2.5 no-underline transition";
+          const dateLabel = item.createdate
+            ? (() => {
+                const parsed = new Date(item.createdate.replace(" ", "T"));
+                if (Number.isNaN(parsed.getTime())) return item.createdate;
+                return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
+              })()
+            : "";
 
           return (
             <Link
@@ -549,6 +498,49 @@ export default async function DocPage({
                     {item.description}
                   </div>
                 </div>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                {dateLabel ? (
+                  <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                      className="mr-1 shrink-0"
+                    >
+                      <path
+                        d="M7.5 2.75v2.5M16.5 2.75v2.5M3.75 8.75h16.5M6 4.75h12A2.25 2.25 0 0 1 20.25 7v11A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V7A2.25 2.25 0 0 1 6 4.75Z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {dateLabel}
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    className="mr-1 shrink-0"
+                  >
+                    <path
+                      d="M10.25 4.75H6.75A2.25 2.25 0 0 0 4.5 7v4.043a2.25 2.25 0 0 0 .659 1.591l5.707 5.707a2.25 2.25 0 0 0 3.182 0l4.293-4.293a2.25 2.25 0 0 0 0-3.182l-5.909-5.909a2.25 2.25 0 0 0-1.591-.659Z"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="8.25" cy="8.25" r="1.1" fill="currentColor" />
+                  </svg>
+                  {item.tips_hash_name}
+                </span>
               </div>
             </Link>
           );

@@ -36,131 +36,10 @@ export type ToolNoteContent = {
   shortDescription: string;
   articleBody: string[];
   technicalSnapshot: string[];
+  setupGuide?: string;
 };
 
 export const ALLOWED_TOOLS = new Set(["speech_text", "text_speech", "image_text", "translate_vi_en", "text_workflow"] as const);
-
-export const toolNotesByKey: Record<ToolKey, ToolNoteContent> = {
-  text_speech: {
-    title: "How My Vietnamese Text-to-Speech Pipeline Runs on a Flask AI Server",
-    shortDescription:
-      "This article explains how my Vietnamese Text-to-Speech module works on a Flask-based AI server, from request routing and model selection to waveform generation and MP3 export. It also outlines the current runtime settings, voice generation flow, and a few practical limits in the version I am using now.",
-    articleBody: [
-      "My Text-to-Speech module runs on a Python Flask AI server inside /opt/hustmedia/python/. The service is exposed on 0.0.0.0:8789, and the main POST /tts route works as a dispatcher between two Vietnamese TTS engines: a local F5-based pipeline and an alternative path based on facebook/mms-tts-vie. The API requires a non-empty text field, reads a servicecode, and falls back to the F5 engine unless the request explicitly asks for the Facebook path. In the current version, the request is processed synchronously and the API returns a success payload rather than streaming the audio directly.",
-      "The main voice generation path is F5_vie. Before synthesis begins, the module converts numeric strings into Vietnamese words so phone numbers, quantities, and short operational text sound more natural. The server then calls f5-tts_infer-cli with a fixed reference voice file, the F5TTS_Base model, speed 0.5, the vocos vocoder, a local vocabulary file, and the checkpoint model_500000.pt. After inference, the generated WAV file is converted to MP3 with pydub and saved to /opt/hustmedia/python/tts/output/output.mp3.",
-      "Inside the F5 pipeline, the processing flow is more than a simple wrapper call. The CLI loads its config, model backbone, and checkpoint, preprocesses the reference audio by trimming silence and adding about 50 ms of padding, and can infer missing reference text with Whisper. The generation text is then split into batches, normalized, resampled to 24 kHz, and passed through the sampling path before the waveform is decoded by the vocoder. When multiple chunks are produced, they are joined with a default cross-fade of 0.15 seconds to reduce audible breaks.",
-      "I also keep a second engine based on facebook/mms-tts-vie. In this path, the tokenizer and model are loaded from Hugging Face, the text is converted into a waveform, and the result is exported through the same output pipeline. This version is useful as an alternative engine, but in the current code it reloads the model on each request, so latency and memory usage can vary more than a persistent in-memory design. Both engines also write to the same output MP3 path, which means concurrent requests need tighter output isolation in future revisions.",
-    ],
-    technicalSnapshot: [
-      "Runtime: Python Flask server on 0.0.0.0:8789",
-      "Main route: POST /tts",
-      "Default engine: F5_vie",
-      "Alternate engine: facebook/mms-tts-vie",
-      "Model path: F5TTS_Base",
-      "Vocoder: vocos",
-      "Checkpoint: model_500000.pt",
-      "Speed: 0.5",
-      "Audio resample target: 24 kHz",
-      "Chunk merge: 0.15 s cross-fade",
-      "Export: WAV to MP3 via pydub",
-    ],
-  },
-  speech_text: {
-    title: "How My Vietnamese Speech-to-Text Pipeline Runs on a Flask AI Server",
-    shortDescription:
-      "This article explains how my Speech-to-Text module processes Vietnamese audio on a Flask AI server, from file input and waveform normalization to transcription output. It also outlines the current model choice, API behavior, and practical runtime limits.",
-    articleBody: [
-      "My Speech-to-Text module runs on the same Python Flask AI server used for the other media utilities in this workflow. The main API entry point is GET/POST /wav2vec2, served through Flask on port 8789. In the current version, the endpoint reads an audio path from form data or query parameters, and if no path is provided, it falls back to a default local file. The response returns JSON with status, transcript, and the processed file path.",
-      "The transcription engine is based on the Hugging Face model khanhld/wav2vec2-base-vietnamese-160h. Both the processor and model are loaded once when the module starts, rather than reloading on every request. The runtime device is selected automatically, using GPU when CUDA is available and CPU otherwise. This keeps repeated requests more stable, although it also means the service keeps a memory footprint while running.",
-      "For audio processing, the file is loaded with librosa, converted to mono, and resampled to 16 kHz, which matches the model input. A normalized intermediate WAV file can also be written to /opt/hustmedia/python/tts/wav2vec2/run.wav for inspection or reuse. Before inference, the waveform is converted to float32, checked to avoid empty input, and normalized by peak amplitude.",
-      "Once prepared, the audio is tokenized with sampling_rate=16000 and passed through the model under torch.no_grad(). The output logits are decoded with greedy CTC argmax, then converted into text with batch_decode. In its current form, this module does not use beam search, VAD chunking, or language-model rescoring, so long files are still processed in one pass and may increase latency or memory usage.",
-      "This module is mainly intended for practical Vietnamese transcription tasks such as voice notes, support logs, internal updates, and simple content preparation. It is not designed as a full enterprise ASR platform, but as a working in-house component that I built and maintain for my own workflow.",
-    ],
-    technicalSnapshot: [
-      "Server runtime: Flask on port 8789",
-      "Main endpoint: GET/POST /wav2vec2",
-      "STT model: khanhld/wav2vec2-base-vietnamese-160h",
-      "Device selection: automatic GPU / CPU",
-      "Input normalization: mono audio, 16 kHz",
-      "Intermediate WAV path: /opt/hustmedia/python/tts/wav2vec2/run.wav",
-      "Decode method: greedy CTC argmax",
-      "Inference mode: torch.no_grad()",
-      "Current limitation: no chunking, no VAD, no beam search",
-    ],
-  },
-  image_text: {
-    title: "How My Image-to-Text Module Works in a Rule-Based OCR Workflow",
-    shortDescription:
-      "This article explains how my Image-to-Text workflow extracts text from screenshots through a local OCR pipeline, from screen capture and region detection to text extraction and post-checking. It also outlines the OCR stack, processing rules, and practical limits.",
-    articleBody: [
-      "My current Image-to-Text workflow is built around a local OCR pipeline rather than a general upload-and-read service. In the repo under /opt/hustmedia/python/, the working path uses local Tesseract OCR, while PaddleOCR and EasyOCR only appear as external service references, not as full OCR logic in this codebase.",
-      "The flow starts with a Selenium script that opens the target chat interface and saves a screenshot as screenshot.png. A second script then processes that image with pytesseract, using the fixed Tesseract binary at /opt/hustmedia/application/Tesseract-OCR/tesseract.exe. Before OCR runs, the image is cropped to the expected chat area, then refined by detecting a gray edge region to isolate the relevant message area.",
-      "The pipeline detects candidate text boxes using contour detection on an Otsu-thresholded image. The boxes are merged by row and horizontal spacing, then filtered with rules for gray regions, uniform backgrounds, and a LINE_THRESHOLD step that removes noisy rows. Instead of reading the whole image, the script keeps only the lowest valid box, expands it with PAD = 5, and runs OCR on that region with pytesseract.image_to_string(..., --psm 7). The extracted text and coordinates are then written to center.json.",
-      "This means the current module is not a broad OCR engine for all image types. It is a rule-based OCR workflow designed for a specific chat-style UI, where the goal is to capture the final relevant text line rather than read the full screenshot. That makes it practical for controlled verification tasks, but also dependent on layout consistency.",
-      "After OCR, the workflow reads center.json, applies a computer-vision check for a red heart icon, and when needed, sends the extracted text into a lightweight classification step before writing the final check_content result back to JSON. This gives the module both an extraction layer and a validation layer.",
-      "At the current stage, the main Flask AI server does not expose a direct public /ocr or /image2text endpoint. So this module should be understood as a working internal OCR component with specific UI-oriented logic, not yet as a universal OCR API.",
-    ],
-    technicalSnapshot: [
-      "OCR stack: local Tesseract OCR",
-      "Python wrapper: pytesseract",
-      "Tesseract binary: /opt/hustmedia/application/Tesseract-OCR/tesseract.exe",
-      "Screenshot source: Selenium capture to screenshot.png",
-      "Region output: chat_region.png",
-      "OCR target: lowest valid filtered text box",
-      "Threshold method: Otsu",
-      "OCR mode: --psm 7",
-      "Padding value: PAD = 5",
-      "Output file: center.json",
-      "Extra validation: CV rule check + content classification",
-      "Current limitation: no direct public OCR endpoint",
-    ],
-  },
-  translate_vi_en: {
-    title: "How My Vietnamese-to-English Module Runs on a Flask AI Server",
-    shortDescription:
-      "This article explains how my Vietnamese-to-English module runs on a Flask AI server, from route dispatch and model loading to text and HTML translation output. It also outlines the current translation direction, runtime flow, and practical limits.",
-    articleBody: [
-      "My Vietnamese-to-English module runs inside the current Flask server, not as a separate public app. In the repo, the server adds the translate directory to sys.path, and the /translate route dispatches requests through translate_fb(...), which maps to main(...) in translate/server_4.py. The route reads content and category from form or query input and does not parse JSON body data.",
-      "The wrapper is fixed to Vietnamese-to-English by default. In server_4.py, the main entry uses src_lang=\"vi\" and tgt_lang=\"en\", and the /translate route does not override them. Because of that, requests sent to /translate follow one default direction unless the code is changed.",
-      "Translation uses facebook/nllb-200-distilled-600M. The tokenizer is loaded globally once, while the model pipeline is lazy-loaded through _get_pipeline() with a lock to avoid race conditions during first initialization. This lets later requests reuse the same pipeline in memory.",
-      "Language direction is enforced through the NLLB language map and generation settings. Vietnamese maps to vie_Latn, English to eng_Latn, the tokenizer source language is set before generation, and output is forced by forced_bos_token_id. This keeps the module returning English output when the target remains en.",
-      "For normal text, the module preserves leading and trailing spacing, translates only the stripped core content, and returns the original input unchanged if the text is empty after stripping. For HTML, it parses the document with BeautifulSoup, skips nodes such as script, style, and source, translates valid text nodes in batch, then writes them back while preserving node spacing. If category is not html, the dispatcher falls back to the text path.",
-      "The translation path also has limits. Input is truncated at max_length=512, output is capped by max_new_tokens=50, and long content can be cut on both sides. Cache and temp paths are moved to drive F: by default, or to HUSTMEDIA_AI_CACHE if that environment variable is set. The model normally stays in memory for faster reuse, but if TRANSLATE_RESET_EACH_CALL=1 is enabled, the pipeline resets and cleans memory after each request.",
-    ],
-    technicalSnapshot: [
-      "Server route: /translate",
-      "Route input: content, category from form/query",
-      "Main wrapper: main(content, src_lang=\"vi\", tgt_lang=\"en\", category=\"text\")",
-      "Translation model: facebook/nllb-200-distilled-600M",
-      "Source language map: vi -> vie_Latn",
-      "Target language map: en -> eng_Latn",
-      "Direction control: forced_bos_token_id",
-      "Text mode: translate stripped core, preserve outer spacing",
-      "HTML mode: BeautifulSoup parse + batch text-node translation",
-      "Input limit: max_length=512",
-      "Output limit: max_new_tokens=50",
-      "Cache path: F: or HUSTMEDIA_AI_CACHE",
-      "Optional reset mode: TRANSLATE_RESET_EACH_CALL=1",
-      "Current limitation: fixed VI -> EN, no JSON POST parsing, invalid target may return 500",
-    ],
-  },
-  text_workflow: {
-    title: "Hello World Workflow Note",
-    shortDescription:
-      "A lightweight example note used to validate route wiring, article rendering, and footer actions end-to-end.",
-    articleBody: [
-      "Hello world from text_workflow. This note exists to verify that the new URI route is correctly connected in the Orders Once flow.",
-      "The page reuses the same layout, section structure, TOC behavior, and related action footer used by other tools, so no separate rendering logic is needed.",
-      "In practice, this is a safe smoke-test entry for validating navigation, metadata fallback, and client-side interactions before adding a full production article.",
-    ],
-    technicalSnapshot: [
-      "Route: /next/orders_once/text_workflow",
-      "Type: content and routing smoke test",
-      "Rendering: shared OrdersHome + OrdersContent pipeline",
-      "Persistence: localStorage-based footer like action",
-    ],
-  },
-};
 
 export const seoByTool: Record<ToolKey, Record<Lang, SeoItem>> = {
   text_speech: {
@@ -233,7 +112,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Practical Notes",
       summary: [
         "Text-to-Speech (TTS) is a Digital Suite module that converts text into natural-sounding audio for documentation, guides, narration, and workflow output. It sits after text preparation and before audio export, helping websites reuse content for accessibility, media tasks, and structured delivery.\n\n- Technical context: This workflow includes text input, request handling, model processing, and audio export.\n\n- Technical benefit: It reduces manual recording work, keeps audio output consistent, and makes written content easier to reuse.",
-        "In 2024, after joining a media company project, I built this Text-to-Speech module for practical audio generation. It used speech synthesis models on a dedicated Flask AI server, standardized paths like /opt/hustmedia/python, and environment-based configurations, later serving as a blueprint for AI-driven media processing in scalable architectures. Common use cases come next.",
+        "In 2024, after joining a media company project, I built this Text-to-Speech module for practical audio generation. It used a Conda-based AI runtime with Torch, CUDA, and GPU acceleration for heavier inference. The setup later became a blueprint for scalable AI-driven media processing. Common use cases come next.",
       ],
       audience: [
         "People who want to turn written content into clear audio for websites, guides, or notes.",
@@ -264,7 +143,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Ghi chú thực tế",
       summary: [
         "Text-to-Speech (TTS) là một mô-đun Digital Suite chuyển văn bản thành âm thanh tự nhiên cho tài liệu, hướng dẫn, thuyết minh và đầu ra workflow. Nó nằm sau bước chuẩn bị văn bản và trước bước xuất âm thanh, giúp website tái sử dụng nội dung cho trợ năng, tác vụ media và phân phối có cấu trúc.\n\n- Bối cảnh kỹ thuật: Workflow này gồm nhập văn bản, xử lý request, xử lý bằng model và xuất âm thanh.\n\n- Lợi ích kỹ thuật: Nó giảm công việc thu âm thủ công, giữ đầu ra âm thanh nhất quán và giúp nội dung văn bản dễ tái sử dụng hơn.",
-        "Năm 2024, sau khi tham gia một dự án media company, tôi xây dựng mô-đun Text-to-Speech này để tạo âm thanh thực tế. Mô-đun dùng các model tổng hợp giọng nói trên một Flask AI server riêng, các path chuẩn như /opt/hustmedia/python và cấu hình theo môi trường, sau đó trở thành blueprint cho xử lý media bằng AI trong kiến trúc có khả năng mở rộng. Các use case phổ biến nằm ở phần tiếp theo.",
+        "Năm 2024, sau khi tham gia một dự án media company, tôi xây dựng mô-đun Text-to-Speech này để tạo âm thanh thực tế. Mô-đun dùng runtime AI dựa trên Conda với Torch, CUDA và tăng tốc GPU cho các tác vụ suy luận nặng hơn. Cách setup này sau đó trở thành blueprint cho xử lý media bằng AI trong kiến trúc có khả năng mở rộng. Các use case phổ biến nằm ở phần tiếp theo.",
       ],
       audience: [
         "Những người muốn chuyển nội dung viết thành audio rõ ràng cho website, hướng dẫn hoặc ghi chú.",
@@ -297,7 +176,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Practical Notes",
       summary: [
         "Speech-to-Text (STT) is a Digital Suite module that converts audio into structured text for notes, reports, support logs, and searchable records. It sits after audio upload and before text review or reuse, helping websites turn voice input into cleaner output for documentation and workflow support.\n\n- Technical context: This workflow includes audio input, speech recognition, text cleanup, and transcript export.\n\n- Technical benefit: It reduces manual note-taking, improves review, and makes spoken information reusable.",
-        "The implementation leverages advanced speech recognition on a dedicated Flask AI server. It utilizes standardized server-side structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a blueprint for developers integrating AI-driven transcription into high-traffic, scalable architectures.",
+        "In 2024, while building the Text-to-Speech module, I realized a complete media web system needed the reverse flow too. This Speech-to-Text module converts speech audio into structured text using Conda, Torch, CUDA, and GPU acceleration for heavier transcription. It later became a blueprint for scalable AI-driven audio-to-text processing. Common use cases come next.",
       ],
       audience: [
         "Users who need clear text from voice recordings for notes or records.",
@@ -328,7 +207,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Ghi chú thực tế",
       summary: [
         "Speech-to-Text (STT) là một mô-đun Digital Suite chuyển âm thanh thành văn bản có cấu trúc cho ghi chú, báo cáo, support log và bản ghi có thể tìm kiếm. Nó nằm sau bước upload âm thanh và trước bước review hoặc tái sử dụng văn bản, giúp website biến đầu vào giọng nói thành đầu ra sạch hơn cho tài liệu và hỗ trợ workflow.\n\n- Bối cảnh kỹ thuật: Workflow này gồm đầu vào âm thanh, nhận dạng giọng nói, làm sạch văn bản và xuất transcript.\n\n- Lợi ích kỹ thuật: Nó giảm việc ghi chú thủ công, cải thiện bước review và giúp thông tin nói có thể tái sử dụng.",
-        "Phần triển khai dùng nhận dạng giọng nói nâng cao trên một Flask AI server riêng. Nó sử dụng cấu trúc server-side chuẩn như /opt/hustmedia/python và cấu hình theo môi trường. Thiết lập này đóng vai trò như một blueprint cho developer tích hợp transcription bằng AI vào kiến trúc có lưu lượng cao và khả năng mở rộng.",
+        "Năm 2024, trong lúc xây dựng mô-đun Text-to-Speech, tôi nhận ra một hệ media web hoàn chỉnh cũng cần luồng ngược lại. Mô-đun Speech-to-Text này chuyển audio giọng nói thành văn bản có cấu trúc bằng Conda, Torch, CUDA và tăng tốc GPU cho các tác vụ transcription nặng hơn. Sau đó nó trở thành blueprint cho xử lý audio-to-text bằng AI trong kiến trúc có khả năng mở rộng. Các use case phổ biến nằm ở phần tiếp theo.",
       ],
       audience: [
         "Người dùng cần văn bản rõ ràng từ bản ghi âm để ghi chú hoặc lưu hồ sơ.",
@@ -361,7 +240,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Practical Notes",
       summary: [
         "This Image-to-Text (OCR) microservice is engineered for the HUST Media ecosystem. Designed for scalable platforms, it extracts structured text from unstructured image data. As a core pipeline component, it automates document processing and indexing for production environments.",
-        "Leveraging advanced OCR models on a dedicated Flask AI server, the module uses standardized server-side structures (e.g., /opt/hustmedia/python) and environment-based configurations. This setup serves as a blueprint for integrating AI-driven analysis into high-traffic, scalable architectures.",
+        "Leveraging advanced OCR models on a dedicated Flask AI server, the module uses standardized server-side structures (e.g., <Project_Path>/python/module_tts) and environment-based configurations. This setup serves as a blueprint for integrating AI-driven analysis into high-traffic, scalable architectures.",
       ],
       audience: [
         "Developers integrating automated OCR capabilities into high-traffic document processing pipelines.",
@@ -423,7 +302,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       practical: "Practical Notes",
       summary: [
         "This VI-to-EN translation module is a high-performance microservice in the HUST Media ecosystem. Built for scalable platforms, it translates Vietnamese text and HTML content into English. As a core pipeline component, it automates content localization for production environments.",
-        "Implementation leverages advanced translation models via a dedicated Flask AI server. It utilizes standardized server structures (e.g., /opt/hustmedia/python) and supports both raw text and HTML parsing. This setup serves as a blueprint for integrating AI-driven localization into high-traffic, scalable architectures.",
+        "Implementation leverages advanced translation models via a dedicated Flask AI server. It utilizes standardized server structures (e.g., <Project_Path>/python/module_tts) and supports both raw text and HTML parsing. This setup serves as a blueprint for integrating AI-driven localization into high-traffic, scalable architectures.",
       ],
       audience: [
         "Developers integrating automated VI-to-EN translation into high-traffic content pipelines.",

@@ -1,0 +1,129 @@
+---
+title: How My Vietnamese Speech-to-Text Pipeline Runs on a Flask AI Server
+---
+
+## Module Setup Guide
+
+AI modules can be built in many ways. This section uses `module_stt` as a simple example so the setup flow is easier to follow. It covers environment setup, model preparation, and service launch.
+
+### Step 1: Set up the module environment
+
+This article focuses on the `Speech-to-Text` workflow, so environment setup is kept brief. The `module_stt` service uses a separate `Conda` environment with `Torch`, `Transformers`, and audio processing dependencies.
+
+```bash
+conda create -n module_stt python=3.10 -y
+conda activate module_stt
+```
+
+Next, install the `Python` packages needed for waveform loading, resampling, and `wav2vec2` inference.
+
+```bash
+pip install flask flask-cors python-dotenv torch transformers librosa soundfile
+```
+
+After this step, the environment is ready for the `STT` module.
+
+### Step 2: Build the module
+
+After the environment is ready, place the demo package in your project directory and configure its local settings. It includes the module structure, the `Speech-to-Text` handler, runtime configuration, and the `/module_stt` route.
+
+The demo package for this module is available as the `module_stt.zip` package.
+
+First, extract the package into your selected project directory, then open the module folder and create a local `.env` file from the sample configuration.
+
+```bash
+unzip module_stt.zip -d <Project_Path>
+cd <Project_Path>/module_stt
+cp .env.example .env
+```
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/speech_text_2.png"
+    alt="Speech to text module package setup"
+    className="rounded-xl"
+    style={{ width: "80%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Package extraction and local .env setup for the module.
+  </figcaption>
+</figure>
+
+Then, update `.env` with your own project path, cache path, between-audio path, transcript output path, default input audio path, model name, and available service port.
+
+```dotenv
+MODULE_STT_HOST=0.0.0.0
+MODULE_STT_PORT=<YOUR_PORT>
+MODULE_STT_CONDA_ENV=<YOUR_CONDA_ENV_PATH>
+MODULE_STT_CACHE=<YOUR_MODEL_CACHE_PATH>
+MODULE_STT_BETWEEN_DIR=<Project_Path>\module_stt\between
+MODULE_STT_OUTPUT_DIR=<Project_Path>\module_stt\output
+MODULE_STT_BETWEEN_AUDIO_PATH=<Project_Path>\module_stt\between\between.wav
+MODULE_STT_TRANSCRIPT_OUTPUT_PATH=<Project_Path>\module_stt\output\transcript.txt
+MODULE_STT_DEFAULT_AUDIO_PATH=<Project_Path>\module_stt\input\input.wav
+MODULE_STT_MODEL_NAME=khanhld/wav2vec2-base-vietnamese-160h
+```
+
+After these values match your machine, the module is ready to be launched as a local backend service.
+
+### Step 3: Start the Module Service
+
+From the module folder, start the service with the main entry file, or use the helper runner when you want the module to launch through the configured runtime.
+
+```bash
+python home.py   # starts the Flask module service directly
+# or
+python run.py    # starts the module through the configured runtime settings
+```
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/speech_text_3.png"
+    alt="Speech to text module service startup"
+    className="rounded-xl"
+    style={{ width: "80%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Starting the module service through the configured runtime.
+  </figcaption>
+</figure>
+
+When the service is running, test the `/wav2vec2` endpoint with a simple request.
+
+```bash
+curl "http://127.0.0.1:<YOUR_PORT>/wav2vec2?path=<Project_Path>/python/module_tts/tts/wav2vec2/run.wav"
+```
+
+If the response returns a valid `JSON` result with the transcript and processed file path, the backend module is ready to connect with the frontend.
+
+## Short description for the article card
+
+This article explains how my `Speech-to-Text` module processes Vietnamese audio on a `Flask` AI server, from file input and waveform normalization to transcription output. It also outlines the current model choice, `API` behavior, and practical runtime limits.
+
+## Article body
+
+My `Speech-to-Text` module runs on the same `Python` `Flask` AI server used for the other media utilities in this workflow. The main `API` entry point is `GET`/`POST` `/wav2vec2`, served through `Flask` on port `8789`. In the current version, the endpoint reads an audio path from form data or query parameters, and if no path is provided, it falls back to a default local file. The response returns `JSON` with status, transcript, and the processed file path.
+
+The transcription engine is based on the Hugging Face model `khanhld/wav2vec2-base-vietnamese-160h`. Both the processor and model are loaded once when the module starts, rather than reloading on every request. The runtime device is selected automatically, using `GPU` when `CUDA` is available and `CPU` otherwise. This keeps repeated requests more stable, although it also means the service keeps a memory footprint while running.
+
+For audio processing, the file is loaded with `librosa`, converted to mono, and resampled to `16 kHz`, which matches the model input. A normalized intermediate `WAV` file can also be written to `<Project_Path>/python/module_tts/tts/wav2vec2/run.wav` for inspection or reuse. Before inference, the waveform is converted to `float32`, checked to avoid empty input, and normalized by peak amplitude.
+
+Once prepared, the audio is tokenized with `sampling_rate=16000` and passed through the model under `torch.no_grad()`. The output logits are decoded with greedy `CTC argmax`, then converted into text with `batch_decode`. In its current form, this module does not use beam search, `VAD` chunking, or language-model rescoring, so long files are still processed in one pass and may increase latency or memory usage.
+
+This module is mainly intended for practical Vietnamese transcription tasks such as voice notes, support logs, internal updates, and simple content preparation. It is not designed as a full enterprise ASR platform, but as a working in-house component that I built and maintain for my own workflow.
+
+## Technical configuration snapshot
+
+- Server runtime: `Flask` on port `8789`
+- Main endpoint: `GET`/`POST` `/wav2vec2`
+- STT model: `khanhld/wav2vec2-base-vietnamese-160h`
+- Device selection: automatic `GPU` / `CPU`
+- Input normalization: mono audio, `16 kHz`
+- Intermediate `WAV` path: `<Project_Path>/python/module_tts/tts/wav2vec2/run.wav`
+- Decode method: greedy `CTC argmax`
+- Inference mode: `torch.no_grad()`
+- Current limitation: no chunking, no `VAD`, no beam search

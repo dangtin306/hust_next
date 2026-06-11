@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useState } from "react";
+import { RenderMdx } from "@/app/shop/ai/render_mdx";
 
 type RelatedItem = { label: string };
 type ActiveContent = {
@@ -69,7 +70,7 @@ type OrdersContentProps = {
   readerValueText: string;
   conclusionTitle: string;
   conclusionText: string;
-  textWorkflowSetupGuide: string;
+  setupGuide: string;
 };
 
 function renderTextBlocks(text: string) {
@@ -84,7 +85,7 @@ function renderTextBlocks(text: string) {
       return (
         <p
           key={`${block.slice(0, 24)}-${index}`}
-          className={index === 0 ? "pl-0.5 sm:pl-1" : "mt-0.5 pl-0.5 sm:pl-1"}
+          className={index === 0 ? "pl-0.5 sm:pl-1" : "mt-1 pl-0.5 sm:pl-1"}
         >
           {labelMatch ? (
             <>
@@ -97,73 +98,6 @@ function renderTextBlocks(text: string) {
         </p>
       );
     });
-}
-
-function renderMarkdownSection(text: string) {
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  const blocks: Array<
-    | { type: "heading"; text: string }
-    | { type: "paragraph"; text: string }
-    | { type: "list"; items: string[] }
-  > = [];
-  let currentList: string[] = [];
-
-  const flushList = () => {
-    if (currentList.length > 0) {
-      blocks.push({ type: "list", items: currentList });
-      currentList = [];
-    }
-  };
-
-  lines.forEach((line) => {
-    if (line.startsWith("### ")) {
-      flushList();
-      blocks.push({ type: "heading", text: line.replace(/^###\s+/, "") });
-      return;
-    }
-
-    if (line.startsWith("- ")) {
-      currentList.push(line.replace(/^-\s+/, ""));
-      return;
-    }
-
-    flushList();
-    blocks.push({ type: "paragraph", text: line });
-  });
-
-  flushList();
-
-  return blocks.map((block, index) => {
-    if (block.type === "heading") {
-      return (
-        <h3 key={`setup-heading-${index}`} className="pt-1 text-base font-bold text-slate-900">
-          {block.text}
-        </h3>
-      );
-    }
-
-    if (block.type === "list") {
-      return (
-        <ul
-          key={`setup-list-${index}`}
-          className="list-disc space-y-1.5 pl-6 sm:pl-7 text-[16px] leading-[1.7] text-slate-700 marker:text-sky-600"
-        >
-          {block.items.map((item, itemIndex) => (
-            <li key={`setup-list-item-${index}-${itemIndex}`}>{item}</li>
-          ))}
-        </ul>
-      );
-    }
-
-    return (
-      <p key={`setup-paragraph-${index}`} className="text-[16px] leading-[1.7] text-slate-700">
-        {block.text}
-      </p>
-    );
-  });
 }
 
 export default function OrdersContent(props: OrdersContentProps) {
@@ -216,12 +150,9 @@ export default function OrdersContent(props: OrdersContentProps) {
     readerValueText,
     conclusionTitle,
     conclusionText,
-    textWorkflowSetupGuide,
+    setupGuide,
   } = props;
   const [isLiked, setIsLiked] = useState(false);
-  const showTextWorkflowSetupGuide =
-    activeTool === "text_workflow" && textWorkflowSetupGuide.trim().length > 0;
-
   const getArticleUriTail = () => {
     try {
       const path = String(window.location.pathname || "");
@@ -320,7 +251,7 @@ export default function OrdersContent(props: OrdersContentProps) {
             <div className="text-lg font-bold leading-snug text-slate-900">
               {activeContent.heading}
             </div>
-            <div className="mt-2 text-[16px] leading-[1.7] text-slate-700">
+            <div className="mt-2 text-[15px] leading-6 text-slate-700">
               {renderTextBlocks(activeContent.summary[0] || "")}
               {activeContent.practical && activeContent.summary[1] ? (
                 <div id="section-practical-notes" className="mt-4 border-t border-slate-200/80 pt-3">
@@ -337,65 +268,28 @@ export default function OrdersContent(props: OrdersContentProps) {
             <h2 className="text-lg font-bold text-slate-900">
               {lang === "vi" ? "Ai nên dùng mô-đun này?" : "Who should use this module?"}
             </h2>
-            <ul className="mt-2 list-disc space-y-1.5 pl-6 sm:pl-7 text-[16px] leading-[1.7] text-slate-700 marker:text-sky-600">
+            <div className="mt-2 space-y-1 text-[15px] leading-[22px] text-slate-700">
               {activeContent.audience.map((item: string, idx: number) => (
-                <li key={idx}>{item}</li>
+                <div key={idx} className="relative pl-5 sm:pl-6">
+                  <div className="absolute left-1.5 top-[10px] h-[5px] w-[5px] rounded-full bg-emerald-500/90" />
+                  <div>{item}</div>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
 
-          {showTextWorkflowSetupGuide ? (
-            <div id="section-setup-guide" className="mt-4 border-t border-slate-200/80 pt-3">
+          <RenderMdx activeNotes={activeNotes} setupGuide={setupGuide} lang={lang} />
+
+          {!activeNotes && !setupGuide.trim() ? (
+            <div id="section-notes" className="mt-4 border-t border-slate-200/80 pt-3">
               <h2 className="text-lg font-bold text-slate-900">
-                Module Setup Guide
+                {lang === "vi" ? "Bài viết liên quan" : "Related Articles"}
               </h2>
-              <div className="mt-2 space-y-3 pl-0.5 sm:pl-1">
-                {renderMarkdownSection(textWorkflowSetupGuide)}
+              <div className="mt-2 pl-0.5 sm:pl-1 text-sm leading-relaxed text-slate-700">
+                {activeContent.related.map((item) => item.label).join(". ")}.
               </div>
             </div>
           ) : null}
-
-          <div id="section-notes" className="mt-4 border-t border-slate-200/80 pt-3">
-            <h2 className="text-lg font-bold text-slate-900">
-              {activeNotes?.title || (lang === "vi" ? "Bài viết liên quan" : "Related Articles")}
-            </h2>
-            {activeNotes ? (
-              <div className="mt-2 pl-0.5 sm:pl-1 space-y-4 break-words text-[16px] leading-[1.7] text-slate-700 [overflow-wrap:anywhere]">
-                <div className="pt-1">
-                  <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
-                    Short description for the article card
-                  </div>
-                  <div className="mt-1">{activeNotes.shortDescription}</div>
-                </div>
-
-                <div className="border-t border-slate-200/80 pt-3">
-                  <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
-                    Article body
-                  </div>
-                  <div className="mt-1 space-y-2">
-                    {activeNotes.articleBody.map((paragraph: string, idx: number) => (
-                      <p key={`note-body-${idx}`}>{paragraph}</p>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-200/80 pt-3">
-                  <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-600">
-                    Technical configuration snapshot
-                  </div>
-                  <ul className="mt-2 space-y-2.5 rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[14px] leading-7 text-slate-700 sm:columns-2 sm:gap-6">
-                    {activeNotes.technicalSnapshot.map((line: string, idx: number) => (
-                      <li key={`note-tech-${idx}`}>{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-2 pl-0.5 sm:pl-1 text-sm leading-relaxed text-slate-700">
-                  {activeContent.related.map((item) => item.label).join(". ")}.
-              </div>
-            )}
-          </div>
         </div>
       </section>
 
@@ -407,26 +301,29 @@ export default function OrdersContent(props: OrdersContentProps) {
           <h3 className="mt-2 text-lg font-bold leading-snug text-slate-900">
             Module Usage Guide
           </h3>
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 space-y-1">
             {moduleUsageGuideBlocks.map((block, idx) =>
               block.type === "paragraph" ? (
-                <p key={`guide-p-${idx}`} className="text-[16px] leading-[1.7] text-slate-700">
+                <p key={`guide-p-${idx}`} className="text-[15px] leading-6 text-slate-700">
                   {block.text}
                 </p>
               ) : (
-                <ol
+                <div
                   key={`guide-ul-${idx}`}
-                  className="list-decimal list-outside space-y-2 rounded-lg border-l-2 border-slate-200 pl-7 pr-1 text-[16px] leading-[1.7] text-slate-700 marker:font-semibold marker:text-slate-500"
+                  className="space-y-1 rounded-lg border-l-2 border-slate-200 pl-7 pr-1 text-[15px] leading-6 text-slate-700"
                 >
                   {block.items.map((item, itemIdx) => (
-                    <li
+                    <div
                       key={`guide-li-${idx}-${itemIdx}`}
-                      className="pl-2 leading-[1.7] [text-wrap:pretty]"
+                      className="relative pl-7 leading-6 [text-wrap:pretty]"
                     >
+                      <span className="absolute left-0 top-0 font-semibold text-slate-500">
+                        {itemIdx + 1}.
+                      </span>
                       {item}
-                    </li>
+                    </div>
                   ))}
-                </ol>
+                </div>
               )
             )}
           </div>
@@ -836,22 +733,22 @@ export default function OrdersContent(props: OrdersContentProps) {
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.09em] text-slate-500">
           {lang === "vi" ? "Ghi Chú Kết" : "Closing Notes"}
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-1">
           <h3 className="text-lg font-bold leading-snug text-slate-900">
             {readerValueTitle}
           </h3>
-          <p className="pl-1 sm:pl-1.5 text-[16px] leading-[1.7] text-slate-700">
+          <p className="pl-1 sm:pl-1.5 text-[15px] leading-6 text-slate-700">
             {readerValueText}
           </p>
         </div>
 
         <div className="my-4 border-t border-slate-200/75" />
 
-        <div id="section-conclusion" className="space-y-2 mb-1">
+        <div id="section-conclusion" className="space-y-1 mb-1">
           <h3 className="text-lg font-bold leading-snug text-slate-900">
             {conclusionTitle}
           </h3>
-          <p className="pl-1 sm:pl-1.5 text-[16px] leading-[1.7] text-slate-600">
+          <p className="pl-1 sm:pl-1.5 text-[15px] leading-6 text-slate-600">
             {conclusionText}
           </p>
         </div>

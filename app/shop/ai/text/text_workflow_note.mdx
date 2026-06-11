@@ -1,0 +1,77 @@
+---
+title: Hello World Workflow Note
+---
+
+## Short description for the article card
+
+A lightweight example note used to validate route wiring, article rendering, and footer actions end-to-end.
+
+## Article body
+
+Hello world from text_workflow. This note exists to verify that the new URI route is correctly connected in the Orders Once flow.
+
+The page reuses the same layout, section structure, TOC behavior, and related action footer used by other tools, so no separate rendering logic is needed.
+
+In practice, this is a safe smoke-test entry for validating navigation, metadata fallback, and client-side interactions before adding a full production article.
+
+## Technical configuration snapshot
+
+- Route: /next/orders_once/text_workflow
+- Type: content and routing smoke test
+- Rendering: shared OrdersHome + OrdersContent pipeline
+- Persistence: localStorage-based footer like action
+
+## Module Setup Guide
+
+This module runs through a controlled local server setup where the web client sends text input to a Flask API, and the API forwards the request to Antigravity CLI running inside an Ubuntu virtual machine.
+
+### Step 1: Prepare the Windows host
+
+The Windows machine is used as the main control environment. OpenClaw is installed on Windows first, then it connects to the Ubuntu virtual machine through SSH for management and execution. Open PowerShell on Windows and run:
+
+```bash
+iwr -useb https://openclaw.ai/install.ps1 | iex
+openclaw --version
+openclaw doctor
+openclaw gateway status
+```
+
+This installs OpenClaw on Windows, prepares Node if needed, and lets you verify that the local control environment is ready before moving to Ubuntu. On the Ubuntu side, the goal in this step is not to explain installation, but to show the main startup flow: boot the VMware guest, wait for VMware Tools, run a guest test command, then prepare SSH forwarding from Windows.
+
+```python
+VMX_PATH = r"C:\Users\Administrator\Documents\Virtual Machines\Ubuntu_2\Ubuntu_2.vmx"
+VMRUN = r"D:\hustmedia\application\vm_ware\vmrun.exe"
+
+open_vmware_ui(vm_gui, vmx)
+time.sleep(2)
+start_vm(vmrun, vmx)
+print(f"Waiting {BOOT_WAIT_SECONDS}s for boot...")
+time.sleep(BOOT_WAIT_SECONDS)
+
+ready = wait_tools(vmrun, vmx)
+```
+
+After the VM is up and VMware Tools responds, Windows can execute a simple guest-side check and then prepare SSH forwarding to Ubuntu:
+
+```python
+GUEST_USER = "hustmedia"
+GUEST_PASS = "12345678"
+GUEST_CMD = "echo auto_login_ok > /tmp/auto_login_check.txt"
+SSH_FORWARD_PORT = 9800
+SSH_TARGET_PORT = 22
+
+if ready:
+    run([
+        vmrun, "-gu", GUEST_USER, "-gp", GUEST_PASS,
+        "runScriptInGuest", vmx_path, "/bin/bash", GUEST_CMD,
+    ], timeout=20)
+
+guest_ip = getGuestIPAddress
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9800 connectaddress=<guest_ip> connectport=22
+```
+
+At that point, Windows can treat the Ubuntu VM as a reachable execution target for SSH-based maintenance and for the runtime steps that follow below. Once the Ubuntu VM is running and reachable over SSH, continue with the runtime preparation below.
+
+### Step 2: Install Antigravity CLI and the Flask API server
+
+In this step, Ubuntu is used as the runtime side where Antigravity CLI and the Flask API server are installed and prepared together. After the VM is reachable, Python dependencies are set up, the CLI environment is verified, and the Flask service is configured so the API can start reliably whenever the Ubuntu runtime is launched from the Windows host.

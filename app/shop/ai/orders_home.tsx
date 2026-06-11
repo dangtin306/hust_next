@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { alert_error, alert_success } from "@/app/AppContext";
-import { ALLOWED_TOOLS, contentByTool, seoByTool, toolNotesByKey, type Lang, type ToolKey } from "./orders_data";
+import { ALLOWED_TOOLS, contentByTool, seoByTool, type Lang, type ToolKey, type ToolNoteContent } from "./orders_data";
 import type { OrdersPostMetaResponse } from "./orders_api_data";
 import OrdersProcess from "./orders_process";
 import OrdersContent from "./orders_content";
@@ -12,7 +12,7 @@ type OrdersHomeProps = {
   slug_2?: string;
   initialPostsApiData?: OrdersPostMetaResponse | null;
   initialLang?: Lang;
-  textWorkflowSetupGuide?: string;
+  initialToolNote?: ToolNoteContent | null;
 };
 type TtsApiResponse = {
   error?: string;
@@ -58,7 +58,7 @@ const OrdersHome = ({
   slug_2: slug2Prop,
   initialPostsApiData = null,
   initialLang = "en",
-  textWorkflowSetupGuide = "",
+  initialToolNote = null,
 }: OrdersHomeProps = {}) => {
   const slug_1 = slug1Prop || "";
   const slug_2 = slug2Prop || "";
@@ -147,7 +147,7 @@ const OrdersHome = ({
 
   const activeSeo = activeTool ? seoByTool[activeTool][lang] : null;
   const activeContent = activeTool ? contentByTool[activeTool][lang] : null;
-  const activeNotes = activeTool ? toolNotesByKey[activeTool] : null;
+  const activeNotes = initialToolNote;
   const routeRoot = slug_1 === "plans" ? "plans" : "orders_once";
   const writtenDateLabel = lang === "vi" ? "Ngày viết:" : "Written date:";
   const articleTitle = String(postsApiData?.title || "");
@@ -604,6 +604,7 @@ const OrdersHome = ({
                 routeRoot={routeRoot}
                 relatedInsights={relatedInsights}
                 showUtilitiesOnMobile={false}
+                hasSetupGuide={Boolean(activeNotes?.setupGuide?.trim())}
               />
 
           <div className="min-w-0 flex-1 space-y-3">
@@ -656,7 +657,7 @@ const OrdersHome = ({
               readerValueText={readerValueText}
               conclusionTitle={conclusionTitle}
               conclusionText={conclusionText}
-              textWorkflowSetupGuide={textWorkflowSetupGuide}
+              setupGuide={activeNotes?.setupGuide || ""}
             />
 
             <div className="mt-4 mb-2 rounded-2xl border border-slate-200/75 bg-white/80 px-4 py-3 shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
@@ -700,6 +701,7 @@ const OrdersHome = ({
                 routeRoot={routeRoot}
                 relatedInsights={relatedInsights}
                 showToc={false}
+                hasSetupGuide={Boolean(activeNotes?.setupGuide?.trim())}
               />
             </div>
           </div>
