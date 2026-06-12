@@ -219,7 +219,8 @@ const buildGuideBlocks = (text: string): MdxBlock[] => {
 };
 
 const renderInlineText = (text: string) => {
-  const parts = text.split(/(`[^`]+`)/g).filter(Boolean);
+  const tokenRegex = /(`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+  const parts = text.split(tokenRegex).filter(Boolean);
 
   if (parts.length === 0) {
     return null;
@@ -235,6 +236,22 @@ const renderInlineText = (text: string) => {
         >
           {codeText}
         </span>
+      );
+    }
+
+    const linkMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (linkMatch) {
+      const [, label, href] = linkMatch;
+      return (
+        <a
+          key={`inline-link-${index}-${href}`}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="text-pink-600 underline decoration-pink-400 underline-offset-2 transition hover:text-pink-700"
+        >
+          {label}
+        </a>
       );
     }
 
@@ -311,7 +328,7 @@ const renderGuideBlocks = (text: string) => {
     return (
       <div
         key={`guide-paragraph-${index}`}
-        className="mx-1.5 mt-1 text-[15px] leading-6 text-slate-700"
+        className="mt-2 px-1.5 text-[15px] leading-6 text-slate-700"
       >
         {renderInlineText(block.text)}
       </div>
@@ -383,7 +400,7 @@ const renderMdxText = (text: string, keyPrefix: string) => {
     }
 
     return (
-      <div key={`${keyPrefix}-paragraph-${index}`} className="mx-1.5 mt-1 text-[15px] leading-6 text-slate-700">
+      <div key={`${keyPrefix}-paragraph-${index}`} className="mt-2 px-1.5 text-[15px] leading-6 text-slate-700">
         {renderInlineText(block.text)}
       </div>
     );

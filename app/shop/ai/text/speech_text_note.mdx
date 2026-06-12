@@ -1,5 +1,5 @@
 ---
-title: How My Vietnamese Speech-to-Text Pipeline Runs on a Flask AI Server
+title: How the Speech-to-Text Logic Works for Vietnamese
 ---
 
 ## Module Setup Guide
@@ -27,7 +27,7 @@ After this step, the environment is ready for the `STT` module.
 
 After the environment is ready, place the demo package in your project directory and configure its local settings. It includes the module structure, the `Speech-to-Text` handler, runtime configuration, and the `/module_stt` route.
 
-The demo package for this module is available as the `module_stt.zip` package.
+The demo package for this module is available at: [Download Module SST](https://hust.media/api/content/module_zip/module_stt).
 
 First, extract the package into your selected project directory, then open the module folder and create a local `.env` file from the sample configuration.
 
@@ -100,25 +100,53 @@ curl "http://127.0.0.1:<YOUR_PORT>/wav2vec2?path=<Project_Path>/python/module_tt
 
 If the response returns a valid `JSON` result with the transcript and processed file path, the backend module is ready to connect with the frontend.
 
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/speech_text_4.png"
+    alt="Speech to text module endpoint verification"
+    className="rounded-xl"
+    style={{ width: "85%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Verifying the module sst endpoint in Postman.
+  </figcaption>
+</figure>
+
 ## Short description for the article card
 
-This article explains how my `Speech-to-Text` module processes Vietnamese audio on a `Flask` AI server, from file input and waveform normalization to transcription output. It also outlines the current model choice, `API` behavior, and practical runtime limits.
+This article explains how my `Speech-to-Text` module processes Vietnamese audio, from waveform loading and normalization to `CTC` decoding and text transcription. It also outlines the current model choice, runtime behavior, and practical limits of the audio pipeline I am using now. The diagram below shows the `SST` runtime flow.
+
+<figure className="my-4 text-center">
+  <img
+    src="https://hust.media/img/tip_news/speech_text_5.png"
+    alt="Speech-to-Text AI logic diagram"
+    className="rounded-xl"
+    style={{ width: "89%", height: "auto", display: "block", margin: "0 auto" }}
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption className="mt-1 text-xs text-slate-500">
+    Speech-to-Text AI logic and runtime flow.
+  </figcaption>
+</figure>
 
 ## Article body
 
-My `Speech-to-Text` module runs on the same `Python` `Flask` AI server used for the other media utilities in this workflow. The main `API` entry point is `GET`/`POST` `/wav2vec2`, served through `Flask` on port `8789`. In the current version, the endpoint reads an audio path from form data or query parameters, and if no path is provided, it falls back to a default local file. The response returns `JSON` with status, transcript, and the processed file path.
+My `Speech-to-Text` module is built around a simple Vietnamese `ASR` pipeline that turns an audio file into text through waveform preprocessing, tensor preparation, and `CTC` decoding. In the current version, the system reads audio from a local file path, prepares the waveform for inference, and returns the final transcript as plain text output. The focus of this module is the speech recognition path itself rather than a complex serving layer.
 
-The transcription engine is based on the Hugging Face model `khanhld/wav2vec2-base-vietnamese-160h`. Both the processor and model are loaded once when the module starts, rather than reloading on every request. The runtime device is selected automatically, using `GPU` when `CUDA` is available and `CPU` otherwise. This keeps repeated requests more stable, although it also means the service keeps a memory footprint while running.
+The transcription engine uses the Hugging Face model `khanhld/wav2vec2-base-vietnamese-160h`. Both the `Wav2Vec2Processor` and `Wav2Vec2ForCTC` model are loaded once when the module starts, instead of being recreated for each run. The runtime device is selected automatically, using `GPU` when `CUDA` is available and `CPU` otherwise. This makes repeated transcription more stable, although the process keeps model memory resident while it is active.
 
-For audio processing, the file is loaded with `librosa`, converted to mono, and resampled to `16 kHz`, which matches the model input. A normalized intermediate `WAV` file can also be written to `<Project_Path>/python/module_tts/tts/wav2vec2/run.wav` for inspection or reuse. Before inference, the waveform is converted to `float32`, checked to avoid empty input, and normalized by peak amplitude.
+For audio preparation, the file is loaded with `librosa`, converted to mono, and resampled to `16 kHz`, which matches the model input format. A normalized intermediate `WAV` file can also be written to `run.wav` for inspection or reuse. Before inference, the waveform is converted to `float32`, checked to avoid empty input, and normalized by peak amplitude so the tensor remains numerically stable for the model.
 
-Once prepared, the audio is tokenized with `sampling_rate=16000` and passed through the model under `torch.no_grad()`. The output logits are decoded with greedy `CTC argmax`, then converted into text with `batch_decode`. In its current form, this module does not use beam search, `VAD` chunking, or language-model rescoring, so long files are still processed in one pass and may increase latency or memory usage.
+Once prepared, the audio is passed into the processor with `sampling_rate=16000`, converted into input tensors, and sent through the model under `torch.no_grad()`. The model produces frame-level logits, which are decoded with greedy `CTC argmax` and then converted into text with `batch_decode`. In its current form, this module does not use beam search, `VAD` chunking, or language-model rescoring, so long recordings are still handled in one pass and may increase latency or memory usage.
 
-This module is mainly intended for practical Vietnamese transcription tasks such as voice notes, support logs, internal updates, and simple content preparation. It is not designed as a full enterprise ASR platform, but as a working in-house component that I built and maintain for my own workflow.
+This module is mainly intended for practical Vietnamese transcription tasks such as voice notes, internal recordings, support audio, and simple content preparation. It is not designed as a full `ASR` platform, but as a compact in-house component built around a direct and understandable speech recognition pipeline.
 
 ## Technical configuration snapshot
 
-- Server runtime: `Flask` on port `8789`
+- Server runtime: `Flask` on `<YOUR_PORT>`
 - Main endpoint: `GET`/`POST` `/wav2vec2`
 - STT model: `khanhld/wav2vec2-base-vietnamese-160h`
 - Device selection: automatic `GPU` / `CPU`
