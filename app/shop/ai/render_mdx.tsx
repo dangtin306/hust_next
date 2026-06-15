@@ -55,6 +55,13 @@ const parseStyleObject = (styleText: string | undefined): CSSProperties | undefi
   return Object.fromEntries(entries) as CSSProperties;
 };
 
+const buildImageStyle = (style: CSSProperties | undefined, width: string | undefined): CSSProperties => ({
+  width: width || "92%",
+  height: "auto",
+  aspectRatio: "auto 16 / 9",
+  ...style,
+});
+
 const buildGuideBlocks = (text: string): MdxBlock[] => {
   const lines = text.split("\n");
   const blocks: MdxBlock[] = [];
@@ -311,10 +318,11 @@ const renderGuideBlocks = (text: string) => {
           <img
             src={block.src}
             alt={block.alt}
-            style={block.imgStyle || { width: block.width || "92%" }}
+            style={buildImageStyle(block.imgStyle, block.width)}
             className={block.imgClassName || "mx-auto block rounded-xl"}
-            loading={block.loading || "lazy"}
-            decoding={block.decoding || "async"}
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
           />
           {block.caption ? (
             <figcaption className={block.captionClassName || "mt-1 text-xs text-slate-500"}>
@@ -385,10 +393,11 @@ const renderMdxText = (text: string, keyPrefix: string) => {
           <img
             src={block.src}
             alt={block.alt}
-            style={block.imgStyle || { width: block.width || "92%" }}
+            style={buildImageStyle(block.imgStyle, block.width)}
             className={block.imgClassName || "mx-auto block rounded-xl"}
-            loading={block.loading || "lazy"}
-            decoding={block.decoding || "async"}
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
           />
           {block.caption ? (
             <figcaption className={block.captionClassName || "mt-1 text-xs text-slate-500"}>
@@ -453,16 +462,11 @@ const renderMdxTextWithFigures = (text: string, keyPrefix: string) => {
           <img
             src={srcMatch[1]}
             alt={altMatch?.[1] || "Setup image"}
-            style={imgStyle || { width: widthMatch?.[1] || "92%" }}
+            style={buildImageStyle(imgStyle, widthMatch?.[1])}
             className={imgClassMatch?.[1] || "mx-auto block rounded-xl"}
-            loading={loadingMatch?.[1] === "eager" ? "eager" : "lazy"}
-            decoding={
-              decodingMatch?.[1] === "sync"
-                ? "sync"
-                : decodingMatch?.[1] === "auto"
-                  ? "auto"
-                  : "async"
-            }
+            loading="eager"
+            decoding="sync"
+            fetchPriority="high"
           />
           {captionMatch?.[1]?.trim() ? (
             <figcaption className={captionClassMatch?.[1] || "mt-1 text-xs text-slate-500"}>
