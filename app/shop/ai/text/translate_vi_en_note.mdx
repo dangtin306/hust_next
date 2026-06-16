@@ -8,17 +8,17 @@ This article explains how my Vietnamese-to-English module runs on a Flask AI ser
 
 ## Article body
 
-My Vietnamese-to-English module runs inside the current Flask server, not as a separate public app. In the repo, the server adds the translate directory to sys.path, and the /translate route dispatches requests through translate_fb(...), which maps to main(...) in translate/server_4.py. The route reads content and category from form or query input and does not parse JSON body data.
+My `Vietnamese-to-English` module runs inside the current `Flask` server, not as a separate public app. In the repo, the server adds the translate directory to sys.path, and the `/translate` route dispatches requests through translate_fb(...), which maps to main(...) in translate/server_4.py. The route reads content and category from form or query input and does not parse JSON body data.
 
-The wrapper is fixed to Vietnamese-to-English by default. In server_4.py, the main entry uses src_lang="vi" and tgt_lang="en", and the /translate route does not override them. Because of that, requests sent to /translate follow one default direction unless the code is changed.
+The wrapper is fixed to `Vietnamese-to-English` by default. In server_4.py, the main entry uses src_lang="vi" and tgt_lang="en", and the `/translate` route does not override them. Because of that, requests sent to `/translate` follow one default direction unless the code is changed.
 
-Translation uses facebook/nllb-200-distilled-600M. The tokenizer is loaded globally once, while the model pipeline is lazy-loaded through _get_pipeline() with a lock to avoid race conditions during first initialization. This lets later requests reuse the same pipeline in memory.
+Translation uses `facebook/nllb-200-distilled-600M`. The tokenizer is loaded globally once, while the model pipeline is lazy-loaded through `_get_pipeline()` with a lock to avoid race conditions during first initialization. This lets later requests reuse the same pipeline in memory.
 
-Language direction is enforced through the NLLB language map and generation settings. Vietnamese maps to vie_Latn, English to eng_Latn, the tokenizer source language is set before generation, and output is forced by forced_bos_token_id. This keeps the module returning English output when the target remains en.
+Language direction is enforced through the `NLLB` language map and generation settings. Vietnamese maps to vie_Latn, English to eng_Latn, the tokenizer source language is set before generation, and output is forced by `forced_bos_token_id`. This keeps the module returning English output when the target remains en.
 
-For normal text, the module preserves leading and trailing spacing, translates only the stripped core content, and returns the original input unchanged if the text is empty after stripping. For HTML, it parses the document with BeautifulSoup, skips nodes such as script, style, and source, translates valid text nodes in batch, then writes them back while preserving node spacing. If category is not html, the dispatcher falls back to the text path.
+For normal text, the module preserves leading and trailing spacing, translates only the stripped core content, and returns the original input unchanged if the text is empty after stripping. For HTML, it parses the document with `BeautifulSoup`, skips nodes such as script, style, and source, translates valid text nodes in batch, then writes them back while preserving node spacing. If category is not html, the dispatcher falls back to the text path.
 
-The translation path also has limits. Input is truncated at max_length=512, output is capped by max_new_tokens=50, and long content can be cut on both sides. Cache and temp paths are moved to drive F: by default, or to HUSTMEDIA_AI_CACHE if that environment variable is set. The model normally stays in memory for faster reuse, but if TRANSLATE_RESET_EACH_CALL=1 is enabled, the pipeline resets and cleans memory after each request.
+The translation path also has limits. Input is truncated at max_length=512, output is capped by max_new_tokens=50, and long content can be cut on both sides. Cache and temp paths are moved to drive F: by default, or to `HUSTMEDIA_AI_CACHE` if that environment variable is set. The model normally stays in memory for faster reuse, but if `TRANSLATE_RESET_EACH_CALL=1` is enabled, the pipeline resets and cleans memory after each request.
 
 ## Technical configuration snapshot
 

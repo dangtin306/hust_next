@@ -13,7 +13,10 @@ Hust Media System Overview introduces the **first note in this Engineering Notes
   <img
     src="https://hust.media/img/icon/system_overview_2.png"
     alt="Hust Media System Overview"
-    style={{ width: "92%", display: "block", margin: "0 auto" }}
+    style={{ width: "92%", height: "auto", aspectRatio: "auto 16 / 9", display: "block", margin: "0 auto" }}
+    loading="eager"
+    decoding="sync"
+    fetchPriority="high"
   />
   <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
     <em>This overview shows how the main notes connect across the platform.</em>
@@ -28,6 +31,8 @@ This overview also shows how the main notes connect across the platform. Use the
 - **Microservices** are organized by functional business logic.
 - **Hybrid delivery** uses **React** for real-time dashboards and **Next.js** for SEO/SSR documentation.
 
+---
+
 ## System Design Goals
 The system is designed around predictable scaling, low-latency processing, cleaner data flow, and stable operational behavior. These goals help the platform remain usable as more services, reports, and workflow records move through the same architecture.
 
@@ -36,6 +41,8 @@ The system is designed around predictable scaling, low-latency processing, clean
 - **Data Integrity**: Audit chain based on aliases and hashed links to trace data lineage.
 - **Threat Intelligence**: Anomaly detection module plus AI pipeline for data sanitization.
 - **Operational Efficiency**: Automated updates via Git, supporting on-premise and hybrid cloud deployment.
+
+---
 
 ## Architecture & Delivery Model
 The architecture separates user-facing interfaces, gateway routing, service logic, storage, and external integrations. This makes the platform easier to maintain because each layer has a clearer role and can be optimized without forcing the entire system to change at once.
@@ -70,6 +77,8 @@ render(view) -> state.sync(...) -> ui.update(...)
 
 MQTT/WebSocket keeps the real-time pipeline consistent between React and Next.
 
+---
+
 ## Data Pipeline & Verification Flow
 The data pipeline organizes incoming tasks, evidence, and status logs before they move deeper into verification and settlement. This makes each record easier to inspect, trace, and reuse across connected services.
 
@@ -79,6 +88,8 @@ The data pipeline organizes incoming tasks, evidence, and status logs before the
 - Settlement: allocate credits, exchange services, and update status.
 
 This pipeline is important because the platform does not treat input as isolated records. Each item can move through validation, verification, reward allocation, and operational tracking while keeping enough context for later review.
+
+---
 
 ## Core Modules & Reward Logic
 The platform is divided into core modules that handle community growth, evidence-based rating, safety verification, and internal reward flow. Each module has a focused role, but they all connect back to the same data and verification model.
@@ -126,6 +137,8 @@ Reward Points are an **internal currency**:
 - Credits fund new tasks to create a self-sustaining loop.
 - Alias/shortlinks are used to audit the full task chain.
 
+---
+
 ## API, Security & Integration
 The API layer connects service creation, data contracts, authentication, and infrastructure protection. This section groups request behavior and security controls together because both are part of the same integration boundary.
 
@@ -171,6 +184,8 @@ ingress:
     service: http://localhost:8794
   - service: http_status:404
 ```
+
+---
 
 ## Operations & Reliability
 Operational design keeps the system stable after deployment. This includes server setup, restart behavior, audit tracking, monitoring, and performance guardrails.

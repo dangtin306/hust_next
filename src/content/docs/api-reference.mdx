@@ -9,13 +9,19 @@ order: 4
 ## Introduction
 This note documents the current v3 API contract behind the platform utilities. It focuses on the shared gateway structure, service-based request routing, and the response handling rules used by the client so integration and operational behavior stay consistent over time.
 
+---
+
 ## Authentication
 All current utilities route through the same `v3` gateway and require an **API Key** in the JSON body. Requests use `Content-Type: application/json`, while routing is handled by `service` and payload structure rather than separate endpoints for each utility.
+
+---
 
 ## Endpoint
 `POST /api/v3`
 
 This endpoint is the shared submission layer for the current utilities. In the client flow, each request starts with `action: "add"`, `username: ""`, a normalized `national_market` value (`"vi"` or `"en"`), and a utility-specific `service` id.
+
+---
 
 ## Request Body
 The current client logic uses one common request contract and then adjusts a few fields per utility. Core fields include `action`, `key`, `username`, `national_market`, `service`, `link`, `comments`, and `quantity`.
@@ -27,6 +33,8 @@ In practice, link, comments, and quantity are reused differently depending on th
 - Speech to Text sends audio as base64 data in `comments.voice_data`, with `quantity` derived from rounded audio duration.
 - Image to Text sends uploaded image data through `images_data`, with a fixed `quantity` of `1`.
 - Vietnamese to English sends trimmed source text through `comments`, with `quantity` based on trimmed character length.
+
+---
 
 ## Response Handling
 The client reads `response.text()` first, then attempts JSON parsing, and falls back to the raw text as a message when parsing fails. A request is treated as successful only when `response.ok` is true and the returned payload does not include an `error` field.
@@ -61,6 +69,8 @@ Content-Type: application/json
   "error": "quantity_less_than_min"
 }
 ```
+
+---
 
 ## Technical Notes
 All current utilities use the same v3 gateway. Requests are separated by service id and payload shape, not by different backend endpoints. The client also blocks repeated submissions at the start of each request flow to reduce duplicate sends.

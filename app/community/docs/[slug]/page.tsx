@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, type CSSProperties, type ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
@@ -69,6 +69,14 @@ const defaultDocThumbnail = "https://hust.media/img/credit_verification_thumbnai
 const docSlugAlias: Record<string, string> = {
   gamification: "validation-workflow",
 };
+
+const buildDocImageStyle = (style: CSSProperties | undefined): CSSProperties => ({
+  width: "92%",
+  maxWidth: "92%",
+  height: "auto",
+  aspectRatio: "auto 16 / 9",
+  ...style,
+});
 
 function slugToTitle(slug: string) {
   return slug
@@ -434,6 +442,26 @@ export default async function DocPage({
         </h3>
       );
     },
+    ul: ({ children, className, ...props }: ComponentPropsWithoutRef<"ul">) => (
+      <div
+        {...(props as ComponentPropsWithoutRef<"div">)}
+        className={[className, "my-2 space-y-2"].filter(Boolean).join(" ")}
+      >
+        {children}
+      </div>
+    ),
+    li: ({ children, className, ...props }: ComponentPropsWithoutRef<"li">) => (
+      <div
+        {...(props as ComponentPropsWithoutRef<"div">)}
+        className={[className, "relative pl-5 sm:pl-6 leading-[1.62] text-slate-700"].filter(Boolean).join(" ")}
+      >
+        <span
+          aria-hidden="true"
+          className="absolute left-1.5 top-[11px] h-[5px] w-[5px] rounded-full bg-emerald-500/90"
+        />
+        {children}
+      </div>
+    ),
     pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
       <DocsMdxPre {...props}>{children}</DocsMdxPre>
     ),
@@ -442,7 +470,11 @@ export default async function DocPage({
       <img
         {...props}
         alt={alt ?? ""}
-        className={[props.className, "mx-auto my-2 w-[92%] max-w-[92%]"].filter(Boolean).join(" ")}
+        style={buildDocImageStyle(props.style)}
+        className={[props.className, "mx-auto my-2"].filter(Boolean).join(" ")}
+        loading="eager"
+        decoding="sync"
+        fetchPriority="high"
       />
     ),
   };

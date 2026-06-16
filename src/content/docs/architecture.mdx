@@ -8,6 +8,8 @@ description: Hybrid UI core with Unified Data Contract, Dual Routing Mechanism, 
 ## Introduction
 This note outlines how the core hybrid architecture connects **ReactJS** and **NextJS** into one structured frontend system. It focuses on shared contracts, routing behavior, data flow, and performance control inside the platform.
 
+---
+
 ## Design Philosophy
 Core Engine implements a **Hybrid UI Architecture** based on the principle of "one logic, two presentation layers." **ReactJS** handles **high-interaction workflows** and **real-time UX**, while **NextJS** serves **SSR/SSG entry points** to optimize **SEO** and **first paint**. Both UI layers share the same **Unified Data Contract**, ensuring consistent rendering behavior without duplicating business rules.
 
@@ -26,6 +28,8 @@ Unified Data Contract (sample):
   "meta": { "ttl": 300, "version": "v2" }
 }
 ```
+
+---
 
 ## Data Flow Pipeline
 Data flows through the **API Gateway** and **Realtime Bus** (MQTT/WebSocket), and is **normalized** before entering the state store to maintain low **Real-time Latency** and synchronized UI updates.
@@ -51,6 +55,8 @@ flowchart LR
 if (route.public) -> Next Router (SSR/SSG)
 else -> React Router (SPA micro-flows)
 ```
+
+---
 
 ## Performance Optimization
 The system applies a **2-Layer Caching Strategy** to optimize throughput:

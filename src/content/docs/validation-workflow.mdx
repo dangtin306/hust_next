@@ -7,10 +7,36 @@ order: 6
 # Core Processing: Validation and Quality Workflow
 
 ## Introduction
-This note outlines how the platform evaluates **submission quality** before records move deeper into processing. The goal is to keep validation behavior consistent across different service flows, reduce unstable input states, and support more reliable downstream operation.
-All examples use sample fields and do not represent real user data.
+This workflow belongs to the validation layer of a web platform. It sits before deeper processing and controls how records are checked, filtered, and moved forward. You usually meet it when a website receives many records or user inputs that need consistent validation before later service flows.
+
+<span style={{ fontWeight: 700 }}>- Technical context:</span> This workflow covers input evaluation, automated validation, and quality control before deeper processing.
+
+<span style={{ fontWeight: 700 }}>- Technical benefit:</span> It improves record consistency, reduces unstable input states, and supports cleaner downstream flow.
+
+---
+
+## Practical Notes
+At the beginning of 2025, after entering a new relationship, I became more focused on keeping the system stable because I had less time to manually review large amounts of user input. That led me to build a more structured validation workflow so records could be checked earlier, filtered more consistently, and moved forward more safely. The diagram below shows the workflow more clearly.
+
+<div style={{ marginTop: "0.75rem" }}>
+  <img
+    src="https://hust.media/img/tip_news/validation_workflow_1.png"
+    alt="Validation workflow diagram"
+    style={{ width: "90%", height: "auto", aspectRatio: "auto 16 / 9", display: "block", margin: "0 auto" }}
+    loading="eager"
+    decoding="sync"
+    fetchPriority="high"
+  />
+  <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
+    <em>How validation and quality control guide records through review.</em>
+  </div>
+</div>
+
+---
 
 ## Input Evaluation Model
+After this brief technical overview, the first layer to examine is the input stage.
+
 Incoming data is treated as **structured input** inside a controlled workflow rather than as isolated submissions. The evaluation model checks **input category**, **completeness**, **validation confidence**, **timing behavior**, and **submission state** across JSON requests and evidence records from Web flows. In practice, fields such as user ID, task ID, service type, evidence type, metadata, and timestamps must remain consistent before the record moves forward, helping maintain stable processing quality across different flows and service conditions.
 
 A simplified evaluation model can be represented as:
@@ -96,8 +122,25 @@ LIMIT 10;
 
 This workflow helps maintain input quality while keeping the processing pipeline structured, scalable, and reliable for real operational use.
 
+---
+
 ## Operational Example
-A record with missing fields can stay in Pending Review. After structure, duplicate, and confidence checks pass, it can move into Processing and later reach the final result set.
+
+A record with a missing required field can remain in Pending Review after validation. Once the structure is valid, no duplicate is found, and the confidence checks pass, the record can move into Processing and later reach the final result set. The example below shows an incomplete record in Pending Review during validation.
+
+<div style={{ marginTop: "0.75rem" }}>
+  <img
+    src="https://hust.media/img/tip_news/validation_workflow_2.png"
+    alt="Pending Review validation example"
+    style={{ width: "85%", height: "auto", aspectRatio: "auto 16 / 9", display: "block", margin: "0 auto" }}
+    loading="eager"
+    decoding="sync"
+    fetchPriority="high"
+  />
+  <div style={{ textAlign: "center", marginTop: "0.25rem" }}>
+    <em>How an incomplete record returns Pending Review during validation.</em>
+  </div>
+</div>
 
 <div id="reader-value-conclusion" className="mt-3.5 rounded-lg border border-slate-200/70 bg-white/70 px-3.5 py-3">
   <div className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
