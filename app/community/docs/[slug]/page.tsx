@@ -11,6 +11,7 @@ import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
 import { DocsMdxPre } from "./DocsCodeBlock";
+import { DocsRelatedInsightsPanel } from "./page_pill";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -479,108 +480,6 @@ export default async function DocPage({
     ),
   };
 
-  const docsPanel = (
-    <section className="rounded-2xl border border-blue-100/80 bg-blue-50/90 px-3 py-3 text-left shadow-sm backdrop-blur-md">
-      <h2 className="mt-2 mb-2 text-center text-lg font-semibold text-slate-800">
-        Related Insights
-      </h2>
-      <nav className="mt-4 space-y-2">
-        {nav.map((item) => {
-          const isActive = item.slug === slug;
-          const baseClass =
-            "block rounded-xl border p-2.5 no-underline transition";
-          const dateLabel = item.createdate
-            ? (() => {
-                const parsed = new Date(item.createdate.replace(" ", "T"));
-                if (Number.isNaN(parsed.getTime())) return item.createdate;
-                return `${parsed.getMonth() + 1}/${parsed.getDate()}/${parsed.getFullYear()}`;
-              })()
-            : "";
-
-          return (
-            <Link
-              key={item.slug}
-              href={`/community/docs/${item.slug}`}
-              className={`${baseClass} ${
-                isActive
-                  ? "border-emerald-300/90 bg-emerald-100/55"
-                  : "border-blue-100/80 bg-blue-200/60 hover:border-blue-300/90 hover:bg-blue-200/80"
-              }`}
-            >
-              <div className="flex items-start gap-2.5">
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  loading="lazy"
-                  className="h-14 w-20 flex-none rounded-lg border border-blue-100/80 object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold leading-snug text-black">
-                    {item.title}
-                  </div>
-                  <div
-                    className="mt-1 text-xs leading-relaxed text-slate-500"
-                    style={{
-                      display: "-webkit-box",
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: "vertical",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {item.description}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-                {dateLabel ? (
-                  <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden="true"
-                      className="mr-1 shrink-0"
-                    >
-                      <path
-                        d="M7.5 2.75v2.5M16.5 2.75v2.5M3.75 8.75h16.5M6 4.75h12A2.25 2.25 0 0 1 20.25 7v11A2.25 2.25 0 0 1 18 20.25H6A2.25 2.25 0 0 1 3.75 18V7A2.25 2.25 0 0 1 6 4.75Z"
-                        stroke="currentColor"
-                        strokeWidth="1.7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    {dateLabel}
-                  </span>
-                ) : null}
-                <span className="inline-flex items-center rounded-full border border-slate-300/80 bg-slate-200/80 px-2 py-0.5 text-slate-600">
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                    className="mr-1 shrink-0"
-                  >
-                    <path
-                      d="M10.25 4.75H6.75A2.25 2.25 0 0 0 4.5 7v4.043a2.25 2.25 0 0 0 .659 1.591l5.707 5.707a2.25 2.25 0 0 0 3.182 0l4.293-4.293a2.25 2.25 0 0 0 0-3.182l-5.909-5.909a2.25 2.25 0 0 0-1.591-.659Z"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="8.25" cy="8.25" r="1.1" fill="currentColor" />
-                  </svg>
-                  {item.tips_hash_name}
-                </span>
-              </div>
-            </Link>
-          );
-        })}
-      </nav>
-    </section>
-  );
-
   return (
     <div className="relative min-h-screen bg-transparent text-slate-700">
       <div
@@ -602,7 +501,7 @@ export default async function DocPage({
               )}
 
               <div className="hidden lg:block">
-                {docsPanel}
+                <DocsRelatedInsightsPanel nav={nav} slug={slug} />
               </div>
             </div>
           </div>
@@ -623,7 +522,7 @@ export default async function DocPage({
             </div>
           </article>
           <div className="mt-2 lg:hidden">
-            {docsPanel}
+            <DocsRelatedInsightsPanel nav={nav} slug={slug} />
           </div>
           <DocsHelpfulFeedback />
         </main>
