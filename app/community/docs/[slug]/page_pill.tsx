@@ -67,17 +67,27 @@ function MetaPill({ label, Icon, className = "" }: MetaPillProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <div
-        className={`inline-flex items-center gap-1 rounded-full whitespace-nowrap border border-slate-300/80 bg-slate-200/80 px-2 py-2 text-slate-600 ${className}`.trim()}
+        className={`inline-flex items-center rounded-full whitespace-nowrap px-1.5 py-2 text-slate-600 ${className}`.trim()}
         style={{
-          lineHeight: 1,
-          paddingTop: 0,
-          paddingBottom: 0,
+          lineHeight: 1
         }}
       >
-        <Icon className="block h-3 w-3 shrink-0" />
-        <span className="block whitespace-nowrap text-[11px] leading-none">
-          {label}
-        </span>
+        <div className="flex items-center gap-1 whitespace-nowrap leading-none"
+          style={{
+            lineHeight: 1,
+            paddingTop: 0,
+            paddingBottom: 0,
+          }}>
+          <Icon className="block shrink-0" />
+          <div
+            className="block whitespace-nowrap text-[11px] leading-none"
+            style={{
+              lineHeight: 1,
+            }}
+          >
+            {label}
+          </div>
+        </div>
       </div>
     </div>
   );
