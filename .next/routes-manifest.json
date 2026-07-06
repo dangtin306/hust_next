@@ -124,6 +124,14 @@
       "namedRegex": "^/community/services/(?<nxtPservice>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/next/orders_once/[slug_2]",
+      "regex": "^/next/orders_once/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug_2": "nxtPslug_2"
+      },
+      "namedRegex": "^/next/orders_once/(?<nxtPslug_2>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/resource/product/play/[slug]",
       "regex": "^/resource/product/play/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -188,6 +196,24 @@
       "regex": "^/api/resources/services\\-info(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/resources/services\\-info(?:/)?$"
+    },
+    {
+      "page": "/api/sidebar-menu",
+      "regex": "^/api/sidebar\\-menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/sidebar\\-menu(?:/)?$"
+    },
+    {
+      "page": "/api/sidebar-menu/clear",
+      "regex": "^/api/sidebar\\-menu/clear(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/sidebar\\-menu/clear(?:/)?$"
+    },
+    {
+      "page": "/clear_silde_bar",
+      "regex": "^/clear_silde_bar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clear_silde_bar(?:/)?$"
     },
     {
       "page": "/community/features",
