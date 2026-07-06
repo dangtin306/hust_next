@@ -1,9 +1,4 @@
-/** @jsxImportSource @emotion/react */
-"use client";
-
 import Link from "next/link";
-import { createStyleObject } from "@capsizecss/core";
-import arialMetrics from "@capsizecss/metrics/inter";
 
 type NavItem = {
   slug: string;
@@ -72,51 +67,17 @@ function MetaPill({ label, Icon, className = "" }: MetaPillProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <div
-        className={`rounded-full whitespace-nowrap text-slate-600 px-2 ${className}`.trim()}
+        className={`inline-flex items-center gap-1 rounded-full whitespace-nowrap border border-slate-300/80 bg-slate-200/80 px-2 text-slate-600 ${className}`.trim()}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
           lineHeight: 1,
           paddingTop: 0,
           paddingBottom: 0,
         }}
       >
-        <div className="whitespace-nowrap leading-none">
-          <div
-            style={{
-              paddingTop: "0.3rem",
-              paddingBottom: "0.3rem",
-              whiteSpace: "nowrap"
-            }}
-            className="whitespace-nowrap leading-none whitespace-nowrap"
-          >
-            <div
-              css={{
-                display: "flex",
-                alignItems: "center",
-                padding: 0,
-                margin: 0,
-                gap: "0.25rem",
-              }}
-            >
-              <Icon
-                className="shrink-0 align-middle" />
-
-              <div
-                css={{
-                  ...createStyleObject({
-                    fontSize: 11,
-                    leading: 16,
-                    fontMetrics: arialMetrics,
-                  }),
-                }}
-              >
-                {label}
-              </div>
-            </div>
-
-          </div>
-        </div>
+        <Icon className="block h-3 w-3 shrink-0" />
+        <span className="block whitespace-nowrap text-[11px] leading-none">
+          {label}
+        </span>
       </div>
     </div>
   );
