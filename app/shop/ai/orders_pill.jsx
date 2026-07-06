@@ -80,7 +80,7 @@ function MetaPill({ label, Icon, className = "" }) {
                         className="whitespace-nowrap leading-none whitespace-nowrap"
                     >
                         <div
-                            css={{
+                            style={{
                                 display: "flex",
                                 alignItems: "center",
                                 padding: 0,
@@ -92,7 +92,7 @@ function MetaPill({ label, Icon, className = "" }) {
                                 className="shrink-0 align-middle" />
 
                             <div
-                                css={{
+                                style={{
                                     ...createStyleObject({
                                         fontSize: 11,
                                         leading: 14,
