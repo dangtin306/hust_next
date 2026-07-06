@@ -67,9 +67,11 @@ function MetaPill({ label, Icon, className = "" }: MetaPillProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <div
-        className={`inline-flex items-center rounded-full whitespace-nowrap px-1.5 py-2 text-slate-600 ${className}`.trim()}
+        className={`inline-flex items-center rounded-full whitespace-nowrap px-2 text-slate-600 ${className}`.trim()}
         style={{
-          lineHeight: 1
+          lineHeight: 1,
+          paddingTop: "0.3rem",
+          paddingBottom: "0.3rem",
         }}
       >
         <div className="flex items-center gap-1 whitespace-nowrap leading-none"
