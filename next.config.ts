@@ -5,9 +5,6 @@ const hideDevIndicator = process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR === "1";
 
 const nextConfig: NextConfig = {
   basePath: "/next",
-  compiler: {
-    emotion: true,
-  },
   ...(hideDevIndicator ? { devIndicators: false } : {}),
   experimental: { externalDir: true },
   webpack: (config, { isServer }) => {
