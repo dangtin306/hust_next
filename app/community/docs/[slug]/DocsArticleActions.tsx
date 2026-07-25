@@ -65,7 +65,7 @@ export default function DocsArticleActions({
     <div className="mt-2 mb-2.5 flex w-full flex-wrap items-center justify-between gap-2.5 pt-3">
       <div className="inline-flex max-w-full items-center self-center rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-5 text-slate-500 sm:text-[13px]">
-          <span className="font-medium text-slate-700">By Hust Media</span>{" "}
+          <span className="font-medium text-slate-700">By Tín Nguyễn Đăng</span>{" "}
           <span className="text-slate-300">•</span>{" "}
           <span>{writtenDateLabel} {writtenDateValue}</span>
         </div>

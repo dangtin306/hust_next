@@ -289,7 +289,9 @@ const NextSidebar = ({
         `}
       >
         <div className="flex justify-between items-center mb-6">
-          <div className="text-purple-400 text-[20px] font-bold">{displayHostname}</div>
+          <div className="text-purple-400 text-[20px] font-bold">
+            {displayHostname}
+          </div>
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}

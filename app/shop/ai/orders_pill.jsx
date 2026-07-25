@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { createStyleObject } from "@capsizecss/core";
+import arialMetrics from "@capsizecss/metrics/inter";
 
 function formatRelatedPostDate(dateRaw) {
     const value = String(dateRaw || "").trim();
@@ -59,27 +61,49 @@ function MetaPill({ label, Icon, className = "" }) {
     return (
         <div className="flex flex-wrap items-center gap-1.5">
             <div
-                className={`inline-flex items-center rounded-full whitespace-nowrap px-2 text-slate-600 ${className}`.trim()}
+                className={`rounded-full whitespace-nowrap text-slate-600 px-2 ${className}`.trim()}
                 style={{
+                    display: "inline-flex",
+                    alignItems: "center",
                     lineHeight: 1,
-                    paddingTop: "0.3rem",
-                    paddingBottom: "0.3rem",
+                    paddingTop: 0,
+                    paddingBottom: 0,
                 }}
             >
-                <div className="inline-flex items-center gap-1 whitespace-nowrap leading-none"
-                    style={{
-                        lineHeight: 1,
-                        paddingTop: 0,
-                        paddingBottom: 0,
-                    }}>
-                    <Icon className="block shrink-0" />
+                <div className="whitespace-nowrap leading-none">
                     <div
-                        className="block whitespace-nowrap text-[11px] leading-none"
                         style={{
-                            lineHeight: 1,
+                            paddingTop: "0.3rem",
+                            paddingBottom: "0.3rem",
+                            whiteSpace: "nowrap"
                         }}
+                        className="whitespace-nowrap leading-none whitespace-nowrap"
                     >
-                        {label}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                padding: 0,
+                                margin: 0,
+                                gap: "0.25rem",
+                            }}
+                        >
+                            <Icon
+                                className="shrink-0 align-middle" />
+
+                            <div
+                                style={{
+                                    ...createStyleObject({
+                                        fontSize: 11,
+                                        leading: 14,
+                                        fontMetrics: arialMetrics,
+                                    }),
+                                }}
+                            >
+                                {label}
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
