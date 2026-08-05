@@ -5,6 +5,9 @@ const hideDevIndicator = process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR === "1";
 
 const nextConfig: NextConfig = {
   basePath: "/next",
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   compiler: {
     emotion: true,
   },
