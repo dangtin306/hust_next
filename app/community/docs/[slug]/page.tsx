@@ -173,7 +173,7 @@ function formatUsDateTime(value: string) {
   return raw;
 }
 
-function getNodeText(node: ReactNode): string {
+function getNodeText(node: unknown): string {
   if (typeof node === "string" || typeof node === "number") {
     return String(node);
   }
