@@ -361,7 +361,8 @@ export default async function DocPage({
 
   const mdxComponents = {
     h1: ({ children, ...props }) => {
-      const headingText = getNodeText(children ?? "").trim();
+      const headingChildren = children as ReactNode;
+      const headingText = getNodeText(headingChildren ?? "").trim();
       const shouldShowDescription =
         Boolean(docDescription) && (!docTitle || headingText === docTitle || Boolean(apiTitle));
       const headingClass = [
@@ -374,7 +375,7 @@ export default async function DocPage({
         <>
           <div className="flex items-start justify-between gap-3">
             <h1 {...props} className={headingClass}>
-              {children}
+              {headingChildren}
             </h1>
             <a
               href="/ai/utility/home_notes"
