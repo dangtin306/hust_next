@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { type ComponentPropsWithoutRef, type CSSProperties, type ReactNode } from "react";
+import { type ComponentProps, type CSSProperties, type ReactNode } from "react";
 import DocsHelpfulFeedback from "./DocsHelpfulFeedback";
 import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
@@ -357,8 +357,10 @@ export default async function DocPage({
   const writtenDateValue = formatUsDateTime(String(postMeta?.createdate || "").trim());
   const categoryLabel = String(postMeta?.tips_hash_name || "").trim() || "Hust Media";
 
+  type MdxComponents = NonNullable<ComponentProps<typeof MDXRemote>["components"]>;
+
   const mdxComponents = {
-    h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => {
+    h1: ({ children, ...props }) => {
       const headingText = getNodeText(children ?? "").trim();
       const shouldShowDescription =
         Boolean(docDescription) && (!docTitle || headingText === docTitle || Boolean(apiTitle));
@@ -422,7 +424,7 @@ export default async function DocPage({
         </>
       );
     },
-    h2: ({ children, ...props }: ComponentPropsWithoutRef<"h2">) => {
+    h2: ({ children, ...props }) => {
       const title = getNodeText(children ?? "");
       const id = slugifyHeading(title);
       const headingClass = [props.className, "!text-[1.2175rem] !font-semibold"]
@@ -434,7 +436,7 @@ export default async function DocPage({
         </h2>
       );
     },
-    h3: ({ children, ...props }: ComponentPropsWithoutRef<"h3">) => {
+    h3: ({ children, ...props }) => {
       const title = getNodeText(children ?? "");
       const id = slugifyHeading(title);
       return (
@@ -443,17 +445,17 @@ export default async function DocPage({
         </h3>
       );
     },
-    ul: ({ children, className, ...props }: ComponentPropsWithoutRef<"ul">) => (
+    ul: ({ children, className, ...props }) => (
       <div
-        {...(props as ComponentPropsWithoutRef<"div">)}
+        {...(props as ComponentProps<"div">)}
         className={[className, "my-2 space-y-2"].filter(Boolean).join(" ")}
       >
         {children}
       </div>
     ),
-    li: ({ children, className, ...props }: ComponentPropsWithoutRef<"li">) => (
+    li: ({ children, className, ...props }) => (
       <div
-        {...(props as ComponentPropsWithoutRef<"div">)}
+        {...(props as ComponentProps<"div">)}
         className={[className, "relative pl-5 sm:pl-6 leading-[1.62] text-slate-700"].filter(Boolean).join(" ")}
       >
         <span
@@ -463,10 +465,10 @@ export default async function DocPage({
         {children}
       </div>
     ),
-    pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
+    pre: ({ children, ...props }) => (
       <DocsMdxPre {...props}>{children}</DocsMdxPre>
     ),
-    img: ({ alt, ...props }: ComponentPropsWithoutRef<"img">) => (
+    img: ({ alt, ...props }) => (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         {...props}
@@ -478,7 +480,7 @@ export default async function DocPage({
         fetchPriority="high"
       />
     ),
-  };
+  } satisfies MdxComponents;
 
   return (
     <div className="relative min-h-screen bg-transparent text-slate-700">
