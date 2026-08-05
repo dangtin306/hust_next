@@ -90,17 +90,17 @@ function MetaPill({ label, Icon, className = "" }: MetaPillProps) {
             }}
             className="whitespace-nowrap leading-none whitespace-nowrap"
           >
-            <div
-              css={{
-                display: "flex",
-                alignItems: "center",
-                padding: 0,
-                margin: 0,
-                gap: "0.25rem",
-              }}
-            >
-              <Icon
-                className="shrink-0 align-middle" />
+          <div
+            css={{
+              display: "flex",
+              alignItems: "center",
+              padding: 0,
+              margin: 0,
+              gap: "0.25rem",
+            }}
+          >
+            <Icon
+              className="shrink-0 align-middle" />
 
               <div
                 css={{

@@ -2,7 +2,7 @@
 
 import type { Lang, ToolKey } from "./orders_data";
 import type { RelatedPostItem } from "./orders_api_data";
-import { OrdersRelatedInsights } from "./orders_pill";
+import { OrdersRelatedInsights } from "./orders_pill_main";
 
 type OrdersProcessProps = {
   lang: Lang;
