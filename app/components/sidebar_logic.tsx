@@ -111,6 +111,8 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
         item.url_redirect === "/shop/category/tips_vip";
       const linkHref = isForceLegacyLink && currentOrigin.includes("localhost")
         ? `http://localhost:3002${item.url_redirect}`
+        : isForceLegacyLink && currentOrigin
+          ? `${currentOrigin}${item.url_redirect}`
         : isLegacyLink && currentOrigin
           ? `${currentOrigin}${item.url_redirect}`
           : typeof item.url_redirect === "string"
