@@ -44,6 +44,11 @@ const normalizeNextHref = (href: string) => {
   return href.startsWith("/next/") ? href.slice("/next".length) : href;
 };
 
+const SPECIAL_LEGACY_ROUTES = new Set([
+  "/ai/utility/home_ai",
+  "/shop/category/tips_vip",
+]);
+
 const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicProps) => {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -107,8 +112,8 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
         item.url_redirect.startsWith("/reactapp/") &&
         item.url_mode !== "redirect";
       const isForceLegacyLink =
-        item.url_redirect === "/ai/utility/home_ai" ||
-        item.url_redirect === "/shop/category/tips_vip";
+        typeof item.url_redirect === "string" &&
+        SPECIAL_LEGACY_ROUTES.has(item.url_redirect);
       const linkHref = isForceLegacyLink && currentOrigin.includes("localhost")
         ? `http://localhost:3002${item.url_redirect}`
         : isForceLegacyLink && currentOrigin
