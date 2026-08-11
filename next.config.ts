@@ -1,10 +1,33 @@
 import type { NextConfig } from "next";
 import path from "path";
+import uriConfig from "./src/uri_config.json";
 
 const hideDevIndicator = process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR === "1";
 
+type RewriteRule = {
+  source: string;
+  destination: string;
+  basePath?: false;
+  locale?: false;
+};
+
+type RouteTree = {
+  [key: string]: RewriteRule | RouteTree;
+};
+
+const isRewriteRule = (value: RewriteRule | RouteTree): value is RewriteRule =>
+  "source" in value && "destination" in value;
+
+const flattenRoutes = (tree: RouteTree): RewriteRule[] =>
+  Object.values(tree).flatMap((route) =>
+    isRewriteRule(route) ? [route] : flattenRoutes(route),
+  );
+
+const rewriteRules = flattenRoutes(uriConfig.routes);
+
 const nextConfig: NextConfig = {
-  basePath: "/next",
+  basePath: uriConfig.basePath,
+  typedRoutes: true,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -28,56 +51,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   async rewrites() {
-    return [
-      {
-        source: "/services/development",
-        destination: "/community/services/development",
-      },
-      {
-        source: "/features",
-        destination: "/community/features",
-      },
-      {
-        source: "/docs",
-        destination: "/community/docs",
-      },
-      {
-        source: "/docs/:path*",
-        destination: "/community/docs/:path*",
-      },
-      {
-        source: "/convert_national_market",
-        destination: "/community/services/national_market",
-      },
-      {
-        source: "/support",
-        destination: "/community/services/support_page",
-      },
-      {
-        source: "/hustadmin",
-        destination: "/shop/hustadmin",
-      },
-      {
-        source: "/hustadmin/:path*",
-        destination: "/shop/hustadmin/:path*",
-      },
-      {
-        source: "/check/:slug",
-        destination: "/shop/scams_check/profile/:slug",
-      },
-      {
-        source: "/check/:path*",
-        destination: "/shop/scams_check/:path*",
-      },
-      {
-        source: "/orders_once/:slug_2",
-        destination: "/shop/ai?slug_2=:slug_2",
-      },
-      {
-        source: "/shop/ai/:slug_2",
-        destination: "/shop/ai?slug_2=:slug_2",
-      },
-    ];
+    return rewriteRules;
   },
 };
 

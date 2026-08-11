@@ -1,0 +1,96 @@
+{
+  "basePath": "/next",
+  "routes": {
+    "community": {
+      "services": {
+        "development": {
+          "source": "/services/development",
+          "destination": "/community/services/development"
+        },
+        "nationalMarket": {
+          "source": "/convert_national_market",
+          "destination": "/community/services/national_market"
+        },
+        "support": {
+          "source": "/support",
+          "destination": "/community/services/support_page"
+        }
+      },
+      "features": {
+        "source": "/features",
+        "destination": "/community/features"
+      },
+      "docs": {
+        "source": "/docs",
+        "destination": "/community/docs"
+      },
+      "docsNested": {
+        "source": "/docs/:path*",
+        "destination": "/community/docs/:path*"
+      }
+    },
+    "history": {
+      "home": {
+        "source": "/history/home",
+        "destination": "/resources/history/home"
+      },
+      "communityAlias": {
+        "source": "/community/history/home",
+        "destination": "/resources/history/home"
+      },
+      "shopAlias": {
+        "source": "/shop/history/home",
+        "destination": "/resources/history/home"
+      }
+    },
+    "info": {
+      "termsService": {
+        "source": "/info/terms_service",
+        "destination": "/info/terms_service"
+      },
+      "privatePolicy": {
+        "source": "/info/private_policy",
+        "destination": "/info/private_policy"
+      },
+      "aboutUs": {
+        "source": "/info/about_us",
+        "destination": "/info/about_us"
+      }
+    },
+    "shop": {
+      "hustAdmin": {
+        "source": "/hustadmin",
+        "destination": "/shop/hustadmin"
+      },
+      "hustAdminNested": {
+        "source": "/hustadmin/:path*",
+        "destination": "/shop/hustadmin/:path*"
+      },
+      "scamsCheck": {
+        "profile": {
+          "source": "/check/:slug",
+          "destination": "/shop/scams_check/profile/:slug"
+        },
+        "nested": {
+          "source": "/check/:path*",
+          "destination": "/shop/scams_check/:path*"
+        }
+      },
+      "ai": {
+        "ordersOnce": {
+          "source": "/orders_once/:slug_2",
+          "destination": "/shop/ai?slug_2=:slug_2"
+        },
+        "history": {
+          "source": "/shop/ai/:slug_2",
+          "destination": "/shop/ai?slug_2=:slug_2"
+        }
+      }
+    }
+  },
+  "locale": {
+    "segmentPattern": "^[a-zA-Z]{2}$",
+    "cookieName": "national_market",
+    "cookieMaxAgeSeconds": 31536000
+  }
+}

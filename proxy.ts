@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import uriConfig from "./src/uri_config.json";
 
-const NEXT_BASE_PATH = "/next";
-const LOCALE_SEGMENT_REGEX = /^[a-zA-Z]{2}$/;
-const MARKET_COOKIE = "national_market";
-const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+const NEXT_BASE_PATH = uriConfig.basePath;
+const LOCALE_SEGMENT_REGEX = new RegExp(uriConfig.locale.segmentPattern);
+const MARKET_COOKIE = uriConfig.locale.cookieName;
+const ONE_YEAR_SECONDS = uriConfig.locale.cookieMaxAgeSeconds;
 
 const extractLocaleRewrite = (pathname: string) => {
   const hasBasePath =
@@ -31,7 +32,7 @@ const extractLocaleRewrite = (pathname: string) => {
   };
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const rewriteInfo = extractLocaleRewrite(request.nextUrl.pathname);
   if (!rewriteInfo) return NextResponse.next();
 

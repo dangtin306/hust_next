@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck
 "use client";
 
 import { Inter } from "next/font/google";
@@ -113,8 +115,8 @@ function CalendarIcon({
              * Group dùng pointer-events="bounding-box".
              * Path thật bị pointer-events="none".
              *
-             * Vì vậy Chrome Element Picker bắt vào group này,
-             * và thuật toán đo đúng bbox của art thật.
+             * Rect trong suốt khóa chiều dọc ở 80% viewBox; chiều ngang
+             * vẫn do art thật của icon quyết định.
              */}
             <g
                 ref={graphicRef}
@@ -126,6 +128,19 @@ function CalendarIcon({
                         "bounding-box",
                 }}
             >
+                <rect
+                    x="50%"
+                    y="10%"
+                    width="0.001%"
+                    height="80%"
+                    fill="currentColor"
+                    fillOpacity="0"
+                    stroke="none"
+                    pointerEvents="none"
+                    aria-hidden="true"
+                    data-orders-icon-80-percent-frame="calendar"
+                />
+
                 <path
                     data-orders-icon-art="calendar"
                     pointerEvents="none"
@@ -200,8 +215,8 @@ function TagIcon({
             className={className}
         >
             {/*
-             * Group graphic chứa path/circle thật của icon.
-             * Thuật toán đo trực tiếp bbox của group này.
+             * Group graphic chứa path/circle thật và frame dọc 80% viewBox.
+             * Frame giúp bbox dọc của group ổn định khi Chrome zoom hoặc resize.
              */}
             <g
                 ref={graphicRef}
@@ -213,6 +228,19 @@ function TagIcon({
                         "bounding-box",
                 }}
             >
+                <rect
+                    x="50%"
+                    y="10%"
+                    width="0.001%"
+                    height="75%"
+                    fill="currentColor"
+                    fillOpacity="0"
+                    stroke="none"
+                    pointerEvents="none"
+                    aria-hidden="true"
+                    data-orders-icon-80-percent-frame="tag"
+                />
+
                 <path
                     data-orders-icon-art="tag"
                     pointerEvents="none"

@@ -6,7 +6,7 @@ type AppRouteHandlerRoutes = "/api/features-image/[...asset]" | "/api/resources/
 type PageRoutes = never
 type LayoutRoutes = "/"
 type RedirectRoutes = never
-type RewriteRoutes = "/check/[[...path]]" | "/check/[slug]" | "/convert_national_market" | "/docs" | "/docs/[[...path]]" | "/features" | "/hustadmin" | "/hustadmin/[[...path]]" | "/orders_once/[slug_2]" | "/services/development" | "/shop/ai/[slug_2]" | "/support"
+type RewriteRoutes = "/next/[[...path]]" | "/next/check/[[...path]]" | "/next/check/[slug]" | "/next/community/history/home" | "/next/convert_national_market" | "/next/docs" | "/next/docs/[[...path]]" | "/next/features" | "/next/history/home" | "/next/hustadmin" | "/next/hustadmin/[[...path]]" | "/next/orders_once/[slug_2]" | "/next/services/development" | "/next/shop/ai/[slug_2]" | "/next/shop/history/home" | "/next/support"
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
 
 
@@ -17,35 +17,38 @@ interface ParamMap {
   "/api/resources/services-info": {}
   "/api/sidebar-menu": {}
   "/api/sidebar-menu/clear": {}
-  "/check/[[...path]]": { "path"?: string[]; }
-  "/check/[slug]": { "slug": string; }
   "/clear_silde_bar": {}
   "/community/docs/[slug]": { "slug": string; }
   "/community/features": {}
   "/community/services/[service]": { "service": string; }
   "/community/services/development": {}
-  "/convert_national_market": {}
-  "/docs": {}
-  "/docs/[[...path]]": { "path"?: string[]; }
-  "/features": {}
-  "/hustadmin": {}
-  "/hustadmin/[[...path]]": { "path"?: string[]; }
   "/info/about_us": {}
   "/info/seo_media": {}
   "/info/terms_service": {}
+  "/next/[[...path]]": { "path"?: string[]; }
+  "/next/check/[[...path]]": { "path"?: string[]; }
+  "/next/check/[slug]": { "slug": string; }
+  "/next/community/history/home": {}
+  "/next/convert_national_market": {}
+  "/next/docs": {}
+  "/next/docs/[[...path]]": { "path"?: string[]; }
+  "/next/features": {}
+  "/next/history/home": {}
+  "/next/hustadmin": {}
+  "/next/hustadmin/[[...path]]": { "path"?: string[]; }
   "/next/orders_once/[slug_2]": { "slug_2": string; }
-  "/orders_once/[slug_2]": { "slug_2": string; }
+  "/next/services/development": {}
+  "/next/shop/ai/[slug_2]": { "slug_2": string; }
+  "/next/shop/history/home": {}
+  "/next/support": {}
   "/resource/product/play/[slug]": { "slug": string; }
   "/resources/[[...segments]]": { "segments"?: string[]; }
   "/resources/play/[slug]": { "slug": string; }
-  "/services/development": {}
   "/shop/ai": {}
-  "/shop/ai/[slug_2]": { "slug_2": string; }
   "/shop/hustadmin/scheduler": {}
   "/shop/resources": {}
   "/shop/scams_check/[slug]": { "slug": string; }
   "/shop/scams_check/profile/[slug]": { "slug": string; }
-  "/support": {}
   "/tabs_nav/navConfig.json": {}
   "/tabs_nav/tabs_nav.json": {}
 }

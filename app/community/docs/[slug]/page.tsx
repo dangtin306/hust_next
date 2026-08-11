@@ -11,7 +11,7 @@ import DocsArticleActions from "./DocsArticleActions";
 import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
 import { DocsMdxPre } from "./DocsCodeBlock";
-import { DocsRelatedInsightsPanel } from "./page_pill";
+import { DocsRelatedInsightsPanel } from "./page_pill_main";
 
 const resolveDocsDir = () => {
   const candidates = [

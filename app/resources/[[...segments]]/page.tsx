@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import ProfileNav from "@/app/shop/resources/ProfileNav";
 import OrdersMain from "@/app/shop/resources/orders_main";
+import HistoryMenuHome from "@/app/community/history/menu_home";
 import {
   buildServiceMetadata,
   fetchServiceInfoBySlug,
@@ -111,6 +112,9 @@ const shouldShowOrdersMain = (slug2: string, slug: string) => {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { segments = [] } = await params;
+  const isHistoryRoute = segments[0] === "history" && segments[1] === "home";
+  if (isHistoryRoute) return {};
+
   const routeState = parseRouteState(segments);
   const slug = pickSlugFromSegments(segments);
   const showOrdersMain = shouldShowOrdersMain(routeState.slug2, slug);
@@ -123,6 +127,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ResourcesCatchAllPage({ params }: PageProps) {
   const { segments = [] } = await params;
+  const isHistoryRoute = segments[0] === "history" && segments[1] === "home";
+  if (isHistoryRoute) return <HistoryMenuHome />;
+
   const cookieStore = await cookies();
   const initialMarket = cookieStore.get("national_market")?.value || "vi";
   const routeState = parseRouteState(segments);

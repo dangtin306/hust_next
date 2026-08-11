@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { SlHome } from "react-icons/sl";
@@ -47,6 +47,11 @@ const normalizeNextHref = (href: string) => {
 const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicProps) => {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const currentOrigin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => "",
+  );
   const latestVersionRaw =
     typeof latestVersion === "string" || typeof latestVersion === "number"
       ? String(latestVersion)
@@ -93,6 +98,24 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
         `${isSelected ? "font-[600]" : ""}`;
 
       const labelText = pickLabel(item.label, lang);
+      const isNextLink =
+        typeof item.url_redirect === "string" &&
+        item.url_redirect.startsWith("/next/") &&
+        item.url_mode !== "redirect";
+      const isLegacyLink =
+        typeof item.url_redirect === "string" &&
+        item.url_redirect.startsWith("/reactapp/") &&
+        item.url_mode !== "redirect";
+      const isForceLegacyLink =
+        item.url_redirect === "/ai/utility/home_ai" ||
+        item.url_redirect === "/shop/category/tips_vip";
+      const linkHref = isForceLegacyLink && currentOrigin.includes("localhost")
+        ? `http://localhost:3002${item.url_redirect}`
+        : isLegacyLink && currentOrigin
+          ? `${currentOrigin}${item.url_redirect}`
+          : typeof item.url_redirect === "string"
+            ? normalizeNextHref(item.url_redirect)
+            : "";
 
       const iconNode =
         item.iconType === "SlHome" ? (
@@ -110,7 +133,23 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
 
       return (
         <div key={key} className="border-t border-gray-300 last:border-b">
-          {hasChildren ? (
+          {isForceLegacyLink ? (
+            <Link
+              href={linkHref}
+              className={rowClassName}
+              onClick={() => {
+                setSelectedKey(key);
+                setIsOpen(false);
+              }}
+            >
+              <div className="flex items-center">
+                {iconNode}
+                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                  {labelText || item.url_redirect}
+                </div>
+              </div>
+            </Link>
+          ) : hasChildren ? (
             <button
               type="button"
               className={rowClassName}
@@ -127,11 +166,9 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
               </div>
               {isOpen ? <FiChevronUp className="h-4 w-4" /> : <FiChevronDown className="h-4 w-4" />}
             </button>
-          ) : typeof item.url_redirect === "string" &&
-            item.url_redirect.startsWith("/next/") &&
-            item.url_mode !== "redirect" ? (
+          ) : isNextLink || isLegacyLink ? (
             <Link
-              href={normalizeNextHref(item.url_redirect)}
+              href={linkHref}
               className={rowClassName}
               onClick={() => {
                 setSelectedKey(key);

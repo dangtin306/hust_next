@@ -33,6 +33,16 @@
         "regex": "^/next/services/development(?:/)?$"
       },
       {
+        "source": "/next/convert_national_market",
+        "destination": "/next/community/services/national_market",
+        "regex": "^/next/convert_national_market(?:/)?$"
+      },
+      {
+        "source": "/next/support",
+        "destination": "/next/community/services/support_page",
+        "regex": "^/next/support(?:/)?$"
+      },
+      {
         "source": "/next/features",
         "destination": "/next/community/features",
         "regex": "^/next/features(?:/)?$"
@@ -48,14 +58,19 @@
         "regex": "^/next/docs(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
-        "source": "/next/convert_national_market",
-        "destination": "/next/community/services/national_market",
-        "regex": "^/next/convert_national_market(?:/)?$"
+        "source": "/next/history/home",
+        "destination": "/next/resources/history/home",
+        "regex": "^/next/history/home(?:/)?$"
       },
       {
-        "source": "/next/support",
-        "destination": "/next/community/services/support_page",
-        "regex": "^/next/support(?:/)?$"
+        "source": "/next/community/history/home",
+        "destination": "/next/resources/history/home",
+        "regex": "^/next/community/history/home(?:/)?$"
+      },
+      {
+        "source": "/next/shop/history/home",
+        "destination": "/next/resources/history/home",
+        "regex": "^/next/shop/history/home(?:/)?$"
       },
       {
         "source": "/next/hustadmin",
@@ -88,7 +103,20 @@
         "regex": "^/next/shop/ai(?:/([^/]+?))(?:/)?$"
       }
     ],
-    "fallback": []
+    "fallback": [
+      {
+        "source": "/next/:path*",
+        "destination": "http://localhost:3002/:path*",
+        "basePath": false,
+        "has": [
+          {
+            "type": "host",
+            "value": "localhost"
+          }
+        ],
+        "regex": "^/next(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      }
+    ]
   },
   "dynamicRoutes": [
     {

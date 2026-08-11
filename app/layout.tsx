@@ -5,6 +5,7 @@ import "./globals.css";
 import LegacyNavbarShell from "./components/LegacyNavbarShell";
 import DisableDevIndicator from "./components/DisableDevIndicator";
 import IgnoreMetaMaskExtensionErrors from "./components/IgnoreMetaMaskExtensionErrors";
+import LocalhostLegacyLinkRedirector from "@/src/redirect";
 import SimpleTopBar from "./components/SimpleTopBar";
 import Footer_web from "./components/Footer_web";
 import SupportButton from "./community/services/SupportButton";
@@ -80,6 +81,7 @@ export default async function RootLayout({
       >
         <DisableDevIndicator />
         <IgnoreMetaMaskExtensionErrors />
+        <LocalhostLegacyLinkRedirector />
         <LegacyNavbarShell
           initialMenu={initialSidebarMenu}
           initialLatestVersion={resolvedSidebarVersion}
