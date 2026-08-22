@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { FaArrowCircleLeft } from "react-icons/fa";
+import { FaArrowCircleLeft, FaArrowCircleRight } from "react-icons/fa";
 import SidebarLogic, { type MenuItem } from "./sidebar_logic";
 
 type SidebarMenuCache = {
@@ -121,6 +121,8 @@ const storeCachedMenu = (payload: SidebarMenuCache["payload"], menu: MenuItem[])
 type NextSidebarProps = {
   isOpen: boolean;
   setIsOpen: (value: boolean) => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (value: boolean) => void;
   initialMenu?: MenuItem[];
   initialLatestVersion?: string | number;
   initialMarket?: string;
@@ -131,6 +133,8 @@ type NextSidebarProps = {
 const NextSidebar = ({
   isOpen,
   setIsOpen,
+  isCollapsed,
+  setIsCollapsed,
   initialMenu = [],
   initialLatestVersion,
   initialMarket = "vi",
@@ -283,22 +287,29 @@ const NextSidebar = ({
           flex flex-col h-full overflow-y-auto
           bg-gradient-to-r from-indigo-100 via-purple-200 to-pink-200
           px-6 py-6 fixed top-0 left-0
-          w-[75vw] min-w-[240px] max-w-[320px] md:w-[280px] md:min-w-[280px] md:max-w-[280px]
+          w-[75vw] min-w-[240px] max-w-[320px]
+          ${isCollapsed ? "md:w-[72px] md:min-w-[72px] md:max-w-[72px] md:px-2" : "md:w-[280px] md:min-w-[280px] md:max-w-[280px]"}
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0
         `}
       >
-        <div className="flex justify-between items-center mb-6">
-          <div className="text-purple-400 text-[20px] font-bold">
+        <div className={`${isCollapsed ? "justify-center" : "justify-between"} flex items-center mb-6`}>
+          <div className={`${isCollapsed ? "hidden" : ""} text-purple-400 text-[20px] font-bold`}>
             {displayHostname}
           </div>
           <button
             type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-white"
-            aria-label="Close menu"
+            onClick={() => {
+              if (window.matchMedia("(min-width: 768px)").matches) {
+                setIsCollapsed(!isCollapsed);
+              } else {
+                setIsOpen(!isOpen);
+              }
+            }}
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center text-white transition-colors hover:text-pink-200"
+            aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
           >
-            <FaArrowCircleLeft size={24} />
+            {isCollapsed ? <FaArrowCircleRight size={24} /> : <FaArrowCircleLeft size={24} />}
           </button>
         </div>
 
@@ -307,6 +318,7 @@ const NextSidebar = ({
             items={menu}
             lang={lang}
             setIsOpen={setIsOpen}
+            isCollapsed={isCollapsed}
             latestVersion={initialLatestVersion}
           />
         </div>

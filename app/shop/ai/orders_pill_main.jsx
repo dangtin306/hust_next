@@ -70,7 +70,7 @@ export function OrdersRelatedInsights({
 
             <div className="mt-4 space-y-2">
                 {relatedInsights.map(
-                    (item) => {
+                    (item, index) => {
                         const uri =
                             String(
                                 item?.uri ||
@@ -220,6 +220,9 @@ export function OrdersRelatedInsights({
                                     }
                                     hashName={
                                         hashName
+                                    }
+                                    logLayout={
+                                        index === 0
                                     }
                                 />
                             </Link>

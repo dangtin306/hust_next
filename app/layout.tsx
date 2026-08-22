@@ -47,6 +47,7 @@ export default async function RootLayout({
     headerStore.get("host") ||
     "";
   const initialLatestVersion = cookieStore.get("latest_version")?.value || "";
+  const initialSidebarCollapsed = cookieStore.get("hust_sidebar_collapsed")?.value === "1";
   const apikey = cookieStore.get("apikey")?.value || "";
   const nationalMarketRaw = cookieStore.get("national_market")?.value || "vi";
   const national_market =
@@ -75,7 +76,13 @@ export default async function RootLayout({
       : initialSidebarVersion;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      style={{
+        "--next-sidebar-width": initialSidebarCollapsed ? "72px" : "280px",
+      } as React.CSSProperties}
+    >
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -83,13 +90,14 @@ export default async function RootLayout({
         <IgnoreMetaMaskExtensionErrors />
         <LocalhostLegacyLinkRedirector />
         <LegacyNavbarShell
+          initialCollapsed={initialSidebarCollapsed}
           initialMenu={initialSidebarMenu}
           initialLatestVersion={resolvedSidebarVersion}
           initialMarket={national_market}
           initialDisplayHostname={initialDisplayHostname}
           initialApiStatus={initialSidebarStatus}
         />
-        <div className="flex-1 transition-all duration-300 md:ml-[280px]">
+        <div className="flex-1 transition-all duration-300 md:ml-[var(--next-sidebar-width)]">
           <div className="antialiased bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200">
             <div className="layout-wrapper layout-content-navbar">
               <div className="layout-container">

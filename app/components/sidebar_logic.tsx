@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { SlHome } from "react-icons/sl";
+import { FiHome, FiSun, FiTool, FiMail, FiUsers, FiFileText, FiShield } from "react-icons/fi";
 import { FaClock } from "react-icons/fa";
 
 type MenuLabel = string | Record<string, string>;
@@ -22,8 +22,18 @@ type SidebarLogicProps = {
   items: MenuItem[];
   lang: string;
   setIsOpen: (value: boolean) => void;
+  isCollapsed: boolean;
   latestVersion?: string | number;
 };
+
+const iconBySource = {
+  "💡": FiSun,
+  "🛠": FiTool,
+  "✉": FiMail,
+  "🤝": FiUsers,
+  "📜": FiFileText,
+  "🛡": FiShield,
+} as const;
 
 const readCookie = (name: string) => {
   if (typeof document === "undefined") return "";
@@ -49,11 +59,11 @@ const SPECIAL_LEGACY_ROUTES = new Set([
   "/shop/category/tips_vip",
 ]);
 
-const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicProps) => {
+const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: SidebarLogicProps) => {
   const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set());
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const currentOrigin = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => window.location.origin,
     () => "",
   );
@@ -99,6 +109,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
       const rowClassName =
         `w-full flex items-center justify-between py-1.5 px-4 text-slate-900 visited:text-slate-900 no-underline ` +
         `${isOpen || isSelected ? "bg-pink-100/50 border-l-2 border-pink-400 " : "bg-gray-100/50 "}` +
+        `${isCollapsed ? "justify-center px-2 " : ""}` +
         `hover:bg-pink-100/60 ` +
         `${isSelected ? "font-[600]" : ""}`;
 
@@ -118,23 +129,38 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
         ? `http://localhost:3002${item.url_redirect}`
         : isForceLegacyLink && currentOrigin
           ? `${currentOrigin}${item.url_redirect}`
-        : isLegacyLink && currentOrigin
-          ? `${currentOrigin}${item.url_redirect}`
-          : typeof item.url_redirect === "string"
-            ? normalizeNextHref(item.url_redirect)
-            : "";
+          : isLegacyLink && currentOrigin
+            ? `${currentOrigin}${item.url_redirect}`
+            : typeof item.url_redirect === "string"
+              ? normalizeNextHref(item.url_redirect)
+              : "";
 
+      const iconClassName = `
+        ${isCollapsed ? "h-7 w-7" : "h-5 w-5"}
+        ${isCollapsed ? "mr-0" : "mr-2"}
+        ${isCollapsed ? "" : "scale-[1]"}
+      `;
+      const sourceIcon = typeof item.icon_src === "string"
+        ? iconBySource[item.icon_src.replace(/\uFE0F/g, "") as keyof typeof iconBySource]
+        : undefined;
       const iconNode =
         item.iconType === "SlHome" ? (
-          <SlHome className="h-5 w-5 mr-2" />
+          <FiHome className={iconClassName} />
         ) : item.iconType === "FaClock" ? (
-          <FaClock className="h-5 w-5 mr-2" />
+          <FaClock className={iconClassName} />
         ) : item.icon_src ? (
           item.icon_src.includes("/") ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.icon_src} alt="" className="h-5 w-5 mr-2" />
+            <img src={item.icon_src} alt="" className={iconClassName} />
+          ) : sourceIcon ? (
+            (() => {
+              const Icon = sourceIcon;
+              return <Icon className={iconClassName} />;
+            })()
           ) : (
-            <span className="h-5 w-5 mr-2 flex items-center justify-center">{item.icon_src}</span>
+            <span className={`${iconClassName} ${isCollapsed ? "text-[22px]" : "text-base"} flex items-center justify-center leading-none`}>
+              {item.icon_src}
+            </span>
           )
         ) : null;
 
@@ -151,7 +177,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
             >
               <div className="flex items-center">
                 {iconNode}
-                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                <div className={`${isCollapsed ? "hidden" : ""} flex-1 text-[15px] whitespace-normal break-words text-left`}>
                   {labelText || item.url_redirect}
                 </div>
               </div>
@@ -171,7 +197,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
                   {labelText}
                 </div>
               </div>
-              {isOpen ? <FiChevronUp className="h-4 w-4" /> : <FiChevronDown className="h-4 w-4" />}
+              {!isCollapsed && (isOpen ? <FiChevronUp className="h-4 w-4" /> : <FiChevronDown className="h-4 w-4" />)}
             </button>
           ) : isNextLink || isLegacyLink ? (
             <Link
@@ -184,7 +210,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
             >
               <div className="flex items-center">
                 {iconNode}
-                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                <div className={`${isCollapsed ? "hidden" : ""} flex-1 text-[15px] whitespace-normal break-words text-left`}>
                   {labelText || item.url_redirect}
                 </div>
               </div>
@@ -202,7 +228,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
             >
               <div className="flex items-center">
                 {iconNode}
-                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                <div className={`${isCollapsed ? "hidden" : ""} flex-1 text-[15px] whitespace-normal break-words text-left`}>
                   {labelText || item.url_redirect}
                 </div>
               </div>
@@ -224,7 +250,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, latestVersion }: SidebarLogicPro
             >
               <div className="flex items-center">
                 {iconNode}
-                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                <div className={`${isCollapsed ? "hidden" : ""} flex-1 text-[15px] whitespace-normal break-words text-left`}>
                   {labelText || (typeof item.url_redirect === "string" ? item.url_redirect : "")}
                 </div>
               </div>

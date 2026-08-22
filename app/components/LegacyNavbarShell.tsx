@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import NextSidebar from "./sidebar_main";
 import type { MenuItem } from "./sidebar_logic";
+import {
+  readSidebarCollapsed,
+  subscribeSidebarCollapsed,
+  writeSidebarCollapsed,
+} from "../../../react_app/src/shared/sidebar_state.js";
 
 type LegacyNavbarShellProps = {
+  initialCollapsed?: boolean;
   initialMenu?: MenuItem[];
   initialLatestVersion?: string | number;
   initialMarket?: string;
@@ -13,6 +19,7 @@ type LegacyNavbarShellProps = {
 };
 
 const LegacyNavbarShell = ({
+  initialCollapsed = false,
   initialMenu = [],
   initialLatestVersion,
   initialMarket = "vi",
@@ -20,6 +27,21 @@ const LegacyNavbarShell = ({
   initialApiStatus = "success",
 }: LegacyNavbarShellProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const isCollapsed = useSyncExternalStore(
+    subscribeSidebarCollapsed,
+    readSidebarCollapsed,
+    () => initialCollapsed,
+  );
+  const setIsCollapsed = (value: boolean) => {
+    writeSidebarCollapsed(value);
+  };
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--next-sidebar-width",
+      isCollapsed ? "72px" : "280px",
+    );
+  }, [isCollapsed]);
 
   useEffect(() => {
     const handleToggle = () => {
@@ -36,6 +58,8 @@ const LegacyNavbarShell = ({
       <NextSidebar
         isOpen={isOpen}
         setIsOpen={setIsOpen}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
         initialMenu={initialMenu}
         initialLatestVersion={initialLatestVersion}
         initialMarket={initialMarket}

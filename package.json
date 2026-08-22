@@ -9,7 +9,7 @@
     "dev": "node scripts/start-dev.js",
     "build": "next build --webpack",
     "start": "node scripts/start.js",
-    "start:prod": "next start -p 3001",
+    "start:prod": "next start -p 3003",
     "lint": "eslint"
   },
   "dependencies": {

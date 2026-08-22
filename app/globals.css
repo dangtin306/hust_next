@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+:root {
+  --next-sidebar-width: 280px;
+}
 @plugin "@tailwindcss/typography";
 @source "../../react_app/src/**/*.{js,jsx,ts,tsx}";
 @import "../app_structure/index.css";

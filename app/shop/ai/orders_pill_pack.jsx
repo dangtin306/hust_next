@@ -2,18 +2,11 @@
 // @ts-nocheck
 "use client";
 
-import { Inter } from "next/font/google";
 import { createStyleString } from "@capsizecss/core";
 import interMetrics from "@capsizecss/metrics/inter";
 import {
     useAlignIconCenterToTextCenterFromFrameGaps,
 } from "./orders_pill_math";
-
-const inter = Inter({
-    subsets: ["latin"],
-    weight: ["400"],
-    display: "swap",
-});
 
 const META_PILL_TEXT_CLASS =
     "orders-related-meta-text";
@@ -40,7 +33,7 @@ ${META_PILL_CAPSIZE_FALLBACK}
     margin: 0;
     padding: 0;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 12px;
     font-weight: 400;
     font-synthesis: none;
@@ -122,6 +115,7 @@ function CalendarIcon({
                 ref={graphicRef}
                 data-orders-icon-bounds-group="calendar"
                 data-orders-devtools-target="true"
+                transform="translate(0 2.4)"
                 pointerEvents="bounding-box"
                 style={{
                     pointerEvents:
@@ -222,6 +216,7 @@ function TagIcon({
                 ref={graphicRef}
                 data-orders-icon-bounds-group="tag"
                 data-orders-devtools-target="true"
+                transform="translate(0 3.6)"
                 pointerEvents="bounding-box"
                 style={{
                     pointerEvents:
@@ -299,6 +294,7 @@ function MetaPill({
     label,
     Icon,
     className = "",
+    logLayout = false,
 }) {
     const {
         pillRef,
@@ -309,7 +305,8 @@ function MetaPill({
         boundsRef,
         measureRef,
     } = useAlignIconCenterToTextCenterFromFrameGaps(
-        label
+        label,
+        logLayout
     );
 
     return (
@@ -317,45 +314,41 @@ function MetaPill({
             ref={pillRef}
             data-orders-meta-pill="true"
             className={`
+                relative
                 box-border
                 inline-flex
                 shrink-0
-                flex-nowrap
-                items-center
+                flex-col
+                items-stretch
                 whitespace-nowrap
                 rounded-full
                 px-2
                 text-slate-600
+                isolate w-max flex-nowrap
                 ${className}
             `.trim()}
             style={{
+                height: "auto",
+                minHeight: "24px",
                 minWidth:
                     "max-content",
                 paddingTop:
-                    "4px",
+                    "0px",
                 paddingBottom:
-                    "4px",
+                    "0px",
             }}
         >
-            <span
-                ref={rowRef}
-                className={`
-                    ${inter.className}
-                    inline-grid
-                    h-[16px]
-                    shrink-0
-                    grid-cols-[12px_max-content]
-                    items-center
-                    gap-[4px]
-                    whitespace-nowrap
-                `.trim()}
-                style={{
-                    fontSynthesis:
-                        "none",
-                }}
+
+            <div
+                data-orders-meta-content-layer="true"
+                className="relative mt-auto mb-[var(--meta-anchor-height,6px)] inline-flex w-max flex-nowrap"
             >
-                <span
-                    className="
+                    <div
+                        ref={rowRef}
+                        className="inline-flex flex-nowrap items-end gap-[4px] whitespace-nowrap"
+                    >
+                    <div
+                        className="
                         grid
                         h-[12px]
                         w-[12px]
@@ -363,39 +356,60 @@ function MetaPill({
                         place-items-center
                         overflow-visible
                         leading-none
-                    "
-                >
-                    <IconGuard
-                        Icon={Icon}
-                        svgRef={
-                            svgRef
-                        }
-                        graphicRef={
-                            graphicRef
-                        }
-                        boundsRef={
-                            boundsRef
-                        }
-                        measureRef={
-                            measureRef
-                        }
-                    />
-                </span>
+                            "
+                        data-orders-meta-icon="true"
+                    >
+                        <IconGuard
+                            Icon={Icon}
+                            svgRef={
+                                svgRef
+                            }
+                            graphicRef={
+                                graphicRef
+                            }
+                            boundsRef={
+                                boundsRef
+                            }
+                            measureRef={
+                                measureRef
+                            }
+                        />
+                    </div>
 
-                <span
-                    ref={textRef}
-                    data-orders-meta-text="true"
-                    className={`
+                    <div
+                        ref={textRef}
+                        data-orders-meta-text="true"
+                        className={`
                         ${META_PILL_TEXT_CLASS}
                         shrink-0
                         whitespace-nowrap
                         font-normal
                         text-slate-600
-                    `.trim()}
-                >
-                    {label}
-                </span>
-            </span>
+                            `.trim()}
+                        style={{
+                            transform:
+                                "translateY(var(--meta-content-shift-y, 0px))",
+                        }}
+                    >
+                        {label}
+                    </div>
+                </div>
+            </div>
+
+            <div
+                data-orders-meta-anchor="true"
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 block w-full shrink-0"
+                style={{
+                    height:
+                        "var(--meta-anchor-height, 6px)",
+                    boxSizing: "border-box",
+                    background:
+                        "linear-gradient(to bottom, rgba(220, 38, 38, 0.8) 0.5px, transparent 0.5px)",
+                    minHeight: 0,
+                }}
+            />
+
         </div>
     );
 }
@@ -440,6 +454,7 @@ export function OrdersPillPackage({
     dateRaw = "",
     hashName = "Hust Media",
     className = "",
+    logLayout = false,
 }) {
     const dateLabel =
         formatRelatedPostDate(
@@ -466,10 +481,11 @@ export function OrdersPillPackage({
                     mt-2
                     flex
                     w-full
-                    flex-wrap
+                    flex-nowrap
                     items-center
                     justify-start
                     gap-1.5
+                    overflow-hidden
                     ${className}
                 `.trim()}
             >
@@ -480,6 +496,9 @@ export function OrdersPillPackage({
                         }
                         Icon={
                             CalendarIcon
+                        }
+                        logLayout={
+                            logLayout
                         }
                         className="
                             border
@@ -495,6 +514,9 @@ export function OrdersPillPackage({
                     }
                     Icon={
                         TagIcon
+                    }
+                    logLayout={
+                        logLayout
                     }
                     className="
                         border

@@ -34,6 +34,9 @@ const nextConfig: NextConfig = {
   compiler: {
     emotion: true,
   },
+  logging: {
+    fetches: false,
+  },
   ...(hideDevIndicator ? { devIndicators: false } : {}),
   experimental: { externalDir: true },
   webpack: (config, { isServer }) => {

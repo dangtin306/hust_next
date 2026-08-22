@@ -325,9 +325,9 @@ function MetaPill({
                 minWidth:
                     "max-content",
                 paddingTop:
-                    "0.3rem",
+                    "4px",
                 paddingBottom:
-                    "0.3rem",
+                    "4px",
             }}
         >
             <span
@@ -458,10 +458,11 @@ export function OrdersPillPackage({
                     mt-2
                     flex
                     w-full
-                    flex-wrap
+                    flex-nowrap
                     items-center
                     justify-start
                     gap-1.5
+                    overflow-hidden
                     ${className}
                 `.trim()}
             >
