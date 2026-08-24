@@ -66,6 +66,10 @@
         "source": "/hustadmin/:path*",
         "destination": "/shop/hustadmin/:path*"
       },
+      "cronServer": {
+        "source": "/cron_server",
+        "destination": "/shop/hustadmin/scheduler"
+      },
       "scamsCheck": {
         "profile": {
           "source": "/check/:slug",
@@ -85,6 +89,12 @@
           "source": "/shop/ai/:slug_2",
           "destination": "/shop/ai?slug_2=:slug_2"
         }
+      }
+    },
+    "swagger": {
+      "test": {
+        "source": "/api/swagger/test",
+        "destination": "/api/swagger"
       }
     }
   },

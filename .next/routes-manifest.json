@@ -73,6 +73,21 @@
         "regex": "^/next/shop/history/home(?:/)?$"
       },
       {
+        "source": "/next/info/terms_service",
+        "destination": "/next/info/terms_service",
+        "regex": "^/next/info/terms_service(?:/)?$"
+      },
+      {
+        "source": "/next/info/private_policy",
+        "destination": "/next/info/private_policy",
+        "regex": "^/next/info/private_policy(?:/)?$"
+      },
+      {
+        "source": "/next/info/about_us",
+        "destination": "/next/info/about_us",
+        "regex": "^/next/info/about_us(?:/)?$"
+      },
+      {
         "source": "/next/hustadmin",
         "destination": "/next/shop/hustadmin",
         "regex": "^/next/hustadmin(?:/)?$"
@@ -81,6 +96,11 @@
         "source": "/next/hustadmin/:path*",
         "destination": "/next/shop/hustadmin/:path*",
         "regex": "^/next/hustadmin(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/cron_server",
+        "destination": "/next/shop/hustadmin/scheduler",
+        "regex": "^/next/cron_server(?:/)?$"
       },
       {
         "source": "/next/check/:slug",
@@ -101,22 +121,14 @@
         "source": "/next/shop/ai/:slug_2",
         "destination": "/next/shop/ai?slug_2=:slug_2",
         "regex": "^/next/shop/ai(?:/([^/]+?))(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/test",
+        "destination": "/next/api/swagger",
+        "regex": "^/next/api/swagger/test(?:/)?$"
       }
     ],
-    "fallback": [
-      {
-        "source": "/next/:path*",
-        "destination": "http://localhost:3002/:path*",
-        "basePath": false,
-        "has": [
-          {
-            "type": "host",
-            "value": "localhost"
-          }
-        ],
-        "regex": "^/next(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
-      }
-    ]
+    "fallback": []
   },
   "dynamicRoutes": [
     {
@@ -236,6 +248,12 @@
       "regex": "^/api/sidebar\\-menu/clear(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/sidebar\\-menu/clear(?:/)?$"
+    },
+    {
+      "page": "/api/swagger",
+      "regex": "^/api/swagger(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger(?:/)?$"
     },
     {
       "page": "/clear_silde_bar",

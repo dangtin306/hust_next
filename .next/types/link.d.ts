@@ -36,18 +36,24 @@ declare namespace __next_route_internal_types__ {
     | `/api/resources/services-info`
     | `/api/sidebar-menu`
     | `/api/sidebar-menu/clear`
+    | `/api/swagger`
     | `/clear_silde_bar`
     | `/community/features`
     | `/community/services/development`
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
+    | `/next/api/swagger/test`
     | `/next/community/history/home`
     | `/next/convert_national_market`
+    | `/next/cron_server`
     | `/next/docs`
     | `/next/features`
     | `/next/history/home`
     | `/next/hustadmin`
+    | `/next/info/about_us`
+    | `/next/info/private_policy`
+    | `/next/info/terms_service`
     | `/next/services/development`
     | `/next/shop/history/home`
     | `/next/support`
@@ -61,7 +67,6 @@ declare namespace __next_route_internal_types__ {
     | `/api/features-image/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
-    | `/next/${OptionalCatchAllSlug<T>}`
     | `/next/check/${OptionalCatchAllSlug<T>}`
     | `/next/check/${SafeSlug<T>}`
     | `/next/docs/${OptionalCatchAllSlug<T>}`
