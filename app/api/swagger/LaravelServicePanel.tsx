@@ -32,7 +32,7 @@ const services = [
     name: "Text to Speech",
     tag: "Text to Speech",
     method: "OpenClawService::tts()",
-    model: "F5_vie",
+    model: "Vie_Neu",
     payload: "text + tool: media_text_to_speech",
     reason: "tool định tuyến request vào service TTS thay vì xử lý như chat text thông thường.",
   },

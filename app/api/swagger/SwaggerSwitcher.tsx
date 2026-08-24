@@ -2,8 +2,11 @@ import Link from "next/link";
 
 export default function SwaggerSwitcher({ active }: { active: "openclaw" | "laravel" }) {
   const clearSwaggerHash = () => {
-    if (typeof window !== "undefined" && window.location.hash) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (typeof window !== "undefined") {
+      if (window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }
   };
 

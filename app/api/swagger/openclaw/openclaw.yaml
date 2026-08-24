@@ -131,7 +131,7 @@ paths:
               textToSpeech:
                 summary: media_text_to_speech
                 value:
-                  model: F5_vie
+                  model: Vie_Neu
                   input:
                     - role: user
                       text: Xin chào từ Media Tech
@@ -330,7 +330,7 @@ components:
           enum: [media_text_to_speech]
         model:
           type: string
-          example: F5_vie
+          example: Vie_Neu
 
     ChatCompletionsRequest:
       type: object
