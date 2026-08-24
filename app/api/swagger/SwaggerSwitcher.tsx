@@ -1,6 +1,12 @@
 import Link from "next/link";
 
 export default function SwaggerSwitcher({ active }: { active: "openclaw" | "laravel" }) {
+  const clearSwaggerHash = () => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  };
+
   return (
     <nav
       aria-label="Swagger documentation"
@@ -9,6 +15,7 @@ export default function SwaggerSwitcher({ active }: { active: "openclaw" | "lara
       <span className="mr-2 text-sm font-semibold text-slate-600">API documentation:</span>
       <Link
         href="/api/swagger/laravel"
+        onClick={clearSwaggerHash}
         className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
           active === "laravel"
             ? "border-blue-600 bg-blue-600 text-white"
@@ -19,6 +26,7 @@ export default function SwaggerSwitcher({ active }: { active: "openclaw" | "lara
       </Link>
       <Link
         href="/api/swagger/openclaw"
+        onClick={clearSwaggerHash}
         className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
           active === "openclaw"
             ? "border-blue-600 bg-blue-600 text-white"
