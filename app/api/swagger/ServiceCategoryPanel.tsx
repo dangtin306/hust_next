@@ -32,6 +32,13 @@ const statusLabel = (status: string) => {
   return "Generic response service";
 };
 
+const exampleMatchers: Record<string, string[]> = {
+  media_text_to_text: ["normal conversation"],
+  media_content_smart: ["media_content_smart"],
+  media_image_to_text: ["media_image_to_text"],
+  media_text_to_speech: ["media_text_to_speech"],
+};
+
 export default function ServiceCategoryPanel({ categories, hidden = false }: ServiceCategoryPanelProps) {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
@@ -63,6 +70,53 @@ export default function ServiceCategoryPanel({ categories, hidden = false }: Ser
       document.getElementById("openclaw-service-categories-slot")?.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!portalNode) return;
+
+    const configuredSelects = new WeakSet<HTMLSelectElement>();
+    const configureExamplesByTag = () => {
+      document.querySelectorAll<HTMLElement>(".opblock-tag-section").forEach((section) => {
+        const heading = section.querySelector<HTMLElement>(".opblock-tag");
+        const tag = Object.keys(exampleMatchers).find((name) =>
+          (heading?.textContent || "").trim().startsWith(name),
+        );
+        if (!tag) return;
+
+        const matchers = exampleMatchers[tag];
+        section.querySelectorAll<HTMLSelectElement>("select").forEach((select) => {
+          if (configuredSelects.has(select)) return;
+
+          const matchingOptions = Array.from(select.options).filter((option) =>
+            matchers.some((matcher) => (option.textContent || "").toLowerCase().includes(matcher)),
+          );
+          if (matchingOptions.length === 0) return;
+
+          configuredSelects.add(select);
+          Array.from(select.options).forEach((option) => {
+            option.hidden = !matchingOptions.includes(option);
+          });
+
+          const selectedOption = matchingOptions[0];
+          if (selectedOption && select.value !== selectedOption.value) {
+            const nativeSetter = Object.getOwnPropertyDescriptor(
+              HTMLSelectElement.prototype,
+              "value",
+            )?.set;
+            nativeSetter?.call(select, selectedOption.value);
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+      });
+    };
+
+    configureExamplesByTag();
+    const observer = new MutationObserver(configureExamplesByTag);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [portalNode]);
 
   if (!portalNode) return null;
 
