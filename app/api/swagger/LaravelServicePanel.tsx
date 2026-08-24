@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 const services = [
   {
     name: "Chat thường",
+    tag: "Chat",
     method: "OpenClawService::responses()",
     model: "gpt-5.6-luna",
     payload: "role + content",
@@ -13,6 +14,7 @@ const services = [
   },
   {
     name: "Viết tin thông minh",
+    tag: "Smart Writing",
     method: "OpenClawService::responses()",
     model: "gpt-5.6-luna",
     payload: "title + desc + len + tone",
@@ -20,6 +22,7 @@ const services = [
   },
   {
     name: "Kiểm tra chính tả",
+    tag: "Spell Check",
     method: "OpenClawService::checkSpelling()",
     model: "gpt-5.6-luna",
     payload: "input_text",
@@ -27,6 +30,7 @@ const services = [
   },
   {
     name: "Text to Speech",
+    tag: "Text to Speech",
     method: "OpenClawService::tts()",
     model: "F5_vie",
     payload: "text + tool: media_text_to_speech",
@@ -34,6 +38,7 @@ const services = [
   },
   {
     name: "OCR hình ảnh",
+    tag: "Image to Text",
     method: "OpenClawService::extractTextFromImage()",
     model: "gpt-5.6-luna",
     payload: "input_text + input_image",
@@ -41,6 +46,7 @@ const services = [
   },
   {
     name: "Tạo hình ảnh",
+    tag: "Image Generation",
     method: "OpenClawService::generateImage()",
     model: "openai/gpt-image-2",
     payload: "prompt + size + aspectRatio + quality + style + tone",
@@ -82,6 +88,34 @@ export default function LaravelServicePanel() {
 
   if (!portalNode) return null;
 
+  const scrollToService = (tag: string) => {
+    const normalizedTag = tag.trim().replace(/\s+/g, "-");
+    const idTarget =
+      document.getElementById(`operations-${tag}`) ||
+      document.getElementById(`operations-tag-${tag}`) ||
+      document.getElementById(`operations-${normalizedTag}`) ||
+      document.getElementById(`operations-tag-${normalizedTag}`) ||
+      document.querySelector(`[data-section-id="operations-${tag}"]`) ||
+      document.querySelector(`[data-section-id="operations-tag-${tag}"]`) ||
+      document.querySelector(`[id$="-${normalizedTag}"]`) ||
+      document.querySelector(`[id$="-${tag}"]`);
+    const textTarget = Array.from(document.querySelectorAll(".opblock-tag")).find((element) =>
+      (element.textContent || "").trim().startsWith(tag),
+    );
+    const target = idTarget || textTarget?.closest(".opblock-tag-section") || textTarget;
+
+    if (target instanceof HTMLElement) {
+      window.history.replaceState(null, "", `#/${encodeURIComponent(tag)}`);
+      const scroll = () => {
+        const top = target.getBoundingClientRect().top + window.scrollY - 24;
+        window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+      };
+
+      scroll();
+      window.setTimeout(scroll, 180);
+    }
+  };
+
   return createPortal(
     <section className="mx-auto mb-6 max-w-[1480px] rounded-xl border border-slate-200 bg-white/90 p-5 shadow-sm">
       <div className="mb-4">
@@ -97,7 +131,12 @@ export default function LaravelServicePanel() {
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {services.map((service) => (
-          <article key={service.name} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <button
+            key={service.name}
+            type="button"
+            onClick={() => scrollToService(service.tag)}
+            className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
             <h3 className="font-semibold text-slate-800">{service.name}</h3>
             <p className="mt-2 text-xs font-semibold text-blue-700">{service.method}</p>
             <dl className="mt-3 space-y-2 text-sm text-slate-600">
@@ -114,7 +153,7 @@ export default function LaravelServicePanel() {
                 <dd>{service.reason}</dd>
               </div>
             </dl>
-          </article>
+          </button>
         ))}
       </div>
     </section>,
