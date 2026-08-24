@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: Media Tech OpenClaw API
+  version: 1.0.0
+  description: |
+    Node.js gateway for the Media Tech OpenClaw integration.
+
+    The gateway exposes four HTTP routes. Text, structured writing, spell
+    checking, script writing, OCR, TTS, image generation, and UI exploration
+    are documented as service capabilities below. Only image generation has a
+    dedicated media route; the other text services use the Responses route.
+
+servers:
+  - url: http://127.0.0.1:8006
+    description: Local Node.js backend
+  - url: http://test.hust.media:8006
+    description: Test backend
+
+tags:
+  - name: Responses
+    description: Main OpenResponses-compatible endpoint and service categories
+  - name: Chat Completions
+    description: OpenAI Chat Completions-compatible response format
+  - name: Health
+    description: Backend health check
+  - name: media_text_to_text
+    description: Normal conversation through the Responses endpoint.
+  - name: media_content_smart
+    description: Structured smart writing using title, description, length, and tone.
+  - name: media_spell_check
+    description: Spell checking through the generic Responses service.
+  - name: media_script_writing
+    description: Script writing through the generic Responses service.
+  - name: media_image_to_text
+    description: OCR and image understanding through the Responses endpoint.
+  - name: media_text_to_speech
+    description: Text-to-speech generation through the configured TTS service.
+  - name: media_text_to_image
+    description: Image generation through the OpenClaw image route.
+  - name: media_explore
+    description: Explore capability exposed by the frontend through Responses.
+
+x-service-categories:
+  media_text_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Normal conversation. This is the default category.
+  media_content_smart:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Structured smart writing using title, desc, len, and tone.
+  media_spell_check:
+    route: /openclaw/v1/responses
+    status: generic-response-service
+    description: Spell checking is sent as a text instruction through Responses.
+  media_script_writing:
+    route: /openclaw/v1/responses
+    status: generic-response-service
+    description: Script writing is sent as a text instruction through Responses.
+  media_image_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: OCR/image understanding using input_image and a Data URI.
+  media_text_to_speech:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Node.js routes audio generation to the configured TTS service.
+  media_text_to_image:
+    route: /openclaw/v1/images/generations
+    status: implemented
+    description: Starts an OpenClaw image task and returns the completed image as Base64.
+  media_explore:
+    route: null
+    status: ui-only
+    description: Explore is a frontend feature and has no dedicated API route.
+
+paths:
+  /openclaw/v1/responses:
+    post:
+      operationId: createResponse
+      tags:
+        - Responses
+        - media_text_to_text
+        - media_content_smart
+        - media_spell_check
+        - media_script_writing
+        - media_image_to_text
+        - media_text_to_speech
+        - media_explore
+      summary: Create a response or execute a text service category
+      description: |
+        The main endpoint for normal chat, smart writing, spell checking,
+        script writing, OCR, and continuation requests. The backend detects
+        the service from the request shape/category and stores response and
+        conversation snapshots.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponsesRequest'
+            examples:
+              normalChat:
+                summary: Normal conversation
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: Chào bạn
+              smartWriting:
+                summary: media_content_smart
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      title: Bàn phương hằng
+                      desc: Giới thiệu, nội dung chính, kết luận
+                      len: 500
+                      tone: Tự nhiên
+              imageToText:
+                summary: media_image_to_text
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: media_image_to_text Nhận diện văn bản
+                        - type: input_image
+                          image_url: data:image/png;base64,BASE64_DATA
+              textToSpeech:
+                summary: media_text_to_speech
+                value:
+                  model: F5_vie
+                  input:
+                    - role: user
+                      text: Xin chào từ Media Tech
+                      tool: media_text_to_speech
+      responses:
+        '200':
+          description: Completed response in Responses API format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v1/chat/completions:
+    post:
+      operationId: createChatCompletion
+      tags: [Chat Completions]
+      summary: Create a Chat Completions-compatible response
+      description: |
+        The gateway accepts Chat Completions input, internally uses the Codex
+        Responses transport, and converts the result back to chat.completion.
+        Use previous_completion_id for continuation on this route.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionsRequest'
+            example:
+              model: gpt-5.6-luna
+              messages:
+                - role: user
+                  content: Chào bạn
+              stream: false
+      responses:
+        '200':
+          description: Completed Chat Completions response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v1/images/generations:
+    post:
+      operationId: generateImage
+      tags:
+        - media_text_to_image
+      summary: Generate an image through OpenClaw
+      description: |
+        The gateway invokes OpenClaw's image_generate tool, polls the task
+        through admin RPC, reads the generated PNG from the shared Docker
+        volume, and returns it as a Responses-compatible output_image item.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationRequest'
+            example:
+              user_id: 69
+              model: openai/gpt-image-2
+              prompt: Một con mèo bên biển
+              n: 1
+              size: 1024x1024
+              aspectRatio: 1:1
+              quality: medium
+              style: Hoạt hình
+              tone: vui tươi
+      responses:
+        '200':
+          description: Completed image response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponseObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v2/health:
+    get:
+      operationId: getOpenClawHealth
+      tags: [Health]
+      summary: Check backend health
+      responses:
+        '200':
+          description: Backend is available
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+components:
+  schemas:
+    ResponsesRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        input:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TextInputItem'
+              - $ref: '#/components/schemas/StructuredWritingInputItem'
+              - $ref: '#/components/schemas/ImageToTextInputItem'
+              - $ref: '#/components/schemas/TextToSpeechInputItem'
+        previous_response_id:
+          type: string
+          nullable: true
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+
+    TextInputItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system, developer]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    StructuredWritingInputItem:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          example: user
+        title:
+          type: string
+        desc:
+          type: string
+        len:
+          oneOf:
+            - type: string
+            - type: integer
+        tone:
+          type: string
+
+    ImageToTextInputItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                properties:
+                  type:
+                    type: string
+                    example: input_text
+                  text:
+                    type: string
+              - type: object
+                properties:
+                  type:
+                    type: string
+                    example: input_image
+                  image_url:
+                    type: string
+                    description: Data URI such as data:image/png;base64,...
+
+    TextToSpeechInputItem:
+      type: object
+      required: [role, text, tool]
+      properties:
+        role:
+          type: string
+          example: user
+        text:
+          type: string
+        tool:
+          type: string
+          enum: [media_text_to_speech]
+        model:
+          type: string
+          example: F5_vie
+
+    ChatCompletionsRequest:
+      type: object
+      required: [messages]
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role:
+                type: string
+                enum: [user, assistant, system, developer]
+              content:
+                type: string
+        stream:
+          type: boolean
+          default: false
+        previous_completion_id:
+          type: string
+
+    ImageGenerationRequest:
+      type: object
+      required: [prompt]
+      properties:
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+        model:
+          type: string
+          example: openai/gpt-image-2
+        prompt:
+          type: string
+        n:
+          type: integer
+          minimum: 1
+          default: 1
+        size:
+          type: string
+          example: 1024x1024
+        aspectRatio:
+          type: string
+          example: 1:1
+        quality:
+          type: string
+          example: medium
+        style:
+          type: string
+        tone:
+          type: string
+        previous_response_id:
+          type: string
+
+    ResponseObject:
+      type: object
+      required: [id, object, status, output]
+      properties:
+        id:
+          type: string
+          example: resp_abc123
+        object:
+          type: string
+          example: response
+        status:
+          type: string
+          example: completed
+        model:
+          type: string
+        previous_response_id:
+          type: string
+          nullable: true
+        output:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        output_text:
+          type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+
+    ImageResponseObject:
+      allOf:
+        - $ref: '#/components/schemas/ResponseObject'
+        - type: object
+          properties:
+            output:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: message
+                  role:
+                    type: string
+                    example: assistant
+                  content:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: output_image
+                        source:
+                          type: object
+                          required: [type, media_type, data]
+                          properties:
+                            type:
+                              type: string
+                              example: base64
+                            media_type:
+                              type: string
+                              example: image/png
+                            data:
+                              type: string
+
+    ChatCompletionObject:
+      type: object
+      required: [id, object, choices]
+      properties:
+        id:
+          type: string
+          example: chatcmpl_abc123
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+
+    ResponseUsage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request or downstream OpenClaw failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

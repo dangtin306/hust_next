@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 export type ServiceCategory = {
   route: string | null;
@@ -10,6 +11,7 @@ export type ServiceCategory = {
 
 type ServiceCategoryPanelProps = {
   categories: Array<[string, ServiceCategory]>;
+  hidden?: boolean;
 };
 
 const operationByService: Record<string, string> = {
@@ -30,25 +32,39 @@ const statusLabel = (status: string) => {
   return "Generic response service";
 };
 
-export default function ServiceCategoryPanel({ categories }: ServiceCategoryPanelProps) {
+export default function ServiceCategoryPanel({ categories, hidden = false }: ServiceCategoryPanelProps) {
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+
   useEffect(() => {
-    const movePanelBelowSwaggerHeader = () => {
-      const panel = document.getElementById("openclaw-service-categories");
+    const ensurePanelSlot = () => {
+      const swaggerRoot = document.querySelector(".swagger-ui");
+      if (!swaggerRoot) return;
+
       const firstOperation = document.querySelector(".opblock-tag-section");
       const parent = firstOperation?.parentElement;
 
-      if (!panel || !firstOperation || !parent) return;
-      if (panel.nextElementSibling !== firstOperation) {
-        parent.insertBefore(panel, firstOperation);
+      if (!firstOperation || !parent) return;
+      let slot = swaggerRoot.querySelector<HTMLElement>("#openclaw-service-categories-slot");
+      if (!slot) {
+        slot = document.createElement("div");
+        slot.id = "openclaw-service-categories-slot";
+        parent.insertBefore(slot, firstOperation);
       }
+      setPortalNode(slot);
     };
 
-    movePanelBelowSwaggerHeader();
-    const observer = new MutationObserver(movePanelBelowSwaggerHeader);
+    ensurePanelSlot();
+    const observer = new MutationObserver(ensurePanelSlot);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      setPortalNode(null);
+      document.getElementById("openclaw-service-categories-slot")?.remove();
+    };
   }, []);
+
+  if (!portalNode) return null;
 
   const scrollToOperation = (serviceKey: string) => {
     const operationId = operationByService[serviceKey] || "createResponse";
@@ -74,10 +90,9 @@ export default function ServiceCategoryPanel({ categories }: ServiceCategoryPane
     });
   };
 
-  return (
+  return createPortal(
     <section
-      id="openclaw-service-categories"
-      className="mx-auto mb-6 max-w-[1480px] rounded-xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm"
+      className={`${hidden ? "hidden" : ""} mx-auto mb-6 max-w-[1480px] rounded-xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm`}
     >
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
@@ -126,6 +141,7 @@ export default function ServiceCategoryPanel({ categories }: ServiceCategoryPane
           </button>
         ))}
       </div>
-    </section>
+    </section>,
+    portalNode,
   );
 }

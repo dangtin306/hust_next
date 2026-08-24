@@ -123,9 +123,14 @@
         "regex": "^/next/shop/ai(?:/([^/]+?))(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/test",
-        "destination": "/next/api/swagger",
-        "regex": "^/next/api/swagger/test(?:/)?$"
+        "source": "/next/api/swagger/openclaw",
+        "destination": "/next/api/swagger/openclaw",
+        "regex": "^/next/api/swagger/openclaw(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/laravel",
+        "destination": "/next/api/swagger/laravel",
+        "regex": "^/next/api/swagger/laravel(?:/)?$"
       }
     ],
     "fallback": []
@@ -254,6 +259,18 @@
       "regex": "^/api/swagger(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/swagger(?:/)?$"
+    },
+    {
+      "page": "/api/swagger/laravel",
+      "regex": "^/api/swagger/laravel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/laravel(?:/)?$"
+    },
+    {
+      "page": "/api/swagger/openclaw",
+      "regex": "^/api/swagger/openclaw(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/openclaw(?:/)?$"
     },
     {
       "page": "/clear_silde_bar",

@@ -8,7 +8,7 @@ import IgnoreMetaMaskExtensionErrors from "./components/IgnoreMetaMaskExtensionE
 import LocalhostLegacyLinkRedirector from "@/src/redirect";
 import SimpleTopBar from "./components/SimpleTopBar";
 import Footer_web from "./components/Footer_web";
-import SupportButton from "./community/services/SupportButton";
+import SupportButtonConditional from "./components/SupportButtonConditional";
 import { getSidebarMenuServer } from "./components/sidebar_menu_server";
 
 const geistSans = Geist({
@@ -125,7 +125,7 @@ export default async function RootLayout({
             </div>
           </div>
         </div>
-        <SupportButton />
+        <SupportButtonConditional />
       </body>
     </html>
   );

@@ -169,3 +169,6 @@ code {
 .legacy-navbar-theme .underline {
   text-decoration-line: none;
 }
+.swagger-ui-server-only .swagger-ui > :not(.scheme-container) {
+  display: none !important;
+}

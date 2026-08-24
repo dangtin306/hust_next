@@ -56,6 +56,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/swagger/laravel/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/swagger/laravel">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/laravel/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/swagger/openclaw/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/swagger/openclaw">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/openclaw/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/swagger/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/swagger">> = Specific
@@ -284,6 +302,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 
 
 
+
+// Validate ../../app/api/swagger/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/api/swagger">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
 
 // Validate ../../app/layout.tsx
 {

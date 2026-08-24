@@ -92,9 +92,13 @@
       }
     },
     "swagger": {
-      "test": {
-        "source": "/api/swagger/test",
-        "destination": "/api/swagger"
+      "openclaw": {
+        "source": "/api/swagger/openclaw",
+        "destination": "/api/swagger/openclaw"
+      },
+      "laravel": {
+        "source": "/api/swagger/laravel",
+        "destination": "/api/swagger/laravel"
       }
     }
   },

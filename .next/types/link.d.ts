@@ -37,13 +37,16 @@ declare namespace __next_route_internal_types__ {
     | `/api/sidebar-menu`
     | `/api/sidebar-menu/clear`
     | `/api/swagger`
+    | `/api/swagger/laravel`
+    | `/api/swagger/openclaw`
     | `/clear_silde_bar`
     | `/community/features`
     | `/community/services/development`
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
-    | `/next/api/swagger/test`
+    | `/next/api/swagger/laravel`
+    | `/next/api/swagger/openclaw`
     | `/next/community/history/home`
     | `/next/convert_national_market`
     | `/next/cron_server`

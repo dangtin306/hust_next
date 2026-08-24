@@ -1,0 +1,333 @@
+openapi: 3.0.3
+info:
+  title: Laravel OpenClaw Downstream Integration API
+  version: 1.0.0
+  description: |
+    Tài liệu chỉ mô tả backend Laravel gọi sang backend OpenClaw.
+    Luồng tích hợp: Laravel OpenClawService -> Node.js OpenClaw Gateway -> OpenClaw agent.
+    Không mô tả frontend, Vue, controller Laravel hoặc các endpoint /api/v1/* và /api/v2/*.
+servers:
+  - url: http://127.0.0.1:{LARAVEL_PORT}
+    description: Laravel backend (reference)
+    variables:
+      LARAVEL_PORT:
+        default: '8000'
+        description: Port đang chạy của Laravel
+  - url: http://127.0.0.1:8006
+    description: OpenClaw Gateway
+  - url: http://127.0.0.1:8803
+    description: OpenClaw agent (internal reference)
+tags:
+  - name: Chat
+    description: Chat thường qua OpenClawService::responses()
+  - name: Smart Writing
+    description: Viết tin thông minh qua OpenClawService::responses()
+  - name: Spell Check
+    description: Kiểm tra chính tả qua OpenClawService::checkSpelling()
+  - name: Text to Speech
+    description: Tạo audio qua OpenClawService::tts()
+  - name: Image to Text
+    description: OCR hình ảnh qua OpenClawService::extractTextFromImage()
+  - name: Image Generation
+    description: Tạo hình ảnh qua OpenClawService::generateImage()
+paths:
+  /openclaw/v1/responses:
+    post:
+      tags: [Chat, Smart Writing, Spell Check, Text to Speech, Image to Text, Image Generation]
+      operationId: openClawResponses
+      summary: Laravel gửi request tới OpenClaw
+      description: |
+        Laravel gọi trực tiếp http://127.0.0.1:8006/openclaw/v1/responses.
+        Laravel OpenClawService dùng endpoint này cho chat, viết tin, chính tả,
+        Text to Speech, OCR hình ảnh và tạo hình ảnh. Tạo hình ảnh cũng gửi qua
+        /openclaw/v1/responses, không gọi trực tiếp /images/generations.
+
+        ## Vì sao request có các data này?
+
+        - `model`: chọn model/service backend mà OpenClaw cần thực thi. Chat,
+          smart writing, spell check và OCR dùng `gpt-5.6-luna`; TTS dùng `F5_vie`;
+          image generation dùng `openai/gpt-image-2`.
+        - `input`: là payload nghiệp vụ chuẩn mà Gateway chuyển tới OpenClaw agent.
+          Laravel luôn gửi một mảng để giữ cùng một request format cho tất cả service.
+        - `role`: xác định dữ liệu đến từ user trong cấu trúc message của OpenClaw.
+        - `content`: dùng cho nội dung văn bản hoặc danh sách content đa phương thức.
+          OCR dùng danh sách này vì cần gửi đồng thời hướng dẫn và hình ảnh.
+        - `title`, `desc`, `len`, `tone`: chỉ xuất hiện ở smart writing để agent biết
+          chủ đề, dàn ý, độ dài và giọng văn cần tạo.
+        - `tool: media_text_to_speech`: yêu cầu OpenClaw chuyển sang service TTS thay
+          vì xử lý như một câu chat thông thường.
+        - `type: input_text` và `type: input_image`: phân biệt hướng dẫn OCR với
+          hình ảnh đầu vào. Laravel chuyển file thành Data URI Base64 trước khi gửi.
+        - `prompt`, `n`, `size`, `aspectRatio`, `quality`, `style`, `tone`: mô tả
+          yêu cầu và tham số đầu ra của image generation. Laravel vẫn gửi chúng qua
+          `responses` để dùng chung pipeline response và agent.
+        - `previous_response_id`: chỉ được thêm khi Laravel tìm thấy response trước
+          của room. Nó giúp OpenClaw tiếp tục đúng ngữ cảnh, không tạo một phiên mới.
+
+        ## Vì sao tất cả service dùng một endpoint?
+
+        Laravel dùng một downstream contract duy nhất để Gateway xác thực header,
+        chọn agent và trả cùng một response format. Service được phân biệt bằng
+        `model`, `tool` hoặc cấu trúc `input`, không phải bằng một endpoint riêng.
+
+        ## Laravel xử lý response như thế nào?
+
+        1. Lấy `response.id` từ OpenClaw.
+        2. Gắn `response.id` với `room_id` của phiên Laravel.
+        3. Lưu mapping vào `open_claw.json`.
+        4. Lần gọi tiếp theo gửi lại ID dưới tên `previous_response_id`.
+        5. Trích xuất kết quả từ `response.output`, `response.output_text`,
+           `response.choices[0].message.content`, audio hoặc image.
+        6. Trả kết quả đã xử lý cho lớp gọi Laravel.
+
+        ## Headers bắt buộc
+
+        - `Authorization: Bearer media_tech`: xác thực Laravel với Gateway.
+        - `Content-Type: application/json`: xác định request body là JSON.
+        - `x-openclaw-agent-id: test`: yêu cầu Gateway định tuyến tới agent `test`.
+      parameters:
+        - name: x-openclaw-agent-id
+          in: header
+          required: true
+          schema:
+            type: string
+            example: test
+          description: Agent OpenClaw được Gateway định tuyến tới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenClawRequest'
+            examples:
+              chat:
+                summary: Chat - OpenClawService::responses()
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: Xin chào
+                  previous_response_id: resp_abc123
+              smart_writing:
+                summary: Viết tin - OpenClawService::responses()
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      title: AI trong báo chí
+                      desc: Mở bài, thực trạng, kết luận
+                      len: '500'
+                      tone: Nghiêm túc
+                  previous_response_id: resp_abc123
+              spell_check:
+                summary: Chính tả - OpenClawService::checkSpelling()
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: 'Hãy kiểm tra lỗi chính tả cho đoạn văn: ...'
+              text_to_speech:
+                summary: TTS - OpenClawService::tts()
+                value:
+                  model: F5_vie
+                  input:
+                    - role: user
+                      text: Xin chào từ Media Tech
+                      tool: media_text_to_speech
+                  previous_response_id: resp_abc123
+              image_to_text:
+                summary: OCR - OpenClawService::extractTextFromImage()
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: media_image_to_text Nhận diện văn bản
+                        - type: input_image
+                          image_url: data:image/png;base64,BASE64_DATA
+                  previous_response_id: resp_abc123
+              image_generation:
+                summary: Tạo hình ảnh - OpenClawService::generateImage()
+                value:
+                  model: openai/gpt-image-2
+                  input:
+                    - role: user
+                      model: openai/gpt-image-2
+                      prompt: Một con mèo bên bờ biển
+                      n: 1
+                      size: 1024x1024
+                      aspectRatio: 1:1
+                      quality: medium
+                      style: Hoạt hình
+                      tone: Vui tươi
+                  previous_response_id: resp_abc123
+      responses:
+        '200':
+          description: OpenClaw response được Laravel xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenClawResponse'
+              example:
+                id: resp_abc123
+                output_text: Nội dung trả lời
+                output: []
+        '401':
+          description: Authorization không hợp lệ
+        '500':
+          description: Gateway hoặc OpenClaw agent gặp lỗi
+components:
+  schemas:
+    OpenClawRequest:
+      type: object
+      required: [model, input]
+      properties:
+        model:
+          type: string
+          description: Model hoặc service backend OpenClaw cần thực thi.
+          example: gpt-5.6-luna
+        input:
+          type: array
+          description: Mảng payload nghiệp vụ do từng method OpenClawService xây dựng; cấu trúc thay đổi theo service.
+          items:
+            type: object
+            additionalProperties: true
+        previous_response_id:
+          type: string
+          description: Chỉ thêm khi Laravel tìm thấy response trước theo room để tiếp tục ngữ cảnh.
+          example: resp_abc123
+    OpenClawResponse:
+      type: object
+      description: Response Laravel đọc và chuyển kết quả cho lớp gọi Laravel
+      properties:
+        id:
+          type: string
+          description: Laravel lưu ID theo room trong open_claw.json và gửi lại làm previous_response_id.
+          example: resp_abc123
+        output:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        output_text:
+          type: string
+          description: Nội dung text chuẩn dùng cho chat, smart writing, spell check và OCR.
+        choices:
+          type: array
+          description: Fallback tương thích Chat Completions
+          items:
+            type: object
+            additionalProperties: true
+        audio:
+          type: object
+          additionalProperties: true
+          description: Audio hoặc Base64 audio được trả về khi dùng OpenClawService::tts().
+        image:
+          type: object
+          additionalProperties: true
+          description: Image hoặc Base64 image được trả về khi dùng OpenClawService::generateImage().
+x-laravel-integration:
+  title: Laravel OpenClawService downstream contract
+  scope: Backend Laravel -> Node.js OpenClaw Gateway -> OpenClaw agent
+  flow:
+    - Laravel OpenClawService tạo request
+    - Laravel gửi POST /openclaw/v1/responses tới Gateway
+    - Gateway định tuyến tới OpenClaw agent
+    - Laravel đọc response.id và output
+    - Laravel lưu response.id theo room
+    - Lần gọi sau gửi previous_response_id
+  endpoints:
+    laravel: http://127.0.0.1:{LARAVEL_PORT}
+    gateway: http://127.0.0.1:8006
+    agent: http://127.0.0.1:8803
+  headers:
+    Authorization: Bearer media_tech
+    Content-Type: application/json
+    x-openclaw-agent-id: test
+  responseExtraction:
+    - response.id
+    - response.output
+    - response.output_text
+    - response.choices[0].message.content
+  responseLifecycle:
+    - Lấy response.id từ response OpenClaw
+    - Gắn response.id với room_id hiện tại
+    - Lưu mapping room_id -> response.id trong open_claw.json
+    - Lần gọi tiếp theo gửi lại response.id dưới tên previous_response_id
+    - Trích xuất text, audio hoặc image từ output tương ứng
+    - Trả kết quả đã xử lý cho lớp gọi Laravel
+  serviceContracts:
+    chat:
+      method: OpenClawService::responses()
+      model: gpt-5.6-luna
+      input:
+        role: user
+        content: Xin chào
+      previous_response_id: Optional; chỉ thêm khi room có response trước
+      result: response.output_text hoặc response.choices[0].message.content
+    smart_writing:
+      method: OpenClawService::responses()
+      model: gpt-5.6-luna
+      input:
+        role: user
+        title: AI trong báo chí
+        desc: Mở bài, thực trạng, kết luận
+        len: '500'
+        tone: Nghiêm túc
+      previous_response_id: Optional; chỉ thêm khi room có response trước
+      result: response.output_text
+    spell_check:
+      method: OpenClawService::checkSpelling()
+      model: gpt-5.6-luna
+      input:
+        role: user
+        content:
+          - type: input_text
+            text: 'Hãy kiểm tra lỗi chính tả cho đoạn văn: ...'
+      previous_response_id: Not required in the current contract
+      result: Parse response text into spelling suggestions
+    text_to_speech:
+      method: OpenClawService::tts()
+      model: F5_vie
+      input:
+        role: user
+        text: Xin chào từ Media Tech
+        tool: media_text_to_speech
+      previous_response_id: Optional; chỉ thêm khi room có response trước
+      result: response audio or Base64 audio data
+    image_to_text:
+      method: OpenClawService::extractTextFromImage()
+      model: gpt-5.6-luna
+      input:
+        role: user
+        content:
+          - type: input_text
+            text: media_image_to_text Nhận diện văn bản
+          - type: input_image
+            image_url: data:image/png;base64,BASE64_DATA
+      previous_response_id: Optional; chỉ thêm khi room có response trước
+      result: response.output_text containing extracted text
+    image_generation:
+      method: OpenClawService::generateImage()
+      model: openai/gpt-image-2
+      input:
+        role: user
+        model: openai/gpt-image-2
+        prompt: Một con mèo bên bờ biển
+        n: 1
+        size: 1024x1024
+        aspectRatio: 1:1
+        quality: medium
+        style: Hoạt hình
+        tone: Vui tươi
+      previous_response_id: Optional; chỉ thêm khi room có response trước
+      result: response image or Base64 image data
+  methods:
+    - OpenClawService::responses()
+    - OpenClawService::checkSpelling()
+    - OpenClawService::tts()
+    - OpenClawService::extractTextFromImage()
+    - OpenClawService::generateImage()
