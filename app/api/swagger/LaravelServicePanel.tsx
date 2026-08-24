@@ -54,6 +54,15 @@ const services = [
   },
 ];
 
+const exampleMatchers: Record<string, string[]> = {
+  Chat: ["chat thường", "chat"],
+  "Smart Writing": ["viết tin", "smart writing"],
+  "Spell Check": ["kiểm tra chính tả", "spell check"],
+  "Text to Speech": ["text to speech", "tts"],
+  "Image to Text": ["ocr", "image to text"],
+  "Image Generation": ["tạo hình ảnh", "image generation"],
+};
+
 export default function LaravelServicePanel() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
 
@@ -85,6 +94,57 @@ export default function LaravelServicePanel() {
       slot?.remove();
     };
   }, []);
+
+  useEffect(() => {
+    if (!portalNode) return;
+
+    const configuredSelects = new WeakSet<HTMLSelectElement>();
+
+    const configureExamplesByTag = () => {
+      document.querySelectorAll<HTMLElement>(".opblock-tag-section").forEach((section) => {
+        const heading = section.querySelector<HTMLElement>(".opblock-tag");
+        const tag = Object.keys(exampleMatchers).find((name) =>
+          (heading?.textContent || "").trim().startsWith(name),
+        );
+        if (!tag) return;
+
+        const matchers = exampleMatchers[tag];
+        section.querySelectorAll<HTMLSelectElement>("select").forEach((select) => {
+          if (configuredSelects.has(select)) return;
+
+          const matchingOptions = Array.from(select.options).filter((option) =>
+            matchers.some((matcher) => (option.textContent || "").toLowerCase().includes(matcher)),
+          );
+          if (matchingOptions.length === 0) return;
+
+          configuredSelects.add(select);
+
+          Array.from(select.options).forEach((option) => {
+            option.hidden = !matchingOptions.includes(option);
+          });
+
+          const selectedOption = matchingOptions[0];
+          const nativeSetter = Object.getOwnPropertyDescriptor(
+            HTMLSelectElement.prototype,
+            "value",
+          )?.set;
+          if (selectedOption && select.value !== selectedOption.value) {
+            nativeSetter?.call(select, selectedOption.value);
+            select.dispatchEvent(new Event("input", { bubbles: true }));
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        });
+      });
+    };
+
+    configureExamplesByTag();
+    const observer = new MutationObserver(configureExamplesByTag);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [portalNode]);
 
   if (!portalNode) return null;
 
