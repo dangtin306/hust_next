@@ -89,8 +89,6 @@ paths:
 
         Response id được dùng để cập nhật trạng thái room Laravel sau khi
         request hoàn tất. OpenClaw không tự biết room_id của Laravel.
-      parameters:
-        - $ref: '#/components/parameters/OpenClawAgentId'
       requestBody:
         required: true
         content:
@@ -177,16 +175,6 @@ paths:
           $ref: '#/components/responses/DownstreamFailure'
 
 components:
-  parameters:
-    OpenClawAgentId:
-      name: x-openclaw-agent-id
-      in: header
-      required: true
-      description: Agent OpenClaw mà gateway sử dụng.
-      schema:
-        type: string
-        example: test
-
   schemas:
     OpenClawRequest:
       type: object
