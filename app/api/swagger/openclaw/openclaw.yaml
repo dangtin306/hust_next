@@ -3,78 +3,159 @@ info:
   title: Media Tech OpenClaw API
   version: 1.0.0
   description: |
-    Node.js gateway for the Media Tech OpenClaw integration.
+    Node.js gateway cho tích hợp Media Tech OpenClaw.
 
-    The gateway exposes four HTTP routes. Text, structured writing, spell
-    checking, script writing, OCR, TTS, image generation, and UI exploration
-    are documented as service capabilities below. Only image generation has a
-    dedicated media route; the other text services use the Responses route.
+    Gateway cung cấp các route Responses, Conversations, Chat Completions, tạo
+    hình ảnh và kiểm tra health. Conversations có thể liên kết với Responses
+    bằng conversation_id; request không có field này vẫn tiếp tục dùng luồng
+    history cũ.
 
 servers:
   - url: http://127.0.0.1:8006
-    description: Local Node.js backend
+    description: Backend Node.js local
   - url: http://test.hust.media:8006
-    description: Test backend
+    description: Backend test
 
 tags:
   - name: Responses
-    description: Main OpenResponses-compatible endpoint and service categories
-  - name: Chat Completions
-    description: OpenAI Chat Completions-compatible response format
+    description: Endpoint tương thích OpenResponses chính và các nhóm service
+  - name: Conversations
+    description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
   - name: Health
-    description: Backend health check
+    description: Kiểm tra health của backend
   - name: media_text_to_text
-    description: Normal conversation through the Responses endpoint.
+    description: Hội thoại thông thường thông qua endpoint Responses.
   - name: media_content_smart
-    description: Structured smart writing using title, description, length, and tone.
+    description: Viết nội dung thông minh theo title, description, length và tone.
   - name: media_spell_check
-    description: Spell checking through the generic Responses service.
+    description: Kiểm tra chính tả thông qua service Responses dùng chung.
   - name: media_script_writing
-    description: Script writing through the generic Responses service.
+    description: Viết script thông qua service Responses dùng chung.
   - name: media_image_to_text
-    description: OCR and image understanding through the Responses endpoint.
+    description: OCR và phân tích hình ảnh thông qua endpoint Responses.
   - name: media_text_to_speech
-    description: Text-to-speech generation through the configured TTS service.
+    description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
   - name: media_text_to_image
-    description: Image generation through the OpenClaw image route.
-  - name: media_explore
-    description: Explore capability exposed by the frontend through Responses.
-
+    description: Tạo hình ảnh thông qua image route của OpenClaw.
 x-service-categories:
+  media_responses:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Endpoint tương thích OpenResponses chính cho request chat và service AI.
+  media_conversations:
+    route: /openclaw/v1/conversations
+    status: implemented
+    description: Tạo Conversations, quản lý item và liên kết Responses bằng conversation_id.
   media_text_to_text:
     route: /openclaw/v1/responses
     status: implemented
-    description: Normal conversation. This is the default category.
+    description: Hội thoại thông thường. Đây là category mặc định.
   media_content_smart:
     route: /openclaw/v1/responses
     status: implemented
-    description: Structured smart writing using title, desc, len, and tone.
+    description: Viết nội dung thông minh theo title, desc, len và tone.
   media_spell_check:
     route: /openclaw/v1/responses
     status: generic-response-service
-    description: Spell checking is sent as a text instruction through Responses.
+    description: Nội dung kiểm tra chính tả được gửi dưới dạng chỉ dẫn text qua Responses.
   media_script_writing:
     route: /openclaw/v1/responses
     status: generic-response-service
-    description: Script writing is sent as a text instruction through Responses.
+    description: Nội dung viết script được gửi dưới dạng chỉ dẫn text qua Responses.
   media_image_to_text:
     route: /openclaw/v1/responses
     status: implemented
-    description: OCR/image understanding using input_image and a Data URI.
+    description: OCR/phân tích hình ảnh bằng input_image và Data URI.
   media_text_to_speech:
     route: /openclaw/v1/responses
     status: implemented
-    description: Node.js routes audio generation to the configured TTS service.
+    description: Node.js định tuyến việc tạo audio đến service TTS đã cấu hình.
   media_text_to_image:
     route: /openclaw/v1/images/generations
     status: implemented
-    description: Starts an OpenClaw image task and returns the completed image as Base64.
-  media_explore:
-    route: null
-    status: ui-only
-    description: Explore is a frontend feature and has no dedicated API route.
-
+    description: Khởi chạy image task của OpenClaw và trả về hình ảnh hoàn tất dưới dạng Base64.
 paths:
+  /openclaw/v1/conversations:
+    post:
+      operationId: createConversation
+      tags:
+        - Conversations
+      summary: Tạo một conversation
+      description: Tạo conversation liên kết với user. conversation_id trả về có định dạng UUID với prefix conv_.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreateRequest'
+            example:
+              user_id: 69
+              metadata:
+                source: frontend
+      responses:
+        '201':
+          description: Đã tạo conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /openclaw/v1/conversations/{id}:
+    get:
+      operationId: getConversation
+      tags:
+        - Conversations
+      summary: Lấy một conversation
+      description: id có thể là số tăng dần hoặc conversation identifier dạng conv_.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Thông tin conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /openclaw/v1/conversations/{id}/items:
+    get:
+      operationId: listConversationItems
+      tags:
+        - Conversations
+      summary: Lấy danh sách conversation item
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Danh sách conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItemList'
+    post:
+      operationId: createConversationItem
+      tags:
+        - Conversations
+      summary: Thêm item vào conversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationItemCreateRequest'
+            example:
+              role: user
+              content: Hãy giới thiệu về Hà Nội
+      responses:
+        '201':
+          description: Đã tạo conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItem'
+
   /openclaw/v1/responses:
     post:
       operationId: createResponse
@@ -86,13 +167,12 @@ paths:
         - media_script_writing
         - media_image_to_text
         - media_text_to_speech
-        - media_explore
-      summary: Create a response or execute a text service category
+      summary: Tạo response hoặc thực thi category service text
       description: |
-        The main endpoint for normal chat, smart writing, spell checking,
-        script writing, OCR, and continuation requests. The backend detects
-        the service from the request shape/category and stores response and
-        conversation snapshots.
+        Endpoint chính cho chat thông thường, viết nội dung thông minh, kiểm tra
+        chính tả, viết script, OCR và các request tiếp tục. Khi có conversation_id,
+        backend tìm conversation, liên kết user item và assistant item, lưu
+        response_id rồi trả về response. Nếu không có, hệ thống dùng luồng history cũ.
       requestBody:
         required: true
         content:
@@ -101,7 +181,7 @@ paths:
               $ref: '#/components/schemas/ResponsesRequest'
             examples:
               normalChat:
-                summary: Normal conversation
+                summary: Hội thoại thông thường
                 value:
                   model: gpt-5.6-luna
                   input:
@@ -138,7 +218,7 @@ paths:
                       tool: media_text_to_speech
       responses:
         '200':
-          description: Completed response in Responses API format
+          description: Response hoàn tất theo định dạng Responses API
           content:
             application/json:
               schema:
@@ -149,12 +229,12 @@ paths:
   /openclaw/v1/chat/completions:
     post:
       operationId: createChatCompletion
-      tags: [Chat Completions]
-      summary: Create a Chat Completions-compatible response
+      tags: [Responses]
+      summary: Tạo response tương thích Chat Completions
       description: |
-        The gateway accepts Chat Completions input, internally uses the Codex
-        Responses transport, and converts the result back to chat.completion.
-        Use previous_completion_id for continuation on this route.
+        Gateway nhận input Chat Completions, sử dụng transport Codex Responses
+        ở bên trong và chuyển kết quả về chat.completion. Dùng
+        previous_completion_id để tiếp tục trên route này.
       requestBody:
         required: true
         content:
@@ -169,7 +249,7 @@ paths:
               stream: false
       responses:
         '200':
-          description: Completed Chat Completions response
+          description: Response Chat Completions hoàn tất
           content:
             application/json:
               schema:
@@ -182,11 +262,11 @@ paths:
       operationId: generateImage
       tags:
         - media_text_to_image
-      summary: Generate an image through OpenClaw
+      summary: Tạo hình ảnh thông qua OpenClaw
       description: |
-        The gateway invokes OpenClaw's image_generate tool, polls the task
-        through admin RPC, reads the generated PNG from the shared Docker
-        volume, and returns it as a Responses-compatible output_image item.
+        Gateway gọi tool image_generate của OpenClaw, theo dõi task thông qua
+        admin RPC, đọc PNG được tạo từ shared Docker volume và trả về dưới dạng
+        output_image item tương thích Responses.
       requestBody:
         required: true
         content:
@@ -205,7 +285,7 @@ paths:
               tone: vui tươi
       responses:
         '200':
-          description: Completed image response
+          description: Image response hoàn tất
           content:
             application/json:
               schema:
@@ -217,10 +297,10 @@ paths:
     get:
       operationId: getOpenClawHealth
       tags: [Health]
-      summary: Check backend health
+      summary: Kiểm tra health backend
       responses:
         '200':
-          description: Backend is available
+          description: Backend đang hoạt động
           content:
             application/json:
               schema:
@@ -232,7 +312,111 @@ paths:
                     example: true
 
 components:
+  parameters:
+    ConversationId:
+      name: id
+      in: path
+      required: true
+      description: id số tăng dần hoặc conversation identifier UUID có prefix conv_.
+      schema:
+        type: string
+      example: conv_550e8400-e29b-41d4-a716-446655440000
+
   schemas:
+    ConversationCreateRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: integer
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            source: frontend
+
+    Conversation:
+      type: object
+      required: [id, conversation_id, category, user_id, metadata, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          example: 1
+        conversation_id:
+          type: string
+          example: conv_550e8400-e29b-41d4-a716-446655440000
+        category:
+          type: string
+          example: conversation
+        user_id:
+          type: integer
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ConversationItemCreateRequest:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system, developer]
+        content:
+          type: string
+          example: Hãy giới thiệu về Hà Nội
+
+    ConversationItem:
+      type: object
+      required: [id, object, role, content, created_at]
+      properties:
+        id:
+          type: string
+          example: item_abc123
+        object:
+          type: string
+          example: conversation.item
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+        response_id:
+          type: string
+          nullable: true
+          example: resp_abc123
+        created_at:
+          type: string
+          format: date-time
+
+    ConversationItemList:
+      type: object
+      required: [object, data, has_more, first_id, last_id]
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationItem'
+        has_more:
+          type: boolean
+          example: false
+        first_id:
+          type: string
+          example: item_abc123
+        last_id:
+          type: string
+          example: item_def456
+
     ResponsesRequest:
       type: object
       additionalProperties: true
@@ -251,6 +435,10 @@ components:
         previous_response_id:
           type: string
           nullable: true
+        conversation_id:
+          type: string
+          description: conversation identifier dạng conv_ dùng để liên kết response với conversation, không bắt buộc.
+          example: conv_550e8400-e29b-41d4-a716-446655440000
         user_id:
           type: integer
         chat_token:
@@ -314,7 +502,7 @@ components:
                     example: input_image
                   image_url:
                     type: string
-                    description: Data URI such as data:image/png;base64,...
+          description: Data URI, ví dụ data:image/png;base64,...
 
     TextToSpeechInputItem:
       type: object
@@ -509,7 +697,7 @@ components:
 
   responses:
     BadRequest:
-      description: Invalid request or downstream OpenClaw failure
+      description: Request không hợp lệ hoặc OpenClaw downstream gặp lỗi
       content:
         application/json:
           schema:

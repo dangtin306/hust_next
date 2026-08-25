@@ -99,6 +99,10 @@
       "laravel": {
         "source": "/api/swagger/laravel",
         "destination": "/api/swagger/laravel"
+      },
+      "home": {
+        "source": "/api/swagger/home",
+        "destination": "/api/swagger/home"
       }
     }
   },

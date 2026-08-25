@@ -186,6 +186,7 @@ export default function SwaggerClient({ spec, serverOnly = false }: SwaggerClien
           swaggerRoot.prepend(serverControls);
         }
         installApiUrlEditor(serverControls);
+
       };
 
       moveServerControlsToTop();

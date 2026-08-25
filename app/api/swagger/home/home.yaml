@@ -1,0 +1,10 @@
+openapi: 3.0.3
+info:
+  title: Media Tech AI API Documentation
+  version: 1.0.0
+  description: >-
+    Đây là tài liệu API AI của Media Tech. Các API được xây dựng theo chuẩn OpenAPI, một chuẩn phổ biến được nhiều hệ thống áp dụng để mô tả route, request, response và kết nối đến các module AI bên trong. Trang Home chỉ giới thiệu tổng quan và không chứa endpoint API. Chọn **Laravel** để xem tài liệu tích hợp các service từ Laravel đến OpenClaw Gateway, hoặc chọn **OpenClaw** để xem các endpoint và service do OpenClaw Gateway cung cấp.
+servers:
+  - url: http://127.0.0.1:8006
+    description: Configured OpenClaw Codex gateway
+paths: {}

@@ -2,15 +2,16 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import ServiceCategoryPanel, { type ServiceCategory } from "./ServiceCategoryPanel";
+import ServiceCategoryPanel, { type ServiceCategory } from "./openclaw/ServiceCategoryPanel";
 import SwaggerClient from "./SwaggerClient";
 import SwaggerSwitcher from "./SwaggerSwitcher";
-import LaravelServicePanel from "./LaravelServicePanel";
+import LaravelServicePanel from "./laravel/LaravelServicePanel";
 
 type SwaggerLayoutClientProps = {
   children: React.ReactNode;
   spec: Record<string, unknown>;
   laravelSpec: Record<string, unknown>;
+  homeSpec: Record<string, unknown>;
   categories: Array<[string, ServiceCategory]>;
 };
 
@@ -18,9 +19,11 @@ export default function SwaggerLayoutClient({
   children,
   spec,
   laravelSpec,
+  homeSpec,
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
+  const isHome = pathname.endsWith("/api/swagger/home");
   const isLaravel = pathname.endsWith("/api/swagger/laravel");
 
   useEffect(() => {
@@ -37,12 +40,20 @@ export default function SwaggerLayoutClient({
 
   return (
     <main className="min-h-screen bg-transparent p-4 sm:p-6">
-      <SwaggerSwitcher active={isLaravel ? "laravel" : "openclaw"} />
+      <SwaggerSwitcher active={isHome ? "home" : isLaravel ? "laravel" : "openclaw"} />
 
-      {isLaravel ? <LaravelServicePanel /> : <ServiceCategoryPanel categories={categories} />}
-      <SwaggerClient spec={isLaravel ? laravelSpec : spec} />
-
-      <div className={isLaravel ? "block" : "hidden"}>{children}</div>
+      {isHome ? (
+        <>
+          <SwaggerClient spec={homeSpec} />
+          <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>
+        </>
+      ) : (
+        <>
+          {isLaravel ? <LaravelServicePanel /> : <ServiceCategoryPanel categories={categories} />}
+          <SwaggerClient spec={isLaravel ? laravelSpec : spec} />
+          <div className={isLaravel ? "block" : "hidden"}>{children}</div>
+        </>
+      )}
     </main>
   );
 }

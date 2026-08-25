@@ -4,7 +4,7 @@ info:
   title: Laravel OpenClaw Downstream Integration API
   version: 1.0.0
   description: |
-    Downstream contract giữa Laravel và Node.js OpenClaw Gateway.
+    Contract downstream giữa Laravel và Node.js OpenClaw Gateway.
 
     Tài liệu này không mô tả frontend và không mô tả các API gọi trực tiếp
     OpenAI hoặc Gemini. Laravel gọi một endpoint chung của OpenClaw Gateway:
@@ -38,9 +38,9 @@ info:
 
 servers:
   - url: http://127.0.0.1:8006
-    description: Local Node.js OpenClaw Gateway
+    description: Gateway OpenClaw Node.js local
   - url: http://test.hust.media:8006
-    description: Test Node.js OpenClaw Gateway
+    description: Gateway OpenClaw Node.js test
 
 tags:
   - name: Chat
@@ -71,7 +71,7 @@ paths:
         - Text to Speech
         - Image to Text
         - Image Generation
-      summary: Process a Laravel request through OpenClaw
+      summary: Xử lý request Laravel qua OpenClaw
       description: |
         Đây là endpoint downstream duy nhất Laravel đang gọi.
 
