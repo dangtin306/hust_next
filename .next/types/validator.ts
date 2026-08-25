@@ -56,6 +56,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/swagger/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/swagger/home">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/swagger/laravel/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/swagger/laravel">> = Specific

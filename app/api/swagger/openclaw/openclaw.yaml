@@ -5,6 +5,8 @@ info:
   description: |
     Node.js gateway cho tích hợp Media Tech OpenClaw.
 
+    Hiểu đơn giản: Conversations giữ một room chat và dữ liệu trong room, còn Responses dùng dữ liệu đó để tạo tin nhắn AI mới cho từng lượt chat.
+
     Gateway cung cấp các route Responses, Conversations, Chat Completions, tạo
     hình ảnh và kiểm tra health. Conversations có thể liên kết với Responses
     bằng conversation_id; request không có field này vẫn tiếp tục dùng luồng

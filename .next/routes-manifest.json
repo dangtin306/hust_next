@@ -131,6 +131,11 @@
         "source": "/next/api/swagger/laravel",
         "destination": "/next/api/swagger/laravel",
         "regex": "^/next/api/swagger/laravel(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/home",
+        "destination": "/next/api/swagger/home",
+        "regex": "^/next/api/swagger/home(?:/)?$"
       }
     ],
     "fallback": []
@@ -259,6 +264,12 @@
       "regex": "^/api/swagger(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/swagger(?:/)?$"
+    },
+    {
+      "page": "/api/swagger/home",
+      "regex": "^/api/swagger/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/home(?:/)?$"
     },
     {
       "page": "/api/swagger/laravel",

@@ -44,7 +44,7 @@ export default function SwaggerLayoutClient({
 
       {isHome ? (
         <>
-          <SwaggerClient spec={homeSpec} />
+          <SwaggerClient spec={homeSpec} hideEmptySpecNotice hideLoading />
           <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>
         </>
       ) : (

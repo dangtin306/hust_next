@@ -6,6 +6,8 @@ import "swagger-ui-dist/swagger-ui.css";
 type SwaggerClientProps = {
   spec: Record<string, unknown>;
   serverOnly?: boolean;
+  hideEmptySpecNotice?: boolean;
+  hideLoading?: boolean;
 };
 
 const SERVER_URL_STORAGE_KEY = "openclaw_swagger_server_url";
@@ -20,7 +22,12 @@ const getInitialServerUrl = (spec: Record<string, unknown>) => {
   return typeof url === "string" ? url : "";
 };
 
-export default function SwaggerClient({ spec, serverOnly = false }: SwaggerClientProps) {
+export default function SwaggerClient({
+  spec,
+  serverOnly = false,
+  hideEmptySpecNotice = false,
+  hideLoading = false,
+}: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [serverUrl, setServerUrl] = useState(() => getInitialServerUrl(spec));
   const [isReady, setIsReady] = useState(false);
@@ -187,6 +194,24 @@ export default function SwaggerClient({ spec, serverOnly = false }: SwaggerClien
         }
         installApiUrlEditor(serverControls);
 
+        if (hideEmptySpecNotice && swaggerRoot) {
+          const hideNotice = () => {
+            const elements = swaggerRoot.querySelectorAll<HTMLElement>("*");
+            elements.forEach((element) => {
+              if (
+                element.children.length === 0 &&
+                element.textContent?.includes("No operations defined in spec!")
+              ) {
+                element.hidden = true;
+                element.style.display = "none";
+              }
+            });
+          };
+
+          hideNotice();
+          window.requestAnimationFrame(hideNotice);
+        }
+
       };
 
       moveServerControlsToTop();
@@ -216,7 +241,7 @@ export default function SwaggerClient({ spec, serverOnly = false }: SwaggerClien
       disposed = true;
       ui?.destroy?.();
     };
-  }, [serverUrl, spec]);
+  }, [hideEmptySpecNotice, serverUrl, spec]);
 
   return (
     <>
@@ -224,7 +249,7 @@ export default function SwaggerClient({ spec, serverOnly = false }: SwaggerClien
         ref={containerRef}
         className={`${isReady ? "" : "hidden"} ${serverOnly ? "swagger-ui-server-only" : ""}`}
       />
-      {!isReady ? (
+      {!isReady && !hideLoading ? (
         <div className="rounded-3xl border border-slate-200/70 bg-white/85 px-4 py-20 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500" />
         </div>

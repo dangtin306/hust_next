@@ -62,13 +62,13 @@
         "source": "/hustadmin",
         "destination": "/shop/hustadmin"
       },
+      "cronServer": {
+        "source": "/hustadmin/cron_server",
+        "destination": "/shop/hustadmin/scheduler"
+      },
       "hustAdminNested": {
         "source": "/hustadmin/:path*",
         "destination": "/shop/hustadmin/:path*"
-      },
-      "cronServer": {
-        "source": "/cron_server",
-        "destination": "/shop/hustadmin/scheduler"
       },
       "scamsCheck": {
         "profile": {

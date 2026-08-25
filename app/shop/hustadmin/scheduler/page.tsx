@@ -1,5 +1,5 @@
-import { getCronHello } from "../../../api/servers/cron";
+import CronServerAdmin from "./cron_server";
 
 export default function CronPage() {
-  return <div>{getCronHello()}</div>;
+  return <CronServerAdmin />;
 }

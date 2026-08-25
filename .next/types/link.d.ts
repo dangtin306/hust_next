@@ -37,6 +37,7 @@ declare namespace __next_route_internal_types__ {
     | `/api/sidebar-menu`
     | `/api/sidebar-menu/clear`
     | `/api/swagger`
+    | `/api/swagger/home`
     | `/api/swagger/laravel`
     | `/api/swagger/openclaw`
     | `/clear_silde_bar`
@@ -45,6 +46,7 @@ declare namespace __next_route_internal_types__ {
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
+    | `/next/api/swagger/home`
     | `/next/api/swagger/laravel`
     | `/next/api/swagger/openclaw`
     | `/next/community/history/home`
