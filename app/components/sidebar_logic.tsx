@@ -3,8 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { FiHome, FiSun, FiTool, FiMail, FiUsers, FiFileText, FiShield } from "react-icons/fi";
-import { FaClock } from "react-icons/fa";
+import { FiHome, FiClock, FiUser, FiSun, FiTool, FiMail, FiUsers, FiFileText, FiShield } from "react-icons/fi";
 
 type MenuLabel = string | Record<string, string>;
 
@@ -27,12 +26,13 @@ type SidebarLogicProps = {
 };
 
 const iconBySource = {
-  "💡": FiSun,
-  "🛠": FiTool,
-  "✉": FiMail,
-  "🤝": FiUsers,
-  "📜": FiFileText,
-  "🛡": FiShield,
+  "💡": FiSun, "🛠": FiTool, "✉": FiMail, "🤝": FiUsers,
+  "📜": FiFileText, "🛡": FiShield, "🕘": FiClock, "🕒": FiClock,
+  "⏰": FiClock, "👩": FiUser, "👤": FiUser, "🙎‍♀️": FiUser,
+} as const;
+
+const iconByLabel = {
+  Diary: FiClock, Profile: FiUser, "Nhật ký": FiClock, "Hồ sơ": FiUser,
 } as const;
 
 const readCookie = (name: string) => {
@@ -114,6 +114,8 @@ const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: Si
         `${isSelected ? "font-[600]" : ""}`;
 
       const labelText = pickLabel(item.label, lang);
+      const sourceKey = typeof item.icon_src === "string" ? item.icon_src.replace(/\uFE0F/g, "") : "";
+      const MappedIcon = iconBySource[sourceKey as keyof typeof iconBySource] || iconByLabel[labelText as keyof typeof iconByLabel];
       const isNextLink =
         typeof item.url_redirect === "string" &&
         item.url_redirect.startsWith("/next/") &&
@@ -140,27 +142,19 @@ const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: Si
         ${isCollapsed ? "mr-0" : "mr-2"}
         ${isCollapsed ? "" : "scale-[1]"}
       `;
-      const sourceIcon = typeof item.icon_src === "string"
-        ? iconBySource[item.icon_src.replace(/\uFE0F/g, "") as keyof typeof iconBySource]
-        : undefined;
       const iconNode =
         item.iconType === "SlHome" ? (
           <FiHome className={iconClassName} />
         ) : item.iconType === "FaClock" ? (
-          <FaClock className={iconClassName} />
+          <FiClock className={iconClassName} />
         ) : item.icon_src ? (
           item.icon_src.includes("/") ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.icon_src} alt="" className={iconClassName} />
-          ) : sourceIcon ? (
-            (() => {
-              const Icon = sourceIcon;
-              return <Icon className={iconClassName} />;
-            })()
+          ) : MappedIcon ? (
+            <MappedIcon className={iconClassName} />
           ) : (
-            <span className={`${iconClassName} ${isCollapsed ? "text-[22px]" : "text-base"} flex items-center justify-center leading-none`}>
-              {item.icon_src}
-            </span>
+            <span className={`${iconClassName} ${isCollapsed ? "text-[22px]" : "text-base"} flex items-center justify-center leading-none`}>{item.icon_src}</span>
           )
         ) : null;
 
@@ -193,7 +187,7 @@ const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: Si
             >
               <div className="flex items-center">
                 {iconNode}
-                <div className="flex-1 text-[15px] whitespace-normal break-words text-left">
+                <div className={`${isCollapsed ? "hidden" : ""} flex-1 text-[15px] whitespace-normal break-words text-left`}>
                   {labelText}
                 </div>
               </div>
