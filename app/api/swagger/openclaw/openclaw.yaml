@@ -30,7 +30,7 @@ tags:
   - name: media_content_smart
     description: Viết nội dung thông minh theo title, description, length và tone.
   - name: media_spell_check
-    description: Kiểm tra chính tả thông qua service Responses dùng chung.
+    description: Sửa lỗi chính tả chưa có route riêng; request đi qua Responses với category mặc định media_text_to_text.
   - name: media_script_writing
     description: Viết script thông qua service Responses dùng chung.
   - name: media_image_to_text
@@ -59,7 +59,7 @@ x-service-categories:
   media_spell_check:
     route: /openclaw/v1/responses
     status: generic-response-service
-    description: Nội dung kiểm tra chính tả được gửi dưới dạng chỉ dẫn text qua Responses.
+    description: Sửa lỗi chính tả dùng route Responses và category mặc định media_text_to_text.
   media_script_writing:
     route: /openclaw/v1/responses
     status: generic-response-service
@@ -189,6 +189,13 @@ paths:
                   input:
                     - role: user
                       content: Chào bạn
+              spellCheck:
+                summary: Sửa lỗi chính tả
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: "Hãy kiểm tra và sửa lỗi chính tả trong đoạn văn sau, giữ nguyên ý nghĩa và cách diễn đạt:\n\nTôi dang hoc lap trinh tai Media Tech."
               smartWriting:
                 summary: media_content_smart
                 value:

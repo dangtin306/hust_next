@@ -36,6 +36,7 @@ const statusLabel = (status: string) => {
 const exampleMatchers: Record<string, string[]> = {
   media_text_to_text: ["normal conversation"],
   media_content_smart: ["media_content_smart"],
+  media_spell_check: ["spell check", "sửa lỗi chính tả"],
   media_image_to_text: ["media_image_to_text"],
   media_text_to_speech: ["media_text_to_speech"],
 };
