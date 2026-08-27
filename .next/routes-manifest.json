@@ -93,14 +93,14 @@
         "regex": "^/next/hustadmin(?:/)?$"
       },
       {
+        "source": "/next/hustadmin/cron_server",
+        "destination": "/next/shop/hustadmin/scheduler",
+        "regex": "^/next/hustadmin/cron_server(?:/)?$"
+      },
+      {
         "source": "/next/hustadmin/:path*",
         "destination": "/next/shop/hustadmin/:path*",
         "regex": "^/next/hustadmin(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
-      },
-      {
-        "source": "/next/cron_server",
-        "destination": "/next/shop/hustadmin/scheduler",
-        "regex": "^/next/cron_server(?:/)?$"
       },
       {
         "source": "/next/check/:slug",

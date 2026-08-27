@@ -8,6 +8,8 @@ type SwaggerClientProps = {
   serverOnly?: boolean;
   hideEmptySpecNotice?: boolean;
   hideLoading?: boolean;
+  className?: string;
+  compact?: boolean;
 };
 
 const SERVER_URL_STORAGE_KEY = "openclaw_swagger_server_url";
@@ -27,6 +29,8 @@ export default function SwaggerClient({
   serverOnly = false,
   hideEmptySpecNotice = false,
   hideLoading = false,
+  className = "",
+  compact = false,
 }: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [serverUrl, setServerUrl] = useState(() => getInitialServerUrl(spec));
@@ -65,7 +69,7 @@ export default function SwaggerClient({
 
   useEffect(() => {
     let disposed = false;
-    let ui: { destroy?: () => void } | undefined;
+    let ui: { destroy?: () => void; preauthorizeApiKey?: (key: string, value: string) => void } | undefined;
 
     const loadSwagger = async () => {
       const swaggerModule = await import("swagger-ui-dist");
@@ -82,7 +86,7 @@ export default function SwaggerClient({
       if (disposed || !containerRef.current) return;
 
       containerRef.current.replaceChildren();
-      const activeSpec = {
+      const activeSpec: Record<string, unknown> = {
         ...spec,
         servers: [
           {
@@ -97,6 +101,12 @@ export default function SwaggerClient({
         spec: activeSpec,
         deepLinking: true,
         layout: "BaseLayout",
+        persistAuthorization: true,
+        onComplete: () => {
+          if (spec.components && typeof spec.components === "object") {
+            ui?.preauthorizeApiKey?.("BearerAuth", "media_tech");
+          }
+        },
       });
 
       const installApiUrlEditor = (serverControls: Element | null) => {
@@ -189,10 +199,24 @@ export default function SwaggerClient({
         const swaggerRoot = containerRef.current?.querySelector(".swagger-ui");
         const serverControls = swaggerRoot?.querySelector(".scheme-container");
 
+        if (compact && swaggerRoot) {
+          swaggerRoot.style.setProperty("width", "100%");
+          swaggerRoot.querySelectorAll<HTMLElement>(".wrapper, .opblock-tag-section, .opblock").forEach((element) => {
+            element.style.setProperty("max-width", "none");
+            element.style.setProperty("margin-left", "0");
+            element.style.setProperty("margin-right", "0");
+            element.style.setProperty("padding-left", "0");
+            element.style.setProperty("padding-right", "0");
+          });
+          [".information-container", ".scheme-container", ".models", ".opblock-tag"].forEach((selector) => {
+            swaggerRoot.querySelector<HTMLElement>(selector)?.style.setProperty("display", "none");
+          });
+        }
+
         if (swaggerRoot && serverControls && swaggerRoot.firstElementChild !== serverControls) {
           swaggerRoot.prepend(serverControls);
         }
-        installApiUrlEditor(serverControls);
+        installApiUrlEditor(serverControls ?? null);
 
         if (hideEmptySpecNotice && swaggerRoot) {
           const hideNotice = () => {
@@ -241,13 +265,13 @@ export default function SwaggerClient({
       disposed = true;
       ui?.destroy?.();
     };
-  }, [hideEmptySpecNotice, serverUrl, spec]);
+  }, [compact, hideEmptySpecNotice, serverUrl, spec]);
 
   return (
     <>
       <div
         ref={containerRef}
-        className={`${isReady ? "" : "hidden"} ${serverOnly ? "swagger-ui-server-only" : ""}`}
+        className={`${isReady ? "" : "hidden"} ${serverOnly ? "swagger-ui-server-only" : ""} ${className}`}
       />
       {!isReady && !hideLoading ? (
         <div className="rounded-3xl border border-slate-200/70 bg-white/85 px-4 py-20 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">

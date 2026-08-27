@@ -51,11 +51,11 @@ declare namespace __next_route_internal_types__ {
     | `/next/api/swagger/openclaw`
     | `/next/community/history/home`
     | `/next/convert_national_market`
-    | `/next/cron_server`
     | `/next/docs`
     | `/next/features`
     | `/next/history/home`
     | `/next/hustadmin`
+    | `/next/hustadmin/cron_server`
     | `/next/info/about_us`
     | `/next/info/private_policy`
     | `/next/info/terms_service`

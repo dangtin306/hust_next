@@ -6,6 +6,8 @@ import ServiceCategoryPanel, { type ServiceCategory } from "./openclaw/ServiceCa
 import SwaggerClient from "./SwaggerClient";
 import SwaggerSwitcher from "./SwaggerSwitcher";
 import LaravelServicePanel from "./laravel/LaravelServicePanel";
+import ConversationResponseOperation from "./openclaw/ConversationResponseOperation";
+import SecondResponseOperation from "./openclaw/SecondResponseOperation";
 
 type SwaggerLayoutClientProps = {
   children: React.ReactNode;
@@ -51,6 +53,12 @@ export default function SwaggerLayoutClient({
         <>
           {isLaravel ? <LaravelServicePanel /> : <ServiceCategoryPanel categories={categories} />}
           <SwaggerClient spec={isLaravel ? laravelSpec : spec} />
+          {!isLaravel ? (
+            <>
+              <ConversationResponseOperation />
+              <SecondResponseOperation />
+            </>
+          ) : null}
           <div className={isLaravel ? "block" : "hidden"}>{children}</div>
         </>
       )}

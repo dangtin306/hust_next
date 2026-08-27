@@ -6,7 +6,7 @@ type AppRouteHandlerRoutes = "/api/features-image/[...asset]" | "/api/resources/
 type PageRoutes = never
 type LayoutRoutes = "/" | "/api/swagger"
 type RedirectRoutes = never
-type RewriteRoutes = "/next/api/swagger/home" | "/next/api/swagger/laravel" | "/next/api/swagger/openclaw" | "/next/check/[[...path]]" | "/next/check/[slug]" | "/next/community/history/home" | "/next/convert_national_market" | "/next/cron_server" | "/next/docs" | "/next/docs/[[...path]]" | "/next/features" | "/next/history/home" | "/next/hustadmin" | "/next/hustadmin/[[...path]]" | "/next/info/about_us" | "/next/info/private_policy" | "/next/info/terms_service" | "/next/orders_once/[slug_2]" | "/next/services/development" | "/next/shop/ai/[slug_2]" | "/next/shop/history/home" | "/next/support"
+type RewriteRoutes = "/next/api/swagger/home" | "/next/api/swagger/laravel" | "/next/api/swagger/openclaw" | "/next/check/[[...path]]" | "/next/check/[slug]" | "/next/community/history/home" | "/next/convert_national_market" | "/next/docs" | "/next/docs/[[...path]]" | "/next/features" | "/next/history/home" | "/next/hustadmin" | "/next/hustadmin/[[...path]]" | "/next/hustadmin/cron_server" | "/next/info/about_us" | "/next/info/private_policy" | "/next/info/terms_service" | "/next/orders_once/[slug_2]" | "/next/services/development" | "/next/shop/ai/[slug_2]" | "/next/shop/history/home" | "/next/support"
 type Routes = AppRoutes | PageRoutes | LayoutRoutes | RedirectRoutes | RewriteRoutes | AppRouteHandlerRoutes
 
 
@@ -36,13 +36,13 @@ interface ParamMap {
   "/next/check/[slug]": { "slug": string; }
   "/next/community/history/home": {}
   "/next/convert_national_market": {}
-  "/next/cron_server": {}
   "/next/docs": {}
   "/next/docs/[[...path]]": { "path"?: string[]; }
   "/next/features": {}
   "/next/history/home": {}
   "/next/hustadmin": {}
   "/next/hustadmin/[[...path]]": { "path"?: string[]; }
+  "/next/hustadmin/cron_server": {}
   "/next/info/about_us": {}
   "/next/info/private_policy": {}
   "/next/info/terms_service": {}

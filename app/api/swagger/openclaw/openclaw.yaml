@@ -13,10 +13,13 @@ info:
     history cũ.
 
 servers:
-  - url: http://127.0.0.1:8006
+  - url: http://localhost:8006
     description: Backend Node.js local
   - url: http://test.hust.media:8006
     description: Backend test
+
+security:
+  - BearerAuth: []
 
 tags:
   - name: Responses
@@ -25,57 +28,57 @@ tags:
     description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
   - name: Health
     description: Kiểm tra health của backend
+  - name: media_text_to_image
+    description: Tạo hình ảnh thông qua image route của OpenClaw.
   - name: media_text_to_text
     description: Hội thoại thông thường thông qua endpoint Responses.
   - name: media_content_smart
     description: Viết nội dung thông minh theo title, description, length và tone.
   - name: media_spell_check
-    description: Sửa lỗi chính tả chưa có route riêng; request đi qua Responses với category mặc định media_text_to_text.
+    description: Sửa lỗi chính tả thông qua endpoint Responses.
   - name: media_script_writing
-    description: Viết script thông qua service Responses dùng chung.
+    description: Viết script thông qua endpoint Responses.
   - name: media_image_to_text
     description: OCR và phân tích hình ảnh thông qua endpoint Responses.
   - name: media_text_to_speech
     description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
-  - name: media_text_to_image
-    description: Tạo hình ảnh thông qua image route của OpenClaw.
 x-service-categories:
   media_responses:
     route: /openclaw/v1/responses
     status: implemented
-    description: Endpoint tương thích OpenResponses chính cho request chat và service AI.
+    description: Endpoint chung tương thích OpenResponses cho các request chat và service AI.
   media_conversations:
     route: /openclaw/v1/conversations
     status: implemented
-    description: Tạo Conversations, quản lý item và liên kết Responses bằng conversation_id.
+    description: Tạo room chat, quản lý item và liên kết Responses bằng conversation_id.
   media_text_to_text:
     route: /openclaw/v1/responses
     status: implemented
-    description: Hội thoại thông thường. Đây là category mặc định.
+    description: Hội thoại thông thường qua Responses. Đây là category mặc định.
   media_content_smart:
     route: /openclaw/v1/responses
     status: implemented
-    description: Viết nội dung thông minh theo title, desc, len và tone.
+    description: Viết nội dung thông minh theo title, desc, len và tone; backend tự chuyển sang skill media_content_smart.
   media_spell_check:
     route: /openclaw/v1/responses
-    status: generic-response-service
-    description: Sửa lỗi chính tả dùng route Responses và category mặc định media_text_to_text.
+    status: implemented
+    description: Sửa lỗi chính tả qua skill media_spelling trên route Responses dùng chung.
   media_script_writing:
     route: /openclaw/v1/responses
-    status: generic-response-service
-    description: Nội dung viết script được gửi dưới dạng chỉ dẫn text qua Responses.
+    status: implemented
+    description: Viết kịch bản qua skill media_script_writing trên route Responses dùng chung.
   media_image_to_text:
     route: /openclaw/v1/responses
     status: implemented
-    description: OCR/phân tích hình ảnh bằng input_image và Data URI.
+    description: OCR/phân tích hình ảnh bằng input_image, source Base64 và MIME type của ảnh.
   media_text_to_speech:
     route: /openclaw/v1/responses
     status: implemented
-    description: Node.js định tuyến việc tạo audio đến service TTS đã cấu hình.
+    description: Tạo audio với model F5_vie, services v3 và servicecode tùy chọn.
   media_text_to_image:
     route: /openclaw/v1/images/generations
     status: implemented
-    description: Khởi chạy image task của OpenClaw và trả về hình ảnh hoàn tất dưới dạng Base64.
+    description: Tạo hình ảnh qua image route và trả về hình ảnh hoàn tất dưới dạng Base64.
 paths:
   /openclaw/v1/conversations:
     post:
@@ -83,17 +86,37 @@ paths:
       tags:
         - Conversations
       summary: Tạo một conversation
-      description: Tạo conversation liên kết với user. conversation_id trả về có định dạng UUID với prefix conv_.
+      description: |
+        Tạo conversation mới.
+        Body có thể rỗng hoặc truyền items ban đầu.
+        user_id chỉ là trường mở rộng nội bộ, không bắt buộc.
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ConversationCreateRequest'
-            example:
-              user_id: 69
-              metadata:
-                source: frontend
+            examples:
+              withItems:
+                summary: Tạo conversation kèm item ban đầu
+                value:
+                  items:
+                    - type: message
+                      role: user
+                      content: Xin chào
+              empty:
+                summary: Tạo conversation rỗng
+                value: {}
+              withUser:
+                summary: Tạo conversation có liên kết user nội bộ
+                value:
+                  user_id: 69
+                  metadata:
+                    source: frontend
+                  items:
+                    - type: message
+                      role: user
+                      content: Xin chào
       responses:
         '201':
           description: Đã tạo conversation
@@ -169,12 +192,13 @@ paths:
         - media_script_writing
         - media_image_to_text
         - media_text_to_speech
-      summary: Tạo response hoặc thực thi category service text
+      summary: Tin nhắn thứ nhất
       description: |
         Endpoint chính cho chat thông thường, viết nội dung thông minh, kiểm tra
         chính tả, viết script, OCR và các request tiếp tục. Khi có conversation_id,
         backend tìm conversation, liên kết user item và assistant item, lưu
         response_id rồi trả về response. Nếu không có, hệ thống dùng luồng history cũ.
+
       requestBody:
         required: true
         content:
@@ -195,7 +219,7 @@ paths:
                   model: gpt-5.6-luna
                   input:
                     - role: user
-                      content: "Hãy kiểm tra và sửa lỗi chính tả trong đoạn văn sau, giữ nguyên ý nghĩa và cách diễn đạt:\n\nTôi dang hoc lap trinh tai Media Tech."
+                      content: "/skill media_spelling\nHãy sửa lỗi chính tả trong đoạn văn sau:\nTôi dang hoc lap trinh tai Media Tech."
               smartWriting:
                 summary: media_content_smart
                 value:
@@ -216,15 +240,27 @@ paths:
                         - type: input_text
                           text: media_image_to_text Nhận diện văn bản
                         - type: input_image
-                          image_url: data:image/png;base64,BASE64_DATA
+                          source:
+                            type: base64
+                            media_type: image/png
+                            data: BASE64_IMAGE
               textToSpeech:
                 summary: media_text_to_speech
                 value:
-                  model: Vie_Neu
+                  model: F5_vie
                   input:
                     - role: user
                       text: Xin chào từ Media Tech
                       tool: media_text_to_speech
+                      services: v3
+                      servicecode: F5_vie
+              scriptWriting:
+                summary: media_script_writing
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: "/skill media_script_writing\nViết kịch bản video ngắn giới thiệu sản phẩm."
       responses:
         '200':
           description: Response hoàn tất theo định dạng Responses API
@@ -321,6 +357,12 @@ paths:
                     example: true
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Nhập token API, ví dụ media_tech.
+
   parameters:
     ConversationId:
       name: id
@@ -334,20 +376,43 @@ components:
   schemas:
     ConversationCreateRequest:
       type: object
-      required: [user_id]
       properties:
+        items:
+          type: array
+          description: Các item ban đầu của conversation.
+          maxItems: 20
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              type:
+                type: string
+                example: message
+              role:
+                type: string
+                enum: [user, assistant, system, developer]
+              content:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: object
+                      additionalProperties: true
         user_id:
           type: integer
+          nullable: true
+          description: Trường liên kết user nội bộ, không bắt buộc.
           example: 69
         metadata:
           type: object
           additionalProperties: true
+          description: Metadata mở rộng của ứng dụng.
           example:
             source: frontend
 
     Conversation:
       type: object
-      required: [id, conversation_id, category, user_id, metadata, created_at, updated_at]
+      required: [id, conversation_id, category, metadata, created_at, updated_at]
       properties:
         id:
           type: integer
@@ -360,6 +425,7 @@ components:
           example: conversation
         user_id:
           type: integer
+          nullable: true
           example: 69
         metadata:
           type: object
@@ -509,13 +575,24 @@ components:
                   type:
                     type: string
                     example: input_image
-                  image_url:
-                    type: string
+                  source:
+                    type: object
+                    required: [type, media_type, data]
+                    properties:
+                      type:
+                        type: string
+                        enum: [base64]
+                      media_type:
+                        type: string
+                        enum: [image/png, image/jpeg, image/gif, image/webp]
+                      data:
+                        type: string
+                        description: Dữ liệu ảnh Base64, không gồm tiền tố Data URI.
           description: Data URI, ví dụ data:image/png;base64,...
 
     TextToSpeechInputItem:
       type: object
-      required: [role, text, tool]
+      required: [role, text, tool, services]
       properties:
         role:
           type: string
@@ -525,9 +602,15 @@ components:
         tool:
           type: string
           enum: [media_text_to_speech]
+        services:
+          type: string
+          example: v3
+        servicecode:
+          type: string
+          example: F5_vie
         model:
           type: string
-          example: Vie_Neu
+          example: F5_vie
 
     ChatCompletionsRequest:
       type: object
