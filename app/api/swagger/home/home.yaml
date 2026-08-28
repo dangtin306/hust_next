@@ -8,7 +8,7 @@ info:
     - Theo mô hình OpenAI:
       - Responses API nhận input và tạo output cho từng request.
       - Conversations API lưu và truy xuất conversation state cùng các item qua nhiều lần gọi.
-    - API URL test hiện tại: https://nginx.hust.media/go/ai. URL này có thể thay đổi nếu domain gặp lỗi.
+    - API URL test hiện tại: https://nginx.hust.media/go/ai/test. URL này có thể thay đổi nếu domain gặp lỗi.
     - Sau này Docker sẽ chạy trên máy anh Thành, nên cấu hình được giữ đơn giản để dễ triển khai.
     - Responses xử lý lượt gọi AI, còn Conversations giữ ngữ cảnh bền vững và liên kết bằng conversation_id.
     - Trang Home chỉ giới thiệu tổng quan và không chứa endpoint API.

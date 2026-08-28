@@ -15,7 +15,7 @@ info:
 servers:
   - url: http://localhost:8006
     description: Backend Node.js local
-  - url: https://nginx.hust.media/go/ai
+  - url: https://nginx.hust.media/go/ai/test
     description: Backend test
 
 security:

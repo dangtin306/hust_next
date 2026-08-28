@@ -39,7 +39,7 @@ info:
 servers:
   - url: http://127.0.0.1:8006
     description: Gateway OpenClaw Node.js local
-  - url: https://nginx.hust.media/go/ai
+  - url: https://nginx.hust.media/go/ai/test
     description: Gateway OpenClaw Node.js test
 
 tags:
