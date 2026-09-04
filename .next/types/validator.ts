@@ -218,10 +218,19 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../app/shop/hustadmin/scheduler/page.tsx
+// Validate ../../app/shop/hustadmin/port_cron/net_ports/page.tsx
 {
-  type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/scheduler">> = Specific
-  const handler = {} as typeof import("../../app/shop/hustadmin/scheduler/page.js")
+  type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/port_cron/net_ports">> = Specific
+  const handler = {} as typeof import("../../app/shop/hustadmin/port_cron/net_ports/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/shop/hustadmin/port_cron/scheduler/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/port_cron/scheduler">> = Specific
+  const handler = {} as typeof import("../../app/shop/hustadmin/port_cron/scheduler/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

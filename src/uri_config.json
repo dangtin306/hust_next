@@ -64,7 +64,11 @@
       },
       "cronServer": {
         "source": "/hustadmin/cron_server",
-        "destination": "/shop/hustadmin/scheduler"
+        "destination": "/shop/hustadmin/port_cron/scheduler"
+      },
+      "netPorts": {
+        "source": "/hustadmin/net_ports",
+        "destination": "/shop/hustadmin/port_cron/net_ports"
       },
       "hustAdminNested": {
         "source": "/hustadmin/:path*",

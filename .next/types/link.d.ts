@@ -56,6 +56,7 @@ declare namespace __next_route_internal_types__ {
     | `/next/history/home`
     | `/next/hustadmin`
     | `/next/hustadmin/cron_server`
+    | `/next/hustadmin/net_ports`
     | `/next/info/about_us`
     | `/next/info/private_policy`
     | `/next/info/terms_service`
@@ -63,7 +64,8 @@ declare namespace __next_route_internal_types__ {
     | `/next/shop/history/home`
     | `/next/support`
     | `/shop/ai`
-    | `/shop/hustadmin/scheduler`
+    | `/shop/hustadmin/port_cron/net_ports`
+    | `/shop/hustadmin/port_cron/scheduler`
     | `/shop/resources`
     | `/tabs_nav/navConfig.json`
     | `/tabs_nav/tabs_nav.json`

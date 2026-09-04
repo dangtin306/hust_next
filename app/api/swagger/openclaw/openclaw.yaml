@@ -26,6 +26,8 @@ tags:
     description: Endpoint tương thích OpenResponses chính và các nhóm service
   - name: Conversations
     description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
+  - name: Model Selection
+    description: Xem danh sách model để chọn model cho request.
   - name: Health
     description: Kiểm tra health của backend
   - name: media_text_to_image
@@ -51,6 +53,10 @@ x-service-categories:
     route: /openclaw/v1/conversations
     status: implemented
     description: Tạo room chat, quản lý item và liên kết Responses bằng conversation_id.
+  media_model_switch:
+    route: /openclaw/v1/models
+    status: implemented
+    description: Xem model và chọn model cho request.
   media_text_to_text:
     route: /openclaw/v1/responses
     status: implemented
@@ -355,6 +361,55 @@ paths:
                   ok:
                     type: boolean
                     example: true
+
+  /openclaw/v1/models:
+    get:
+      operationId: listModels
+      tags:
+        - Model Selection
+      summary: Lấy danh sách model
+      description: Lấy các model có thể dùng trong request Responses.
+      responses:
+        '200':
+          description: Danh sách model
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data]
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, object, created, owned_by]
+                      properties:
+                        id:
+                          type: string
+                          example: gpt-5.6-luna
+                        object:
+                          type: string
+                          example: model
+                        created:
+                          type: integer
+                          example: 0
+                        owned_by:
+                          type: string
+                          example: openai
+              example:
+                object: list
+                data:
+                  - id: gpt-5.6-luna
+                    object: model
+                    created: 0
+                    owned_by: openai
+                  - id: gemini-3.7-flash
+                    object: model
+                    created: 0
+                    owned_by: google
 
 components:
   securitySchemes:

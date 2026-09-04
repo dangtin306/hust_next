@@ -17,15 +17,18 @@ type ServiceCategoryPanelProps = {
 const operationByService: Record<string, string> = {
   media_responses: "createResponse",
   media_conversations: "createConversation",
+  media_model_switch: "listModels",
   media_text_to_image: "generateImage",
 };
 
 const formatServiceName = (value: string) =>
-  value
-    .replace(/^media_/, "")
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
+  value === "media_model_switch"
+    ? "Model Selection"
+    : value
+      .replace(/^media_/, "")
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
 
 const statusLabel = (status: string) => {
   if (status === "implemented") return "Đã triển khai";

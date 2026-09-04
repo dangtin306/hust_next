@@ -8,6 +8,7 @@ import SwaggerSwitcher from "./SwaggerSwitcher";
 import LaravelServicePanel from "./laravel/LaravelServicePanel";
 import ConversationResponseOperation from "./openclaw/ConversationResponseOperation";
 import SecondResponseOperation from "./openclaw/SecondResponseOperation";
+import ModelSelectionOperation from "./openclaw/ModelSelectionOperation";
 
 type SwaggerLayoutClientProps = {
   children: React.ReactNode;
@@ -57,6 +58,7 @@ export default function SwaggerLayoutClient({
             <>
               <ConversationResponseOperation />
               <SecondResponseOperation />
+              <ModelSelectionOperation />
             </>
           ) : null}
           <div className={isLaravel ? "block" : "hidden"}>{children}</div>

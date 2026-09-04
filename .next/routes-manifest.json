@@ -94,8 +94,13 @@
       },
       {
         "source": "/next/hustadmin/cron_server",
-        "destination": "/next/shop/hustadmin/scheduler",
+        "destination": "/next/shop/hustadmin/port_cron/scheduler",
         "regex": "^/next/hustadmin/cron_server(?:/)?$"
+      },
+      {
+        "source": "/next/hustadmin/net_ports",
+        "destination": "/next/shop/hustadmin/port_cron/net_ports",
+        "regex": "^/next/hustadmin/net_ports(?:/)?$"
       },
       {
         "source": "/next/hustadmin/:path*",
@@ -338,10 +343,16 @@
       "namedRegex": "^/shop/ai(?:/)?$"
     },
     {
-      "page": "/shop/hustadmin/scheduler",
-      "regex": "^/shop/hustadmin/scheduler(?:/)?$",
+      "page": "/shop/hustadmin/port_cron/net_ports",
+      "regex": "^/shop/hustadmin/port_cron/net_ports(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/shop/hustadmin/scheduler(?:/)?$"
+      "namedRegex": "^/shop/hustadmin/port_cron/net_ports(?:/)?$"
+    },
+    {
+      "page": "/shop/hustadmin/port_cron/scheduler",
+      "regex": "^/shop/hustadmin/port_cron/scheduler(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/hustadmin/port_cron/scheduler(?:/)?$"
     },
     {
       "page": "/shop/resources",
