@@ -6,6 +6,7 @@ import { ALLOWED_TOOLS, contentByTool, seoByTool, type Lang, type ToolKey, type 
 import type { OrdersPostMetaResponse } from "./orders_api_data";
 import OrdersProcess from "./orders_process";
 import OrdersContent from "./orders_content";
+import { isLocalHost } from "@/src/host_utils";
 
 type OrdersHomeProps = {
   slug_1?: string;
@@ -106,8 +107,7 @@ const OrdersHome = ({
     if (typeof window === "undefined") return;
     if (!slug_2) return;
     const host = window.location.hostname.toLowerCase();
-    const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
-    if (isLocalHost) return;
+    if (isLocalHost(host)) return;
 
     const cacheKey = `orders_post_meta:${slug_1 || "orders_once"}:${slug_2}`;
 

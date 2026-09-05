@@ -321,7 +321,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       conclusionTitle: "Conclusion",
       conclusion:
         "This Vietnamese-to-English module combines controlled translation routing, fixed language direction, and practical text handling into one maintainable service layer. It remains aligned with the platform's broader system integration and stable operation model.",
-      related: [{ label: "Vietnamese-to-English Translation Note", href: "/next/orders_once/translate_vi_en" }],
+      related: [{ label: "Vietnamese-to-English Translation Note", href: "/orders_once/translate_vi_en" }],
     },
     vi: {
       title: "Dịch tiếng Việt sang tiếng Anh",
@@ -346,7 +346,7 @@ export const contentByTool: Record<ToolKey, Record<Lang, ToolContent>> = {
       readerValue: "",
       conclusionTitle: "Kết luận",
       conclusion: "",
-      related: [{ label: "Tổng quan dịch Việt - Anh", href: "/next/orders_once/translate_vi_en" }],
+      related: [{ label: "Tổng quan dịch Việt - Anh", href: "/orders_once/translate_vi_en" }],
     },
   },
   text_workflow: {
@@ -462,7 +462,7 @@ export const toolProcessCards: ToolProcessCard[] = [
   {
     key: "translate_vi_en",
     image: "https://hust.media/img/translate_vi_en_thumb.png",
-    href: () => "/next/orders_once/translate_vi_en",
+    href: () => "/orders_once/translate_vi_en",
     title: { en: "Vietnamese to English", vi: "Dịch Việt sang Anh" },
     description: {
       en: "Translate Vietnamese text into clear English for docs and content.",
@@ -473,7 +473,7 @@ export const toolProcessCards: ToolProcessCard[] = [
   {
     key: "text_workflow",
     image: "https://hust.media/img/text_speech_thumbnail.png",
-    href: () => "/next/orders_once/text_workflow",
+    href: () => "/orders_once/text_workflow",
     title: { en: "Text Workflow", vi: "Text Workflow" },
     description: {
       en: "Hello-world workflow note used to validate route and article rendering.",

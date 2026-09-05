@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FaArrowCircleLeft, FaArrowCircleRight } from "react-icons/fa";
 import SidebarLogic, { type MenuItem } from "./sidebar_logic";
+import { isLocalHost } from "@/src/host_utils";
 
 type SidebarMenuCache = {
   timestamp: number;
@@ -180,7 +181,7 @@ const NextSidebar = ({
     const apikey = readCookie("apikey");
     const national_market = nationalMarket || readCookie("national_market") || "vi";
     const main_domain =
-      host && host !== "localhost"
+      host && !isLocalHost(host)
         ? readCookie("main_domain") || getMainDomainFromHost(host) || "hust"
         : readCookie("main_domain") || "hust";
 

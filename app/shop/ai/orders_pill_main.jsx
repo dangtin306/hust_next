@@ -120,7 +120,7 @@ export function OrdersRelatedInsights({
                         const href =
                             routeRoot ===
                             "orders_once"
-                                ? `/next/orders_once/${uri}`
+                            ? `/orders_once/${uri}`
                                 : `/ai/plans/${uri}`;
 
                         const key =

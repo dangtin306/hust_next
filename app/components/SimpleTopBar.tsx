@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore, useState } from "react";
 import NavDown from "./nav_down";
+import { isLocalHost } from "@/src/host_utils";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
@@ -61,7 +62,7 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
     () => ""
   );
   const showDomainSelect =
-    hydrated && typeof window !== "undefined" && window.location.hostname === "localhost";
+    hydrated && typeof window !== "undefined" && isLocalHost(window.location.hostname);
   const hideNav =
     hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
   const effectiveLatestVersion =

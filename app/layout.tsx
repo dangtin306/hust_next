@@ -10,6 +10,7 @@ import SimpleTopBar from "./components/SimpleTopBar";
 import Footer_web from "./components/Footer_web";
 import SupportButtonConditional from "./components/SupportButtonConditional";
 import { getSidebarMenuServer } from "./components/sidebar_menu_server";
+import { isLocalHost } from "@/src/host_utils";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export const metadata: Metadata = {
 };
 
 const getMainDomainFromHost = (host: string) => {
+  if (isLocalHost(host)) return "hust";
   const parts = host.split(".").filter(Boolean);
   return parts.length > 2 ? parts[parts.length - 2] : parts[0] || "hust";
 };

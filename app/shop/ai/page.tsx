@@ -7,6 +7,7 @@ import { seoByTool, type ToolNoteContent } from "@/app/shop/ai/orders_data";
 import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import path from "path";
+import { isLocalHostHeader } from "@/src/host_utils";
 
 type PageProps = {
   searchParams: Promise<{ slug_2?: string | string[] }>;
@@ -23,7 +24,7 @@ const normalizeLang = (value: string) =>
   String(value || "").toLowerCase() === "vi" ? "vi" : "en";
 const isLocalHost = (host: string) => {
   const value = String(host || "").toLowerCase();
-  return value.includes("localhost") || value.includes("127.0.0.1") || value.includes("::1");
+  return isLocalHostHeader(value);
 };
 
 const resolveToolNotePath = (slug: string) => {

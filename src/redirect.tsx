@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import uriConfig from "./uri_config.json";
+import { isLocalHost } from "./host_utils";
 
 type RewriteRule = {
   source: string;
@@ -54,7 +55,7 @@ const isConfiguredUri = (pathname: string) =>
 
 export default function LocalhostLegacyLinkRedirector() {
   useEffect(() => {
-    if (window.location.hostname !== "localhost") return undefined;
+    if (!isLocalHost(window.location.hostname)) return undefined;
 
     const handleClick = (event: MouseEvent) => {
       if (
@@ -86,7 +87,7 @@ export default function LocalhostLegacyLinkRedirector() {
       event.preventDefault();
       event.stopPropagation();
 
-      const legacyUrl = new URL(`http://localhost:3002${getAppPathname(destination.pathname)}`);
+      const legacyUrl = new URL(`http://${window.location.hostname}:3002${getAppPathname(destination.pathname)}`);
       legacyUrl.search = destination.search;
       legacyUrl.hash = destination.hash;
       window.location.assign(legacyUrl.toString());

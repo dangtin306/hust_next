@@ -4,6 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { FiHome, FiClock, FiUser, FiSun, FiTool, FiMail, FiUsers, FiFileText, FiShield } from "react-icons/fi";
+import { isLocalHost } from "@/src/host_utils";
 
 type MenuLabel = string | Record<string, string>;
 
@@ -67,6 +68,11 @@ const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: Si
     () => window.location.origin,
     () => "",
   );
+  const isHydrated = useSyncExternalStore(
+    () => () => { },
+    () => true,
+    () => false,
+  );
   const latestVersionRaw =
     typeof latestVersion === "string" || typeof latestVersion === "number"
       ? String(latestVersion)
@@ -127,8 +133,12 @@ const SidebarLogic = ({ items, lang, setIsOpen, isCollapsed, latestVersion }: Si
       const isForceLegacyLink =
         typeof item.url_redirect === "string" &&
         SPECIAL_LEGACY_ROUTES.has(item.url_redirect);
-      const linkHref = isForceLegacyLink && currentOrigin.includes("localhost")
-        ? `http://localhost:3002${item.url_redirect}`
+      // This component is rendered during SSR too, where `window` is unavailable.
+      // Keep the legacy-localhost rewrite client-only while preserving the normal
+      // href during the server render.
+      const hostname = isHydrated ? window.location.hostname : "";
+      const linkHref = isForceLegacyLink && isLocalHost(hostname)
+        ? `http://${hostname}:3002${item.url_redirect}`
         : isForceLegacyLink && currentOrigin
           ? `${currentOrigin}${item.url_redirect}`
           : isLegacyLink && currentOrigin

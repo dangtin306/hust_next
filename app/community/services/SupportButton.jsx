@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { animated, useSpring } from "@react-spring/web";
+import { isLocalHost } from "@/src/host_utils";
 
 const CACHE_KEY = "support_chat";
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
@@ -29,7 +30,7 @@ const isCacheValid = (store, payload, nationalMarket, currentDomain, mainDomain)
     store &&
     Date.now() - Number(store.timestamp || 0) < CACHE_TTL_MS &&
     JSON.stringify(store.payload) === JSON.stringify(payload) &&
-    currentDomain !== "localhost" &&
+    !isLocalHost(currentDomain) &&
     String(nationalMarket || "") === String(store.national_market || "") &&
     normalizeDomain(store.main_domain) === normalizeDomain(mainDomain)
   );
@@ -65,7 +66,7 @@ const getInitialSupportLinks = () => {
   if (typeof window === "undefined") return "";
 
   const mainDomain =
-    window.location.hostname !== "localhost"
+    !isLocalHost(window.location.hostname)
       ? readCookie("main_domain") || getMainDomainFromHost() || "hust"
       : readCookie("main_domain") || "hust";
   const nationalMarket = readCookie("national_market") || "en";
@@ -125,7 +126,7 @@ const SupportButton = () => {
 
   useEffect(() => {
     const mainDomain =
-      window.location.hostname !== "localhost"
+      !isLocalHost(window.location.hostname)
         ? readCookie("main_domain") || getMainDomainFromHost() || "hust"
         : readCookie("main_domain") || "hust";
 
