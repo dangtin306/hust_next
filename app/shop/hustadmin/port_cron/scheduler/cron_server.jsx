@@ -367,7 +367,7 @@ const CronServerAdmin = () => {
                 updating ? "opacity-70 cursor-not-allowed hover:bg-blue-500" : ""
               }`}
             >
-              {updating ? "Đang cập nhật..." : "Update"}
+              {updating ? "Refreshing..." : "Refresh"}
             </button>
           </div>
         </div>

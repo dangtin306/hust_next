@@ -1,7 +1,7 @@
 "use client";
 
-import type { Lang, ToolKey } from "./orders_data";
-import type { RelatedPostItem } from "./orders_api_data";
+import type { Lang, ToolKey } from "@/app/shop/ai/orders_data";
+import type { RelatedPostItem } from "@/app/shop/ai/orders_api_data";
 import { OrdersRelatedInsights } from "./orders_pill_main";
 
 type OrdersProcessProps = {

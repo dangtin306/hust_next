@@ -27,6 +27,14 @@
       "docsNested": {
         "source": "/docs/:path*",
         "destination": "/community/docs/:path*"
+      },
+      "clearSildeBar": {
+        "source": "/clear_silde_bar",
+        "destination": "/community/clear_silde_bar"
+      },
+      "technicalInsights": {
+        "source": "/tech/:uri",
+        "destination": "/community/technical_insights?uri=:uri"
       }
     },
     "history": {
@@ -55,6 +63,16 @@
       "aboutUs": {
         "source": "/info/about_us",
         "destination": "/info/about_us"
+      }
+    },
+    "resource": {
+      "productPlay": {
+        "source": "/resource/product/play/:slug",
+        "destination": "/resources/play/:slug"
+      },
+      "accountsProductPlay": {
+        "source": "/accounts/product/play/:slug",
+        "destination": "/resources/play/:slug"
       }
     },
     "shop": {

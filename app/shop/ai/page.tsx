@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import OrdersHome from "@/app/shop/ai/orders_home";
+import OrdersHome from "@/app/shop/ai/content/orders_home";
 import { getOrdersPostMeta } from "@/app/shop/ai/orders_api_data";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";

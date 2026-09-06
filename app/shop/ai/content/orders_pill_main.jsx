@@ -3,16 +3,16 @@
 import Link from "next/link";
 import {
     OrdersPillPackage,
-} from "./orders_pill_pack";
+} from "@/app/shop/ai/orders_pill_pack";
 
 /**
- * @typedef {import("./orders_api_data").RelatedPostItem} RelatedPostItem
+ * @typedef {import("@/app/shop/ai/orders_api_data").RelatedPostItem} RelatedPostItem
  */
 
 /**
  * @param {{
  *   relatedInsights?: RelatedPostItem[];
- *   activeTool: import("./orders_data").ToolKey | null;
+ *   activeTool: import("@/app/shop/ai/orders_data").ToolKey | null;
  *   routeRoot: "plans" | "orders_once";
  *   showOnMobile?: boolean;
  *   className?: string;

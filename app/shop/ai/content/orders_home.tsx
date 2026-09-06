@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { alert_error, alert_success } from "@/app/AppContext";
-import { ALLOWED_TOOLS, contentByTool, seoByTool, type Lang, type ToolKey, type ToolNoteContent } from "./orders_data";
-import type { OrdersPostMetaResponse } from "./orders_api_data";
+import { ALLOWED_TOOLS, contentByTool, seoByTool, type Lang, type ToolKey, type ToolNoteContent } from "@/app/shop/ai/orders_data";
+import type { OrdersPostMetaResponse } from "@/app/shop/ai/orders_api_data";
 import OrdersProcess from "./orders_process";
 import OrdersContent from "./orders_content";
 import { isLocalHost } from "@/src/host_utils";
