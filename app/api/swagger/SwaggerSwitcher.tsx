@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export default function SwaggerSwitcher({ active }: { active: "home" | "openclaw" | "laravel" }) {
+export default function SwaggerSwitcher({
+  active,
+}: {
+  active: "home" | "openclaw" | "laravel" | "git_auto" | "gitea_test";
+}) {
   const clearSwaggerHash = () => {
     if (typeof window !== "undefined") {
       if (window.location.hash) {
@@ -48,6 +52,28 @@ export default function SwaggerSwitcher({ active }: { active: "home" | "openclaw
         }`}
       >
         OpenClaw
+      </Link>
+      <Link
+        href="/api/swagger/git_auto"
+        onClick={clearSwaggerHash}
+        className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
+          active === "git_auto"
+            ? "border-blue-600 bg-blue-600 text-white"
+            : "border-slate-300 bg-white text-slate-700 hover:border-blue-500 hover:text-blue-600"
+        }`}
+      >
+        Git Auto
+      </Link>
+      <Link
+        href="/api/swagger/gitea_test"
+        onClick={clearSwaggerHash}
+        className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
+          active === "gitea_test"
+            ? "border-blue-600 bg-blue-600 text-white"
+            : "border-slate-300 bg-white text-slate-700 hover:border-blue-500 hover:text-blue-600"
+        }`}
+      >
+        Gitea Test
       </Link>
     </nav>
   );

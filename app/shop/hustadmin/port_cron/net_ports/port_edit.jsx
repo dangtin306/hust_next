@@ -20,7 +20,7 @@ const Port_edit = ({ showedit, setshowedit, selectedPort, onSave, onDelete, isCr
     const payload = isCreate
       ? {
           port_name: itemPortEdit?.port_name || "",
-          port_code: itemPortEdit?.port_code || "",
+          port_note: itemPortEdit?.port_note || "",
           port: itemPortEdit?.port === "" || itemPortEdit?.port == null ? "" : Number(itemPortEdit.port),
           port_status: Boolean(itemPortEdit?.port_status),
         }
@@ -37,7 +37,7 @@ const Port_edit = ({ showedit, setshowedit, selectedPort, onSave, onDelete, isCr
   const currentPort = selectedPort || {};
 
   const fields = [
-    ["port_name", "name", "Sửa tên port"], ["port_code", "code", "Sửa port code"],
+    ["port_name", "name", "Sửa tên port"], ["port_note", "note", "Sửa note"],
     ...(!isDelete ? [["port", "port", "Sửa port"]] : []),
   ];
 
@@ -48,7 +48,7 @@ const Port_edit = ({ showedit, setshowedit, selectedPort, onSave, onDelete, isCr
           <div className="form-control">
             <div className="mb-0.5 flex flex-1 items-center justify-between">
               <label className="mb-0 text-sm leading-tight sm:text-base">
-                {isDelete ? `Xoá port: ${currentPort?.port_name || currentPort?.port_code || currentPort?.port}` : isCreate ? "Tạo port mới" : `Chỉnh sửa port: ${currentPort?.port_name || currentPort?.port_code || currentPort?.port}`}
+                {isDelete ? `Xoá port: ${currentPort?.port_name || currentPort?.port_note || currentPort?.port}` : isCreate ? "Tạo port mới" : `Chỉnh sửa port: ${currentPort?.port_name || currentPort?.port_note || currentPort?.port}`}
               </label>
               <label onClick={() => setshowedit(false)} className="mb-0 cursor-pointer px-2 py-0.5 text-xs leading-tight sm:text-sm">Đóng</label>
             </div>

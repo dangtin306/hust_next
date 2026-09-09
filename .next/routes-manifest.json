@@ -58,6 +58,16 @@
         "regex": "^/next/docs(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
+        "source": "/next/clear_silde_bar",
+        "destination": "/next/community/clear_silde_bar",
+        "regex": "^/next/clear_silde_bar(?:/)?$"
+      },
+      {
+        "source": "/next/tech/:uri",
+        "destination": "/next/community/technical_insights?uri=:uri",
+        "regex": "^/next/tech(?:/([^/]+?))(?:/)?$"
+      },
+      {
         "source": "/next/history/home",
         "destination": "/next/resources/history/home",
         "regex": "^/next/history/home(?:/)?$"
@@ -86,6 +96,16 @@
         "source": "/next/info/about_us",
         "destination": "/next/info/about_us",
         "regex": "^/next/info/about_us(?:/)?$"
+      },
+      {
+        "source": "/next/resource/product/play/:slug",
+        "destination": "/next/resources/play/:slug",
+        "regex": "^/next/resource/product/play(?:/([^/]+?))(?:/)?$"
+      },
+      {
+        "source": "/next/accounts/product/play/:slug",
+        "destination": "/next/resources/play/:slug",
+        "regex": "^/next/accounts/product/play(?:/([^/]+?))(?:/)?$"
       },
       {
         "source": "/next/hustadmin",
@@ -147,14 +167,6 @@
   },
   "dynamicRoutes": [
     {
-      "page": "/accounts/product/play/[slug]",
-      "regex": "^/accounts/product/play/([^/]+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPslug": "nxtPslug"
-      },
-      "namedRegex": "^/accounts/product/play/(?<nxtPslug>[^/]+?)(?:/)?$"
-    },
-    {
       "page": "/api/features-image/[...asset]",
       "regex": "^/api/features\\-image/(.+?)(?:/)?$",
       "routeKeys": {
@@ -177,22 +189,6 @@
         "nxtPservice": "nxtPservice"
       },
       "namedRegex": "^/community/services/(?<nxtPservice>[^/]+?)(?:/)?$"
-    },
-    {
-      "page": "/next/orders_once/[slug_2]",
-      "regex": "^/next/orders_once/([^/]+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPslug_2": "nxtPslug_2"
-      },
-      "namedRegex": "^/next/orders_once/(?<nxtPslug_2>[^/]+?)(?:/)?$"
-    },
-    {
-      "page": "/resource/product/play/[slug]",
-      "regex": "^/resource/product/play/([^/]+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPslug": "nxtPslug"
-      },
-      "namedRegex": "^/resource/product/play/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
       "page": "/resources/play/[slug]",
@@ -271,6 +267,12 @@
       "namedRegex": "^/api/swagger(?:/)?$"
     },
     {
+      "page": "/api/swagger/git_auto",
+      "regex": "^/api/swagger/git_auto(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/git_auto(?:/)?$"
+    },
+    {
       "page": "/api/swagger/home",
       "regex": "^/api/swagger/home(?:/)?$",
       "routeKeys": {},
@@ -289,10 +291,10 @@
       "namedRegex": "^/api/swagger/openclaw(?:/)?$"
     },
     {
-      "page": "/clear_silde_bar",
-      "regex": "^/clear_silde_bar(?:/)?$",
+      "page": "/community/clear_silde_bar",
+      "regex": "^/community/clear_silde_bar(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/clear_silde_bar(?:/)?$"
+      "namedRegex": "^/community/clear_silde_bar(?:/)?$"
     },
     {
       "page": "/community/features",
@@ -305,6 +307,12 @@
       "regex": "^/community/services/development(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/community/services/development(?:/)?$"
+    },
+    {
+      "page": "/community/technical_insights",
+      "regex": "^/community/technical_insights(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/community/technical_insights(?:/)?$"
     },
     {
       "page": "/favicon.ico",

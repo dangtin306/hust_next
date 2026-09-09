@@ -37,18 +37,21 @@ declare namespace __next_route_internal_types__ {
     | `/api/sidebar-menu`
     | `/api/sidebar-menu/clear`
     | `/api/swagger`
+    | `/api/swagger/git_auto`
     | `/api/swagger/home`
     | `/api/swagger/laravel`
     | `/api/swagger/openclaw`
-    | `/clear_silde_bar`
+    | `/community/clear_silde_bar`
     | `/community/features`
     | `/community/services/development`
+    | `/community/technical_insights`
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
     | `/next/api/swagger/home`
     | `/next/api/swagger/laravel`
     | `/next/api/swagger/openclaw`
+    | `/next/clear_silde_bar`
     | `/next/community/history/home`
     | `/next/convert_national_market`
     | `/next/docs`
@@ -70,17 +73,18 @@ declare namespace __next_route_internal_types__ {
     | `/tabs_nav/navConfig.json`
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
-    | `/accounts/product/play/${SafeSlug<T>}`
     | `/api/features-image/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
+    | `/next/accounts/product/play/${SafeSlug<T>}`
     | `/next/check/${OptionalCatchAllSlug<T>}`
     | `/next/check/${SafeSlug<T>}`
     | `/next/docs/${OptionalCatchAllSlug<T>}`
     | `/next/hustadmin/${OptionalCatchAllSlug<T>}`
     | `/next/orders_once/${SafeSlug<T>}`
+    | `/next/resource/product/play/${SafeSlug<T>}`
     | `/next/shop/ai/${SafeSlug<T>}`
-    | `/resource/product/play/${SafeSlug<T>}`
+    | `/next/tech/${SafeSlug<T>}`
     | `/resources/${OptionalCatchAllSlug<T>}`
     | `/resources/play/${SafeSlug<T>}`
     | `/shop/scams_check/${SafeSlug<T>}`

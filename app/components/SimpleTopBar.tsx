@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore, useState } from "react";
 import NavDown from "./nav_down";
+import TopNavCategories from "../../../react_app/src/app_structure/app_fontend/top_nav_categories.jsx";
 import { isLocalHost } from "@/src/host_utils";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -65,6 +66,7 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
     hydrated && typeof window !== "undefined" && isLocalHost(window.location.hostname);
   const hideNav =
     hydrated && typeof window !== "undefined" && window.location.href.includes("shownav=NO");
+  const showGuestCategories = hydrated && !readCookie("apikey");
   const effectiveLatestVersion =
     latestVersion !== "" ? latestVersion : String(initialLatestVersion || "");
   const hasLatestVersion = effectiveLatestVersion !== "";
@@ -124,6 +126,8 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
         )}
       </div>
 
+      {showGuestCategories && <TopNavCategories />}
+
       {showDomainSelect ? (
         <div className="flex items-center gap-1 text-xs text-gray-600">
           <label htmlFor="domain-select">domain:</label>
@@ -151,6 +155,7 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
           </span>
         </div>
       )}
+
     </nav>
   );
 };

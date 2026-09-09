@@ -32,7 +32,7 @@ const PortCheck = ({ showcheck, setshowcheck, selectedPort, onCheck }) => {
         <div className="form-control">
           <div className="flex items-center justify-between flex-1 mb-0.5">
             <label className="mb-0 text-sm sm:text-base leading-tight">
-              Check thử port: {selectedPort?.port_name || selectedPort?.port_code || selectedPort?.port}
+              Check thử port: {selectedPort?.port_name || selectedPort?.port_note || selectedPort?.port}
             </label>
             <label onClick={closeCheck} className="mb-0 px-2 py-0.5 cursor-pointer text-xs sm:text-sm leading-tight">
               Đóng
@@ -42,7 +42,7 @@ const PortCheck = ({ showcheck, setshowcheck, selectedPort, onCheck }) => {
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
             <div className="flex flex-col gap-0 leading-tight">
               <div className="mb-0.5"><span className="font-semibold">Name:</span> {selectedPort?.port_name || "-"}</div>
-              <div className="mb-0.5"><span className="font-semibold">Code:</span> {selectedPort?.port_code || "-"}</div>
+              <div className="mb-0.5"><span className="font-semibold">Note:</span> {selectedPort?.port_note || "-"}</div>
               <div className="mb-0.5"><span className="font-semibold">Port:</span> {selectedPort?.port ?? "-"}</div>
               <div className="mb-0.5 break-all"><span className="font-semibold">Value update:</span> port_status, pid, process, executable, command, parent_process, parent_command</div>
             </div>

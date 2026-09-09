@@ -17,11 +17,11 @@ export default function SwaggerHomePage() {
           Chọn tài liệu bạn muốn xem
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          Home chỉ giới thiệu hai nhóm tài liệu API. Chọn một khung bên dưới để bắt đầu.
+          Home giới thiệu bốn nhóm tài liệu API. Chọn một khung bên dưới để bắt đầu.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-4">
         <Link
           href="/api/swagger/laravel"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
@@ -57,6 +57,42 @@ export default function SwaggerHomePage() {
           </p>
           <span className="mt-4 block text-sm font-semibold text-blue-700">
             Xem tài liệu OpenClaw →
+          </span>
+        </Link>
+
+        <Link
+          href="/api/swagger/git_auto"
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Git Auto
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-slate-800">
+            Git Auto
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Công cụ tự động hóa Git cho hệ thống.
+          </p>
+          <span className="mt-4 block text-sm font-semibold text-blue-700">
+            Xem Git Auto →
+          </span>
+        </Link>
+
+        <Link
+          href="/api/swagger/gitea_test"
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Gitea Test
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-slate-800">
+            Gitea Test
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Khu vực kiểm thử tích hợp Gitea.
+          </p>
+          <span className="mt-4 block text-sm font-semibold text-blue-700">
+            Xem Gitea Test →
           </span>
         </Link>
       </div>

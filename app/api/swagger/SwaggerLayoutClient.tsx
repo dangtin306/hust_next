@@ -28,6 +28,8 @@ export default function SwaggerLayoutClient({
   const pathname = usePathname() || "";
   const isHome = pathname.endsWith("/api/swagger/home");
   const isLaravel = pathname.endsWith("/api/swagger/laravel");
+  const isGitAuto = pathname.endsWith("/api/swagger/git_auto");
+  const isGiteaTest = pathname.endsWith("/api/swagger/gitea_test");
 
   useEffect(() => {
     const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -43,9 +45,23 @@ export default function SwaggerLayoutClient({
 
   return (
     <main className="min-h-screen bg-transparent p-4 sm:p-6">
-      <SwaggerSwitcher active={isHome ? "home" : isLaravel ? "laravel" : "openclaw"} />
+      <SwaggerSwitcher
+        active={
+          isHome
+            ? "home"
+            : isLaravel
+              ? "laravel"
+              : isGitAuto
+                ? "git_auto"
+                : isGiteaTest
+                  ? "gitea_test"
+                  : "openclaw"
+        }
+      />
 
-      {isHome ? (
+      {isGitAuto || isGiteaTest ? (
+        <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>
+      ) : isHome ? (
         <>
           <SwaggerClient spec={homeSpec} hideEmptySpecNotice hideLoading />
           <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>

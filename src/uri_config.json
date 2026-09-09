@@ -125,6 +125,14 @@
       "home": {
         "source": "/api/swagger/home",
         "destination": "/api/swagger/home"
+      },
+      "gitAuto": {
+        "source": "/api/swagger/git_auto",
+        "destination": "/api/swagger/git_auto"
+      },
+      "giteaTest": {
+        "source": "/api/swagger/gitea_test",
+        "destination": "/api/swagger/gitea_test"
       }
     }
   },

@@ -10,7 +10,7 @@ import "../scheduler/scheduler.css";
 type PortRecord = {
   id?: number | string;
   port_name?: string;
-  port_code?: string;
+  port_note?: string;
   protocol?: string;
   address?: string;
   port?: number | string;
@@ -58,7 +58,7 @@ const PortRow = ({ item, index, onCheck, onEdit, onDelete }: { item: PortRecord;
         <span className="font-semibold">Name:</span> {item.port_name || item.process || "-"}
       </div>
       <div className="mt-1">
-        <span className="font-semibold">Code:</span> {item.port_code || "-"}
+        <span className="font-semibold">Note:</span> {item.port_note || "-"}
       </div>
     </td>
     <td className="border px-2 py-2 align-top break-all">
@@ -235,7 +235,7 @@ export default function NetPortsPage() {
         body: JSON.stringify({
           id_show: updatedPort.id,
           port_name: updatedPort.port_name || "",
-          port_code: updatedPort.port_code || "",
+          port_note: updatedPort.port_note || "",
           port: updatedPort.port === "" || updatedPort.port == null ? "" : Number(updatedPort.port),
           port_status: Boolean(updatedPort.port_status),
         }),

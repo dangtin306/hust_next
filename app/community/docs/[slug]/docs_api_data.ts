@@ -29,7 +29,7 @@ export async function getDocPostMeta(
 
   try {
     const response = await fetch(
-      `https://hust.media/api/content/getdata.php?uri=${encodeURIComponent(normalizedUri)}&mode=posts`,
+      `https://hust.media/api/content/getdata_v2.php?uri=${encodeURIComponent(normalizedUri)}&mode=posts`,
       useCache
         ? { next: { revalidate: POSTS_CACHE_TTL_SECONDS } }
         : { cache: "no-store" }
