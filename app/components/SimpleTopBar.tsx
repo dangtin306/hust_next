@@ -90,72 +90,72 @@ const SimpleTopBar = ({ initialHost = "", initialLatestVersion = "" }: SimpleTop
   };
 
   return (
-    <nav className="sticky top-0 z-40 flex flex-wrap items-center justify-between w-full gap-2 border-b border-gray-200 bg-white pl-3 pr-2 py-2 text-sm text-gray-700 shadow-sm md:py-0">
-
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Toggle menu"
-          className="inline-flex h-7 w-7 items-center justify-center rounded bg-pink-200 text-gray-800 hover:bg-pink-400 md:hidden"
-          onClick={handleMenuToggle}
-        >
-          <span className="flex flex-col gap-0.5">
-            <span className="h-0.5 w-4 bg-purple-500" />
-            <span className="h-0.5 w-4 bg-purple-500" />
-            <span className="h-0.5 w-4 bg-purple-500" />
-          </span>
-        </button>
-        {hasLatestVersion && !hideNavControls && (
-          <>
-            <button
-              type="button"
-              className="rounded-l bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
-              onClick={() => window.history.back()}
-            >
-              Prev
-            </button>
-            <div className="h-6 w-px bg-gray-200" />
-            <button
-              type="button"
-              className="rounded-r bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
-              onClick={() => window.history.forward()}
-            >
-              Next
-            </button>
-          </>
-        )}
-      </div>
-
-      {showGuestCategories && <TopNavCategories />}
-
-      {showDomainSelect ? (
-        <div className="flex items-center gap-1 text-xs text-gray-600">
-          <label htmlFor="domain-select">domain:</label>
-          <select
-            id="domain-select"
-            value={domain}
-            onChange={handleDomainChange}
-            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-xs"
+    <nav className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white text-sm text-gray-700 shadow-none">
+      <div className="mx-auto flex w-full max-w-[1320px] items-center gap-3 px-2 py-1 md:py-0 lg:px-8 xl:px-12">
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            className="inline-flex h-7 w-7 items-center justify-center rounded bg-pink-200 text-gray-800 hover:bg-pink-400 md:hidden"
+            onClick={handleMenuToggle}
           >
-            <option value="hust">HUST</option>
-            <option value="tecom">TECOM</option>
-            <option value="nofake">NOFAKE</option>
-          </select>
+            <span className="flex flex-col gap-0.5">
+              <span className="h-0.5 w-4 bg-purple-500" />
+              <span className="h-0.5 w-4 bg-purple-500" />
+              <span className="h-0.5 w-4 bg-purple-500" />
+            </span>
+          </button>
+          {hasLatestVersion && !hideNavControls && (
+            <>
+              <button
+                type="button"
+                className="rounded-l bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
+                onClick={() => window.history.back()}
+              >
+                Prev
+              </button>
+              <div className="h-6 w-px bg-gray-200" />
+              <button
+                type="button"
+                className="rounded-r bg-pink-200 px-2 py-1 text-xs font-bold text-gray-800 hover:bg-pink-400"
+                onClick={() => window.history.forward()}
+              >
+                Next
+              </button>
+            </>
+          )}
         </div>
-      ) : (
-        <span className="text-xs text-gray-500" />
-      )}
 
-      {hydrated ? (
-        <NavDown />
-      ) : (
-        <div className="py-2">
-          <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
-            {fallbackDomainLabel}
-          </span>
+        {showGuestCategories && <TopNavCategories />}
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {showDomainSelect ? (
+            <div className="flex items-center gap-1 text-xs text-gray-600">
+              <label htmlFor="domain-select">domain:</label>
+              <select
+                id="domain-select"
+                value={domain}
+                onChange={handleDomainChange}
+                className="rounded border border-gray-300 bg-white px-1 py-0.5 text-xs"
+              >
+                <option value="hust">HUST</option>
+                <option value="tecom">TECOM</option>
+                <option value="nofake">NOFAKE</option>
+              </select>
+            </div>
+          ) : null}
+
+          {hydrated ? (
+            <NavDown />
+          ) : (
+            <div className="py-2">
+              <span className="rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 px-3.5 py-1 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200/70">
+                {fallbackDomainLabel}
+              </span>
+            </div>
+          )}
         </div>
-      )}
-
+      </div>
     </nav>
   );
 };
