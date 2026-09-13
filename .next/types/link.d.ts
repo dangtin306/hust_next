@@ -38,6 +38,8 @@ declare namespace __next_route_internal_types__ {
     | `/api/sidebar-menu/clear`
     | `/api/swagger`
     | `/api/swagger/git_auto`
+    | `/api/swagger/git_test`
+    | `/api/swagger/gitea_test`
     | `/api/swagger/home`
     | `/api/swagger/laravel`
     | `/api/swagger/openclaw`
@@ -48,6 +50,9 @@ declare namespace __next_route_internal_types__ {
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
+    | `/next/api/swagger/git_auto`
+    | `/next/api/swagger/git_test`
+    | `/next/api/swagger/gitea_test`
     | `/next/api/swagger/home`
     | `/next/api/swagger/laravel`
     | `/next/api/swagger/openclaw`
@@ -67,13 +72,16 @@ declare namespace __next_route_internal_types__ {
     | `/next/shop/history/home`
     | `/next/support`
     | `/shop/ai`
+    | `/shop/hustadmin/home`
     | `/shop/hustadmin/port_cron/net_ports`
     | `/shop/hustadmin/port_cron/scheduler`
+    | `/shop/hustadmin/service_money_list`
     | `/shop/resources`
     | `/tabs_nav/navConfig.json`
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
     | `/api/features-image/${CatchAllSlug<T>}`
+    | `/api/gitea/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
     | `/next/accounts/product/play/${SafeSlug<T>}`

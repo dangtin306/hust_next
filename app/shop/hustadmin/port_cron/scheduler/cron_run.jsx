@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 
-const Cron_run = ({ showrun, setshowrun, selectedCron, onRun }) => {
+const Cron_run = ({ showrun, setshowrun, selectedCron, onRun, isDuplicate = false }) => {
   const [running, setRunning] = useState(0);
-  const [buttonText, setButtonText] = useState("Chạy thử");
+  const [buttonText, setButtonText] = useState(isDuplicate ? "Duplicate Cron" : "Chạy thử");
 
   useEffect(() => {
     if (!selectedCron) return;
@@ -23,7 +23,7 @@ const Cron_run = ({ showrun, setshowrun, selectedCron, onRun }) => {
       await onRun?.();
     } finally {
       setRunning(0);
-      setButtonText("Chạy thử");
+      setButtonText(isDuplicate ? "Duplicate Cron" : "Chạy thử");
     }
   };
 
@@ -35,7 +35,7 @@ const Cron_run = ({ showrun, setshowrun, selectedCron, onRun }) => {
         <div className="form-control">
           <div className="flex items-center justify-between flex-1 mb-0.5">
             <label className="mb-0 text-sm sm:text-base leading-tight">
-              Chạy thử cron: {selectedCron?.name_cron || selectedCron?.task_cron}
+              {isDuplicate ? "Duplicate Cron: " : "Chạy thử cron: "}{selectedCron?.name_cron || selectedCron?.task_cron}
             </label>
             <label onClick={closeRun} className="mb-0 px-2 py-0.5 cursor-pointer text-xs sm:text-sm leading-tight">
               Đóng
@@ -70,7 +70,7 @@ const Cron_run = ({ showrun, setshowrun, selectedCron, onRun }) => {
             type="button"
             disabled={running === 1}
             onClick={handleRun}
-            className="mt-2 flex break-inside bg-emerald-500 hover:bg-emerald-400 rounded-3xl px-8 py-1.5 mb-0 w-full dark:bg-slate-800 dark:text-white"
+            className={`mt-2 flex break-inside rounded-3xl px-8 py-1.5 mb-0 w-full dark:bg-slate-800 dark:text-white ${isDuplicate ? "bg-violet-500 hover:bg-violet-400" : "bg-emerald-500 hover:bg-emerald-400"}`}
           >
             <div className="flex items-center justify-between flex-1">
               {running === 1 && <div className="spinner-border spinner-border-sm" role="status" />}

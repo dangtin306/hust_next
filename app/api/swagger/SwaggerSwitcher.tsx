@@ -3,12 +3,16 @@ import Link from "next/link";
 export default function SwaggerSwitcher({
   active,
 }: {
-  active: "home" | "openclaw" | "laravel" | "git_auto" | "gitea_test";
+  active: "home" | "openclaw" | "laravel" | "git_auto" | "git_test" | "gitea_test";
 }) {
   const clearSwaggerHash = () => {
     if (typeof window !== "undefined") {
       if (window.location.hash) {
-        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
       }
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }
@@ -30,7 +34,9 @@ export default function SwaggerSwitcher({
       >
         Home
       </Link>
-      <span className="mr-2 text-sm font-semibold text-slate-600">API documentation:</span>
+      <span className="mr-2 text-sm font-semibold text-slate-600">
+        API documentation:
+      </span>
       <Link
         href="/api/swagger/laravel"
         onClick={clearSwaggerHash}
@@ -55,6 +61,7 @@ export default function SwaggerSwitcher({
       </Link>
       <Link
         href="/api/swagger/git_auto"
+        prefetch
         onClick={clearSwaggerHash}
         className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
           active === "git_auto"
@@ -65,7 +72,20 @@ export default function SwaggerSwitcher({
         Git Auto
       </Link>
       <Link
+        href="/api/swagger/git_test"
+        prefetch
+        onClick={clearSwaggerHash}
+        className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
+          active === "git_test"
+            ? "border-blue-600 bg-blue-600 text-white"
+            : "border-slate-300 bg-white text-slate-700 hover:border-blue-500 hover:text-blue-600"
+        }`}
+      >
+        Git Test
+      </Link>
+      <Link
         href="/api/swagger/gitea_test"
+        prefetch
         onClick={clearSwaggerHash}
         className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
           active === "gitea_test"

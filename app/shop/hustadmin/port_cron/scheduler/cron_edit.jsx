@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 
-const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCreate = false, isDelete = false }) => {
+const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCreate = false, isDelete = false, isDuplicate = false }) => {
   const [nutxuly, setNutxuly] = useState(0);
   const [nutorder, setNutorder] = useState("Lưu thay đổi");
   const [itemCronEdit, setItemCronEdit] = useState({});
@@ -35,7 +35,7 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
   const handleSubmit = async (event) => {
     event.preventDefault();
     setNutxuly(1);
-    setNutorder(isDelete ? "Đang xoá..." : "Vui lòng chờ một lát 😊");
+    setNutorder(isDelete ? "Đang xoá..." : isDuplicate ? "Đang duplicate..." : "Vui lòng chờ một lát 😊");
 
     try {
       if (isDelete) {
@@ -45,7 +45,7 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
       }
     } finally {
       setNutxuly(0);
-      setNutorder(isDelete ? "Xác nhận xoá" : "Lưu thay đổi");
+      setNutorder(isDelete ? "Xác nhận xoá" : isDuplicate ? "Xác nhận Duplicate Cron" : "Lưu thay đổi");
     }
   };
 
@@ -67,6 +67,8 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
               <label className="mb-0 text-sm sm:text-base leading-tight">
                   {isDelete
                   ? `Xoá cron: ${selectedCron?.name_cron || selectedCron?.task_cron}`
+                  : isDuplicate
+                  ? `Duplicate Cron: ${selectedCron?.name_cron || selectedCron?.task_cron}`
                   : isCreate
                   ? "Tạo cron mới"
                   : `Chỉnh sửa cron: ${selectedCron?.name_cron || selectedCron?.task_cron}`}
@@ -92,7 +94,7 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
                 name="name"
                 aria-describedby="addon-wrapping"
                 onChange={(e) => hamcancode("name_cron", e.target.value)}
-                disabled={isDelete}
+                disabled={isDelete || isDuplicate}
               />
             </div>
 
@@ -112,11 +114,11 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
                 name="task"
                 aria-describedby="addon-wrapping"
                 onChange={(e) => hamcancode("task_cron", e.target.value)}
-                disabled={isDelete}
+                disabled={isDelete || isDuplicate}
               />
             </div>
 
-            {!isDelete && (
+            {!isDelete && !isDuplicate && (
               <>
                 <label className="mb-0 text-xs sm:text-sm leading-tight">
                   {isCreate ? "Interval" : "Sửa interval"}
@@ -266,13 +268,13 @@ const Cron_edit = ({ showedit, setshowedit, selectedCron, onSave, onDelete, isCr
               disabled={nutxuly === 1}
               onClick={handleSubmit}
               className={`mt-3 flex break-inside rounded-3xl px-8 py-1.5 mb-0 w-full dark:bg-slate-800 dark:text-white ${
-                isDelete ? "bg-rose-500 hover:bg-rose-400" : "bg-purple-400 hover:bg-purple-300"
+                isDelete ? "bg-rose-500 hover:bg-rose-400" : isDuplicate ? "bg-violet-500 hover:bg-violet-400" : "bg-purple-400 hover:bg-purple-300"
               }`}
             >
               <div className="flex items-center justify-between flex-1">
                 {nutxuly === 1 && <div className="spinner-border spinner-border-sm" role="status" />}
                 <span className="text-sm sm:text-base font-medium text-white">
-                  {isDelete && nutxuly !== 1 ? "Xác nhận xoá" : nutorder}
+                  {isDelete && nutxuly !== 1 ? "Xác nhận xoá" : isDuplicate && nutxuly !== 1 ? "Xác nhận Duplicate Cron" : nutorder}
                 </span>
                 <div className="text-lg">{"\u27A4"}</div>
               </div>

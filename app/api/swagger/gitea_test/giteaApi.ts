@@ -12,8 +12,6 @@ export type Branch = { name: string; protected?: boolean; latest_commit?: { sha:
 export type Commit = { sha: string; message?: string; author?: string; created_at?: string; timestamp?: string };
 export type TreeEntry = { name: string; path?: string; type?: string; mode?: string; size?: number };
 type TreeResponse = { ref?: string; path?: string; items?: TreeEntry[] };
-export type Registry = { enabled?: boolean; images_found: number; images: Array<{ name?: string; image?: string; tag?: string; type?: string; updated_at?: string; size?: number }> };
-export type Progress = { project: string; current_stage: string; next_stage?: string; stages: Array<{ key: string; name: string; status: string }> };
 
 async function get<T>(path: string): Promise<T> {
   const response = await fetch(`${API_ROOT}/${path}`, { cache: "no-store" });
@@ -31,5 +29,3 @@ export const getTree = async (owner: string, repo: string, ref: string, path = "
   const result = await get<TreeResponse | TreeEntry[]>(`repositories/${owner}/${repo}/tree?ref=${encodeURIComponent(ref)}${path ? `&path=${encodeURIComponent(path)}` : ""}`);
   return Array.isArray(result) ? result : result.items || [];
 };
-export const getRegistry = (owner: string, repo: string) => get<Registry>(`projects/${owner}/${repo}/registry`);
-export const getProgress = (owner: string, repo: string) => get<Progress>(`projects/${owner}/${repo}/progress`);

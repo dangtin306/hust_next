@@ -32,12 +32,21 @@ export default function IgnoreMetaMaskExtensionErrors() {
       }
     };
 
-    window.addEventListener("unhandledrejection", onUnhandledRejection);
-    window.addEventListener("error", onError);
+    // Capture phase is needed because the MetaMask inpage script can emit the
+    // error before it reaches the normal bubbling listeners.
+    window.addEventListener("unhandledrejection", onUnhandledRejection, true);
+    window.addEventListener("error", onError, true);
+
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      if (args.some(hasMetaMaskTrace)) return;
+      originalConsoleError(...args);
+    };
 
     return () => {
-      window.removeEventListener("unhandledrejection", onUnhandledRejection);
-      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection, true);
+      window.removeEventListener("error", onError, true);
+      console.error = originalConsoleError;
     };
   }, []);
 

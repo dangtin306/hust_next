@@ -15,12 +15,14 @@ const CronServerAdmin = () => {
   const [showcreate, setshowcreate] = useState(false);
   const [showrun, setshowrun] = useState(false);
   const [showdelete, setshowdelete] = useState(false);
+  const [showduplicate, setshowduplicate] = useState(false);
   const [selectedCron, setSelectedCron] = useState(null);
   const [createCron, setCreateCron] = useState(null);
   const editRef = useRef(null);
   const createRef = useRef(null);
   const runRef = useRef(null);
   const deleteRef = useRef(null);
+  const duplicateRef = useRef(null);
 
   const scrollToSection = (ref) => {
     const target = ref.current;
@@ -95,6 +97,14 @@ const CronServerAdmin = () => {
     });
   }, [showdelete, selectedCron]);
 
+  useEffect(() => {
+    if (!showduplicate || !selectedCron) return;
+
+    requestAnimationFrame(() => {
+      scrollToSection(duplicateRef);
+    });
+  }, [showduplicate, selectedCron]);
+
   const handleUpdate = () => {
     fetchSchedulerData({ isManualUpdate: true });
   };
@@ -106,6 +116,7 @@ const CronServerAdmin = () => {
     setshowedit(false);
     setshowrun(false);
     setshowdelete(false);
+    setshowduplicate(false);
     setCreateCron({
       category_key: categoryKey,
       category_name: categoryName,
@@ -128,6 +139,7 @@ const CronServerAdmin = () => {
   const openEdit = (job, category, categoryIndex, jobIndex) => {
     setshowrun(false);
     setshowdelete(false);
+    setshowduplicate(false);
     setSelectedCron({
       ...job,
       category_key: category?.category_key || category?.name_category || "",
@@ -141,6 +153,7 @@ const CronServerAdmin = () => {
   const openRun = (job, category, categoryIndex, jobIndex) => {
     setshowedit(false);
     setshowdelete(false);
+    setshowduplicate(false);
     setSelectedCron({
       ...job,
       category_key: category?.category_key || category?.name_category || "",
@@ -154,6 +167,7 @@ const CronServerAdmin = () => {
   const openDelete = (job, category, categoryIndex, jobIndex) => {
     setshowedit(false);
     setshowrun(false);
+    setshowduplicate(false);
     setSelectedCron({
       ...job,
       category_key: category?.category_key || category?.name_category || "",
@@ -162,6 +176,20 @@ const CronServerAdmin = () => {
       __jobIndex: jobIndex,
     });
     setshowdelete(true);
+  };
+
+  const openDuplicate = (job, category, categoryIndex, jobIndex) => {
+    setshowedit(false);
+    setshowrun(false);
+    setshowdelete(false);
+    setSelectedCron({
+      ...job,
+      category_key: category?.category_key || category?.name_category || "",
+      category_name: category?.name_category || category?.category_name || "",
+      __categoryIndex: categoryIndex,
+      __jobIndex: jobIndex,
+    });
+    setshowduplicate(true);
   };
 
   const handleSaveCron = async (nextCron, sourceCron = selectedCron) => {
@@ -194,6 +222,7 @@ const CronServerAdmin = () => {
         setSelectedCron(null);
         setshowcreate(false);
         setCreateCron(null);
+        setshowduplicate(false);
         await fetchSchedulerData();
         return true;
       }
@@ -249,6 +278,8 @@ const CronServerAdmin = () => {
         alert_success(info?.message || "Đã tạo cron mới");
         setshowcreate(false);
         setCreateCron(null);
+        setshowduplicate(false);
+        setSelectedCron(null);
         await fetchSchedulerData();
         return true;
       }
@@ -287,6 +318,36 @@ const CronServerAdmin = () => {
       }
 
       alert_error(info?.message || "Run cron failed");
+      return false;
+    } catch (error) {
+      alert_error(error);
+      return false;
+    }
+  };
+
+  const handleDuplicateCron = async () => {
+    if (!selectedCron) return false;
+
+    const payload = {
+      category_key: selectedCron.category_key || selectedCron.category_name || "",
+      task_cron: selectedCron.task_cron || "",
+    };
+
+    try {
+      const response = await axios.post(
+        "https://nginx.hust.media/go/servers/scheduler/cron_clone",
+        payload
+      );
+      const info = response?.data || {};
+      if (info?.status === 1 || info?.ok === true) {
+        alert_success(info?.message || "Đã duplicate cron");
+        setshowduplicate(false);
+        setSelectedCron(null);
+        await fetchSchedulerData();
+        return true;
+      }
+
+      alert_error(info?.message || "Duplicate cron failed");
       return false;
     } catch (error) {
       alert_error(error);
@@ -424,6 +485,16 @@ const CronServerAdmin = () => {
         />
       </div>
 
+      <div ref={duplicateRef}>
+        <CronRun
+          showrun={showduplicate}
+          setshowrun={setshowduplicate}
+          selectedCron={selectedCron}
+          onRun={handleDuplicateCron}
+          isDuplicate
+        />
+      </div>
+
       <div className="card-body p-3 sm:p-4 rounded-xl border border-slate-200 bg-gradient-to-br from-sky-50 via-white to-rose-50 shadow-sm">
         {loading ? (
           <div className="rounded-3xl border border-slate-200/70 bg-white/85 px-4 py-16 shadow-2xl ring-1 ring-black/5 backdrop-blur-md">
@@ -462,26 +533,35 @@ const CronServerAdmin = () => {
                       <th className="border text-left py-2 px-2 w-[18%]">Task</th>
                       <th className="border text-center py-2 px-2 w-[18%]">At time / Interval</th>
                       <th className="border text-left py-2 px-2 w-[21%]">Source</th>
-                      <th className="border text-center py-2 px-2 w-[10%] min-w-[82px] whitespace-nowrap">Status</th>
+                      <th className="border text-center py-2 px-2 w-[15%] min-w-[160px] whitespace-nowrap">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {services.map((job, jobIndex) => (
                       <tr key={`${job?.task_cron || "task"}-${jobIndex}`} className="odd:bg-white even:bg-slate-50 hover:bg-sky-50">
                         <td className="border py-2 px-2 align-top">
-                          <span
-                            className="block leading-tight"
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                              wordBreak: "break-word",
-                            }}
-                            title={job?.name_cron || ""}
-                          >
-                            {job?.name_cron || "-"}
-                          </span>
+                          <div className="flex flex-col items-start gap-2">
+                            <span
+                              className="block leading-tight"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                                wordBreak: "break-word",
+                              }}
+                              title={job?.name_cron || ""}
+                            >
+                              {job?.name_cron || "-"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => openRun(job, category, categoryIndex, jobIndex)}
+                              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 whitespace-nowrap"
+                            >
+                              Run
+                            </button>
+                          </div>
                         </td>
                         <td className="border py-2 px-2 align-top break-all">
                           <div className="flex flex-col gap-0.5">
@@ -522,7 +602,7 @@ const CronServerAdmin = () => {
                             "-"
                           )}
                         </td>
-                        <td className="border py-2 px-2 text-center align-top whitespace-nowrap min-w-[82px]">
+                        <td className="border py-2 px-2 text-center align-top whitespace-nowrap min-w-[160px]">
                           <div className="flex flex-col items-center gap-2">
                             <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
                               {job?.cron_status ? (
@@ -545,7 +625,7 @@ const CronServerAdmin = () => {
                               </button>
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-center gap-1 whitespace-nowrap">
+                            <div className="flex flex-nowrap items-center justify-center gap-1 whitespace-nowrap">
                               <button
                                 type="button"
                                 onClick={() => openEdit(job, category, categoryIndex, jobIndex)}
@@ -557,11 +637,12 @@ const CronServerAdmin = () => {
 
                               <button
                                 type="button"
-                                onClick={() => openRun(job, category, categoryIndex, jobIndex)}
-                                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-white px-2 py-1 text-[11px] font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800 whitespace-nowrap"
+                                onClick={() => openDuplicate(job, category, categoryIndex, jobIndex)}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-200 bg-white px-2 py-1 text-[11px] font-semibold text-violet-500 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 whitespace-nowrap"
                               >
-                                Run
+                                Clone
                               </button>
+
                             </div>
                           </div>
                         </td>

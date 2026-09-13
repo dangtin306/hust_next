@@ -130,6 +130,10 @@
         "source": "/api/swagger/git_auto",
         "destination": "/api/swagger/git_auto"
       },
+      "gitTest": {
+        "source": "/api/swagger/git_test",
+        "destination": "/api/swagger/git_test"
+      },
       "giteaTest": {
         "source": "/api/swagger/gitea_test",
         "destination": "/api/swagger/gitea_test"

@@ -161,6 +161,21 @@
         "source": "/next/api/swagger/home",
         "destination": "/next/api/swagger/home",
         "regex": "^/next/api/swagger/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/git_auto",
+        "destination": "/next/api/swagger/git_auto",
+        "regex": "^/next/api/swagger/git_auto(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/git_test",
+        "destination": "/next/api/swagger/git_test",
+        "regex": "^/next/api/swagger/git_test(?:/)?$"
+      },
+      {
+        "source": "/next/api/swagger/gitea_test",
+        "destination": "/next/api/swagger/gitea_test",
+        "regex": "^/next/api/swagger/gitea_test(?:/)?$"
       }
     ],
     "fallback": []
@@ -173,6 +188,14 @@
         "nxtPasset": "nxtPasset"
       },
       "namedRegex": "^/api/features\\-image/(?<nxtPasset>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/gitea/[...path]",
+      "regex": "^/api/gitea/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/gitea/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
       "page": "/community/docs/[slug]",
@@ -273,6 +296,18 @@
       "namedRegex": "^/api/swagger/git_auto(?:/)?$"
     },
     {
+      "page": "/api/swagger/git_test",
+      "regex": "^/api/swagger/git_test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/git_test(?:/)?$"
+    },
+    {
+      "page": "/api/swagger/gitea_test",
+      "regex": "^/api/swagger/gitea_test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/swagger/gitea_test(?:/)?$"
+    },
+    {
       "page": "/api/swagger/home",
       "regex": "^/api/swagger/home(?:/)?$",
       "routeKeys": {},
@@ -351,6 +386,12 @@
       "namedRegex": "^/shop/ai(?:/)?$"
     },
     {
+      "page": "/shop/hustadmin/home",
+      "regex": "^/shop/hustadmin/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/hustadmin/home(?:/)?$"
+    },
+    {
       "page": "/shop/hustadmin/port_cron/net_ports",
       "regex": "^/shop/hustadmin/port_cron/net_ports(?:/)?$",
       "routeKeys": {},
@@ -361,6 +402,12 @@
       "regex": "^/shop/hustadmin/port_cron/scheduler(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/shop/hustadmin/port_cron/scheduler(?:/)?$"
+    },
+    {
+      "page": "/shop/hustadmin/service_money_list",
+      "regex": "^/shop/hustadmin/service_money_list(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/hustadmin/service_money_list(?:/)?$"
     },
     {
       "page": "/shop/resources",

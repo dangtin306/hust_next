@@ -2,7 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import ServiceCategoryPanel, { type ServiceCategory } from "./openclaw/ServiceCategoryPanel";
+import ServiceCategoryPanel, {
+  type ServiceCategory,
+} from "./openclaw/ServiceCategoryPanel";
 import SwaggerClient from "./SwaggerClient";
 import SwaggerSwitcher from "./SwaggerSwitcher";
 import LaravelServicePanel from "./laravel/LaravelServicePanel";
@@ -29,10 +31,12 @@ export default function SwaggerLayoutClient({
   const isHome = pathname.endsWith("/api/swagger/home");
   const isLaravel = pathname.endsWith("/api/swagger/laravel");
   const isGitAuto = pathname.endsWith("/api/swagger/git_auto");
+  const isGitTest = pathname.endsWith("/api/swagger/git_test");
   const isGiteaTest = pathname.endsWith("/api/swagger/gitea_test");
 
   useEffect(() => {
-    const resetScroll = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const resetScroll = () =>
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     resetScroll();
     const firstFrame = window.requestAnimationFrame(resetScroll);
     const timer = window.setTimeout(resetScroll, 120);
@@ -44,7 +48,7 @@ export default function SwaggerLayoutClient({
   }, [isLaravel]);
 
   return (
-    <main className="min-h-screen bg-transparent p-4 sm:p-6">
+    <main className="min-h-screen min-w-0 overflow-x-hidden bg-transparent p-4 sm:p-6">
       <SwaggerSwitcher
         active={
           isHome
@@ -53,22 +57,30 @@ export default function SwaggerLayoutClient({
               ? "laravel"
               : isGitAuto
                 ? "git_auto"
+                : isGitTest
+                  ? "git_test"
                 : isGiteaTest
                   ? "gitea_test"
                   : "openclaw"
         }
       />
 
-      {isGitAuto || isGiteaTest ? (
-        <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>
+      {isGitAuto || isGitTest || isGiteaTest ? (
+        <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (
         <>
           <SwaggerClient spec={homeSpec} hideEmptySpecNotice hideLoading />
-          <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">{children}</div>
+          <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">
+            {children}
+          </div>
         </>
       ) : (
         <>
-          {isLaravel ? <LaravelServicePanel /> : <ServiceCategoryPanel categories={categories} />}
+          {isLaravel ? (
+            <LaravelServicePanel />
+          ) : (
+            <ServiceCategoryPanel categories={categories} />
+          )}
           <SwaggerClient spec={isLaravel ? laravelSpec : spec} />
           {!isLaravel ? (
             <>

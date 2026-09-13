@@ -56,6 +56,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/swagger/git_test/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/swagger/git_test">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/git_test/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/swagger/gitea_test/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/swagger/gitea_test">> = Specific
+  const handler = {} as typeof import("../../app/api/swagger/gitea_test/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/swagger/home/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/swagger/home">> = Specific
@@ -209,6 +227,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/shop/hustadmin/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/home">> = Specific
+  const handler = {} as typeof import("../../app/shop/hustadmin/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/shop/hustadmin/port_cron/net_ports/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/port_cron/net_ports">> = Specific
@@ -222,6 +249,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/port_cron/scheduler">> = Specific
   const handler = {} as typeof import("../../app/shop/hustadmin/port_cron/scheduler/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/shop/hustadmin/service_money_list/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/shop/hustadmin/service_money_list">> = Specific
+  const handler = {} as typeof import("../../app/shop/hustadmin/service_money_list/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -258,6 +294,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/features-image/[...asset]">> = Specific
   const handler = {} as typeof import("../../app/api/features-image/[...asset]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/gitea/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/gitea/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/gitea/[...path]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

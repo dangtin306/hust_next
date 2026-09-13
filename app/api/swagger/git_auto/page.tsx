@@ -3,7 +3,7 @@ import GitControl from "./GitControl";
 
 export const metadata: Metadata = {
   title: "Git Control",
-  description: "Mock Git control dashboard.",
+  description: "Laravel Git Control dashboard for the local OpenClaw source.",
 };
 
 export default function GitAutoPage() { return <GitControl />; }
