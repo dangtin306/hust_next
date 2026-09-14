@@ -82,7 +82,7 @@ const mdxComponents: Record<string, any> = {
 
 export default function TechMdxArticle({ source }: { source: string }) {
   return (
-    <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-3 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+    <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-2 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
       <MDXRemote source={source} components={mdxComponents} />
     </div>
   );

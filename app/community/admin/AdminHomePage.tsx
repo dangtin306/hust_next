@@ -8,10 +8,19 @@ type AdminLink = {
   level_manage?: number;
 };
 
+type AdminService = {
+  service_name?: string;
+  service_code?: string;
+  to?: string;
+  level_manage?: number;
+  children?: AdminService[];
+};
+
 type AdminCategory = {
   category_name?: string;
   category_code?: string;
   links?: AdminLink[];
+  services?: AdminService[];
 };
 
 type AdminStats = {
@@ -24,11 +33,13 @@ type AdminStats = {
 type AdminMenuResponse = {
   category_name?: string;
   category_code?: string;
-  links?: AdminLink[];
+  links?: Array<AdminLink | AdminCategory>;
+  services?: AdminService[];
   api_results?: {
     category_name?: string;
     category_code?: string;
-    links?: AdminLink[];
+    links?: Array<AdminLink | AdminCategory>;
+    services?: AdminService[];
     mongo_results?: { links?: AdminLink[] };
     categories?: AdminCategory[];
   };
@@ -47,24 +58,71 @@ const readCookie = (name: string) => {
 const formatNumber = (value?: number) =>
   typeof value === "number" ? value.toLocaleString("en-GB") : "0";
 
+const servicesToLinks = (services: AdminService[] = []): AdminLink[] =>
+  services.flatMap((service) => {
+    const currentLink = service.to
+      ? [{
+          to: service.to,
+          text: service.service_name || service.service_code,
+          level_manage: service.level_manage,
+        }]
+      : [];
+    return [...currentLink, ...servicesToLinks(service.children || [])];
+  });
+
+const normalizeCategory = (category: AdminCategory): AdminCategory => ({
+  ...category,
+  links: Array.isArray(category.links)
+    ? category.links
+    : servicesToLinks(category.services || []),
+});
+
+const isCategory = (item: AdminLink | AdminCategory): item is AdminCategory =>
+  "category_name" in item || "category_code" in item || "services" in item;
+
+const normalizeCategoryList = (items?: Array<AdminLink | AdminCategory>) => {
+  if (!Array.isArray(items) || !items.length || !items.every(isCategory)) return null;
+  return items.map(normalizeCategory);
+};
+
 const normalizeCategories = (body: AdminMenuResponse): AdminCategory[] => {
-  if (Array.isArray(body.categories)) return body.categories;
-  if (body.category_name || body.category_code || Array.isArray(body.links)) return [body];
+  if (Array.isArray(body.categories)) return body.categories.map(normalizeCategory);
+  const topLevelCategories = normalizeCategoryList(body.links);
+  if (topLevelCategories) return topLevelCategories;
+  if (body.category_name || body.category_code || Array.isArray(body.services)) {
+    return [normalizeCategory({
+      category_name: body.category_name,
+      category_code: body.category_code,
+      links: body.links as AdminLink[] | undefined,
+      services: body.services,
+    })];
+  }
 
   const apiResults = body.api_results;
-  if (Array.isArray(apiResults?.categories)) return apiResults.categories;
+  if (Array.isArray(apiResults?.categories)) return apiResults.categories.map(normalizeCategory);
   if (apiResults?.category_name || apiResults?.category_code) {
-    return [{
+    const linkedCategories = normalizeCategoryList(apiResults.links);
+    if (linkedCategories) return linkedCategories;
+    return [normalizeCategory({
       category_name: apiResults.category_name,
       category_code: apiResults.category_code,
-      links: apiResults.links,
-    }];
+      links: apiResults.links as AdminLink[] | undefined,
+      services: apiResults.services,
+    })];
   }
   const legacyLinks = apiResults?.links || apiResults?.mongo_results?.links || [];
+  const linkedCategories = normalizeCategoryList(legacyLinks);
+  if (linkedCategories) return linkedCategories;
   if (legacyLinks.length && legacyLinks.every((item) => "links" in item && !("text" in item) && !("to" in item))) {
     return legacyLinks as unknown as AdminCategory[];
   }
-  return legacyLinks.length ? [{ category_name: "Quản trị hệ thống", category_code: "admin", links: legacyLinks }] : [];
+  return legacyLinks.length
+    ? [{
+        category_name: "Quản trị hệ thống",
+        category_code: "admin",
+        links: legacyLinks as AdminLink[],
+      }]
+    : [];
 };
 
 const resolveHref = (value: string) => {
@@ -155,21 +213,25 @@ export default function AdminHomePage() {
                   </button>
                   {openCategory === categoryIndex && (
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {(category.links || []).map((link, linkIndex) => (
-                        <a
-                          key={`${link.to || "admin-link"}-${linkIndex}`}
-                          href={resolveHref(link.to || "#")}
-                          className="group flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                        >
-                          <span className="text-left text-sm font-medium leading-5 sm:text-base">
-                            {link.text || "Untitled"}
-                          </span>
-                          <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400 transition group-hover:text-blue-500">
-                            {typeof link.level_manage === "number" && `L${link.level_manage}`}
-                            <span className="text-lg" aria-hidden="true">→</span>
-                          </span>
-                        </a>
-                      ))}
+                      {category.services?.length ? (
+                        <ServiceList services={category.services} />
+                      ) : (
+                        (category.links || []).map((link, linkIndex) => (
+                          <a
+                            key={`${link.to || "admin-link"}-${linkIndex}`}
+                            href={resolveHref(link.to || "#")}
+                            className="group flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                          >
+                            <span className="text-left text-sm font-medium leading-5 sm:text-base">
+                              {link.text || "Untitled"}
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400 transition group-hover:text-blue-500">
+                              {typeof link.level_manage === "number" && `L${link.level_manage}`}
+                              <span className="text-lg" aria-hidden="true">→</span>
+                            </span>
+                          </a>
+                        ))
+                      )}
                     </div>
                   )}
                 </section>
@@ -181,6 +243,56 @@ export default function AdminHomePage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function ServiceList({ services }: { services: AdminService[] }) {
+  const [openServices, setOpenServices] = useState<Record<number, boolean>>({});
+
+  return (
+    <>
+      {services.map((service, serviceIndex) => {
+        const children = service.children || [];
+        const hasChildren = children.length > 0;
+        const isOpen = openServices[serviceIndex] === true;
+        const label = service.service_name || service.service_code || "Untitled";
+
+        return (
+          <div key={`${service.service_code || label}-${serviceIndex}`} className="space-y-3">
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={() => setOpenServices((current) => ({ ...current, [serviceIndex]: !isOpen }))}
+                className="group flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                aria-expanded={isOpen}
+              >
+                <span className="text-sm font-medium leading-5 sm:text-base">{label}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400 transition group-hover:text-blue-500">
+                  {typeof service.level_manage === "number" && `L${service.level_manage}`}
+                  <span className={`text-lg transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true">⌄</span>
+                </span>
+              </button>
+            ) : (
+              <a
+                href={resolveHref(service.to || "#")}
+                className="group flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+              >
+                <span className="text-left text-sm font-medium leading-5 sm:text-base">{label}</span>
+                <span className="flex shrink-0 items-center gap-2 text-xs text-slate-400 transition group-hover:text-blue-500">
+                  {typeof service.level_manage === "number" && `L${service.level_manage}`}
+                  <span className="text-lg" aria-hidden="true">→</span>
+                </span>
+              </a>
+            )}
+            {hasChildren && isOpen && (
+              <div className="ml-4 grid grid-cols-1 gap-3 border-l-2 border-blue-100 pl-3 sm:ml-6 sm:grid-cols-2">
+                <ServiceList services={children} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </>
   );
 }
 
