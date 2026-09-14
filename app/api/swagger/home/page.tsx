@@ -17,11 +17,11 @@ export default function SwaggerHomePage() {
           Chọn tài liệu bạn muốn xem
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          Home giới thiệu bốn nhóm tài liệu API. Chọn một khung bên dưới để bắt đầu.
+          Home giới thiệu năm nhóm tài liệu API. Chọn một khung bên dưới để bắt đầu.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <Link
           href="/api/swagger/laravel"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
@@ -75,6 +75,24 @@ export default function SwaggerHomePage() {
           </p>
           <span className="mt-4 block text-sm font-semibold text-blue-700">
             Xem Git Auto →
+          </span>
+        </Link>
+
+        <Link
+          href="/api/swagger/git_test"
+          className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+            Git Test
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-slate-800">
+            Git Control Test
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Kiểm thử các thao tác Git trong workflow của nhân viên.
+          </p>
+          <span className="mt-4 block text-sm font-semibold text-blue-700">
+            Xem Git Test →
           </span>
         </Link>
 

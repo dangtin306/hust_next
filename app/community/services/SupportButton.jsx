@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { animated, useSpring } from "@react-spring/web";
+import { useRouter } from "next/navigation";
 import { isLocalHost } from "@/src/host_utils";
 
 const CACHE_KEY = "support_chat";
@@ -86,6 +87,7 @@ const getInitialSupportLinks = () => {
 };
 
 const SupportButton = () => {
+  const router = useRouter();
   const [hienDanhSach, setHienDanhSach] = useState(false);
   const [linksSupport, setLinksSupport] = useState(() => getInitialSupportLinks());
   const isMounted = useSyncExternalStore(
@@ -200,25 +202,14 @@ const SupportButton = () => {
       }
     };
 
-    const startBackgroundFetch = () => {
-      if (cancelled) return;
-      // Run chat bootstrap after full page load, then delay a bit more
-      // so it does not compete with critical rendering/network tasks.
-      delayTimer = window.setTimeout(() => {
-        run();
-      }, 900);
-    };
-
-    if (document.readyState === "complete") {
-      startBackgroundFetch();
-    } else {
-      window.addEventListener("load", startBackgroundFetch, { once: true });
-    }
+    // Match the React implementation: fetch after a fixed two-second delay.
+    delayTimer = window.setTimeout(() => {
+      if (!cancelled) run();
+    }, 2000);
 
     return () => {
       cancelled = true;
       if (delayTimer) window.clearTimeout(delayTimer);
-      window.removeEventListener("load", startBackgroundFetch);
     };
   }, [linksSupport]);
 
@@ -229,7 +220,7 @@ const SupportButton = () => {
   const handleClick = (event, link) => {
     if (link?.mode === "switch_router" && link?.router) {
       event.preventDefault();
-      window.location.assign(link.router);
+      router.push(link.router);
     }
   };
 
@@ -265,7 +256,7 @@ const SupportButton = () => {
                       if (link?.status !== "show") return null;
                       const text =
                         typeof link?.text === "object"
-                          ? link.text?.[lang] || link.text?.vi || link.text?.en
+                          ? link.text?.[lang] || link.text?.en || link.text?.vi
                           : link?.text;
 
                       return (

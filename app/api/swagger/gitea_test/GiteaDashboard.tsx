@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  Check,
   ChevronRight,
   CircleAlert,
+  Copy,
   File,
   Folder,
   GitBranch,
+  Package,
   RefreshCw,
   UserRound,
 } from "lucide-react";
@@ -41,20 +44,66 @@ const readableSize = (value?: number) =>
       ? `${(value / 1024).toFixed(1)} MB`
       : `${value} KB`;
 
+type MockPackage = {
+  name: string;
+  type: string;
+  tag: string;
+  status: string;
+  size: string;
+  updated: string;
+  registryUri: string;
+};
+
+const MOCK_PACKAGES: MockPackage[] = [
+  {
+    name: "openclaw_agent",
+    type: "docker_container",
+    tag: "latest",
+    status: "Available",
+    size: "4.2 GB",
+    updated: "14/09/2026 14:20",
+    registryUri: "gitea.company.vn/company_team/openclaw_agent:latest",
+  },
+  {
+    name: "web_ai_backend",
+    type: "docker_container",
+    tag: "latest",
+    status: "Available",
+    size: "1.1 GB",
+    updated: "14/09/2026 14:18",
+    registryUri: "gitea.company.vn/company_team/web_ai_backend:latest",
+  },
+  {
+    name: "web_ai_fontend",
+    type: "docker_container",
+    tag: "latest",
+    status: "Available",
+    size: "620 MB",
+    updated: "14/09/2026 14:15",
+    registryUri: "gitea.company.vn/company_team/web_ai_fontend:latest",
+  },
+];
+
+const DEPLOY_FILE = "compose.prod.yml";
+
 function Panel({
   title,
   eyebrow,
   action,
+  className = "",
+  headerClassName = "mb-5",
   children,
 }: {
   title: string;
   eyebrow?: string;
   action?: React.ReactNode;
+  className?: string;
+  headerClassName?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className={`min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
+      <div className={`${headerClassName} flex items-start justify-between gap-4`}>
         <div>
           {eyebrow && (
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-600">
@@ -107,6 +156,179 @@ function State({
   return <>{children}</>;
 }
 
+function ProjectStructure() {
+  return (
+    <Panel title="Project Structure" eyebrow="Repository layout" headerClassName="mb-2" className="h-fit self-start">
+      <div className="-mx-5 h-fit rounded-xl border border-slate-100 bg-slate-50/70 p-0 sm:-mx-6">
+        <div className="mx-auto flex w-fit max-w-full items-center gap-2 rounded-xl border border-indigo-100 bg-white px-3 py-2 shadow-sm">
+          <Folder size={17} className="shrink-0 text-indigo-500" />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Project</p>
+            <p className="truncate text-sm font-bold text-slate-900">media_tech_ai</p>
+          </div>
+        </div>
+        <div className="relative mt-6 grid grid-cols-2 items-start gap-2.5 before:absolute before:left-1/4 before:right-1/4 before:top-[-12px] before:h-px before:bg-indigo-200 after:absolute after:left-1/2 after:top-[-25px] after:h-3.5 after:w-px after:bg-indigo-200">
+          <div className="absolute left-1/4 top-[-12px] h-3.5 w-px bg-indigo-200" />
+          <div className="absolute right-1/4 top-[-12px] h-3.5 w-px bg-indigo-200" />
+          <div className="relative min-w-0 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+            <div className="flex items-start gap-2">
+              <File size={16} className="mt-0.5 shrink-0 text-indigo-500" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-800">Source Code</p>
+                <p className="mt-1 truncate text-[11px] text-slate-500" title="dangtin/media_tech_ai">dangtin/media_tech_ai</p>
+              </div>
+            </div>
+            <div className="relative mt-3 border-l border-indigo-200 pl-3">
+              <div className="absolute left-0 top-1/2 w-2 -translate-x-px border-t border-indigo-200" />
+              <div className="truncate rounded-md bg-slate-50 px-2 py-1.5 text-[11px] font-medium text-slate-600" title="media_tech_ai_code">
+                media_tech_ai_code
+              </div>
+            </div>
+          </div>
+          <div className="relative min-w-0 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm">
+            <div className="flex items-start gap-2">
+              <Package size={16} className="mt-0.5 shrink-0 text-indigo-500" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-800">Packages</p>
+                <p className="mt-1 truncate text-[11px] text-slate-500" title="docker_container">docker_container</p>
+              </div>
+            </div>
+            <div className="relative mt-3 border-l border-indigo-200 pl-3">
+              <div className="absolute left-0 top-1/2 w-2 -translate-x-px border-t border-indigo-200" />
+              <div className="rounded-md bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600">
+                Images <span className="font-normal text-slate-400">· {MOCK_PACKAGES.length}</span>
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] font-normal text-slate-500">
+                  {MOCK_PACKAGES.map((pkg) => <span key={pkg.name} className="whitespace-nowrap" title={pkg.name}>{pkg.name}</span>)}
+                </div>
+              </div>
+              <div className="mt-2 rounded-md bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-600">
+                Deploy File <span className="font-normal text-slate-400">· 1</span>
+                <span className="ml-1 text-[10px] font-normal text-slate-500" title={DEPLOY_FILE}>{DEPLOY_FILE}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function PackageCard({
+  packageData,
+  copied,
+  onCopy,
+}: {
+  packageData: MockPackage;
+  copied: boolean;
+  onCopy: (uri: string) => void;
+}) {
+  return (
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="min-w-0">
+            <h3 className="truncate font-bold text-slate-900">{packageData.name}</h3>
+            <p className="mt-1 truncate text-xs text-slate-500">{packageData.type} · {packageData.tag}</p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+          {packageData.status}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-x-4 border-t border-slate-100 pt-3 text-sm">
+        <div>
+          <p className="text-xs text-slate-400">Size</p>
+          <p className="mt-1 font-semibold text-slate-800">{packageData.size}</p>
+        </div>
+        <div>
+          <p className="text-xs text-slate-400">Updated</p>
+          <p className="mt-1 font-semibold text-slate-800">{packageData.updated}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-end gap-2">
+        <div className="min-w-0 flex-1 rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-xs text-slate-400">Registry URI</p>
+          <code className="mt-1 block truncate text-xs leading-5 text-slate-700" title={packageData.registryUri}>{packageData.registryUri}</code>
+        </div>
+        <button
+          type="button"
+          onClick={() => onCopy(packageData.registryUri)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50"
+        >
+          {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+          {copied ? "Copied" : "Copy URI"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function PackagesSection({
+  copiedUri,
+  onCopy,
+}: {
+  copiedUri: string;
+  onCopy: (uri: string) => void;
+}) {
+  const [autoTested, setAutoTested] = useState<"idle" | "running" | "done">("idle");
+
+  const handleAutoTest = () => {
+    setAutoTested("running");
+    window.setTimeout(() => setAutoTested("done"), 700);
+    window.setTimeout(() => setAutoTested("idle"), 2200);
+  };
+
+  return (
+    <Panel
+      title="Packages"
+      eyebrow="Docker Container"
+      headerClassName="mb-2"
+      action={
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500">{MOCK_PACKAGES.length} packages</span>
+          <button
+            type="button"
+            data-testid="packages-auto-test"
+            onClick={handleAutoTest}
+            disabled={autoTested === "running"}
+            className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"
+          >
+            {autoTested === "running" ? "Đang đẩy..." : autoTested === "done" ? "Đã đẩy thử" : "Test đẩy lên"}
+          </button>
+        </div>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {MOCK_PACKAGES.map((packageData) => (
+          <PackageCard
+            key={packageData.name}
+            packageData={packageData}
+            copied={copiedUri === packageData.registryUri}
+            onCopy={onCopy}
+          />
+        ))}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Deploy File</p>
+              <p className="mt-0.5 text-xs text-slate-500">File dùng để khởi tạo và chạy các container.</p>
+            </div>
+            <span className="text-xs text-slate-400">1 file</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span
+              title="File dùng để khởi tạo và chạy các container trên máy triển khai."
+              className="rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-600"
+            >
+              {DEPLOY_FILE}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 export default function GiteaDashboard() {
   const [health, setHealth] = useState<api.Health>();
   const [user, setUser] = useState<api.User>();
@@ -120,6 +342,12 @@ export default function GiteaDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date>();
   const [refreshing, setRefreshing] = useState(false);
   const [refreshWarning, setRefreshWarning] = useState("");
+  const [copiedUri, setCopiedUri] = useState("");
+  const copyUri = useCallback(async (uri: string) => {
+    await navigator.clipboard.writeText(uri);
+    setCopiedUri(uri);
+    window.setTimeout(() => setCopiedUri(""), 1600);
+  }, []);
   const run = useCallback(
     async <T,>(
       key: string,
@@ -316,13 +544,52 @@ export default function GiteaDashboard() {
             </div>
           </Panel>
         </State>
+        <State
+          loading={loading.branches}
+          error={errors.branches}
+          retry={() => retry("branches")}
+        >
+          <Panel title="Branches" eyebrow="Source control">
+            <div className="space-y-3">
+              {branches.map((branch) => (
+                <div
+                  key={branch.name}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <GitBranch size={18} className="text-indigo-500" />
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        {branch.name}
+                      </p>
+                      <p className="mt-1 max-w-xs truncate text-xs text-slate-500">
+                        {branch.latest_commit?.sha.slice(0, 7)} ·{" "}
+                        {branch.latest_commit?.message?.trim()}
+                      </p>
+                    </div>
+                  </div>
+                  {branch.protected ? (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                      Protected
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </State>
       </div>
-      <State
-        loading={loading.tree}
-        error={errors.tree}
-        retry={() => retry("tree")}
-      >
-        <Panel title="Source Repository" eyebrow="Browse source">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(220px,0.8fr)_minmax(0,2.2fr)]">
+        <ProjectStructure />
+        <PackagesSection copiedUri={copiedUri} onCopy={copyUri} />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+        <State
+          loading={loading.tree}
+          error={errors.tree}
+          retry={() => retry("tree")}
+        >
+          <Panel title="Source Repository" eyebrow="Browse source">
           <div className="mb-4 flex items-center gap-1 text-xs text-slate-500">
             <button
               onClick={() => {
@@ -387,41 +654,6 @@ export default function GiteaDashboard() {
               </p>
             )}
           </div>
-        </Panel>
-      </State>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <State
-          loading={loading.branches}
-          error={errors.branches}
-          retry={() => retry("branches")}
-        >
-          <Panel title="Branches" eyebrow="Source control">
-            <div className="space-y-3">
-              {branches.map((branch) => (
-                <div
-                  key={branch.name}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <GitBranch size={18} className="text-indigo-500" />
-                    <div>
-                      <p className="font-semibold text-slate-800">
-                        {branch.name}
-                      </p>
-                      <p className="mt-1 max-w-xs truncate text-xs text-slate-500">
-                        {branch.latest_commit?.sha.slice(0, 7)} ·{" "}
-                        {branch.latest_commit?.message?.trim()}
-                      </p>
-                    </div>
-                  </div>
-                  {branch.protected ? (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      Protected
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
           </Panel>
         </State>
         <State
