@@ -77,7 +77,7 @@ export default function TechContent({ post, lang, mdxArticle, closingNotes, arti
             <div className="min-w-0 flex-1">
               <h1 className="min-w-0 flex-1 text-balance text-xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{post.title}</h1>
             </div>
-            <Link href="/community/features" className="inline-flex shrink-0 items-center no-underline rounded-2xl border border-pink-200 bg-pink-50 px-3 py-1.5 text-[14.5px] font-semibold text-slate-900 shadow-sm transition hover:bg-pink-100 hover:no-underline active:scale-[0.98]">Back to Insights</Link>
+            <Link href="/shop/category/tips_vip" className="inline-flex shrink-0 items-center no-underline rounded-2xl border border-pink-200 bg-pink-50 px-3 py-1.5 text-[14.5px] font-semibold text-slate-900 shadow-sm transition hover:bg-pink-100 hover:no-underline active:scale-[0.98]">Back to Insights</Link>
           </div>
           {post.description ? <div className="mt-3 w-full text-sm leading-relaxed text-slate-600 sm:text-base">{post.description}</div> : null}
           <div className="mt-3 flex min-w-0 flex-row flex-nowrap items-center gap-2 text-xs text-slate-500 sm:flex-wrap sm:gap-x-3 sm:gap-y-2 sm:text-sm">
