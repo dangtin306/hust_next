@@ -2,8 +2,10 @@
 // @ts-nocheck
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { createStyleString } from "@capsizecss/core";
 import interMetrics from "@capsizecss/metrics/inter";
+import { isLocalHost } from "@/src/host_utils";
 import {
     useAlignIconCenterToTextCenterFromFrameGaps,
 } from "./orders_pill_math";
@@ -55,6 +57,12 @@ ${META_PILL_CAPSIZE_FALLBACK}
     }
 }
 `;
+
+const subscribeToHost = () => () => {};
+const getLocalHostSnapshot = () =>
+    typeof window !== "undefined" &&
+    isLocalHost(window.location.hostname);
+const getServerHostSnapshot = () => false;
 
 function formatRelatedPostDate(
     dateRaw
@@ -295,6 +303,7 @@ function MetaPill({
     Icon,
     className = "",
     logLayout = false,
+    showLayoutGuide = false,
 }) {
     const {
         pillRef,
@@ -396,19 +405,21 @@ function MetaPill({
                 </div>
             </div>
 
-            <div
-                data-orders-meta-anchor="true"
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 bottom-0 block w-full shrink-0"
-                style={{
-                    height:
-                        "var(--meta-anchor-height, 6px)",
-                    boxSizing: "border-box",
-                    background:
-                        "linear-gradient(to bottom, rgba(220, 38, 38, 0.8) 0.5px, transparent 0.5px)",
-                    minHeight: 0,
-                }}
-            />
+            {showLayoutGuide ? (
+                <div
+                    data-orders-meta-anchor="true"
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 block w-full shrink-0"
+                    style={{
+                        height:
+                            "var(--meta-anchor-height, 6px)",
+                        boxSizing: "border-box",
+                        background:
+                            "linear-gradient(to bottom, rgba(220, 38, 38, 0.8) 0.5px, transparent 0.5px)",
+                        minHeight: 0,
+                    }}
+                />
+            ) : null}
 
         </div>
     );
@@ -467,6 +478,12 @@ export function OrdersPillPackage({
         ).trim() ||
         "Hust Media";
 
+    const showLayoutGuide = useSyncExternalStore(
+        subscribeToHost,
+        getLocalHostSnapshot,
+        getServerHostSnapshot
+    );
+
     return (
         <>
             <style
@@ -500,6 +517,9 @@ export function OrdersPillPackage({
                         logLayout={
                             logLayout
                         }
+                        showLayoutGuide={
+                            showLayoutGuide
+                        }
                         className="
                             border
                             border-slate-300/80
@@ -517,6 +537,9 @@ export function OrdersPillPackage({
                     }
                     logLayout={
                         logLayout
+                    }
+                    showLayoutGuide={
+                        showLayoutGuide
                     }
                     className="
                         border

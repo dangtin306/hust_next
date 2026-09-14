@@ -12,8 +12,6 @@ import TocNavClient from "./TocNavClient";
 import { getDocPostMeta } from "./docs_api_data";
 import { DocsMdxPre } from "./DocsCodeBlock";
 import { DocsRelatedInsightsPanel } from "./page_pill_main";
-import { headers } from "next/headers";
-import { isLocalHostHeader } from "@/src/host_utils";
 
 const resolveDocsDir = () => {
   const candidates = [
@@ -358,9 +356,6 @@ export default async function DocPage({
   const writtenDateLabel = "Written date:";
   const writtenDateValue = formatUsDateTime(String(postMeta?.createdate || "").trim());
   const categoryLabel = String(postMeta?.tips_hash_name || "").trim() || "Hust Media";
-  const requestHeaders = await headers();
-  const requestHost = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
-  const showMdxDividers = isLocalHostHeader(requestHost);
 
   const mdxComponents: Record<string, any> = {
     h1: ({ children, ...props }: any) => {
@@ -472,7 +467,6 @@ export default async function DocPage({
     pre: ({ children, ...props }: any) => (
       <DocsMdxPre {...props}>{children}</DocsMdxPre>
     ),
-    hr: () => (showMdxDividers ? <hr /> : null),
     img: ({ alt, ...props }: any) => (
       // eslint-disable-next-line @next/next/no-img-element
       <img
