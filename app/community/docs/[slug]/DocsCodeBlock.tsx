@@ -88,7 +88,7 @@ function trimCodeBlockChildren(children: ReactNode) {
   const rawChildren = children.props.children;
   const normalizedClassName = [
     children.props.className,
-    "m-0 block border-0 bg-transparent p-0 text-inherit before:content-none after:content-none",
+    "m-0 block border-0 !bg-transparent p-0 !text-slate-900 before:content-none after:content-none",
   ]
     .filter(Boolean)
     .join(" ");

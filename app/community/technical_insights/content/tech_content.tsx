@@ -23,6 +23,7 @@ type ArticleActionsProps = {
   isLiked: boolean;
   onToggleLike: () => void;
   onShare: () => void;
+  borderTop?: boolean;
 };
 
 const formatUsDateTime = (value: string) => {
@@ -33,9 +34,9 @@ const formatUsDateTime = (value: string) => {
   return `${mm}/${dd}/${yyyy} ${hh}:${mi}:${ss}`;
 };
 
-function ArticleActions({ lang, writtenDateLabel, createdate, isLiked, onToggleLike, onShare }: ArticleActionsProps) {
+function ArticleActions({ lang, writtenDateLabel, createdate, isLiked, onToggleLike, onShare, borderTop = true }: ArticleActionsProps) {
   return (
-    <div className="mt-2 mb-1 flex w-full flex-wrap items-center justify-between gap-2.5 border-t border-slate-300/90 pt-3">
+    <div className={`mt-2 mb-1 flex w-full flex-wrap items-center justify-between gap-2.5 ${borderTop ? "border-t border-slate-300/90 pt-3" : ""}`}>
       <div className="mt-1 inline-flex max-w-full items-center self-center rounded-xl border border-slate-200/80 bg-slate-50/70 px-3 py-1.5">
         <div className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs leading-5 text-slate-500 sm:text-[13px]">
           <span className="font-medium text-slate-700">By Tín Nguyễn Đăng</span>{" "}
@@ -87,7 +88,7 @@ export default function TechContent({ post, lang, mdxArticle, closingNotes, arti
             <span className="inline-flex max-w-[44%] shrink-0 items-center whitespace-nowrap rounded-full border border-[#D8E0E8] bg-[#EEF2F6] px-2.5 py-1 font-semibold text-[#5E6B7A] sm:max-w-none">{post.tips_hash_name || "Hust Media"}</span>
           </div>
         </header>
-        <div className="max-lg:px-1 lg:px-7 pb-4 pt-0 sm:pb-4 max-lg:pt-7 lg:pt-6">
+        <div className="max-lg:px-1 lg:px-7 pb-[23px] pt-0 sm:pb-[23px] max-lg:pt-7 lg:pt-6">
           <article className="min-w-0">
             <div>{mdxArticle}</div>
           </article>
@@ -109,7 +110,7 @@ export default function TechContent({ post, lang, mdxArticle, closingNotes, arti
           <ArticleActions {...actionsProps} />
         </section>
       ) : (
-        <ArticleActions {...actionsProps} />
+        <ArticleActions {...actionsProps} borderTop={false} />
       )}
     </div>
   );

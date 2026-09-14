@@ -155,6 +155,50 @@ const stripFrontmatter = (source: string) =>
     .replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, "")
     .trim();
 
+const htmlToMdx = (source: string) => {
+  let value = String(source || "")
+    .replace(/^\uFEFF/, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+
+  value = value.replace(
+    /<div[^>]*data-code-block[^>]*data-language="([^"]*)"[^>]*>([\s\S]*?)<\/div>/gi,
+    (_match, language: string, code: string) => `\n\n\`\`\`${language || "text"}\n${code.replace(/<[^>]+>/g, "").trim()}\n\`\`\`\n\n`,
+  );
+  value = value.replace(
+    /<figure[\s\S]*?<img[^>]*src="([^"]+)"[^>]*alt="([^"]*)"[^>]*>[\s\S]*?<\/figure>/gi,
+    (_match, src: string, alt: string) => `\n\n![${alt || "Article image"}](${src})\n\n`,
+  );
+  value = value.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_match, text: string) => `\n\n## ${text.replace(/<[^>]+>/g, "").trim()}\n\n`);
+  value = value.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_match, text: string) => `\n\n### ${text.replace(/<[^>]+>/g, "").trim()}\n\n`);
+  value = value.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**");
+  value = value.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`");
+  value = value.replace(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, "[$2]($1)");
+  value = value.replace(/<br\s*\/?>(\s*)/gi, "\n");
+  value = value.replace(/<[^>]+>/g, "");
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+const getLegacyHtmlSource = async (uri: string, useCache: boolean) => {
+  try {
+    const response = await fetch(
+      `https://hust.media/api/content/getdata_v1.php?uri=${encodeURIComponent(uri)}&mode=posts`,
+      useCache ? { next: { revalidate: 3600 } } : { cache: "no-store" },
+    );
+    if (!response.ok) return "";
+    const payload = (await response.json()) as PostsApiPayload;
+    const content = payload?.data?.content;
+    return typeof content === "string" && content.trim() ? htmlToMdx(content) : "";
+  } catch {
+    return "";
+  }
+};
+
 const normalizeRelatedPost = (
   item: Partial<TechnicalInsightRelatedPost> | undefined,
 ): TechnicalInsightRelatedPost => ({
@@ -223,13 +267,16 @@ export async function getTechnicalInsight(
       : await getCategoryPosts(category, normalizedUri, options.useCache !== false);
 
     const rawContent = typeof data.content === "string" ? data.content : "";
+    const legacySource = data.posts_type === "mdx"
+      ? await getLegacyHtmlSource(normalizedUri, options.useCache !== false)
+      : "";
     return {
       uri: normalizedUri,
       category,
       title: typeof data.title === "string" ? data.title : normalizedUri,
       description: typeof data.description === "string" ? data.description : "",
       content: markdownToHtml(rawContent),
-      mdxSource: stripFrontmatter(rawContent),
+      mdxSource: legacySource || stripFrontmatter(rawContent),
       createdate: typeof data.createdate === "string" ? data.createdate : "",
       tips_hash_name: typeof data.tips_hash_name === "string" ? data.tips_hash_name : "Hust Media",
       posts_type: typeof data.posts_type === "string" ? data.posts_type : "html",

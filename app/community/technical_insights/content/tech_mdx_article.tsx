@@ -29,7 +29,16 @@ const slugifyHeading = (input: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const escapeMdxPlaceholders = (source: string) =>
+  source.replace(/<([A-Z][A-Z0-9_]+)>/g, "&lt;$1&gt;");
+
 export type TechClosingNotes = { readerValue: string; conclusion: string } | null;
+
+const stripSectionDividers = (value: string) =>
+  value
+    .replace(/(^|\n)\s*---\s*(?=\n|$)/g, "$1")
+    .replace(/\s*---\s*$/, "")
+    .trim();
 
 export const splitClosingNotes = (source: string): { mainSource: string; closingNotes: TechClosingNotes } => {
   const readerValue = /^##\s+Reader Value\s*$/m;
@@ -41,9 +50,12 @@ export const splitClosingNotes = (source: string): { mainSource: string; closing
   }
 
   const readerStart = readerMatch.index + readerMatch[0].length;
-  const readerValueText = source.slice(readerStart, conclusionMatch.index).replace(/^\s+|\s+$/g, "");
+  const readerValueText = stripSectionDividers(source.slice(readerStart, conclusionMatch.index));
   const conclusionStart = conclusionMatch.index + conclusionMatch[0].length;
-  const conclusionText = source.slice(conclusionStart).replace(/^\s+|\s+$/g, "");
+  const conclusionText = stripSectionDividers(source.slice(conclusionStart));
+  if (!readerValueText || !conclusionText) {
+    return { mainSource: source, closingNotes: null };
+  }
   return {
     mainSource: source.slice(0, readerMatch.index).replace(/\s+$/, ""),
     closingNotes: { readerValue: readerValueText, conclusion: conclusionText },
@@ -82,8 +94,8 @@ const mdxComponents: Record<string, any> = {
 
 export default function TechMdxArticle({ source }: { source: string }) {
   return (
-    <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-2 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
-      <MDXRemote source={source} components={mdxComponents} />
+    <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-2 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] prose-code:text-pink-700 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
+      <MDXRemote source={escapeMdxPlaceholders(source)} components={mdxComponents} />
     </div>
   );
 }
