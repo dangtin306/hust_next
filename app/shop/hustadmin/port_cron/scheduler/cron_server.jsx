@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import Link from "next/link";
 import { FaEdit } from "react-icons/fa";
 import { alert_error, alert_success } from "../../../../AppContext.js";
 import CronEdit from "./cron_edit.jsx";
@@ -420,11 +421,17 @@ const CronServerAdmin = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h2 className="text-2xl font-bold m-0 text-slate-800">Cron Server</h2>
           <div className="flex items-center gap-2 self-start">
+            <Link
+              href="/hustadmin/home"
+              className="rounded-lg bg-slate-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-600 sm:text-sm"
+            >
+              Home
+            </Link>
             <button
               onClick={handleUpdate}
               type="button"
               disabled={updating}
-              className={`bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1.5 px-3 rounded-lg w-auto transition-colors text-sm sm:text-base ${
+              className={`bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-2.5 rounded-lg w-auto transition-colors text-xs sm:text-sm ${
                 updating ? "opacity-70 cursor-not-allowed hover:bg-blue-500" : ""
               }`}
             >

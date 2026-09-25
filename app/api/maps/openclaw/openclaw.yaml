@@ -1,0 +1,861 @@
+openapi: 3.0.3
+info:
+  title: Media Tech OpenClaw API
+  version: 1.0.0
+  description: |
+    Node.js gateway cho tích hợp Media Tech OpenClaw.
+
+    Hiểu đơn giản: Conversations giữ một room chat và dữ liệu trong room, còn Responses dùng dữ liệu đó để tạo tin nhắn AI mới cho từng lượt chat.
+
+    Gateway cung cấp các route Responses, Conversations, Chat Completions, tạo
+    hình ảnh và kiểm tra health. Conversations có thể liên kết với Responses
+    bằng conversation_id; request không có field này vẫn tiếp tục dùng luồng
+    history cũ.
+
+servers:
+  - url: https://node_js.hust.media/openclaw
+    description: OpenClaw Production Gateway
+  - url: http://localhost:2999/openclaw
+    description: Node.js Gateway Local (cổng 2999)
+  - url: http://localhost:8818
+    description: Backend Node.js local (cổng 8818)
+  - url: https://nginx.hust.media/go/ai/test
+    description: Backend test
+
+security:
+  - BearerAuth: []
+  - SessionKey: []
+
+tags:
+  - name: Responses
+    description: Endpoint tương thích OpenResponses chính và các nhóm service
+  - name: Conversations
+    description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
+  - name: Model Selection
+    description: Xem danh sách model để chọn model cho request.
+  - name: Health
+    description: Kiểm tra health của backend
+  - name: media_text_to_image
+    description: Tạo hình ảnh thông qua image route của OpenClaw.
+  - name: media_text_to_text
+    description: Hội thoại thông thường thông qua endpoint Responses.
+  - name: media_content_smart
+    description: Viết nội dung thông minh theo title, description, length và tone.
+  - name: media_spell_check
+    description: Sửa lỗi chính tả thông qua endpoint Responses.
+  - name: media_script_writing
+    description: Viết script thông qua endpoint Responses.
+  - name: media_image_to_text
+    description: OCR và phân tích hình ảnh thông qua endpoint Responses.
+  - name: media_text_to_speech
+    description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
+x-service-categories:
+  media_responses:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Endpoint chung tương thích OpenResponses cho các request chat và service AI.
+  media_conversations:
+    route: /openclaw/v1/conversations
+    status: implemented
+    description: Tạo room chat, quản lý item và liên kết Responses bằng conversation_id.
+  media_model_switch:
+    route: /openclaw/v1/models
+    status: implemented
+    description: Xem model và chọn model cho request.
+  media_text_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Hội thoại thông thường qua Responses. Đây là category mặc định.
+  media_content_smart:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Viết nội dung thông minh theo title, desc, len và tone; backend tự chuyển sang skill media_content_smart.
+  media_spell_check:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Sửa lỗi chính tả qua skill media_spelling trên route Responses dùng chung.
+  media_script_writing:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Viết kịch bản qua skill media_script_writing trên route Responses dùng chung.
+  media_image_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: OCR/phân tích hình ảnh bằng input_image, source Base64 và MIME type của ảnh.
+  media_text_to_speech:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Tạo audio với model F5_vie, services v3 và servicecode tùy chọn.
+  media_text_to_image:
+    route: /openclaw/v1/images/generations
+    status: implemented
+    description: Tạo hình ảnh qua image route và trả về hình ảnh hoàn tất dưới dạng Base64.
+paths:
+  /openclaw/v1/conversations:
+    post:
+      operationId: createConversation
+      tags:
+        - Conversations
+      summary: Tạo một conversation
+      description: |
+        Tạo conversation mới.
+        Body có thể rỗng hoặc truyền items ban đầu.
+        user_id chỉ là trường mở rộng nội bộ, không bắt buộc.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreateRequest'
+            examples:
+              withItems:
+                summary: Tạo conversation kèm item ban đầu
+                value:
+                  items:
+                    - type: message
+                      role: user
+                      content: Xin chào
+              empty:
+                summary: Tạo conversation rỗng
+                value: {}
+              withUser:
+                summary: Tạo conversation có liên kết user nội bộ
+                value:
+                  user_id: 69
+                  metadata:
+                    source: frontend
+                  items:
+                    - type: message
+                      role: user
+                      content: Xin chào
+      responses:
+        '201':
+          description: Đã tạo conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /openclaw/v1/conversations/{id}:
+    get:
+      operationId: getConversation
+      tags:
+        - Conversations
+      summary: Lấy một conversation
+      description: id có thể là số tăng dần hoặc conversation identifier dạng conv_.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Thông tin conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /openclaw/v1/conversations/{id}/items:
+    get:
+      operationId: listConversationItems
+      tags:
+        - Conversations
+      summary: Lấy danh sách conversation item
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Danh sách conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItemList'
+    post:
+      operationId: createConversationItem
+      tags:
+        - Conversations
+      summary: Thêm item vào conversation
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationItemCreateRequest'
+            example:
+              role: user
+              content: Hãy giới thiệu về Hà Nội
+      responses:
+        '201':
+          description: Đã tạo conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItem'
+
+  /openclaw/v1/responses:
+    post:
+      operationId: createResponse
+      tags:
+        - Responses
+        - media_text_to_text
+        - media_content_smart
+        - media_spell_check
+        - media_script_writing
+        - media_image_to_text
+        - media_text_to_speech
+      summary: Tin nhắn thứ nhất
+      description: |
+        Endpoint chính cho chat thông thường, viết nội dung thông minh, kiểm tra
+        chính tả, viết script, OCR và các request tiếp tục. Khi có conversation_id,
+        backend tìm conversation, liên kết user item và assistant item, lưu
+        response_id rồi trả về response. Nếu không có, hệ thống dùng luồng history cũ.
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponsesRequest'
+            examples:
+              normalChat:
+                summary: Hội thoại thông thường
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: Chào bạn
+              spellCheck:
+                summary: Sửa lỗi chính tả
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: "/skill media_spelling\nHãy sửa lỗi chính tả trong đoạn văn sau:\nTôi dang hoc lap trinh tai Media Tech."
+              smartWriting:
+                summary: media_content_smart
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      title: Bàn phương hằng
+                      desc: Giới thiệu, nội dung chính, kết luận
+                      len: 500
+                      tone: Tự nhiên
+              imageToText:
+                summary: media_image_to_text
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: media_image_to_text Nhận diện văn bản
+                        - type: input_image
+                          source:
+                            type: base64
+                            media_type: image/png
+                            data: BASE64_IMAGE
+              textToSpeech:
+                summary: media_text_to_speech
+                value:
+                  model: F5_vie
+                  input:
+                    - role: user
+                      text: Xin chào từ Media Tech
+                      tool: media_text_to_speech
+                      services: v3
+                      servicecode: F5_vie
+              scriptWriting:
+                summary: media_script_writing
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: "/skill media_script_writing\nViết kịch bản video ngắn giới thiệu sản phẩm."
+      responses:
+        '200':
+          description: Response hoàn tất theo định dạng Responses API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v1/chat/completions:
+    post:
+      operationId: createChatCompletion
+      tags: [Responses]
+      summary: Tạo response tương thích Chat Completions
+      description: |
+        Gateway nhận input Chat Completions, sử dụng transport Codex Responses
+        ở bên trong và chuyển kết quả về chat.completion. Dùng
+        previous_completion_id để tiếp tục trên route này.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionsRequest'
+            example:
+              model: gpt-5.6-luna
+              messages:
+                - role: user
+                  content: Chào bạn
+              stream: false
+      responses:
+        '200':
+          description: Response Chat Completions hoàn tất
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v1/images/generations:
+    post:
+      operationId: generateImage
+      tags:
+        - media_text_to_image
+      summary: Tạo hình ảnh thông qua OpenClaw
+      description: |
+        Gateway gọi tool image_generate của OpenClaw, theo dõi task thông qua
+        admin RPC, đọc PNG được tạo từ shared Docker volume và trả về dưới dạng
+        output_image item tương thích Responses.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationRequest'
+            example:
+              user_id: 69
+              model: openai/gpt-image-2
+              prompt: Một con mèo bên biển
+              n: 1
+              size: 1024x1024
+              aspectRatio: 1:1
+              quality: medium
+              style: Hoạt hình
+              tone: vui tươi
+      responses:
+        '200':
+          description: Image response hoàn tất
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponseObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /openclaw/v2/health:
+    get:
+      operationId: getOpenClawHealth
+      tags: [Health]
+      summary: Kiểm tra health backend
+      responses:
+        '200':
+          description: Backend đang hoạt động
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /openclaw/v1/models:
+    get:
+      operationId: listModels
+      tags:
+        - Model Selection
+      summary: Lấy danh sách model
+      description: Lấy các model có thể dùng trong request Responses.
+      responses:
+        '200':
+          description: Danh sách model
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data]
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, object, created, owned_by]
+                      properties:
+                        id:
+                          type: string
+                          example: gpt-5.6-luna
+                        object:
+                          type: string
+                          example: model
+                        created:
+                          type: integer
+                          example: 0
+                        owned_by:
+                          type: string
+                          example: openai
+              example:
+                object: list
+                data:
+                  - id: gpt-5.6-luna
+                    object: model
+                    created: 0
+                    owned_by: openai
+                  - id: gemini-3.7-flash
+                    object: model
+                    created: 0
+                    owned_by: google
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Nhập token API, ví dụ media_tech.
+    SessionKey:
+      type: apiKey
+      in: header
+      name: x-openclaw-session-key
+      description: Header phiên OpenClaw, mặc định agent:chat_bot:real (hoặc agent:chat_bot:demo).
+
+  parameters:
+    ConversationId:
+      name: id
+      in: path
+      required: true
+      description: id số tăng dần hoặc conversation identifier UUID có prefix conv_.
+      schema:
+        type: string
+      example: conv_550e8400-e29b-41d4-a716-446655440000
+
+  schemas:
+    ConversationCreateRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Các item ban đầu của conversation.
+          maxItems: 20
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              type:
+                type: string
+                example: message
+              role:
+                type: string
+                enum: [user, assistant, system, developer]
+              content:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        user_id:
+          type: integer
+          nullable: true
+          description: Trường liên kết user nội bộ, không bắt buộc.
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Metadata mở rộng của ứng dụng.
+          example:
+            source: frontend
+
+    Conversation:
+      type: object
+      required: [id, conversation_id, category, metadata, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          example: 1
+        conversation_id:
+          type: string
+          example: conv_550e8400-e29b-41d4-a716-446655440000
+        category:
+          type: string
+          example: conversation
+        user_id:
+          type: integer
+          nullable: true
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ConversationItemCreateRequest:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system, developer]
+        content:
+          type: string
+          example: Hãy giới thiệu về Hà Nội
+
+    ConversationItem:
+      type: object
+      required: [id, object, role, content, created_at]
+      properties:
+        id:
+          type: string
+          example: item_abc123
+        object:
+          type: string
+          example: conversation.item
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+        response_id:
+          type: string
+          nullable: true
+          example: resp_abc123
+        created_at:
+          type: string
+          format: date-time
+
+    ConversationItemList:
+      type: object
+      required: [object, data, has_more, first_id, last_id]
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationItem'
+        has_more:
+          type: boolean
+          example: false
+        first_id:
+          type: string
+          example: item_abc123
+        last_id:
+          type: string
+          example: item_def456
+
+    ResponsesRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        input:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TextInputItem'
+              - $ref: '#/components/schemas/StructuredWritingInputItem'
+              - $ref: '#/components/schemas/ImageToTextInputItem'
+              - $ref: '#/components/schemas/TextToSpeechInputItem'
+        previous_response_id:
+          type: string
+          nullable: true
+        conversation_id:
+          type: string
+          description: conversation identifier dạng conv_ dùng để liên kết response với conversation, không bắt buộc.
+          example: conv_550e8400-e29b-41d4-a716-446655440000
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+
+    TextInputItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system, developer]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
+
+    StructuredWritingInputItem:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          example: user
+        title:
+          type: string
+        desc:
+          type: string
+        len:
+          oneOf:
+            - type: string
+            - type: integer
+        tone:
+          type: string
+
+    ImageToTextInputItem:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                properties:
+                  type:
+                    type: string
+                    example: input_text
+                  text:
+                    type: string
+              - type: object
+                properties:
+                  type:
+                    type: string
+                    example: input_image
+                  source:
+                    type: object
+                    required: [type, media_type, data]
+                    properties:
+                      type:
+                        type: string
+                        enum: [base64]
+                      media_type:
+                        type: string
+                        enum: [image/png, image/jpeg, image/gif, image/webp]
+                      data:
+                        type: string
+                        description: Dữ liệu ảnh Base64, không gồm tiền tố Data URI.
+          description: Data URI, ví dụ data:image/png;base64,...
+
+    TextToSpeechInputItem:
+      type: object
+      required: [role, text, tool, services]
+      properties:
+        role:
+          type: string
+          example: user
+        text:
+          type: string
+        tool:
+          type: string
+          enum: [media_text_to_speech]
+        services:
+          type: string
+          example: v3
+        servicecode:
+          type: string
+          example: F5_vie
+        model:
+          type: string
+          example: F5_vie
+
+    ChatCompletionsRequest:
+      type: object
+      required: [messages]
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role:
+                type: string
+                enum: [user, assistant, system, developer]
+              content:
+                type: string
+        stream:
+          type: boolean
+          default: false
+        previous_completion_id:
+          type: string
+
+    ImageGenerationRequest:
+      type: object
+      required: [prompt]
+      properties:
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+        model:
+          type: string
+          example: openai/gpt-image-2
+        prompt:
+          type: string
+        n:
+          type: integer
+          minimum: 1
+          default: 1
+        size:
+          type: string
+          example: 1024x1024
+        aspectRatio:
+          type: string
+          example: 1:1
+        quality:
+          type: string
+          example: medium
+        style:
+          type: string
+        tone:
+          type: string
+        previous_response_id:
+          type: string
+
+    ResponseObject:
+      type: object
+      required: [id, object, status, output]
+      properties:
+        id:
+          type: string
+          example: resp_abc123
+        object:
+          type: string
+          example: response
+        status:
+          type: string
+          example: completed
+        model:
+          type: string
+        previous_response_id:
+          type: string
+          nullable: true
+        output:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        output_text:
+          type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+
+    ImageResponseObject:
+      allOf:
+        - $ref: '#/components/schemas/ResponseObject'
+        - type: object
+          properties:
+            output:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: message
+                  role:
+                    type: string
+                    example: assistant
+                  content:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: output_image
+                        source:
+                          type: object
+                          required: [type, media_type, data]
+                          properties:
+                            type:
+                              type: string
+                              example: base64
+                            media_type:
+                              type: string
+                              example: image/png
+                            data:
+                              type: string
+
+    ChatCompletionObject:
+      type: object
+      required: [id, object, choices]
+      properties:
+        id:
+          type: string
+          example: chatcmpl_abc123
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+
+    ResponseUsage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Request không hợp lệ hoặc OpenClaw downstream gặp lỗi
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

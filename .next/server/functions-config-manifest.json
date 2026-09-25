@@ -9,6 +9,8 @@
           "originalSource": "/:path*"
         }
       ]
-    }
+    },
+    "/api/node-activity/events": {},
+    "/api/node-activity/health": {}
   }
 }

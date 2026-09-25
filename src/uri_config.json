@@ -80,6 +80,10 @@
         "source": "/hustadmin",
         "destination": "/shop/hustadmin"
       },
+      "n8n": {
+        "source": "/hustadmin/n8n",
+        "destination": "/shop/ai/workflow/laravel"
+      },
       "cronServer": {
         "source": "/hustadmin/cron_server",
         "destination": "/shop/hustadmin/port_cron/scheduler"
@@ -108,35 +112,85 @@
           "destination": "/shop/ai?slug_2=:slug_2"
         },
         "history": {
-          "source": "/shop/ai/:slug_2",
+          "source": "/shop/ai/:slug_2(speech_text|text_speech|image_text|translate_vi_en|text_workflow)",
           "destination": "/shop/ai?slug_2=:slug_2"
+        },
+        "chatBot": {
+          "workflowHome": {
+            "source": "/workflow/chat_bot/home",
+            "destination": "/shop/ai/workflow"
+          },
+          "workflowRoot": {
+            "source": "/workflow/chat_bot",
+            "destination": "/shop/ai/workflow"
+          },
+          "workflowLaravel": {
+            "source": "/workflow/chat_bot/laravel",
+            "destination": "/shop/ai/workflow/laravel"
+          },
+          "workflowTest1": {
+            "source": "/workflow/chat_bot/test_1",
+            "destination": "/shop/ai/chat_bot/test_1"
+          },
+          "test1": {
+            "source": "/chat_bot/test_1",
+            "destination": "/shop/ai/chat_bot/test_1"
+          },
+          "workflowApi1": {
+            "source": "/workflow/chat_bot/api_1",
+            "destination": "/shop/ai/chat_bot/api_1"
+          },
+          "api1": {
+            "source": "/chat_bot/api_1",
+            "destination": "/shop/ai/chat_bot/api_1"
+          },
+          "workflowMain": {
+            "source": "/workflow/chat_bot/main",
+            "destination": "/shop/ai/chat_bot/main"
+          },
+          "main": {
+            "source": "/chat_bot/main",
+            "destination": "/shop/ai/chat_bot/main"
+          }
         }
       }
     },
     "swagger": {
+      "homeRoot": {
+        "source": "/api/swagger",
+        "destination": "/api/maps"
+      },
+      "chatTest": {
+        "source": "/api/swagger/chat_test",
+        "destination": "/api/maps/chat_test"
+      },
       "openclaw": {
         "source": "/api/swagger/openclaw",
-        "destination": "/api/swagger/openclaw"
+        "destination": "/api/maps/openclaw"
       },
       "laravel": {
         "source": "/api/swagger/laravel",
-        "destination": "/api/swagger/laravel"
+        "destination": "/api/maps/laravel"
+      },
+      "n8n": {
+        "source": "/api/swagger/n8n",
+        "destination": "/api/maps/n8n"
       },
       "home": {
         "source": "/api/swagger/home",
-        "destination": "/api/swagger/home"
+        "destination": "/api/maps/dashboard"
       },
       "gitAuto": {
         "source": "/api/swagger/git_auto",
-        "destination": "/api/swagger/git_auto"
+        "destination": "/api/maps/git_auto"
       },
       "gitTest": {
         "source": "/api/swagger/git_test",
-        "destination": "/api/swagger/git_test"
+        "destination": "/api/maps/git_test"
       },
       "giteaTest": {
         "source": "/api/swagger/gitea_test",
-        "destination": "/api/swagger/gitea_test"
+        "destination": "/api/maps/gitea_test"
       }
     }
   },

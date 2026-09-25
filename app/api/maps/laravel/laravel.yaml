@@ -1,0 +1,432 @@
+openapi: 3.0.3
+
+info:
+  title: Laravel OpenClaw Downstream Integration API
+  version: 1.0.0
+  description: |
+    Contract downstream giữa Laravel và Node.js OpenClaw Gateway.
+
+    Tài liệu này không mô tả frontend và không mô tả các API gọi trực tiếp
+    OpenAI hoặc Gemini. Laravel gọi một endpoint chung của OpenClaw Gateway:
+
+      POST /openclaw/v1/responses
+
+    OpenClaw Gateway chạy tại http://127.0.0.1:8818 và chuyển request đến
+    agent OpenClaw đã được cấu hình phía sau gateway.
+
+    Laravel gửi tất cả service request đến cùng endpoint trên.
+
+    Cơ chế liên kết room Laravel với phiên OpenClaw:
+
+      1. room_id là ID phòng chat do Laravel quản lý.
+      2. Laravel không gửi room_id trong request downstream.
+      3. Laravel đọc file app/Services/open_claw.json và tìm room_id.
+      4. Nếu room đã có response trước đó, Laravel lấy previous_response_id
+         đã lưu và thêm field này vào request gửi OpenClaw.
+      5. Nếu room chưa có response trước đó, request không có
+         previous_response_id.
+      6. OpenClaw trả về response.id.
+      7. Laravel lưu response.id cùng room_id trong open_claw.json.
+      8. Lần gọi tiếp theo của cùng room sẽ dùng response.id đó làm
+         previous_response_id.
+
+    Vì vậy room_id và previous_response_id là hai giá trị khác nhau:
+
+      room_id -> khóa phòng của Laravel
+      response.id -> ID response của OpenClaw
+      previous_response_id -> response.id trước đó được gửi để tiếp tục phiên
+
+servers:
+  - url: http://127.0.0.1:8818
+    description: Gateway OpenClaw Node.js local
+  - url: https://nginx.hust.media/go/ai/test
+    description: Gateway OpenClaw Node.js test
+
+tags:
+  - name: Chat
+    description: Payload chat thường gửi qua OpenClaw
+  - name: Smart Writing
+    description: Payload viết tin thông minh gửi qua OpenClaw
+  - name: Spell Check
+    description: Payload kiểm tra chính tả gửi qua OpenClaw
+  - name: Text to Speech
+    description: Payload tạo audio gửi qua OpenClaw
+  - name: Image to Text
+    description: Payload OCR hình ảnh gửi qua OpenClaw
+  - name: Image Generation
+    description: Payload tạo hình ảnh gửi qua OpenClaw
+
+  - name: OpenClawService
+    description: Request downstream từ Laravel đến OpenClaw Gateway
+
+paths:
+  /openclaw/v1/responses:
+    post:
+      operationId: createLaravelOpenClawResponse
+      tags:
+        - OpenClawService
+        - Chat
+        - Smart Writing
+        - Spell Check
+        - Text to Speech
+        - Image to Text
+        - Image Generation
+      summary: Xử lý request Laravel qua OpenClaw
+      description: |
+        Đây là endpoint downstream duy nhất Laravel đang gọi.
+
+        Loại nghiệp vụ được nhận biết từ cấu trúc của input item:
+
+          - Chat thường: role + content
+          - Viết tin thông minh: role + title + desc + len + tone
+          - Kiểm tra chính tả: role + content chứa input_text
+          - Text to Speech: role + text + tool
+          - OCR: role + content chứa input_text và input_image
+          - Tạo hình ảnh: role + model + prompt + size + aspectRatio
+
+        Laravel gửi model tương ứng với nghiệp vụ. Laravel không gửi
+        room_id, user_id hoặc chat_token đến endpoint này.
+
+        Response id được dùng để cập nhật trạng thái room Laravel sau khi
+        request hoàn tất. OpenClaw không tự biết room_id của Laravel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenClawRequest'
+            examples:
+              chat:
+                summary: Chat thường
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: Xin chào
+                  previous_response_id: resp_abc123
+              smartWriting:
+                summary: Viết tin thông minh
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      title: AI trong báo chí
+                      desc: Mở bài, thực trạng, ứng dụng và kết luận
+                      len: "500"
+                      tone: Nghiêm túc
+                  previous_response_id: resp_abc123
+              spellCheck:
+                summary: Kiểm tra chính tả
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: Hãy kiểm tra lỗi chính tả cho đoạn văn này
+              textToSpeech:
+                summary: Text to Speech
+                value:
+                  model: Vie_Neu
+                  input:
+                    - role: user
+                      text: Xin chào từ Media Tech
+                      tool: media_text_to_speech
+                  previous_response_id: resp_abc123
+              imageToText:
+                summary: OCR hình ảnh
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content:
+                        - type: input_text
+                          text: media_image_to_text Nhận diện nội dung trong ảnh
+                        - type: input_image
+                          image_url: data:image/png;base64,BASE64_DATA
+                  previous_response_id: resp_abc123
+              imageGeneration:
+                summary: Tạo hình ảnh
+                value:
+                  model: openai/gpt-image-2
+                  input:
+                    - role: user
+                      model: openai/gpt-image-2
+                      prompt: Một con mèo bên bờ biển
+                      n: 1
+                      size: 1024x1024
+                      aspectRatio: "1:1"
+                      quality: medium
+                      style: Hoạt hình
+                      tone: Vui tươi
+                  previous_response_id: resp_abc123
+      responses:
+        '200':
+          description: OpenClaw đã xử lý thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenClawResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/DownstreamFailure'
+
+components:
+  schemas:
+    OpenClawRequest:
+      type: object
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+          description: Model được Laravel chọn cho nghiệp vụ.
+          examples:
+            - gpt-5.6-luna
+            - Vie_Neu
+            - openai/gpt-image-2
+        input:
+          type: array
+          minItems: 1
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/ChatInput'
+              - $ref: '#/components/schemas/SmartWritingInput'
+              - $ref: '#/components/schemas/TextToSpeechInput'
+              - $ref: '#/components/schemas/ImageToTextInput'
+              - $ref: '#/components/schemas/ImageGenerationInput'
+              - $ref: '#/components/schemas/SpellCheckInput'
+        previous_response_id:
+          type: string
+          nullable: true
+          description: ID response trước đó được Laravel lấy theo room_id.
+          example: resp_abc123
+      additionalProperties: false
+
+    ChatInput:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system, developer]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
+      additionalProperties: false
+
+    SmartWritingInput:
+      type: object
+      required: [role, title, desc, len, tone]
+      properties:
+        role:
+          type: string
+          enum: [user]
+        title:
+          type: string
+        desc:
+          type: string
+        len:
+          oneOf:
+            - type: string
+            - type: integer
+        tone:
+          type: string
+      additionalProperties: false
+
+    SpellCheckInput:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user]
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/InputText'
+      additionalProperties: false
+
+    TextToSpeechInput:
+      type: object
+      required: [role, text, tool]
+      properties:
+        role:
+          type: string
+          enum: [user]
+        text:
+          type: string
+        tool:
+          type: string
+          enum: [media_text_to_speech]
+      additionalProperties: false
+
+    ImageToTextInput:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user]
+        content:
+          type: array
+          minItems: 2
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/InputText'
+              - $ref: '#/components/schemas/InputImage'
+      additionalProperties: false
+
+    ImageGenerationInput:
+      type: object
+      required: [role, model, prompt, n, size, aspectRatio, quality]
+      properties:
+        role:
+          type: string
+          enum: [user]
+        model:
+          type: string
+          example: openai/gpt-image-2
+        prompt:
+          type: string
+        n:
+          type: integer
+          minimum: 1
+          example: 1
+        size:
+          type: string
+          enum: [1024x1024, 1024x1536, 720x1280, 1280x720]
+        aspectRatio:
+          type: string
+          enum: ['1:1', '2:3', '9:16', '16:9']
+        quality:
+          type: string
+        style:
+          type: string
+        tone:
+          type: string
+      additionalProperties: false
+
+    InputText:
+      type: object
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          enum: [input_text]
+        text:
+          type: string
+      additionalProperties: false
+
+    InputImage:
+      type: object
+      required: [type, image_url]
+      properties:
+        type:
+          type: string
+          enum: [input_image]
+        image_url:
+          type: string
+          description: Data URI chứa ảnh Base64.
+          example: data:image/png;base64,BASE64_DATA
+      additionalProperties: false
+
+    OpenClawResponse:
+      type: object
+      required: [id, object, status]
+      properties:
+        id:
+          type: string
+          description: ID Laravel lưu lại làm previous_response_id cho room.
+          example: resp_abc123
+        object:
+          type: string
+          example: response
+        status:
+          type: string
+          example: completed
+        model:
+          type: string
+        previous_response_id:
+          type: string
+          nullable: true
+        output_text:
+          type: string
+          nullable: true
+        output:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutputItem'
+        usage:
+          $ref: '#/components/schemas/Usage'
+      additionalProperties: true
+
+    OutputItem:
+      type: object
+      properties:
+        type:
+          type: string
+        role:
+          type: string
+        content:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+
+    Usage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        status:
+          type: integer
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Request downstream không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: API key hoặc agent không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    DownstreamFailure:
+      description: OpenClaw Gateway hoặc agent trả lỗi.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

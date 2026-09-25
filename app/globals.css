@@ -172,3 +172,25 @@ code {
 .swagger-ui-server-only .swagger-ui > :not(.scheme-container) {
   display: none !important;
 }
+
+/* Swagger transparent background to show original root gradient */
+.swagger-ui {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.swagger-ui .scheme-container {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.swagger-ui .topbar,
+.swagger-ui .wrapper,
+.swagger-ui .information-container,
+.swagger-ui .info,
+.swagger-ui .opblock-tag-section {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+

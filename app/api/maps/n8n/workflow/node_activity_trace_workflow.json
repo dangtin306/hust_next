@@ -1,0 +1,353 @@
+{
+  "name": "OpenClaw & Node.js Activity Tracing Pipeline (Port 8809)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "node-activity-trace",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-trace-ingress-webhook",
+      "name": "Node.js Webhook Ingress (8809)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, -70],
+      "webhookId": "node-activity-trace-8809"
+    },
+    {
+      "parameters": {},
+      "id": "node-manual-test-trigger",
+      "name": "Manual Trace Ping",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 70]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalizes OpenTelemetry & Node.js Activity Payload\nconst item = $input.first().json;\nconst body = item.body || item;\n\nconst now = new Date().toISOString();\nconst traceId = body.trace_id || body.event_id || ('trace-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));\nconst stage = String(body.stage || 'agent_execution').toLowerCase();\nconst status = body.status || (body.status_code >= 400 ? 'error' : (body.duration_ms > 1500 ? 'slow' : 'success'));\nconst durationMs = Number(body.duration_ms || 120);\n\n// Determine diagram active node stages\nlet stageNodeIds = Array.isArray(body.stage_node_ids) ? body.stage_node_ids : [];\nif (stageNodeIds.length === 0) {\n  if (stage.includes('auth') || stage.includes('token')) {\n    stageNodeIds = ['node-trace-ingress-webhook', 'node-otel-trace-parser', 'node-stage-router', 'node-stage-auth-session', 'node-check-pipeline-error', 'node-socket-broadcast'];\n  } else if (stage.includes('tool') || stage.includes('cli')) {\n    stageNodeIds = ['node-trace-ingress-webhook', 'node-otel-trace-parser', 'node-stage-router', 'node-stage-tool-runner', 'node-check-pipeline-error', 'node-socket-broadcast'];\n  } else if (stage.includes('stream') || stage.includes('synthesis')) {\n    stageNodeIds = ['node-trace-ingress-webhook', 'node-otel-trace-parser', 'node-stage-router', 'node-stage-stream-synthesis', 'node-check-latency-sla', 'node-socket-broadcast'];\n  } else {\n    stageNodeIds = ['node-trace-ingress-webhook', 'node-otel-trace-parser', 'node-stage-router', 'node-stage-agent-dispatch', 'node-check-pipeline-error', 'node-socket-broadcast'];\n  }\n}\n\nreturn [{\n  json: {\n    event: 'node:trace',\n    trace_id: traceId,\n    service: body.service || 'node.openclaw',\n    environment: body.environment || 'production',\n    stage: stage,\n    stage_node_ids: stageNodeIds,\n    status: status,\n    status_code: body.status_code || (status === 'error' ? 500 : 200),\n    duration_ms: durationMs,\n    trace: body.trace || { action: body.action || 'agent_run' },\n    timestamp: body.timestamp || now,\n    received_at: now\n  }\n}];"
+      },
+      "id": "node-otel-trace-parser",
+      "name": "OpenTelemetry Parser & Normalizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.stage }}",
+        "rules": {
+          "rules": [
+            { "value2": "auth_validation", "outputKey": "main-0" },
+            { "value2": "agent_execution", "outputKey": "main-1" },
+            { "value2": "tool_execution", "outputKey": "main-2" },
+            { "value2": "stream_synthesis", "outputKey": "main-3" }
+          ]
+        },
+        "fallbackOutput": "main-1"
+      },
+      "id": "node-stage-router",
+      "name": "Route By Pipeline Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage: Gateway Auth & Token Verification\nconst item = $input.first().json;\nitem.auth_verified = true;\nreturn [{ json: item }];"
+      },
+      "id": "node-stage-auth-session",
+      "name": "🔐 Gateway Auth & Token Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [670, -120]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage: OpenClaw Agent Executor\nconst item = $input.first().json;\nitem.agent_dispatched = true;\nreturn [{ json: item }];"
+      },
+      "id": "node-stage-agent-dispatch",
+      "name": "🤖 OpenClaw Agent Executor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [670, -20]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage: CLI Tool & Terminal Runner\nconst item = $input.first().json;\nitem.tool_executed = true;\nreturn [{ json: item }];"
+      },
+      "id": "node-stage-tool-runner",
+      "name": "⚡ CLI Tool & Terminal Runner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [670, 80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stage: SSE Stream Synthesizer\nconst item = $input.first().json;\nitem.stream_synthesized = true;\nreturn [{ json: item }];"
+      },
+      "id": "node-stage-stream-synthesis",
+      "name": "🌊 SSE Stream Synthesizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [670, 180]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.status === 'error' || $json.status_code >= 400 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "node-check-pipeline-error",
+      "name": "Check Error / Exception",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [930, 20]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.duration_ms }}",
+              "operation": "larger",
+              "value2": 1500
+            }
+          ]
+        }
+      },
+      "id": "node-check-latency-sla",
+      "name": "Check Latency SLA (>1.5s)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1090, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alert & Exception Sink\nconst item = $input.first().json;\nitem.alert_triggered = true;\nreturn [{ json: item }];"
+      },
+      "id": "node-alert-error-handler",
+      "name": "🔴 Error Alert & Crash Sink",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1090, -60]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepares payload for Frontend Socket.IO / SSE Broadcast\nconst item = $input.first().json;\nreturn [{ json: item }];"
+      },
+      "id": "node-socket-broadcast",
+      "name": "⚡ Socket.IO Telemetry Broadcast",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1310, 20]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Exporter: aggregates metrics for OpenTelemetry & Prometheus\nconst item = $input.first().json;\nreturn [{ json: { exported: true, trace_id: item.trace_id, latency: item.duration_ms } }];"
+      },
+      "id": "node-otel-exporter",
+      "name": "📊 OpenTelemetry & Prometheus Sink",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1530, -40]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"trace_id\": \"{{ $json.trace_id }}\",\n  \"status\": \"{{ $json.status }}\",\n  \"received_at\": \"{{ $json.received_at }}\"\n}",
+        "options": {}
+      },
+      "id": "node-response-ack",
+      "name": "Webhook 200 Acknowledged",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1530, 80]
+    }
+  ],
+  "connections": {
+    "node-trace-ingress-webhook": {
+      "main": [
+        [
+          {
+            "node": "node-otel-trace-parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-manual-test-trigger": {
+      "main": [
+        [
+          {
+            "node": "node-otel-trace-parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-otel-trace-parser": {
+      "main": [
+        [
+          {
+            "node": "node-stage-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-stage-router": {
+      "main": [
+        [
+          {
+            "node": "node-stage-auth-session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-stage-agent-dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-stage-tool-runner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-stage-stream-synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-stage-auth-session": {
+      "main": [
+        [
+          {
+            "node": "node-check-pipeline-error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-stage-agent-dispatch": {
+      "main": [
+        [
+          {
+            "node": "node-check-pipeline-error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-stage-tool-runner": {
+      "main": [
+        [
+          {
+            "node": "node-check-pipeline-error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-stage-stream-synthesis": {
+      "main": [
+        [
+          {
+            "node": "node-check-pipeline-error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-check-pipeline-error": {
+      "main": [
+        [
+          {
+            "node": "node-alert-error-handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-check-latency-sla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-check-latency-sla": {
+      "main": [
+        [
+          {
+            "node": "node-socket-broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-socket-broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-alert-error-handler": {
+      "main": [
+        [
+          {
+            "node": "node-socket-broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "node-socket-broadcast": {
+      "main": [
+        [
+          {
+            "node": "node-otel-exporter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "node-response-ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

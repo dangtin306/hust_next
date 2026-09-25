@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { FaEdit } from "react-icons/fa";
 import { alert_error, alert_success } from "../../../../AppContext.js";
 import PortCheck from "./port_check.jsx";
@@ -351,11 +352,17 @@ export default function NetPortsPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="m-0 text-2xl font-bold text-slate-800">Net Ports</h2>
           <div className="flex items-center gap-2">
+            <Link
+              href="/hustadmin/home"
+              className="rounded-lg bg-slate-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-600 sm:text-sm"
+            >
+              Home
+            </Link>
             <button
               type="button"
               onClick={refreshPortStatuses}
               disabled={updating || updatingAll}
-              className={`w-auto rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-600 sm:text-base ${
+              className={`w-auto rounded-lg bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-600 sm:text-sm ${
                 updating || updatingAll ? "cursor-not-allowed opacity-70" : ""
               }`}
             >
@@ -365,7 +372,7 @@ export default function NetPortsPage() {
               type="button"
               onClick={updateAllPorts}
               disabled={updating || updatingAll}
-              className={`w-auto rounded-lg bg-emerald-400 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 sm:text-base ${
+              className={`w-auto rounded-lg bg-emerald-400 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-500 sm:text-sm ${
                 updating || updatingAll ? "cursor-not-allowed opacity-70" : ""
               }`}
             >

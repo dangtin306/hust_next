@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type AdminLink = {
   to?: string;
@@ -48,6 +48,14 @@ type AdminMenuResponse = {
 
 const MENU_API = "https://node_js.hust.media/main_2/users/admin/data_home";
 const STATS_API = "https://hust.media/api/profile/statistic.php";
+const HOME_CACHE_KEY = "hust_admin_home_cache";
+const HOME_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+type AdminHomeCache = {
+  cachedAt: number;
+  categories: AdminCategory[];
+  stats: AdminStats | null;
+};
 
 const readCookie = (name: string) => {
   if (typeof document === "undefined") return "";
@@ -142,31 +150,69 @@ export default function AdminHomePage() {
   const [openCategory, setOpenCategory] = useState<number | null>(null);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
+  const load = useCallback(async (force = false) => {
+    const cacheKey = `${HOME_CACHE_KEY}_${readCookie("apikey") || "guest"}`;
+
+    if (!force) {
       try {
-        const [menuResponse, statsResponse] = await Promise.all([
-          fetch(MENU_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ apikey: readCookie("apikey") }),
-          }),
-          fetch(STATS_API),
-        ]);
-        if (!menuResponse.ok) throw new Error(`Không tải được danh sách quản trị (${menuResponse.status})`);
-        const menuBody = (await menuResponse.json()) as AdminMenuResponse;
-        setCategories(normalizeCategories(menuBody));
-        if (statsResponse.ok) setStats((await statsResponse.json()) as AdminStats);
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "Không tải được dữ liệu quản trị");
-      } finally {
-        setLoading(false);
+        const cached = JSON.parse(localStorage.getItem(cacheKey) || "null") as AdminHomeCache | null;
+        if (
+          cached &&
+          Date.now() - cached.cachedAt < HOME_CACHE_TTL &&
+          Array.isArray(cached.categories)
+        ) {
+          setCategories(cached.categories);
+          setStats(cached.stats || null);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        localStorage.removeItem(cacheKey);
       }
-    };
-    void load();
+    }
+
+    setLoading(true);
+    setError("");
+    if (force) setReloading(true);
+
+    try {
+      const [menuResponse, statsResponse] = await Promise.all([
+        fetch(MENU_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apikey: readCookie("apikey") }),
+        }),
+        fetch(STATS_API),
+      ]);
+      if (!menuResponse.ok) throw new Error(`Không tải được danh sách quản trị (${menuResponse.status})`);
+      const menuBody = (await menuResponse.json()) as AdminMenuResponse;
+      const nextCategories = normalizeCategories(menuBody);
+      const nextStats = statsResponse.ok ? ((await statsResponse.json()) as AdminStats) : null;
+      setCategories(nextCategories);
+      setStats(nextStats);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({
+          cachedAt: Date.now(),
+          categories: nextCategories,
+          stats: nextStats,
+        } satisfies AdminHomeCache));
+      } catch {
+        // Ignore storage quota/private mode errors; the page still works from the API response.
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không tải được dữ liệu quản trị");
+    } finally {
+      setLoading(false);
+      setReloading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   return (
     <main className="min-h-[calc(100vh-5rem)] px-3 py-2 text-slate-800 sm:px-5">
@@ -184,6 +230,16 @@ export default function AdminHomePage() {
         )}
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-md sm:p-6">
+          <div className="mb-4 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void load(true)}
+              disabled={loading || reloading}
+              className="rounded-lg bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+            >
+              {reloading ? "Reloading..." : "Reload"}
+            </button>
+          </div>
           {loading ? (
             <p className="text-center text-lg">Please wait a moment 😊 ...</p>
           ) : error ? (
