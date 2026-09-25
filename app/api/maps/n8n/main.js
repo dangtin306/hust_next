@@ -79,12 +79,14 @@ export default function N8nWorkflowMain() {
     setIsStale(false);
     setLatestEvent({ eventName, payload, receivedAt: new Date().toISOString() });
 
-    // Nhóm theo trace_id hoặc request_id
-    const requestId = payload.request_id || payload.trace_id;
+    // Gateway runId is trace_id; group all service stages in one chat run under it.
+    const requestId = payload.trace_id || payload.request_id;
     if (requestId) {
       setActiveRequests((prev) => {
         const existingIdx = prev.findIndex((r) => r.id === requestId);
-        const stage = payload.stage;
+        const stage = payload.stage === "openclaw.service" && payload.service_id
+          ? `${payload.stage}:${payload.service_id}`
+          : payload.stage;
         const currentStages = existingIdx >= 0 ? [...prev[existingIdx].stages] : [];
 
         if (stage && !currentStages.includes(stage)) {
@@ -377,10 +379,16 @@ export default function N8nWorkflowMain() {
               {latestEvent.eventName}
             </span>
 
-            {/* Request / Trace ID */}
-            {(latestEvent.payload.request_id || latestEvent.payload.trace_id) && (
+            {/* Gateway runId / Trace ID */}
+            {(latestEvent.payload.trace_id || latestEvent.payload.request_id) && (
               <span className="font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 truncate max-w-xs">
-                ID: {latestEvent.payload.request_id || latestEvent.payload.trace_id}
+                Trace ID: {latestEvent.payload.trace_id || latestEvent.payload.request_id}
+              </span>
+            )}
+
+            {latestEvent.payload.service_id && (
+              <span className="font-mono text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800">
+                service: {latestEvent.payload.service_id}
               </span>
             )}
 

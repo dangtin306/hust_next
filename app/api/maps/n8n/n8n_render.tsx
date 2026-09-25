@@ -41,7 +41,7 @@ import {
   Zap,
 } from "lucide-react";
 
-import { mapStageToNodeId, getSseProxyUrl } from "./process";
+import { mapServiceIdToNodeId, mapStageToNodeId, getSseProxyUrl } from "./process";
 
 // ==========================================
 // 1. DATA CONTRACTS
@@ -112,6 +112,7 @@ export interface NodeActivitySSEPayload {
   timestamp?: string;
   request_id?: string;
   trace_id?: string;
+  service_id?: string;
   method?: string;
   route?: string;
   status_code?: number;
@@ -664,7 +665,7 @@ export const N8nDiagramRenderer = forwardRef<
       // 1. Chống trùng lặp sự kiện qua ID hoặc tổ hợp khóa duy nhất
       const eventKey =
         payload.id ||
-        `${payload.request_id || payload.trace_id || "req"}_${eventName}_${payload.stage || ""}_${payload.timestamp || ""}`;
+        `${payload.trace_id || payload.request_id || "req"}_${eventName}_${payload.stage || ""}_${payload.service_id || ""}_${payload.timestamp || ""}`;
       if (seenEventIdsRef.current.has(eventKey)) {
         return;
       }
@@ -676,6 +677,21 @@ export const N8nDiagramRenderer = forwardRef<
       }
 
       onEventReceivedRef.current?.(eventName, payload);
+
+      // Gateway chat events describe the outer run, not an individual service node.
+      if (
+        eventName === "openclaw.gateway.chat" ||
+        payload.type === "openclaw.gateway.chat" ||
+        payload.stage === "openclaw.gateway.chat"
+      ) {
+        return;
+      }
+
+      const isServiceStage = payload.stage === "openclaw.service";
+      const serviceNodeId = isServiceStage
+        ? mapServiceIdToNodeId(payload.service_id)
+        : undefined;
+      if (isServiceStage && !serviceNodeId) return;
 
       // 2. Xử lý theo từng loại event chuẩn từ Node backend
       switch (eventName) {
@@ -699,36 +715,47 @@ export const N8nDiagramRenderer = forwardRef<
         }
 
         case "stage.started": {
-          const targetNodeId = mapStageToNodeId(payload.stage);
+          const targetNodeId = serviceNodeId || mapStageToNodeId(payload.stage);
           const isUnclassified =
             targetNodeId === "node-stage-unclassified" ||
             (Array.isArray(targetNodeId) && targetNodeId.includes("node-stage-unclassified"));
           const label = isUnclassified
             ? `${payload.stage || "unknown"}`
+            : serviceNodeId
+            ? `${payload.service_id} • đang chạy`
             : (payload.stage || "running");
           setNodeStatus(targetNodeId, "running", label, 120000);
           break;
         }
 
         case "stage.completed": {
-          const targetNodeId = mapStageToNodeId(payload.stage);
+          const targetNodeId = serviceNodeId || mapStageToNodeId(payload.stage);
           const duration = payload.duration_ms || 0;
           const status = duration > 1500 ? "slow" : "success";
-          const label = `${payload.stage || ""} (${duration}ms)`;
+          const outcome = payload.outcome || "completed";
+          const label = serviceNodeId
+            ? `${payload.service_id} • ${outcome} • ${duration}ms`
+            : `${payload.stage || ""} (${duration}ms)`;
           setNodeStatus(targetNodeId, status, label, 8000);
           break;
         }
 
         case "stage.failed": {
-          const targetNodeId = mapStageToNodeId(payload.stage);
-          const label = `Lỗi ${payload.status_code || 500}: ${payload.stage || ""}`;
+          const targetNodeId = serviceNodeId || mapStageToNodeId(payload.stage);
+          const duration = payload.duration_ms || 0;
+          const outcome = payload.outcome || payload.message || "failed";
+          const label = serviceNodeId
+            ? `${payload.service_id} • ${outcome} • ${duration}ms`
+            : `Lỗi ${payload.status_code || 500}: ${payload.stage || ""}`;
           setNodeStatus(targetNodeId, "error", label, 8000);
-          setNodeStatus(
-            ["ce361f6c-bf94-4d14-9579-c5bf3ef818d1", "Acknowledge Node Activity", "node-request-outcome"],
-            "error",
-            "Stage Failed",
-            8000
-          );
+          if (!serviceNodeId) {
+            setNodeStatus(
+              ["ce361f6c-bf94-4d14-9579-c5bf3ef818d1", "Acknowledge Node Activity", "node-request-outcome"],
+              "error",
+              "Stage Failed",
+              8000
+            );
+          }
           break;
         }
 
@@ -881,6 +908,7 @@ export const N8nDiagramRenderer = forwardRef<
           "stage.started",
           "stage.completed",
           "stage.failed",
+          "openclaw.gateway.chat",
           "connected",
           "replay_gap",
         ];
