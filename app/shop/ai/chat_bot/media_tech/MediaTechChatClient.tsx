@@ -40,20 +40,20 @@ type MediaTechService =
 
 export const SUGGESTIONS = [
   {
+    icon: "💬",
+    title: "Chatbot thuần",
+    description: "Trò chuyện tự do với AI thông qua endpoint Responses.",
+    endpoint: "POST /openclaw/v1/responses",
+    apiService: "media_text_to_text" as const,
+    prompt: "",
+  },
+  {
     icon: "🎨",
     title: "media_text_to_image",
     description: "Tạo hình ảnh thông qua image route của OpenClaw.",
     endpoint: "POST /openclaw/v1/images/generations",
     apiService: "media_text_to_image" as const,
     prompt: "Tạo một hình ảnh: ",
-  },
-  {
-    icon: "💬",
-    title: "media_text_to_text",
-    description: "Hội thoại thông thường thông qua endpoint Responses.",
-    endpoint: "POST /openclaw/v1/responses",
-    apiService: "media_text_to_text" as const,
-    prompt: "Hãy trò chuyện với mình về: ",
   },
   {
     icon: "✍️",
@@ -486,6 +486,8 @@ export default function MediaTechChatClient({
         payload.quality = "medium";
         payload.user_id = userId;
       } else if (useResponsesApi) {
+        // Keep the upstream Responses identity aligned with the selected agent/session.
+        payload.user = activeSessionKey;
         if (activeService === "media_content_smart") {
           const [titleLine, ...descriptionLines] = text.split("\n");
           const title = titleLine.trim();
@@ -738,7 +740,7 @@ export default function MediaTechChatClient({
 
   return (
     <div
-      className={`mx-auto flex w-full ${selectedService && selectedService !== "media_text_to_text" ? "max-w-6xl" : "max-w-4xl"} flex-col ${
+      className={`mx-auto flex w-full max-w-6xl flex-col ${
         isDrawer
           ? "h-[85vh] max-h-[760px] p-0"
           : "h-[calc(100vh-140px)] min-h-[580px] max-h-[860px] px-2 py-4 sm:px-4"
@@ -921,7 +923,7 @@ export default function MediaTechChatClient({
                 <div className="min-w-0 text-xs text-purple-800">
                   <span className="font-semibold">Dịch vụ:</span>{" "}
                   <span className="font-mono font-semibold">
-                    {selectedService || "Chat thông thường"}
+                    {SUGGESTIONS.find((item) => item.apiService === selectedService)?.title || selectedService || "Chatbot thuần"}
                   </span>
                 </div>
                 <button
@@ -1079,7 +1081,7 @@ export default function MediaTechChatClient({
             <div className="min-w-0 flex-1">
             {selectedService && (
               <div className="mb-1 px-1 text-[11px] text-purple-700">
-                Đã chọn <strong>{selectedService}</strong> — {selectedService === "media_content_smart" ? "dòng đầu là tiêu đề, các dòng sau ghi mô tả/ý chính; hệ thống dùng độ dài 500 và giọng tự nhiên." : "nhập nội dung đầu vào cụ thể bên dưới rồi nhấn gửi."}
+                Đã chọn <strong>{SUGGESTIONS.find((item) => item.apiService === selectedService)?.title || selectedService}</strong> — {selectedService === "media_content_smart" ? "dòng đầu là tiêu đề, các dòng sau ghi mô tả/ý chính; hệ thống dùng độ dài 500 và giọng tự nhiên." : "nhập nội dung đầu vào cụ thể bên dưới rồi nhấn gửi."}
               </div>
             )}
             <textarea
