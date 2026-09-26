@@ -114,6 +114,7 @@ export interface NodeActivitySSEPayload {
   request_id?: string;
   trace_id?: string;
   correlation_id?: string;
+  chat_kind?: string;
   service_id?: string;
   workflow_id?: string;
   execution_id?: string;
@@ -399,6 +400,7 @@ const N8N_NODE_TYPES = {
   stickyNote: N8nStickyNoteRenderer,
 };
 
+const CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 const OPENCLAW_FORMAT_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1";
 const SAFE_OUTCOMES = new Set([
   "success", "completed", "ok", "failed", "error", "timeout", "cancelled", "aborted", "skipped",
@@ -748,21 +750,28 @@ export const N8nDiagramRenderer = forwardRef<
         }
       }
 
-      // Gateway lifecycle alone does not classify the request as ordinary chat.
-      // Keep it visibly unclassified instead of lighting the Chat node.
+      // Only the explicit Node discriminator may route a Gateway lifecycle to Chat.
       if (isGatewayChatStage) {
+        const isOrdinaryChat = payload.chat_kind === "ordinary";
+        const targetNodeId = isOrdinaryChat ? CHAT_NODE_ID : "node-stage-unclassified";
+        const chatLabel = isOrdinaryChat ? "Chat thường" : "openclaw.gateway.chat • chưa phân loại";
         if (eventName === "stage.started") {
-          setNodeStatus("node-stage-unclassified", "running", "openclaw.gateway.chat • chưa phân loại", 120000);
+          setNodeStatus(targetNodeId, "running", `${chatLabel} • đang chạy`, 120000);
         } else if (eventName === "stage.completed") {
           const duration = payload.duration_ms || 0;
           setNodeStatus(
-            "node-stage-unclassified",
+            targetNodeId,
             duration > 1500 ? "slow" : "success",
-            `openclaw.gateway.chat • chưa phân loại • ${duration}ms`,
+            `${chatLabel} • ${getSafeOutcomeLabel(payload.outcome, "completed")} • ${duration}ms`,
             8000
           );
         } else if (eventName === "stage.failed") {
-          setNodeStatus("node-stage-unclassified", "error", "openclaw.gateway.chat • chưa phân loại • lỗi", 8000);
+          setNodeStatus(
+            targetNodeId,
+            "error",
+            `${chatLabel} • ${getSafeOutcomeLabel(payload.outcome, "failed")} • lỗi`,
+            8000
+          );
         }
         return;
       }
