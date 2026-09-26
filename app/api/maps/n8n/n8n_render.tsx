@@ -585,6 +585,8 @@ export const N8nDiagramRenderer = forwardRef<
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const eventSourceRef = useRef<EventSource | null>(null);
   const traceCorrelationRef = useRef<Map<string, string>>(new Map());
+  const correlationTraceRef = useRef<Map<string, string>>(new Map());
+  const chatKindByTurnRef = useRef<Map<string, { chatKind: string; updatedAt: number }>>(new Map());
   const eventGroupsRef = useRef<Map<string, {
     traceIds: Set<string>;
     serviceIds: Set<string>;
@@ -712,17 +714,60 @@ export const N8nDiagramRenderer = forwardRef<
       const traceId = payload.trace_id;
       const correlationId = payload.correlation_id;
       if (traceId && correlationId) {
-        traceCorrelationRef.current.set(traceId, correlationId);
+        const knownCorrelationId = traceCorrelationRef.current.get(traceId);
+        if (!knownCorrelationId) traceCorrelationRef.current.set(traceId, correlationId);
+        if (!correlationTraceRef.current.has(correlationId)) {
+          correlationTraceRef.current.set(correlationId, traceId);
+        }
         if (traceCorrelationRef.current.size > 500) {
           const oldestTrace = traceCorrelationRef.current.keys().next().value;
           if (oldestTrace) traceCorrelationRef.current.delete(oldestTrace);
         }
+        if (correlationTraceRef.current.size > 500) {
+          const oldestCorrelation = correlationTraceRef.current.keys().next().value;
+          if (oldestCorrelation) correlationTraceRef.current.delete(oldestCorrelation);
+        }
       }
-      const requestGroupId = correlationId ||
-        (traceId ? traceCorrelationRef.current.get(traceId) : undefined) ||
-        traceId || payload.request_id;
+      const effectiveTraceId = traceId ||
+        (correlationId ? correlationTraceRef.current.get(correlationId) : undefined);
+      const effectiveCorrelationId = correlationId ||
+        (effectiveTraceId ? traceCorrelationRef.current.get(effectiveTraceId) : undefined);
+      const chatKindTurnKey = effectiveTraceId
+        ? `trace:${effectiveTraceId}`
+        : effectiveCorrelationId
+        ? `correlation:${effectiveCorrelationId}`
+        : payload.request_id
+        ? `request:${payload.request_id}`
+        : undefined;
+      const correlationAliasKey = effectiveCorrelationId
+        ? `correlation:${effectiveCorrelationId}`
+        : undefined;
+      const clearChatKindCacheForTurn = () => {
+        if (chatKindTurnKey) chatKindByTurnRef.current.delete(chatKindTurnKey);
+        if (correlationAliasKey) chatKindByTurnRef.current.delete(correlationAliasKey);
+        if (effectiveTraceId) chatKindByTurnRef.current.delete(`trace:${effectiveTraceId}`);
+        if (effectiveTraceId) {
+          const mappedCorrelationId = traceCorrelationRef.current.get(effectiveTraceId);
+          traceCorrelationRef.current.delete(effectiveTraceId);
+          if (mappedCorrelationId) {
+            chatKindByTurnRef.current.delete(`correlation:${mappedCorrelationId}`);
+          }
+          if (mappedCorrelationId && correlationTraceRef.current.get(mappedCorrelationId) === effectiveTraceId) {
+            correlationTraceRef.current.delete(mappedCorrelationId);
+          }
+        } else if (effectiveCorrelationId) {
+          correlationTraceRef.current.delete(effectiveCorrelationId);
+        }
+      };
+      const requestGroupId = effectiveTraceId
+        ? `trace:${effectiveTraceId}`
+        : effectiveCorrelationId
+        ? `correlation:${effectiveCorrelationId}`
+        : payload.request_id
+        ? `request:${payload.request_id}`
+        : undefined;
       if (requestGroupId) {
-        const traceGroup = traceId ? eventGroupsRef.current.get(traceId) : undefined;
+        const traceGroup = effectiveTraceId ? eventGroupsRef.current.get(`trace:${effectiveTraceId}`) : undefined;
         const group = eventGroupsRef.current.get(requestGroupId) || traceGroup || {
           traceIds: new Set<string>(),
           serviceIds: new Set<string>(),
@@ -740,8 +785,8 @@ export const N8nDiagramRenderer = forwardRef<
         group.latestEvent = eventName;
         group.updatedAt = Date.now();
         eventGroupsRef.current.set(requestGroupId, group);
-        if (traceId && requestGroupId !== traceId) {
-          eventGroupsRef.current.delete(traceId);
+        if (effectiveTraceId && requestGroupId !== `trace:${effectiveTraceId}`) {
+          eventGroupsRef.current.delete(`trace:${effectiveTraceId}`);
         }
         if (eventGroupsRef.current.size > 500) {
           const oldestGroup = Array.from(eventGroupsRef.current.entries())
@@ -752,7 +797,32 @@ export const N8nDiagramRenderer = forwardRef<
 
       // Only the explicit Node discriminator may route a Gateway lifecycle to Chat.
       if (isGatewayChatStage) {
-        const isOrdinaryChat = payload.chat_kind === "ordinary";
+        const isLifecycleEvent = ["stage.started", "stage.completed", "stage.failed"].includes(eventName);
+        const eventChatKind = typeof payload.chat_kind === "string" && payload.chat_kind.trim()
+          ? payload.chat_kind.trim()
+          : undefined;
+        const cachedChatKind = chatKindTurnKey
+          ? chatKindByTurnRef.current.get(chatKindTurnKey)?.chatKind ||
+            (correlationAliasKey ? chatKindByTurnRef.current.get(correlationAliasKey)?.chatKind : undefined)
+          : undefined;
+        const chatKind = eventChatKind || cachedChatKind;
+
+        if (isLifecycleEvent && eventChatKind && chatKindTurnKey) {
+          chatKindByTurnRef.current.set(chatKindTurnKey, {
+            chatKind: eventChatKind,
+            updatedAt: Date.now(),
+          });
+          if (correlationAliasKey && correlationAliasKey !== chatKindTurnKey) {
+            chatKindByTurnRef.current.delete(correlationAliasKey);
+          }
+          if (chatKindByTurnRef.current.size > 500) {
+            const oldestTurn = Array.from(chatKindByTurnRef.current.entries())
+              .sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
+            if (oldestTurn) chatKindByTurnRef.current.delete(oldestTurn[0]);
+          }
+        }
+
+        const isOrdinaryChat = chatKind === "ordinary";
         const targetNodeId = isOrdinaryChat ? CHAT_NODE_ID : "node-stage-unclassified";
         const chatLabel = isOrdinaryChat ? "Chat thường" : "openclaw.gateway.chat • chưa phân loại";
         if (eventName === "stage.started") {
@@ -772,6 +842,9 @@ export const N8nDiagramRenderer = forwardRef<
             `${chatLabel} • ${getSafeOutcomeLabel(payload.outcome, "failed")} • lỗi`,
             8000
           );
+        }
+        if ((eventName === "stage.completed" || eventName === "stage.failed") && chatKindTurnKey) {
+          clearChatKindCacheForTurn();
         }
         return;
       }
@@ -877,6 +950,7 @@ export const N8nDiagramRenderer = forwardRef<
         }
 
         case "request.completed": {
+          clearChatKindCacheForTurn();
           const statusCode = payload.status_code || 200;
           const isError = statusCode >= 400;
           const duration = payload.duration_ms || 0;
@@ -929,6 +1003,8 @@ export const N8nDiagramRenderer = forwardRef<
         nodeTimersRef.current.forEach((t) => clearTimeout(t));
         nodeTimersRef.current.clear();
         traceCorrelationRef.current.clear();
+        correlationTraceRef.current.clear();
+        chatKindByTurnRef.current.clear();
         eventGroupsRef.current.clear();
         setNodes((current) =>
           current.map((n) =>
