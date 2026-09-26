@@ -113,6 +113,7 @@ export interface NodeActivitySSEPayload {
   timestamp?: string;
   request_id?: string;
   trace_id?: string;
+  correlation_id?: string;
   service_id?: string;
   workflow_id?: string;
   execution_id?: string;
@@ -398,7 +399,6 @@ const N8N_NODE_TYPES = {
   stickyNote: N8nStickyNoteRenderer,
 };
 
-const CHAT_FALLBACK_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 const OPENCLAW_FORMAT_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1";
 const SAFE_OUTCOMES = new Set([
   "success", "completed", "ok", "failed", "error", "timeout", "cancelled", "aborted", "skipped",
@@ -582,14 +582,13 @@ export const N8nDiagramRenderer = forwardRef<
   const nodeTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const eventSourceRef = useRef<EventSource | null>(null);
-  const traceActivityRef = useRef<Map<string, {
-    hasService: boolean;
-    gatewayStatus: "running" | "completed" | "failed" | null;
-    durationMs: number;
-    outcome: string;
+  const traceCorrelationRef = useRef<Map<string, string>>(new Map());
+  const eventGroupsRef = useRef<Map<string, {
+    traceIds: Set<string>;
+    serviceIds: Set<string>;
+    latestEvent: string;
     updatedAt: number;
   }>>(new Map());
-  const chatFallbackOwnerRef = useRef<{ traceId: string; running: boolean } | null>(null);
   const reactFlowInstanceRef = useRef<ReactFlowInstance<Node, Edge> | null>(null);
 
   const onEventReceivedRef = useRef(onEventReceived);
@@ -692,7 +691,7 @@ export const N8nDiagramRenderer = forwardRef<
       // 1. Chống trùng lặp sự kiện qua ID hoặc tổ hợp khóa duy nhất
       const eventKey =
         payload.id ||
-        `${payload.trace_id || payload.request_id || "req"}_${eventName}_${payload.stage || ""}_${payload.service_id || ""}_${payload.timestamp || ""}`;
+        `${payload.correlation_id || payload.trace_id || payload.request_id || "req"}_${eventName}_${payload.stage || ""}_${payload.service_id || ""}_${payload.timestamp || ""}`;
       if (seenEventIdsRef.current.has(eventKey)) {
         return;
       }
@@ -709,124 +708,88 @@ export const N8nDiagramRenderer = forwardRef<
       const isGatewayChatStage = payload.stage === "openclaw.gateway.chat";
       const isFormatStage = payload.stage === "openclaw.format_response";
       const traceId = payload.trace_id;
-
-      const getTraceActivity = (id: string) => {
-        const existing = traceActivityRef.current.get(id);
-        if (existing) return existing;
-        const created = {
-          hasService: false,
-          gatewayStatus: null as "running" | "completed" | "failed" | null,
-          durationMs: 0,
-          outcome: "",
+      const correlationId = payload.correlation_id;
+      if (traceId && correlationId) {
+        traceCorrelationRef.current.set(traceId, correlationId);
+        if (traceCorrelationRef.current.size > 500) {
+          const oldestTrace = traceCorrelationRef.current.keys().next().value;
+          if (oldestTrace) traceCorrelationRef.current.delete(oldestTrace);
+        }
+      }
+      const requestGroupId = correlationId ||
+        (traceId ? traceCorrelationRef.current.get(traceId) : undefined) ||
+        traceId || payload.request_id;
+      if (requestGroupId) {
+        const traceGroup = traceId ? eventGroupsRef.current.get(traceId) : undefined;
+        const group = eventGroupsRef.current.get(requestGroupId) || traceGroup || {
+          traceIds: new Set<string>(),
+          serviceIds: new Set<string>(),
+          latestEvent: eventName,
           updatedAt: Date.now(),
         };
-        traceActivityRef.current.set(id, created);
-        return created;
-      };
-
-      const refreshChatFallback = (options?: {
-        preferredTraceId?: string;
-        clearTraceId?: string;
-        suppressTerminals?: boolean;
-      }) => {
-        const activities = Array.from(traceActivityRef.current.entries());
-        const runningFallbacks = activities
-          .filter(([, activity]) => !activity.hasService && activity.gatewayStatus === "running")
-          .sort((a, b) => b[1].updatedAt - a[1].updatedAt);
-
-        if (runningFallbacks.length > 0) {
-          const [ownerTraceId] = runningFallbacks[0];
-          setNodeStatus(
-            CHAT_FALLBACK_NODE_ID,
-            "running",
-            runningFallbacks.length > 1
-              ? `Chat thường • ${runningFallbacks.length} lượt đang chạy`
-              : "Chat thường • đang chạy",
-            0
-          );
-          chatFallbackOwnerRef.current = { traceId: ownerTraceId, running: true };
-          return;
-        }
-
+        if (traceId) group.traceIds.add(traceId);
         if (
-          options?.clearTraceId &&
-          chatFallbackOwnerRef.current?.traceId === options.clearTraceId
+          isServiceStage &&
+          typeof payload.service_id === "string" &&
+          mapServiceIdToNodeId(payload.service_id)
         ) {
-          setNodeStatus(CHAT_FALLBACK_NODE_ID, "idle", "", 0);
-          chatFallbackOwnerRef.current = null;
-          return;
+          group.serviceIds.add(payload.service_id);
         }
-
-        if (options?.suppressTerminals) {
-          // A service child or terminal Gateway event supersedes any stale Chat fallback,
-          // including a completed fallback owned by a different trace.
-          setNodeStatus(CHAT_FALLBACK_NODE_ID, "idle", "", 0);
-          chatFallbackOwnerRef.current = null;
-          return;
+        group.latestEvent = eventName;
+        group.updatedAt = Date.now();
+        eventGroupsRef.current.set(requestGroupId, group);
+        if (traceId && requestGroupId !== traceId) {
+          eventGroupsRef.current.delete(traceId);
         }
+        if (eventGroupsRef.current.size > 500) {
+          const oldestGroup = Array.from(eventGroupsRef.current.entries())
+            .sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
+          if (oldestGroup) eventGroupsRef.current.delete(oldestGroup[0]);
+        }
+      }
 
-        const preferred = options?.preferredTraceId
-          ? traceActivityRef.current.get(options.preferredTraceId)
-          : undefined;
-        const terminalFallbacks = activities
-          .filter(([, activity]) => !activity.hasService && activity.gatewayStatus !== null && activity.gatewayStatus !== "running")
-          .sort((a, b) => b[1].updatedAt - a[1].updatedAt);
-        const selected = preferred && !preferred.hasService && preferred.gatewayStatus !== "running"
-          ? [options!.preferredTraceId!, preferred] as const
-          : terminalFallbacks[0];
-
-        if (selected) {
-          const [ownerTraceId, activity] = selected;
-          const status = activity.gatewayStatus === "failed"
-            ? "error"
-            : activity.durationMs > 1500
-            ? "slow"
-            : "success";
+      // Gateway lifecycle alone does not classify the request as ordinary chat.
+      // Keep it visibly unclassified instead of lighting the Chat node.
+      if (isGatewayChatStage) {
+        if (eventName === "stage.started") {
+          setNodeStatus("node-stage-unclassified", "running", "openclaw.gateway.chat • chưa phân loại", 120000);
+        } else if (eventName === "stage.completed") {
+          const duration = payload.duration_ms || 0;
           setNodeStatus(
-            CHAT_FALLBACK_NODE_ID,
-            status,
-            `Chat thường • ${activity.outcome || activity.gatewayStatus} • ${activity.durationMs}ms`,
+            "node-stage-unclassified",
+            duration > 1500 ? "slow" : "success",
+            `openclaw.gateway.chat • chưa phân loại • ${duration}ms`,
             8000
           );
-          chatFallbackOwnerRef.current = { traceId: ownerTraceId, running: false };
-          return;
-        }
-
-        if (chatFallbackOwnerRef.current?.running) {
-          setNodeStatus(CHAT_FALLBACK_NODE_ID, "idle", "", 0);
-          chatFallbackOwnerRef.current = null;
-        }
-      };
-
-      const isStageLifecycle = ["stage.started", "stage.completed", "stage.failed"].includes(eventName);
-      if (traceId && isGatewayChatStage && isStageLifecycle) {
-        const activity = getTraceActivity(traceId);
-        activity.updatedAt = Date.now();
-        if (eventName === "stage.started") {
-          activity.gatewayStatus = "running";
-          refreshChatFallback();
-        } else {
-          activity.gatewayStatus = eventName === "stage.failed" ? "failed" : "completed";
-          activity.durationMs = payload.duration_ms || 0;
-          activity.outcome = getSafeOutcomeLabel(payload.outcome, eventName === "stage.failed" ? "failed" : "completed");
-          refreshChatFallback(activity.hasService
-            ? { clearTraceId: traceId, suppressTerminals: true }
-            : { preferredTraceId: traceId });
+        } else if (eventName === "stage.failed") {
+          setNodeStatus("node-stage-unclassified", "error", "openclaw.gateway.chat • chưa phân loại • lỗi", 8000);
         }
         return;
       }
-
-      if (traceId && isServiceStage) {
-        const activity = getTraceActivity(traceId);
-        activity.hasService = true;
-        activity.updatedAt = Date.now();
-        refreshChatFallback({ clearTraceId: traceId, suppressTerminals: true });
-      }
+      if (eventName === "openclaw.gateway.chat") return;
 
       const serviceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
         : undefined;
-      if (isServiceStage && !serviceNodeId) return;
+      if (isServiceStage && !serviceNodeId) {
+        const serviceLabel = typeof payload.service_id === "string" && payload.service_id
+          ? `Service chưa ánh xạ: ${payload.service_id}`
+          : "openclaw.service • thiếu service_id";
+        if (eventName === "stage.started") {
+          setNodeStatus("node-stage-unclassified", "running", serviceLabel, 120000);
+        } else if (eventName === "stage.completed") {
+          const duration = payload.duration_ms || 0;
+          setNodeStatus(
+            "node-stage-unclassified",
+            duration > 1500 ? "slow" : "success",
+            `${serviceLabel} • ${duration}ms`,
+            8000
+          );
+        } else if (eventName === "stage.failed") {
+          setNodeStatus("node-stage-unclassified", "error", `${serviceLabel} • lỗi`, 8000);
+        }
+        return;
+      }
 
       // 2. Xử lý theo từng loại event chuẩn từ Node backend
       switch (eventName) {
@@ -850,7 +813,9 @@ export const N8nDiagramRenderer = forwardRef<
         }
 
         case "stage.started": {
-          const targetNodeId = serviceNodeId || mapStageToNodeId(payload.stage);
+          const targetNodeId = isFormatStage
+            ? payload.node_id || OPENCLAW_FORMAT_NODE_ID
+            : serviceNodeId || mapStageToNodeId(payload.stage);
           const isUnclassified =
             targetNodeId === "node-stage-unclassified" ||
             (Array.isArray(targetNodeId) && targetNodeId.includes("node-stage-unclassified"));
@@ -954,8 +919,8 @@ export const N8nDiagramRenderer = forwardRef<
       resetAllNodes: () => {
         nodeTimersRef.current.forEach((t) => clearTimeout(t));
         nodeTimersRef.current.clear();
-        traceActivityRef.current.clear();
-        chatFallbackOwnerRef.current = null;
+        traceCorrelationRef.current.clear();
+        eventGroupsRef.current.clear();
         setNodes((current) =>
           current.map((n) =>
             n.type === "n8nNode"
