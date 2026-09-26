@@ -767,12 +767,12 @@ export default function ChatBotApiClient() {
   };
 
   return (
-    <div className="flex w-full flex-col bg-transparent text-slate-800 antialiased selection:bg-purple-200">
+    <div className="flex h-full min-h-full w-full flex-col bg-gradient-to-br from-slate-100/90 via-white/80 to-purple-50/70 text-slate-800 antialiased selection:bg-purple-200">
 
       {/* Main Container */}
-      <div className={`relative mx-auto flex h-full w-full ${selectedSuggestion ? "max-w-6xl" : "max-w-5xl"} flex-col px-2 py-2 sm:px-4 sm:py-3`}>
+      <div className={`relative mx-auto flex min-h-full w-full ${selectedSuggestion ? "max-w-6xl" : "max-w-5xl"} flex-col px-3 py-3 sm:px-5 sm:py-4`}>
         {/* Top Header Card */}
-        <header className="z-10 mb-2 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-2.5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-md">
+        <header className="z-10 mb-3 flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/80 bg-white/90 px-4 py-3 shadow-[0_8px_24px_rgb(71,85,105,0.08)] backdrop-blur-md">
           {/* Identity & Status */}
           <div className="flex items-center gap-3">
             <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-pink-500 text-white shadow-md shadow-purple-500/25">
@@ -900,7 +900,7 @@ export default function ChatBotApiClient() {
         )}
 
         {/* Messages Scroll Area */}
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/60 bg-white/65 p-4 shadow-[0_8px_30px_rgb(0,0,0,0.03)] backdrop-blur-md sm:p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/80 bg-white/72 p-4 shadow-[0_8px_24px_rgb(71,85,105,0.06)] backdrop-blur-md sm:p-5">
           <div className="mx-auto flex max-w-3xl flex-col gap-4">
             {messages.map((msg) => {
               const isBot = msg.sender === "bot";
@@ -1038,7 +1038,7 @@ export default function ChatBotApiClient() {
         </div>
 
         {/* Input Bar & Footer */}
-        <footer className="mt-2 shrink-0 rounded-2xl border border-white/70 bg-white/80 p-2 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-md sm:p-3">
+        <footer className="mt-3 shrink-0 rounded-2xl border border-white/80 bg-white/90 p-2.5 shadow-[0_8px_24px_rgb(71,85,105,0.08)] backdrop-blur-md sm:p-3">
           <div className="relative flex items-end gap-2 rounded-xl border border-purple-200/80 bg-white/95 p-1.5 shadow-inner transition-all focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-400/30">
             {/* Input Textarea */}
             <div className="min-w-0 flex-1">
