@@ -204,10 +204,29 @@ async function request<T>(
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    const errorPayload = payload as {
+      message?: unknown;
+      error?: unknown;
+      details?: unknown;
+      error_code?: unknown;
+      code?: unknown;
+    };
+    const nestedError =
+      errorPayload.error && typeof errorPayload.error === "object"
+        ? (errorPayload.error as { message?: unknown; details?: unknown; code?: unknown })
+        : undefined;
+    const message = [
+      errorPayload.message,
+      typeof errorPayload.error === "string" ? errorPayload.error : undefined,
+      nestedError?.message,
+      errorPayload.details,
+      nestedError?.details,
+    ].find((value): value is string => typeof value === "string" && value.trim().length > 0);
     const error = new Error(
-      payload.message || `Git API request failed (${response.status})`,
+      message || `Git API request failed (${response.status})`,
     ) as GitApiError;
-    error.code = payload.error_code || payload.code;
+    const errorCode = errorPayload.error_code || errorPayload.code || nestedError?.code;
+    error.code = typeof errorCode === "string" ? errorCode : undefined;
     error.status = response.status;
     error.uncertain =
       method === "POST" && [502, 503, 504].includes(response.status);

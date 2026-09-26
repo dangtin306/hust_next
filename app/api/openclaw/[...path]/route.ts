@@ -33,6 +33,16 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       requestHeaders["x-openclaw-session-key"] = sessionKey;
     }
 
+    const correlationId = request.headers.get("x-openclaw-correlation-id");
+    if (correlationId) {
+      requestHeaders["x-openclaw-correlation-id"] = correlationId;
+    }
+
+    const serviceId = request.headers.get("x-openclaw-service-id");
+    if (serviceId) {
+      requestHeaders["x-openclaw-service-id"] = serviceId;
+    }
+
     const contentType = request.headers.get("content-type");
     if (contentType) {
       requestHeaders["content-type"] = contentType;

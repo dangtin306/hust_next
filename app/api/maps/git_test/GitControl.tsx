@@ -1102,7 +1102,7 @@ export default function GitControl() {
   const mergeStatus = mergeError ? "Failed" : mergeSucceeded ? "Merged" : "Ready";
   const mergeCommitHash = mergeSucceeded
     ? mergePullRequest?.merge_commit_sha || "—"
-    : "—";
+    : mergeError || "—";
 
   return (
     <main className="min-h-screen w-full min-w-0 space-y-3 overflow-x-hidden bg-slate-50 p-0 text-slate-900">
@@ -1631,7 +1631,7 @@ export default function GitControl() {
                 <p className="text-[11px] text-slate-400">
                   Merge commit hash
                 </p>
-                <p className="mt-1 font-mono text-sm text-slate-500">
+                <p className={`mt-1 min-w-0 break-words whitespace-pre-wrap text-sm ${mergeError ? "text-rose-600" : "font-mono text-slate-500"}`}>
                   {mergeCommitHash}
                 </p>
               </div>

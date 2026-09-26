@@ -452,15 +452,21 @@ export default function MediaTechChatClient({
         activeConvId = await createConversation();
       }
 
+      const activeService = attachedImage ? "media_image_to_text" : apiService;
+      const selectedServiceId = attachedImage ? "media_image_to_text" : displayService;
+      const correlationId = crypto.randomUUID();
       const reqHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         "x-openclaw-session-key": activeSessionKey,
+        "x-openclaw-correlation-id": correlationId,
       };
+      if (selectedServiceId) {
+        reqHeaders["x-openclaw-service-id"] = selectedServiceId;
+      }
       if (targetUrl) {
         reqHeaders["x-openclaw-target"] = targetUrl;
       }
 
-      const activeService = attachedImage ? "media_image_to_text" : apiService;
       const isImageGeneration = activeService === "media_text_to_image";
       const endpoint = isImageGeneration
         ? "/next/api/openclaw/v1/images/generations"
