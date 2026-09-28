@@ -16,44 +16,82 @@ import {
   Radio,
   RefreshCw,
   Server,
-  ShieldAlert,
-  Terminal,
-  XCircle,
   Zap,
 } from "lucide-react";
 
 import {
-  DEFAULT_WORKFLOW_ID,
-  MOCK_GRAPH_DATA,
-  N8N_SERVER_URL,
-  N8N_TARGET_PORT,
-  TARGET_WEBHOOK_URL,
   NODE_BACKEND_SSE_URL,
-  NODE_BACKEND_HEALTH_URL,
   NODE_BACKEND_HOST,
   DEMO_SSE_EVENTS,
-  getSseProxyUrl,
   fetchWorkflowGraph,
+  mapServiceIdToNodeId,
 } from "./process";
 
 import N8nDiagramRenderer from "./n8n_render";
 
-export default function N8nWorkflowMain() {
-  const [graphData, setGraphData] = useState(MOCK_GRAPH_DATA);
-  const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+function graphSource(graph) {
+  return graph?.source || graph?.sync?.source || "unknown";
+}
 
-  // Tải sơ đồ n8n thực tế từ backend API
+function isVerifiedN8nSource(source) {
+  return ["n8n-api", "n8n_api", "n8n api"].includes(String(source).trim().toLowerCase());
+}
+
+function graphNodeIds(graph) {
+  const nodes = graph?.nodes || graph?.flowNodes || [];
+  return new Set(nodes.map((node) => node?.id).filter(Boolean));
+}
+
+function graphEdgeCount(graph) {
+  if (!graph) return 0;
+  if (Array.isArray(graph.edges) && graph.edges.length > 0) return graph.edges.length;
+  return Object.values(graph.connections || {}).reduce((total, outputGroups) => {
+    if (!outputGroups || typeof outputGroups !== "object") return total;
+    return total + Object.values(outputGroups).reduce((groupTotal, outputIndexes) => {
+      if (!Array.isArray(outputIndexes)) return groupTotal;
+      return groupTotal + outputIndexes.reduce((outputTotal, connections) =>
+        outputTotal + (Array.isArray(connections) ? connections.length : 0), 0);
+    }, 0);
+  }, 0);
+}
+
+function graphStickyCount(graph) {
+  const ids = new Set((graph?.stickyNotes || []).map((note) => note?.id).filter(Boolean));
+  (graph?.nodes || graph?.flowNodes || []).forEach((node) => {
+    if (node?.isStickyNote || node?.type === "stickyNote" || node?.type === "n8n-nodes-base.stickyNote") {
+      ids.add(node.id || `${node.name}:${node.position?.join(",")}`);
+    }
+  });
+  return ids.size;
+}
+
+export default function N8nWorkflowMain() {
+  const [graphData, setGraphData] = useState(null);
+  const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  const [graphLoadError, setGraphLoadError] = useState(null);
+  const [missingMappingNotice, setMissingMappingNotice] = useState("");
+  const lastVerifiedGraphRef = useRef(null);
+
+  // Load raw snapshot only; retain a prior snapshot only when its source was verified n8n API.
   const loadRemoteGraph = useCallback(async () => {
     setIsLoadingGraph(true);
     const res = await fetchWorkflowGraph();
     if (res.success && res.graph) {
       setGraphData(res.graph);
+      setGraphLoadError(null);
+      if (isVerifiedN8nSource(graphSource(res.graph))) {
+        lastVerifiedGraphRef.current = res.graph;
+      }
+    } else {
+      setGraphData(lastVerifiedGraphRef.current);
+      setGraphLoadError(res.error?.message || "Không tải được Graph API.");
     }
     setIsLoadingGraph(false);
   }, []);
 
   useEffect(() => {
-    loadRemoteGraph();
+    const frame = requestAnimationFrame(() => loadRemoteGraph());
+    return () => cancelAnimationFrame(frame);
   }, [loadRemoteGraph]);
 
   // Connection & Live State
@@ -78,6 +116,20 @@ export default function N8nWorkflowMain() {
     setLastEventTimestamp(now);
     setIsStale(false);
     setLatestEvent({ eventName, payload, receivedAt: new Date().toISOString() });
+
+    if (payload.stage === "openclaw.service") {
+      const serviceId = typeof payload.service_id === "string" ? payload.service_id : "";
+      const presentIds = graphNodeIds(graphData);
+      const explicitId = typeof payload.node_id === "string" ? payload.node_id.trim() : "";
+      const mappedId = explicitId && presentIds.has(explicitId) ? explicitId : mapServiceIdToNodeId(serviceId);
+      if (!mappedId) {
+        setMissingMappingNotice(`Chưa có ánh xạ node cho service_id: ${serviceId || "(thiếu)"}.`);
+      } else if (!presentIds.has(mappedId)) {
+        setMissingMappingNotice(`Graph snapshot thiếu node ${mappedId} cho service_id: ${serviceId}.`);
+      } else {
+        setMissingMappingNotice("");
+      }
+    }
 
     // Gateway runId is trace_id; group all service stages in one chat run under it.
     const requestId = payload.trace_id || payload.request_id;
@@ -116,7 +168,7 @@ export default function N8nWorkflowMain() {
         }
       });
     }
-  }, []);
+  }, [graphData]);
 
   // Xử lý sự kiện replay_gap
   const handleReplayGap = useCallback((payload) => {
@@ -182,11 +234,12 @@ export default function N8nWorkflowMain() {
     }
   };
 
-  const flowNodeCount = graphData?.nodes?.length ?? 36;
-  const stickyNoteCount = graphData?.stickyNotes?.length ?? 2;
-  const edgeCount = Array.isArray(graphData?.edges)
-    ? graphData.edges.length
-    : Object.keys(graphData?.connections || {}).length || 32;
+  const flowNodeCount = graphData ? (graphData.nodes || graphData.flowNodes || []).length : null;
+  const stickyNoteCount = graphData ? graphStickyCount(graphData) : null;
+  const edgeCount = graphEdgeCount(graphData);
+  const snapshotSource = graphSource(graphData);
+  const snapshotWorkflowId = graphData?.workflow_id || graphData?.workflowId || graphData?.id || graphData?.workflow?.id;
+  const verifiedSnapshot = isVerifiedN8nSource(snapshotSource);
 
   return (
     <div className="p-4 md:p-6 w-full flex flex-col gap-4 text-slate-100">
@@ -257,7 +310,11 @@ export default function N8nWorkflowMain() {
               </span>
 
               <span className="inline-flex items-center gap-1 text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-800">
-                <Boxes className="w-3 h-3 text-indigo-400" /> {graphData?.name || "media_tech_realtime"} ({graphData?.id || "0KwASApTaZfyktBi"})
+                <Boxes className="w-3 h-3 text-indigo-400" /> {graphData?.name || "Workflow graph"} ({snapshotWorkflowId || "workflow ID unavailable"})
+              </span>
+
+              <span className={`inline-flex items-center gap-1 text-xs font-mono font-medium px-2.5 py-0.5 rounded-full border ${verifiedSnapshot ? "bg-emerald-950/80 text-emerald-300 border-emerald-800" : "bg-amber-950/80 text-amber-200 border-amber-700"}`}>
+                <Info className="w-3 h-3" /> Source: {snapshotSource}{verifiedSnapshot ? " · n8n API" : " · unverified"}
               </span>
 
               {/* Stale Warning Badge */}
@@ -291,19 +348,19 @@ export default function N8nWorkflowMain() {
             <div className="flex items-center gap-1.5 text-slate-300" title="Nodes trên đồ thị">
               <Boxes className="w-4 h-4 text-cyan-400" />
               <span>Nodes:</span>
-              <span className="font-bold text-white">{flowNodeCount}</span>
+              <span className="font-bold text-white">{flowNodeCount ?? "—"}</span>
             </div>
             <span className="text-slate-700">|</span>
             <div className="flex items-center gap-1.5 text-slate-300" title="Vùng quy trình">
               <PanelTop className="w-4 h-4 text-indigo-400" />
               <span>Nhánh:</span>
-              <span className="font-bold text-white">{stickyNoteCount}</span>
+              <span className="font-bold text-white">{stickyNoteCount ?? "—"}</span>
             </div>
             <span className="text-slate-700">|</span>
             <div className="flex items-center gap-1.5 text-slate-300" title="Liên kết Luồng">
               <Activity className="w-4 h-4 text-emerald-400" />
               <span>Edges:</span>
-              <span className="font-bold text-white">{edgeCount}</span>
+              <span className="font-bold text-white">{graphData ? edgeCount : "—"}</span>
             </div>
           </div>
 
@@ -490,26 +547,55 @@ export default function N8nWorkflowMain() {
         </div>
       )}
 
-      {/* Ghi chú thông tin hệ thống */}
-      <div className="px-4 py-2.5 rounded-xl bg-slate-900/70 border border-slate-800 text-xs text-slate-400 flex flex-col md:flex-row md:items-center justify-between gap-2">
+      {/* Snapshot provenance and service-to-node mapping diagnostics */}
+      <div className={`px-4 py-2.5 rounded-xl border text-xs flex flex-col gap-2 ${verifiedSnapshot ? "bg-slate-900/70 border-slate-800 text-slate-400" : "bg-amber-950/50 border-amber-700/70 text-amber-100"}`}>
         <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-cyan-400 shrink-0" />
+          <Info className={`w-4 h-4 shrink-0 ${verifiedSnapshot ? "text-cyan-400" : "text-amber-300"}`} />
           <span>
-            <strong className="text-slate-200">Hệ thống:</strong> Sơ đồ n8n đồng bộ trực tiếp từ backend API (<code className="text-emerald-300">{NODE_BACKEND_HOST}/openclaw/workflow/graph</code>) và giám sát hoạt động thời gian thực qua SSE (<code className="text-cyan-300">{NODE_BACKEND_HOST}/openclaw/workflow/events</code>).
+            <strong className={verifiedSnapshot ? "text-slate-200" : "text-amber-100"}>Graph snapshot:</strong>{" "}
+            {graphData
+              ? verifiedSnapshot
+                ? "Nguồn xác nhận là n8n API. SSE chỉ cập nhật trạng thái node; topology lấy nguyên trạng từ snapshot."
+                : `Nguồn “${snapshotSource}” chưa xác minh dữ liệu từ instance n8n; không thể khẳng định canvas đồng bộ trực tiếp với n8n.`
+              : graphLoadError
+                ? `Graph unavailable/offline: ${graphLoadError}. Chưa có snapshot n8n API hợp lệ để giữ lại.`
+                : "Đang tải snapshot graph; chưa có topology để hiển thị."}
+            {graphData && <> Workflow ID: <code className="font-mono">{snapshotWorkflowId || "unknown"}</code>; {flowNodeCount} nodes / {edgeCount} edges.</>}
           </span>
         </div>
+        {graphData?.sync && (
+          <div className="pl-6 font-mono text-[11px] text-slate-400">
+            Sync: {JSON.stringify(graphData.sync)}
+          </div>
+        )}
+        {graphLoadError && graphData && (
+          <div className="pl-6 text-amber-200">Tải lại thất bại; đang hiển thị snapshot n8n API hợp lệ gần nhất. {graphLoadError}</div>
+        )}
+        {missingMappingNotice && (
+          <div className="pl-6 text-rose-200">Thiếu mapping service → node trong graph snapshot: {missingMappingNotice}</div>
+        )}
       </div>
 
       {/* Khung sơ đồ chính (React Flow Renderer) */}
       <main className="relative w-full h-[min(1000px,calc(100vh-180px))] min-h-[760px] rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl flex flex-col">
-        <N8nDiagramRenderer
-          ref={rendererRef}
-          graph={graphData}
-          onEventReceived={handleEventReceived}
-          onConnectionStatusChange={setConnectionStatus}
-          onReplayGap={handleReplayGap}
-          className="w-full h-full"
-        />
+        {graphData ? (
+          <N8nDiagramRenderer
+            ref={rendererRef}
+            graph={graphData}
+            onEventReceived={handleEventReceived}
+            onConnectionStatusChange={setConnectionStatus}
+            onReplayGap={handleReplayGap}
+            className="w-full h-full"
+          />
+        ) : (
+          <div className="m-auto max-w-xl p-6 text-center text-slate-300">
+            <AlertTriangle className="w-8 h-8 mx-auto mb-3 text-amber-300" />
+            <p className="font-semibold">Graph unavailable/offline</p>
+            <p className="mt-2 text-sm text-slate-400">
+              {graphLoadError || (isLoadingGraph ? "Đang tải snapshot graph…" : "Chưa có snapshot hợp lệ để hiển thị.")}
+            </p>
+          </div>
+        )}
       </main>
 
       {/* Khu vực Công cụ Mô phỏng Demo (ĐƯỢC TÁCH BIỆT RÕ RÀNG VỚI LUỒNG LIVE) */}

@@ -927,28 +927,25 @@ export const N8nDiagramRenderer = forwardRef<
       const mappedServiceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
         : undefined;
-      // Service lifecycle events map by service_id; only an explicit Chat node ID
-      // may identify ordinary chat without service_id=standard_chat.
+      const explicitServiceNodeId = typeof payload.node_id === "string" && graphNodeNamesRef.current.has(payload.node_id.trim())
+        ? payload.node_id.trim()
+        : undefined;
+      // Prefer an explicit node_id only when it exists in this snapshot; otherwise map by service_id.
       const serviceNodeId = isServiceStage
-        ? payload.node_id === CHAT_NODE_ID ? CHAT_NODE_ID : mappedServiceNodeId
+        ? explicitServiceNodeId || mappedServiceNodeId
         : undefined;
       if (isServiceStage && !serviceNodeId) {
         const serviceLabel = typeof payload.service_id === "string" && payload.service_id
           ? `Service chưa ánh xạ: ${payload.service_id}`
           : "openclaw.service • thiếu service_id";
-        if (eventName === "stage.started") {
-          setNodeStatus("node-stage-unclassified", "running", serviceLabel, 120000);
-        } else if (eventName === "stage.completed") {
-          const duration = payload.duration_ms || 0;
-          setNodeStatus(
-            "node-stage-unclassified",
-            duration > 1500 ? "slow" : "success",
-            `${serviceLabel} • ${duration}ms`,
-            8000
-          );
-        } else if (eventName === "stage.failed") {
-          setNodeStatus("node-stage-unclassified", "error", `${serviceLabel} • lỗi`, 8000);
-        }
+        console.warn(`[RealtimeGraph] ${serviceLabel}; no substitute node was highlighted.`);
+        return;
+      }
+
+      if (isServiceStage && serviceNodeId && !graphNodeNamesRef.current.has(serviceNodeId)) {
+        console.warn(
+          `[RealtimeGraph] Snapshot lacks node ${serviceNodeId} for service_id=${payload.service_id}; topology was not modified.`,
+        );
         return;
       }
 

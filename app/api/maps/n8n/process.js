@@ -26,26 +26,15 @@ export const NODE_BACKEND_GRAPH_URL = "https://node_md.hust.media/openclaw/workf
 export const NODE_BACKEND_HOST = "node_md.hust.media";
 export const STANDARD_CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 
-const OPENCLAW_SERVICE_NODE_DEFINITIONS = [
-  { serviceId: "media_text_to_image", id: "ee84c439-2efc-47e7-8b0b-5ebafe22da07", position: { x: 1260, y: -980 } },
-  { serviceId: "media_text_to_text", id: "25478a40-28e5-4373-9b66-205c593f8794", position: { x: 1530, y: -980 } },
-  { serviceId: "media_content_smart", id: "3e818377-4a3e-42e3-ac1e-8ea637aabc0d", position: { x: 1800, y: -980 } },
-  { serviceId: "media_spell_check", id: "40358c2e-4cd5-4ab3-b55d-730bacf216f2", position: { x: 2070, y: -980 } },
-  { serviceId: "media_script_writing", id: "187cb020-77d5-4c51-8102-21277c8562fa", position: { x: 1395, y: -800 } },
-  { serviceId: "media_image_to_text", id: "d015b908-5547-44f8-99f6-5d4a6f9f99f7", position: { x: 1665, y: -800 } },
-  { serviceId: "media_text_to_speech", id: "b3c64536-4524-4716-b9a8-24381b998946", position: { x: 1935, y: -800 } },
-  { serviceId: "standard_chat", id: STANDARD_CHAT_NODE_ID, position: { x: 1665, y: -600 } },
-];
-
-const SERVICE_REGION_NOTE = {
-  id: "openclaw-service-telemetry-region",
-  name: "OpenClaw Service Telemetry",
-  isStickyNote: true,
-  content: "# OpenClaw Service Telemetry\n7 service nodes are highlighted from SSE events using service_id.\nWorkflow: 0KwASApTaZfyktBi",
-  color: 6,
-  position: { x: 1220, y: -1040 },
-  width: 1150,
-  height: 410,
+const OPENCLAW_SERVICE_NODE_IDS = {
+  media_text_to_image: "ee84c439-2efc-47e7-8b0b-5ebafe22da07",
+  media_text_to_text: "25478a40-28e5-4373-9b66-205c593f8794",
+  media_content_smart: "3e818377-4a3e-42e3-ac1e-8ea637aabc0d",
+  media_spell_check: "40358c2e-4cd5-4ab3-b55d-730bacf216f2",
+  media_script_writing: "187cb020-77d5-4c51-8102-21277c8562fa",
+  media_image_to_text: "d015b908-5547-44f8-99f6-5d4a6f9f99f7",
+  media_text_to_speech: "b3c64536-4524-4716-b9a8-24381b998946",
+  standard_chat: STANDARD_CHAT_NODE_ID,
 };
 
 /**
@@ -71,7 +60,7 @@ export function getHealthProxyUrl() {
 }
 
 /**
- * Tải cấu trúc workflow thật từ Node backend API (36 nodes n8n media_tech_realtime)
+ * Nhận nguyên trạng graph snapshot cùng metadata từ Graph API. Không bổ sung topology.
  */
 export async function fetchWorkflowGraph() {
   try {
@@ -84,9 +73,16 @@ export async function fetchWorkflowGraph() {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     const data = await res.json();
-    return { success: true, graph: upsertOpenClawServiceNodes(data) };
+    const graph = data?.graph && typeof data.graph === "object"
+      ? data.graph
+      : data?.data?.graph && typeof data.data.graph === "object"
+        ? data.data.graph
+        : data?.data && typeof data.data === "object"
+          ? data.data
+          : data;
+    return { success: true, graph };
   } catch (err) {
-    console.warn("[WorkflowGraph] Could not fetch remote graph, falling back to local:", err);
+    console.warn("[WorkflowGraph] Could not fetch graph snapshot:", err);
     return { success: false, error: err };
   }
 }
@@ -183,54 +179,7 @@ export function mapStageToNodeId(stageName) {
 
 // Map each OpenClaw service execution to its dedicated node in the live workflow graph.
 export function mapServiceIdToNodeId(serviceId) {
-  return OPENCLAW_SERVICE_NODE_DEFINITIONS.find((node) => node.serviceId === serviceId)?.id || null;
-}
-
-/** Upsert telemetry nodes only into the intended media_tech_realtime workflow graph. */
-export function upsertOpenClawServiceNodes(inputGraph) {
-  const graph = inputGraph?.graph && typeof inputGraph.graph === "object"
-    ? inputGraph.graph
-    : inputGraph;
-  const workflowId = graph?.id || graph?.workflowId || graph?.workflow?.id;
-  if (workflowId !== OPENCLAW_REALTIME_WORKFLOW_ID) return inputGraph;
-
-  const sourceNodes = Array.isArray(graph.nodes)
-    ? graph.nodes
-    : Array.isArray(graph.flowNodes)
-    ? graph.flowNodes
-    : [];
-  const nodesById = new Map(sourceNodes.filter((node) => node?.id).map((node) => [node.id, node]));
-
-  OPENCLAW_SERVICE_NODE_DEFINITIONS.forEach(({ serviceId, id, position }) => {
-    const existing = nodesById.get(id);
-    nodesById.set(id, existing
-      ? serviceId === "standard_chat" ? existing : { ...existing, name: serviceId }
-      : {
-          id,
-          name: serviceId === "standard_chat" ? "Chat thường" : serviceId,
-          type: "n8n-nodes-base.code",
-          typeVersion: 2,
-          position,
-          disabled: false,
-          parameters: {},
-        });
-  });
-
-  const nodes = Array.from(nodesById.values());
-  const stickyNotes = Array.isArray(graph.stickyNotes) ? graph.stickyNotes : [];
-  const notesById = new Map(stickyNotes.filter((note) => note?.id).map((note) => [note.id, note]));
-  if (!notesById.has(SERVICE_REGION_NOTE.id)) {
-    notesById.set(SERVICE_REGION_NOTE.id, SERVICE_REGION_NOTE);
-  }
-
-  const patchedGraph = {
-    ...graph,
-    nodes,
-    ...(Array.isArray(graph.flowNodes) ? { flowNodes: nodes } : {}),
-    stickyNotes: Array.from(notesById.values()),
-  };
-
-  return graph === inputGraph ? patchedGraph : { ...inputGraph, graph: patchedGraph };
+  return OPENCLAW_SERVICE_NODE_IDS[serviceId] || null;
 }
 
 // Cấu trúc Graph thể hiện rõ 2 nhánh độc lập và các stage thực tế từ OpenClaw backend
