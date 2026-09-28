@@ -42,7 +42,12 @@ import {
   Zap,
 } from "lucide-react";
 
-import { mapServiceIdToNodeId, mapStageToNodeId, getSseProxyUrl } from "./process";
+import {
+  mapServiceIdToNodeId,
+  mapStageToNodeId,
+  getSseProxyUrl,
+  STANDARD_CHAT_NODE_ID,
+} from "./process";
 
 // ==========================================
 // 1. DATA CONTRACTS
@@ -114,7 +119,6 @@ export interface NodeActivitySSEPayload {
   request_id?: string;
   trace_id?: string;
   correlation_id?: string;
-  chat_kind?: string;
   service_id?: string;
   workflow_id?: string;
   execution_id?: string;
@@ -400,7 +404,7 @@ const N8N_NODE_TYPES = {
   stickyNote: N8nStickyNoteRenderer,
 };
 
-const CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
+const CHAT_NODE_ID = STANDARD_CHAT_NODE_ID;
 const OPENCLAW_FORMAT_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1";
 const SAFE_OUTCOMES = new Set([
   "success", "completed", "ok", "failed", "error", "timeout", "cancelled", "aborted", "skipped",
@@ -582,11 +586,11 @@ export const N8nDiagramRenderer = forwardRef<
   const [reconnectNonce, setReconnectNonce] = useState(0);
 
   const nodeTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const graphNodeNamesRef = useRef<Map<string, string>>(new Map());
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const eventSourceRef = useRef<EventSource | null>(null);
   const traceCorrelationRef = useRef<Map<string, string>>(new Map());
   const correlationTraceRef = useRef<Map<string, string>>(new Map());
-  const chatKindByTurnRef = useRef<Map<string, { chatKind: string; updatedAt: number }>>(new Map());
   const eventGroupsRef = useRef<Map<string, {
     traceIds: Set<string>;
     serviceIds: Set<string>;
@@ -709,7 +713,8 @@ export const N8nDiagramRenderer = forwardRef<
       onEventReceivedRef.current?.(eventName, payload);
 
       const isServiceStage = payload.stage === "openclaw.service";
-      const isGatewayChatStage = payload.stage === "openclaw.gateway.chat";
+      const isGatewayChatEvent =
+        eventName === "openclaw.gateway.chat" || payload.stage === "openclaw.gateway.chat";
       const isFormatStage = payload.stage === "openclaw.format_response";
       const traceId = payload.trace_id;
       const correlationId = payload.correlation_id;
@@ -732,31 +737,19 @@ export const N8nDiagramRenderer = forwardRef<
         (correlationId ? correlationTraceRef.current.get(correlationId) : undefined);
       const effectiveCorrelationId = correlationId ||
         (effectiveTraceId ? traceCorrelationRef.current.get(effectiveTraceId) : undefined);
-      const chatKindTurnKey = effectiveTraceId
-        ? `trace:${effectiveTraceId}`
-        : effectiveCorrelationId
-        ? `correlation:${effectiveCorrelationId}`
-        : payload.request_id
-        ? `request:${payload.request_id}`
-        : undefined;
-      const correlationAliasKey = effectiveCorrelationId
-        ? `correlation:${effectiveCorrelationId}`
-        : undefined;
-      const clearChatKindCacheForTurn = () => {
-        if (chatKindTurnKey) chatKindByTurnRef.current.delete(chatKindTurnKey);
-        if (correlationAliasKey) chatKindByTurnRef.current.delete(correlationAliasKey);
-        if (effectiveTraceId) chatKindByTurnRef.current.delete(`trace:${effectiveTraceId}`);
+      const clearTraceCorrelationForTurn = () => {
         if (effectiveTraceId) {
           const mappedCorrelationId = traceCorrelationRef.current.get(effectiveTraceId);
           traceCorrelationRef.current.delete(effectiveTraceId);
-          if (mappedCorrelationId) {
-            chatKindByTurnRef.current.delete(`correlation:${mappedCorrelationId}`);
-          }
           if (mappedCorrelationId && correlationTraceRef.current.get(mappedCorrelationId) === effectiveTraceId) {
             correlationTraceRef.current.delete(mappedCorrelationId);
           }
         } else if (effectiveCorrelationId) {
+          const mappedTraceId = correlationTraceRef.current.get(effectiveCorrelationId);
           correlationTraceRef.current.delete(effectiveCorrelationId);
+          if (mappedTraceId && traceCorrelationRef.current.get(mappedTraceId) === effectiveCorrelationId) {
+            traceCorrelationRef.current.delete(mappedTraceId);
+          }
         }
       };
       const requestGroupId = effectiveTraceId
@@ -795,72 +788,16 @@ export const N8nDiagramRenderer = forwardRef<
         }
       }
 
-      // Only the explicit Node discriminator may route a Gateway lifecycle to Chat.
-      if (isGatewayChatStage) {
-        const isLifecycleEvent = ["stage.started", "stage.completed", "stage.failed"].includes(eventName);
-        const eventChatKind = typeof payload.chat_kind === "string" && payload.chat_kind.trim()
-          ? payload.chat_kind.trim()
-          : undefined;
-        const cachedChatKind = chatKindTurnKey
-          ? chatKindByTurnRef.current.get(chatKindTurnKey)?.chatKind ||
-            (correlationAliasKey ? chatKindByTurnRef.current.get(correlationAliasKey)?.chatKind : undefined)
-          : undefined;
-        const chatKind = eventChatKind || cachedChatKind;
-
-        if (isLifecycleEvent && eventChatKind && chatKindTurnKey) {
-          chatKindByTurnRef.current.set(chatKindTurnKey, {
-            chatKind: eventChatKind,
-            updatedAt: Date.now(),
-          });
-          if (correlationAliasKey && correlationAliasKey !== chatKindTurnKey) {
-            chatKindByTurnRef.current.delete(correlationAliasKey);
-          }
-          if (chatKindByTurnRef.current.size > 500) {
-            const oldestTurn = Array.from(chatKindByTurnRef.current.entries())
-              .sort((a, b) => a[1].updatedAt - b[1].updatedAt)[0];
-            if (oldestTurn) chatKindByTurnRef.current.delete(oldestTurn[0]);
-          }
-        }
-
-        const isOrdinaryChat = chatKind === "ordinary";
-        const targetNodeId = isOrdinaryChat ? CHAT_NODE_ID : "node-stage-unclassified";
-        const chatLabel = isOrdinaryChat ? "Chat thường" : "openclaw.gateway.chat • chưa phân loại";
-        if (eventName === "stage.started") {
-          setNodeStatus(targetNodeId, "running", `${chatLabel} • đang chạy`, 120000);
-        } else if (eventName === "stage.completed") {
-          const duration = payload.duration_ms || 0;
-          setNodeStatus(
-            targetNodeId,
-            duration > 1500 ? "slow" : "success",
-            `${chatLabel} • ${getSafeOutcomeLabel(payload.outcome, "completed")} • ${duration}ms`,
-            8000
-          );
-        } else if (eventName === "stage.failed") {
-          setNodeStatus(
-            targetNodeId,
-            "error",
-            `${chatLabel} • ${getSafeOutcomeLabel(payload.outcome, "failed")} • lỗi`,
-            8000
-          );
-        }
-        if ((eventName === "stage.completed" || eventName === "stage.failed") && chatKindTurnKey) {
-          clearChatKindCacheForTurn();
-        }
-        return;
-      }
-      if (eventName === "openclaw.gateway.chat") return;
+      // This generic gateway event does not identify a specific chat/service node.
+      if (isGatewayChatEvent) return;
 
       const mappedServiceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
         : undefined;
-      // Standard chat is emitted through the same service lifecycle as tools.
-      // Accept either its stable service_id or the explicit workflow node_id.
+      // Service lifecycle events map by service_id; only an explicit Chat node ID
+      // may identify ordinary chat without service_id=standard_chat.
       const serviceNodeId = isServiceStage
-        ? mappedServiceNodeId || (
-            payload.service_id === "standard_chat" || payload.node_id === CHAT_NODE_ID
-              ? CHAT_NODE_ID
-              : undefined
-          )
+        ? payload.node_id === CHAT_NODE_ID ? CHAT_NODE_ID : mappedServiceNodeId
         : undefined;
       if (isServiceStage && !serviceNodeId) {
         const serviceLabel = typeof payload.service_id === "string" && payload.service_id
@@ -881,6 +818,24 @@ export const N8nDiagramRenderer = forwardRef<
         }
         return;
       }
+
+      const explicitNodeId = typeof payload.node_id === "string" ? payload.node_id.trim() : "";
+      const explicitNodeName = explicitNodeId
+        ? graphNodeNamesRef.current.get(explicitNodeId)
+        : undefined;
+      const isGraphNodeEvent = !isServiceStage && Boolean(explicitNodeId);
+      const lifecycleTargetNodeId = isServiceStage
+        ? serviceNodeId
+        : isGraphNodeEvent
+          ? explicitNodeName ? explicitNodeId : undefined
+          : isFormatStage
+            ? OPENCLAW_FORMAT_NODE_ID
+            : mapStageToNodeId(payload.stage);
+      const lifecycleNodeLabel = isServiceStage
+        ? serviceNodeId === CHAT_NODE_ID ? "Chat thường" : payload.service_id || "openclaw.service"
+        : isFormatStage
+          ? payload.node_name || explicitNodeName || "Format OpenClaw response"
+          : payload.node_name || explicitNodeName || payload.stage || "Workflow node";
 
       // 2. Xử lý theo từng loại event chuẩn từ Node backend
       switch (eventName) {
@@ -904,50 +859,37 @@ export const N8nDiagramRenderer = forwardRef<
         }
 
         case "stage.started": {
-          const targetNodeId = isFormatStage
-            ? payload.node_id || OPENCLAW_FORMAT_NODE_ID
-            : serviceNodeId || mapStageToNodeId(payload.stage);
+          const targetNodeId = lifecycleTargetNodeId;
+          if (!targetNodeId) break;
           const isUnclassified =
             targetNodeId === "node-stage-unclassified" ||
             (Array.isArray(targetNodeId) && targetNodeId.includes("node-stage-unclassified"));
           const label = isUnclassified
             ? `${payload.stage || "unknown"}`
-            : serviceNodeId
-            ? `${payload.service_id} • đang chạy`
-            : (payload.stage || "running");
+            : `${lifecycleNodeLabel} • đang chạy`;
           setNodeStatus(targetNodeId, "running", label, 120000);
           break;
         }
 
         case "stage.completed": {
-          const targetNodeId = isFormatStage
-            ? payload.node_id || OPENCLAW_FORMAT_NODE_ID
-            : serviceNodeId || mapStageToNodeId(payload.stage);
+          const targetNodeId = lifecycleTargetNodeId;
+          if (!targetNodeId) break;
           const duration = payload.duration_ms || 0;
           const status = duration > 1500 ? "slow" : "success";
           const outcome = getSafeOutcomeLabel(payload.outcome, "completed");
-          const label = isFormatStage
-            ? `${payload.node_name || "Format OpenClaw response"} • ${outcome} • ${duration}ms`
-            : serviceNodeId
-            ? `${payload.service_id} • ${outcome} • ${duration}ms`
-            : `${payload.stage || ""} (${duration}ms)`;
+          const label = `${lifecycleNodeLabel} • ${outcome} • ${duration}ms`;
           setNodeStatus(targetNodeId, status, label, 8000);
           break;
         }
 
         case "stage.failed": {
-          const targetNodeId = isFormatStage
-            ? payload.node_id || OPENCLAW_FORMAT_NODE_ID
-            : serviceNodeId || mapStageToNodeId(payload.stage);
+          const targetNodeId = lifecycleTargetNodeId;
+          if (!targetNodeId) break;
           const duration = payload.duration_ms || 0;
           const outcome = getSafeOutcomeLabel(payload.outcome, "failed");
-          const label = isFormatStage
-            ? `${payload.node_name || "Format OpenClaw response"} • ${outcome} • ${duration}ms`
-            : serviceNodeId
-            ? `${payload.service_id} • ${outcome} • ${duration}ms`
-            : `Lỗi ${payload.status_code || 500}: ${payload.stage || ""}`;
+          const label = `${lifecycleNodeLabel} • ${outcome} • ${duration}ms`;
           setNodeStatus(targetNodeId, "error", label, 8000);
-          if (!serviceNodeId && !isFormatStage) {
+          if (!serviceNodeId && !isFormatStage && !isGraphNodeEvent) {
             setNodeStatus(
               ["ce361f6c-bf94-4d14-9579-c5bf3ef818d1", "Acknowledge Node Activity", "node-request-outcome"],
               "error",
@@ -959,7 +901,7 @@ export const N8nDiagramRenderer = forwardRef<
         }
 
         case "request.completed": {
-          clearChatKindCacheForTurn();
+          clearTraceCorrelationForTurn();
           const statusCode = payload.status_code || 200;
           const isError = statusCode >= 400;
           const duration = payload.duration_ms || 0;
@@ -1013,7 +955,6 @@ export const N8nDiagramRenderer = forwardRef<
         nodeTimersRef.current.clear();
         traceCorrelationRef.current.clear();
         correlationTraceRef.current.clear();
-        chatKindByTurnRef.current.clear();
         eventGroupsRef.current.clear();
         setNodes((current) =>
           current.map((n) =>
@@ -1038,6 +979,11 @@ export const N8nDiagramRenderer = forwardRef<
   useEffect(() => {
     if (!graph) return;
     const { allNodes, flowEdges } = convertNormalizedGraphToFlow(graph);
+    graphNodeNamesRef.current = new Map(
+      allNodes
+        .filter((node) => node.type === "n8nNode")
+        .map((node) => [node.id, (node.data as FlowNodeData).name || ""]),
+    );
 
     setNodes((prevNodes) => {
       if (!prevNodes || prevNodes.length === 0) {

@@ -24,6 +24,7 @@ export const NODE_BACKEND_SSE_URL = "https://node_md.hust.media/openclaw/workflo
 export const NODE_BACKEND_HEALTH_URL = "https://node_md.hust.media/openclaw/workflow/health";
 export const NODE_BACKEND_GRAPH_URL = "https://node_md.hust.media/openclaw/workflow/graph";
 export const NODE_BACKEND_HOST = "node_md.hust.media";
+export const STANDARD_CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 
 const OPENCLAW_SERVICE_NODE_DEFINITIONS = [
   { serviceId: "media_text_to_image", id: "ee84c439-2efc-47e7-8b0b-5ebafe22da07", position: { x: 1260, y: -980 } },
@@ -33,6 +34,7 @@ const OPENCLAW_SERVICE_NODE_DEFINITIONS = [
   { serviceId: "media_script_writing", id: "187cb020-77d5-4c51-8102-21277c8562fa", position: { x: 1395, y: -800 } },
   { serviceId: "media_image_to_text", id: "d015b908-5547-44f8-99f6-5d4a6f9f99f7", position: { x: 1665, y: -800 } },
   { serviceId: "media_text_to_speech", id: "b3c64536-4524-4716-b9a8-24381b998946", position: { x: 1935, y: -800 } },
+  { serviceId: "standard_chat", id: STANDARD_CHAT_NODE_ID, position: { x: 1665, y: -600 } },
 ];
 
 const SERVICE_REGION_NOTE = {
@@ -202,10 +204,10 @@ export function upsertOpenClawServiceNodes(inputGraph) {
   OPENCLAW_SERVICE_NODE_DEFINITIONS.forEach(({ serviceId, id, position }) => {
     const existing = nodesById.get(id);
     nodesById.set(id, existing
-      ? { ...existing, name: serviceId }
+      ? serviceId === "standard_chat" ? existing : { ...existing, name: serviceId }
       : {
           id,
-          name: serviceId,
+          name: serviceId === "standard_chat" ? "Chat thường" : serviceId,
           type: "n8n-nodes-base.code",
           typeVersion: 2,
           position,
@@ -277,6 +279,14 @@ export const MOCK_GRAPH_DATA = {
       type: "n8n-nodes-base.code",
       typeVersion: 2,
       position: { x: 420, y: 50 },
+      disabled: false,
+    },
+    {
+      id: STANDARD_CHAT_NODE_ID,
+      name: "Chat thường",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: { x: 420, y: 150 },
       disabled: false,
     },
 
