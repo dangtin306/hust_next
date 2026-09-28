@@ -144,6 +144,8 @@ export type FlowNodeData = {
   nodeType: string;
   typeVersion?: number;
   parameters?: Record<string, unknown>;
+  sourceHandleIds?: string[];
+  targetHandleIds?: string[];
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
   subLabel?: string;
@@ -341,6 +343,17 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
     data.nodeType === "n8n-nodes-base.httpRequest" && httpMethod && httpUrl
       ? `${httpMethod}: ${httpUrl}`
       : "";
+  const sourceHandleIds = data.sourceHandleIds?.length
+    ? data.sourceHandleIds
+    : ["main-0"];
+  const targetHandleIds = data.targetHandleIds?.length
+    ? data.targetHandleIds
+    : ["main-0"];
+  const isFormatDecision =
+    id === "b18073a2-c1a5-4ef4-a803-8e03ad67b3d1" &&
+    data.nodeType === "n8n-nodes-base.if";
+  const getHandlePositionStyle = (index: number, count: number) =>
+    count > 1 ? { top: `${((index + 1) / (count + 1)) * 100}%` } : undefined;
 
   const getBorderStatusClass = () => {
     switch (liveStatus) {
@@ -383,12 +396,16 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
       <div
         className={`w-16 h-16 rounded-2xl border-2 flex items-center justify-center shadow-lg relative transition-all duration-300 ${getBorderStatusClass()}`}
       >
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="main-0"
-          className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
-        />
+        {targetHandleIds.map((handleId, index) => (
+          <Handle
+            key={`target-${handleId}`}
+            type="target"
+            position={Position.Left}
+            id={handleId}
+            style={getHandlePositionStyle(index, targetHandleIds.length)}
+            className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
+          />
+        ))}
 
         <div
           className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center text-white shadow-md transition-transform duration-200 group-hover:scale-105`}
@@ -396,12 +413,32 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
           <NodeIcon className="w-5 h-5 stroke-[2.2]" />
         </div>
 
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="main-0"
-          className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
-        />
+        {sourceHandleIds.map((handleId, index) => {
+          const handlePositionStyle = getHandlePositionStyle(index, sourceHandleIds.length);
+          const outputLabel = isFormatDecision
+            ? handleId === "main-0" ? "true" : handleId === "main-1" ? "false" : undefined
+            : undefined;
+
+          return (
+            <React.Fragment key={`source-${handleId}`}>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={handleId}
+                style={handlePositionStyle}
+                className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
+              />
+              {outputLabel && (
+                <span
+                  className="absolute z-10 -right-7 -translate-y-1/2 pointer-events-none text-[8px] leading-none font-semibold text-slate-200"
+                  style={handlePositionStyle}
+                >
+                  {outputLabel}
+                </span>
+              )}
+            </React.Fragment>
+          );
+        })}
 
         {glowDotColor && (
           <span
@@ -583,8 +620,53 @@ export const convertNormalizedGraphToFlow = (
     });
   }
 
+  const handlesByNode = new Map<string, { sources: Set<string>; targets: Set<string> }>();
+  const getHandlesForNode = (nodeId: string) => {
+    let handles = handlesByNode.get(nodeId);
+    if (!handles) {
+      handles = { sources: new Set<string>(), targets: new Set<string>() };
+      handlesByNode.set(nodeId, handles);
+    }
+    return handles;
+  };
+
+  flowEdges.forEach((edge) => {
+    if (edge.source) {
+      getHandlesForNode(edge.source).sources.add(edge.sourceHandle || "main-0");
+    }
+    if (edge.target) {
+      getHandlesForNode(edge.target).targets.add(edge.targetHandle || "main-0");
+    }
+  });
+
+  const sortHandleIds = (handleIds: Set<string>) =>
+    Array.from(handleIds).sort((left, right) => {
+      const leftIndex = Number(left.match(/-(\d+)$/)?.[1]);
+      const rightIndex = Number(right.match(/-(\d+)$/)?.[1]);
+      if (Number.isFinite(leftIndex) && Number.isFinite(rightIndex)) {
+        return leftIndex - rightIndex;
+      }
+      return left.localeCompare(right);
+    });
+
+  const flowNodesWithHandles = flowNodes.map((node) => {
+    const handles = handlesByNode.get(node.id);
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        sourceHandleIds: handles?.sources.size
+          ? sortHandleIds(handles.sources)
+          : ["main-0"],
+        targetHandleIds: handles?.targets.size
+          ? sortHandleIds(handles.targets)
+          : ["main-0"],
+      },
+    };
+  });
+
   return {
-    allNodes: [...stickyNotes, ...flowNodes],
+    allNodes: [...stickyNotes, ...flowNodesWithHandles],
     flowEdges,
   };
 };
