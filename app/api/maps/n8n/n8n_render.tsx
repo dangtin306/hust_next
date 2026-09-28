@@ -33,7 +33,9 @@ import {
   Code2,
   Database,
   GitBranch,
+  GitFork,
   GitMerge,
+  Globe,
   HelpCircle,
   MessageSquare,
   Radio,
@@ -62,6 +64,7 @@ export interface N8nFlowNode {
   typeVersion?: number;
   position: PositionInput;
   disabled?: boolean;
+  parameters?: Record<string, unknown>;
   isStickyNote?: false;
   [key: string]: unknown;
 }
@@ -140,6 +143,7 @@ export type FlowNodeData = {
   name: string;
   nodeType: string;
   typeVersion?: number;
+  parameters?: Record<string, unknown>;
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
   subLabel?: string;
@@ -200,7 +204,32 @@ const STICKY_COLOR_MAP: Record<
   },
 };
 
-const getNodeCategory = (nodeType = "", name = "") => {
+const getNodeCategory = (nodeType = "", name = "", nodeId = "") => {
+  // Render the final OpenClaw workflow nodes by their n8n node type, never by label text.
+  if (
+    nodeId === "b18073a2-c1a5-4ef4-a803-8e03ad67b3d1" &&
+    nodeType === "n8n-nodes-base.if"
+  ) {
+    return { icon: GitFork, bg: "bg-[#2ca34a]" };
+  }
+  if (
+    [
+      "a8b336c8-0af9-4e0e-a87e-2421c8aa0001",
+      "a8b336c8-0af9-4e0e-a87e-2421c8aa0003",
+    ].includes(nodeId) && nodeType === "n8n-nodes-base.httpRequest"
+  ) {
+    return { icon: Globe, bg: "bg-[#2867b2]" };
+  }
+  if (
+    [
+      "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1",
+      "a8b336c8-0af9-4e0e-a87e-2421c8aa0002",
+      "a8b336c8-0af9-4e0e-a87e-2421c8aa0004",
+    ].includes(nodeId) && nodeType === "n8n-nodes-base.code"
+  ) {
+    return { icon: Code2, bg: "bg-[#f59e0b]" };
+  }
+
   const lower = (nodeType + " " + name).toLowerCase();
   if (lower.includes("webhook") || lower.includes("ingress")) return { icon: Radio, bg: "bg-[#ff6d5a]" };
   if (lower.includes("trigger") || lower.includes("cron")) return { icon: Clock, bg: "bg-[#10b981]" };
@@ -300,8 +329,18 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
 }
 
 function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
-  const { icon: NodeIcon, bg: iconBg } = getNodeCategory(data.nodeType, data.name);
+  const { icon: NodeIcon, bg: iconBg } = getNodeCategory(data.nodeType, data.name, id);
   const liveStatus = data.liveStatus || "idle";
+  const httpMethod = typeof data.parameters?.method === "string"
+    ? data.parameters.method.trim().toUpperCase()
+    : "";
+  const httpUrl = typeof data.parameters?.url === "string"
+    ? data.parameters.url.trim()
+    : "";
+  const httpRequestSummary =
+    data.nodeType === "n8n-nodes-base.httpRequest" && httpMethod && httpUrl
+      ? `${httpMethod}: ${httpUrl}`
+      : "";
 
   const getBorderStatusClass = () => {
     switch (liveStatus) {
@@ -386,6 +425,14 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
             {data.description}
           </span>
         )}
+        {httpRequestSummary && (
+          <span
+            className="mt-0.5 text-[9px] leading-tight text-sky-300 font-mono max-w-[124px] truncate"
+            title={httpRequestSummary}
+          >
+            {httpRequestSummary}
+          </span>
+        )}
         {data.subLabel && (
           <span className="text-[10px] text-cyan-300 font-mono font-medium max-w-[120px] truncate">
             {data.subLabel}
@@ -461,6 +508,10 @@ export const convertNormalizedGraphToFlow = (
       name: node.name,
       nodeType: node.type,
       typeVersion: node.typeVersion,
+      parameters:
+        node.parameters && typeof node.parameters === "object"
+          ? node.parameters as Record<string, unknown>
+          : undefined,
       disabled: Boolean(node.disabled),
       liveStatus: "idle",
       subLabel: "",
