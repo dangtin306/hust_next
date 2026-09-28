@@ -123,6 +123,29 @@ export const OPENCLAW_SESSION_MAP: Record<string, string> = {
   "540": "ee1ad515-9cc0-4052-ba37-dec83e880c7c",
 };
 
+function createCorrelationId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (typeof cryptoApi?.randomUUID === "function") {
+    return cryptoApi.randomUUID();
+  }
+
+  // randomUUID is unavailable on some browsers when the site is served over
+  // plain HTTP (for example, from a LAN IP). Prefer Web Crypto when available.
+  const bytes = new Uint8Array(16);
+  if (typeof cryptoApi?.getRandomValues === "function") {
+    cryptoApi.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+}
+
 // Markdown-like text renderer with syntax highlighting container for code blocks
 export function FormattedMessageContent({ text }: { text: string }) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -454,7 +477,7 @@ export default function MediaTechChatClient({
 
       const activeService = attachedImage ? "media_image_to_text" : apiService;
       const selectedServiceId = attachedImage ? "media_image_to_text" : displayService;
-      const correlationId = crypto.randomUUID();
+      const correlationId = createCorrelationId();
       const reqHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         "x-openclaw-session-key": activeSessionKey,
@@ -583,25 +606,32 @@ export default function MediaTechChatClient({
             ?.find((item: any) => item?.type === "output_image" && item?.source?.data);
           if (outputImage) {
             imageUrl = `data:${outputImage.source.media_type || "image/png"};base64,${outputImage.source.data}`;
-            botReply = "Đã tạo hình ảnh theo yêu cầu.";
+            botReply = "Mình đã tạo ảnh cho bạn đây.";
+          } else if (typeof data?.output_text === "string" && data.output_text.trim()) {
+            botReply = data.output_text;
+          } else {
+            // Image API responses contain internal metadata; never show the raw
+            // response JSON as if it were a user-facing answer.
+            botReply = "Mình chưa nhận được ảnh từ dịch vụ. Bạn thử lại nhé.";
           }
-        }
-        if (!botReply && typeof data?.output_text === "string" && data.output_text) {
-          botReply = data.output_text;
-        } else if (!botReply && Array.isArray(data?.output) && data.output.length > 0) {
-          const firstOut = data.output[0];
-          if (Array.isArray(firstOut?.content)) {
-            botReply = firstOut.content.map((c: any) => c.text || c.output_text || "").join("\n");
-          } else if (typeof firstOut?.content === "string") {
-            botReply = firstOut.content;
-          }
-        } else if (Array.isArray(data?.choices) && data.choices.length > 0) {
-          const first = data.choices[0];
-          botReply = first?.message?.content || first?.text || "";
-        } else if (typeof data === "string") {
-          botReply = data;
         } else {
-          botReply = JSON.stringify(data);
+          if (typeof data?.output_text === "string" && data.output_text) {
+            botReply = data.output_text;
+          } else if (Array.isArray(data?.output) && data.output.length > 0) {
+            const firstOut = data.output[0];
+            if (Array.isArray(firstOut?.content)) {
+              botReply = firstOut.content.map((c: any) => c.text || c.output_text || "").join("\n");
+            } else if (typeof firstOut?.content === "string") {
+              botReply = firstOut.content;
+            }
+          } else if (Array.isArray(data?.choices) && data.choices.length > 0) {
+            const first = data.choices[0];
+            botReply = first?.message?.content || first?.text || "";
+          } else if (typeof data === "string") {
+            botReply = data;
+          } else {
+            botReply = JSON.stringify(data);
+          }
         }
 
         if (data.conversation_id && data.conversation_id !== activeConvId) {
@@ -1004,7 +1034,9 @@ export default function MediaTechChatClient({
                       />
                     )}
                     {isBot ? (
-                      <FormattedMessageContent text={msg.text} />
+                      <FormattedMessageContent
+                        text={msg.imageUrl ? "Mình đã tạo ảnh cho bạn đây." : msg.text}
+                      />
                     ) : (
                       <div className="whitespace-pre-wrap break-words">{msg.text}</div>
                     )}

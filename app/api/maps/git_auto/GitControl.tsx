@@ -393,6 +393,10 @@ function HistoryPanel({
             ? event.short_sha || event.sha.slice(0, 7)
             : event.type === "pull_request"
               ? "PULL REQUEST"
+              : event.type === "vscode_sync"
+                ? "VS CODE"
+                : event.type === "update_code"
+                  ? "FULL/SYNC"
               : event.type.toUpperCase();
           const eventDescription = isCommit
             ? event.message?.trim()
@@ -402,6 +406,10 @@ function HistoryPanel({
                 ? `Push ${event.mode || "all"} · ${event.status || "—"}`
                 : event.type === "pull_request" || event.type === "merge"
                   ? `Pull request #${event.pr_index || "—"} · ${event.source_branch || "—"} → ${event.target_branch || "—"} · ${event.status || "—"}`
+                  : event.type === "vscode_sync"
+                    ? `Cập nhật Git Graph vào VS Code · ${event.target || event.branch || "—"} · Nhánh: ${event.updated_branches?.join(", ") || "—"} · ${event.status || "—"}`
+                    : event.type === "update_code"
+                      ? event.message?.trim() || `Full/Sync · ${event.branch || "—"} · ${event.status || "—"}`
                   : "Unknown history event";
           const eventColor = isCommit
             ? "text-indigo-600"
@@ -411,14 +419,20 @@ function HistoryPanel({
                 ? "text-emerald-600"
                 : event.type === "pull_request"
                   ? "text-indigo-600"
-                  : "text-violet-600";
+                  : event.type === "merge"
+                    ? "text-violet-600"
+                    : event.type === "vscode_sync"
+                      ? "text-cyan-700"
+                      : event.type === "update_code"
+                        ? "text-sky-700"
+                        : "text-slate-600";
           return (
           <button
             key={isCommit ? event.sha : `${event.type}-${event.date || index}`}
             onClick={() => onSelect(event)}
             className="flex w-full items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
           >
-            <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : event.type === "pull" ? "bg-sky-50" : event.type === "push" ? "bg-emerald-50" : event.type === "pull_request" ? "bg-indigo-50" : "bg-violet-50"}`}>
+            <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : event.type === "pull" ? "bg-sky-50" : event.type === "push" ? "bg-emerald-50" : event.type === "pull_request" ? "bg-indigo-50" : event.type === "merge" ? "bg-violet-50" : event.type === "vscode_sync" ? "bg-cyan-50" : event.type === "update_code" ? "bg-sky-50" : "bg-slate-50"}`}>
               {eventLabel}
             </span>
             {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{eventLabel}</span>}
@@ -451,12 +465,18 @@ function HistoryPanel({
                 ? `Push ${selectedCommit.mode || "all"} · ${selectedCommit.status || "—"}`
                 : selectedCommit.type === "pull_request" || selectedCommit.type === "merge"
                   ? `Pull request #${selectedCommit.pr_index || "—"} · ${selectedCommit.source_branch || "—"} → ${selectedCommit.target_branch || "—"} · ${selectedCommit.status || "—"}`
+                  : selectedCommit.type === "vscode_sync"
+                    ? `Cập nhật Git Graph vào VS Code · Target: ${selectedCommit.target || selectedCommit.branch || "—"} · Remote: ${selectedCommit.mirror_remote || "—"} · Nhánh: ${selectedCommit.updated_branches?.join(", ") || "—"} · ${selectedCommit.status || "—"}`
+                    : selectedCommit.type === "update_code"
+                      ? selectedCommit.message?.trim() || `Full/Sync · ${selectedCommit.branch || "—"} · ${selectedCommit.status || "—"}`
                   : "Unknown history event"}
           </p>
           <p className="mt-1 font-mono text-slate-500">
             {selectedCommit.type === "commit"
               ? `${selectedCommit.sha} · ${selectedCommit.author}`
-              : selectedCommit.type.toUpperCase()}
+              : selectedCommit.type === "vscode_sync"
+                ? `${selectedCommit.target_inferred ? "Theo cấu hình" : "Target được chọn"} · Remote refs ${selectedCommit.remote_refs_available ? "có sẵn" : "không có"}`
+                : selectedCommit.type.toUpperCase()}
           </p>
         </div>
       )}
@@ -645,6 +665,7 @@ export default function GitControl() {
   const [toast, setToast] = useState("");
   const [toastPaused, setToastPaused] = useState(false);
   const toastTimer = useRef<number | undefined>(undefined);
+  const vscodeSyncPanelRef = useRef<HTMLDivElement>(null);
   const [pullRequestLoading, setPullRequestLoading] = useState(false);
   const [pullRequestNotice, setPullRequestNotice] = useState("");
   const [newCycle, setNewCycle] = useState(false);
@@ -802,6 +823,42 @@ export default function GitControl() {
     if (scope === "push") setPushNotice(message);
     toastTimer.current = window.setTimeout(() => setToast(""), 3000);
   }, []);
+  const [vscodeSyncTarget, setVscodeSyncTarget] = useState<"config" | "main" | "demo" | null>(null);
+  const [vscodeSyncNotice, setVscodeSyncNotice] = useState("");
+  const syncVscodeExtension = async (target?: "main" | "demo") => {
+    const requestedTarget = target || "config hiện tại";
+    vscodeSyncPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setVscodeSyncTarget(target || "config");
+    setVscodeSyncNotice(`Đang đồng bộ metadata theo ${requestedTarget}…`);
+    try {
+      const result = await laravelGitService.syncGraphMirror(target);
+      if (result.status === "error" || result.synced === false) {
+        const error = new Error(result.message || `API không đồng bộ được target ${requestedTarget}.`) as GitApiError;
+        error.code = result.error_code;
+        throw error;
+      }
+      const actualTarget = result.target || target || "—";
+      const branches = result.updated_branches?.length
+        ? result.updated_branches.join(", ")
+        : "không có nhánh cần cập nhật";
+      const refs = result.remote_refs_available === undefined
+        ? "không rõ"
+        : result.remote_refs_available ? "có" : "không";
+      const selection = result.target_inferred === undefined
+        ? ""
+        : result.target_inferred ? " · theo config" : " · theo lựa chọn";
+      const details = `Target: ${actualTarget}${selection} · Remote: ${result.mirror_remote || "—"} · Nhánh: ${branches} · Remote refs: ${refs}`;
+      setVscodeSyncNotice(`Đồng bộ thành công. ${details}`);
+      notify(`Đã đồng bộ metadata VS Code tới ${actualTarget}.`);
+      load(true);
+    } catch (error) {
+      const message = `Đồng bộ VS Code thất bại: ${apiError(error as GitApiError)}`;
+      setVscodeSyncNotice(message);
+      notify(message);
+    } finally {
+      setVscodeSyncTarget(null);
+    }
+  };
   const openPullRequestDetails = async () => {
     const index = workflow?.pull_request?.index;
     if (!index) return;
@@ -1416,6 +1473,37 @@ export default function GitControl() {
               </p>
             </div>
           </Panel>
+          <div ref={vscodeSyncPanelRef}>
+            <Panel
+              title="Đồng bộ extension VS Code"
+              icon={<Code2 size={16} className="text-indigo-500" />}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">
+                  Cập nhật thông tin vào VS Code.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button disabled={vscodeSyncTarget !== null} onClick={() => void syncVscodeExtension()}>
+                    {vscodeSyncTarget === "config" && <RefreshCw size={13} className="animate-spin" />}
+                    Accept config
+                  </Button>
+                  <Button disabled={vscodeSyncTarget !== null} onClick={() => void syncVscodeExtension("main")}>
+                    {vscodeSyncTarget === "main" && <RefreshCw size={13} className="animate-spin" />}
+                    Accept main
+                  </Button>
+                  <Button disabled={vscodeSyncTarget !== null} onClick={() => void syncVscodeExtension("demo")}>
+                    {vscodeSyncTarget === "demo" && <RefreshCw size={13} className="animate-spin" />}
+                    Accept demo
+                  </Button>
+                </div>
+              </div>
+              {vscodeSyncNotice && (
+                <p className={`mt-2 break-words text-xs ${/thất bại|lỗi/i.test(vscodeSyncNotice) ? "text-rose-600" : /đang/i.test(vscodeSyncNotice) ? "text-amber-600" : "text-emerald-600"}`}>
+                  {vscodeSyncNotice}
+                </p>
+              )}
+            </Panel>
+          </div>
           <Panel
             title="Diff Viewer"
             icon={<FileCode2 size={16} className="text-indigo-500" />}

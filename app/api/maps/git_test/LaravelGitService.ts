@@ -94,7 +94,9 @@ export type HistoryEvent =
   | { type: "pull"; branch?: string; status?: string; date?: string }
   | { type: "push"; mode?: string; status?: string; date?: string }
   | { type: "pull_request"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; date?: string }
-  | { type: "merge"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; short_sha?: string; date?: string };
+  | { type: "merge"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; short_sha?: string; date?: string }
+  | { type: "update_code"; branch?: string; status?: string; message?: string; copied_count?: number; date?: string }
+  | { type: "vscode_sync"; branch?: string; status?: string; target?: string; target_inferred?: boolean; mirror_remote?: string; updated_branches?: string[]; remote_refs_available?: boolean; message?: string; error_code?: string; date?: string };
 export type HistoryResponse = {
   history_data?: HistoryEvent[];
   commits?: Commit[];
@@ -133,6 +135,17 @@ export type PullRequestMergeResult = {
   merge_commit_sha?: string;
   source_branch?: string;
   target_branch?: string;
+};
+export type GraphMirrorSyncResult = {
+  status?: "ok" | "error";
+  message?: string;
+  error_code?: string;
+  target?: "main" | "demo";
+  target_inferred?: boolean;
+  synced?: boolean;
+  mirror_remote?: string;
+  updated_branches?: string[];
+  remote_refs_available?: boolean;
 };
 export type GitWorkflow = {
   repository: string;
@@ -372,6 +385,13 @@ export class LaravelGitService {
       "projects/source/update-code",
       "POST",
       { component: COMPONENT },
+    );
+  }
+  async syncGraphMirror(target?: "main" | "demo") {
+    return request<GraphMirrorSyncResult>(
+      "projects/source/sync-graph-mirror",
+      "POST",
+      target ? { target } : {},
     );
   }
   async createBranch(name: string) {

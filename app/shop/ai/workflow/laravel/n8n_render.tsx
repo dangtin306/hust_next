@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
+  useId,
   forwardRef,
 } from "react";
 import { io, Socket } from "socket.io-client";
@@ -31,11 +33,13 @@ import {
   Clock,
   Code2,
   Database,
+  Expand,
   GitBranch,
   GitMerge,
   MessageSquare,
   Radio,
   Sliders,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -142,6 +146,93 @@ export type FlowNodeData = {
   liveStatus: LiveNodeStatus;
   [key: string]: unknown;
 };
+
+type MermaidSubdiagram = {
+  nodeId: string;
+  nodeName: string;
+  definition: string;
+  source?: string;
+  children: string[];
+};
+
+function getMermaidDefinition(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const fenced = value.match(/```\s*mermaid\s*\r?\n([\s\S]*?)```/i);
+  if (fenced?.[1]?.trim()) return fenced[1].trim();
+
+  const trimmed = value.trim();
+  return /^(?:flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie|mindmap|timeline|gitGraph|quadrantChart|xychart-beta|block-beta)\b/i.test(trimmed)
+    ? trimmed
+    : null;
+}
+
+function getNodeMermaid(data: FlowNodeData, nodeId: string): MermaidSubdiagram | null {
+  const markdown = data.markdown;
+  const markdownRecord = markdown && typeof markdown === "object"
+    ? (markdown as Record<string, unknown>)
+    : null;
+  const definition =
+    getMermaidDefinition(markdownRecord?.content) ??
+    getMermaidDefinition(markdown) ??
+    getMermaidDefinition(data.notes);
+  if (!definition) return null;
+
+  const children = Array.isArray(markdownRecord?.embedded_children)
+    ? markdownRecord.embedded_children.filter((child): child is string => typeof child === "string")
+    : [];
+
+  return {
+    nodeId,
+    nodeName: data.name,
+    definition,
+    source: typeof markdownRecord?.source === "string" ? markdownRecord.source : undefined,
+    children,
+  };
+}
+
+function MermaidDiagram({ definition }: { definition: string }) {
+  const reactId = useId();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const container = containerRef.current;
+    setError(null);
+    const renderDiagram = async () => {
+      try {
+        const { default: mermaid } = await import("mermaid");
+        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "dark" });
+        const id = `workflow-subdiagram-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+        const result = await mermaid.render(id, definition);
+        if (cancelled || !container) return;
+        container.innerHTML = result.svg;
+        result.bindFunctions?.(container);
+      } catch (renderError) {
+        if (!cancelled) {
+          setError(renderError instanceof Error ? renderError.message : "Không thể render sơ đồ Mermaid.");
+        }
+      }
+    };
+    void renderDiagram();
+    return () => {
+      cancelled = true;
+      container?.replaceChildren();
+    };
+  }, [definition, reactId]);
+
+  return (
+    <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-700 bg-[#15191e] p-4">
+      {error ? (
+        <div className="rounded-lg border border-rose-500/40 bg-rose-950/40 p-4 text-sm text-rose-200">
+          Không thể hiển thị sơ đồ: {error}
+        </div>
+      ) : (
+        <div ref={containerRef} className="w-max min-w-full [&>svg]:h-auto [&>svg]:max-w-none" />
+      )}
+    </div>
+  );
+}
 
 export type StickyNoteData = {
   content: string;
@@ -278,6 +369,7 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
 function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) {
   const meta = getNodeCategory(data.nodeType);
   const Icon = meta.icon;
+  const hasMermaidDiagram = Boolean(data.hasMermaidDiagram);
   const isBranchNode =
     String(data.nodeType || "").toLowerCase().includes("if") ||
     String(data.nodeType || "").toLowerCase().includes("switch");
@@ -290,7 +382,12 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
   else if (liveStatus === "error") liveClass = "n8n-node--error";
 
   return (
-    <div className="flex flex-col items-center justify-start w-[116px] select-none group pointer-events-auto">
+    <div
+      className={`flex flex-col items-center justify-start w-[116px] select-none group pointer-events-auto ${
+        hasMermaidDiagram ? "cursor-pointer" : "cursor-default"
+      }`}
+      title={hasMermaidDiagram ? `${data.name} — bấm để mở sơ đồ con` : data.name}
+    >
       {/* Khung vuông icon chính (~64x64) mô phỏng chuẩn node n8n Editor */}
       <div
         className={`relative w-16 h-16 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
@@ -340,6 +437,11 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
             ✕
           </span>
         )}
+        {hasMermaidDiagram && (
+          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-950 bg-violet-500 text-white shadow" aria-label="Có sơ đồ Mermaid">
+            <Expand className="h-2.5 w-2.5" />
+          </span>
+        )}
 
         {/* Source Handles (Tròn nhỏ bên phải node: main-0 và main-1 cho node rẽ nhánh) */}
         {isBranchNode ? (
@@ -374,7 +476,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
       {/* Tên node và version nằm bên dưới icon box, căn giữa, tối đa 2 dòng */}
       <div className="mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
         <span
-          className="text-xs font-medium text-slate-200 leading-snug line-clamp-2 max-w-[112px] break-words"
+          className={`text-xs font-medium leading-snug line-clamp-2 max-w-[112px] break-words ${hasMermaidDiagram ? "text-violet-200" : "text-slate-200"}`}
           title={data.name}
         >
           {data.name}
@@ -435,6 +537,15 @@ export const convertNormalizedGraphToFlow = (
       typeVersion: node.typeVersion,
       disabled: Boolean(node.disabled),
       liveStatus: "idle",
+      markdown: node.markdown,
+      notes: node.notes,
+      hasMermaidDiagram: Boolean(
+        getMermaidDefinition(
+          node.markdown && typeof node.markdown === "object"
+            ? (node.markdown as Record<string, unknown>).content
+            : node.markdown
+        ) ?? getMermaidDefinition(node.notes)
+      ),
     },
   }));
 
@@ -518,8 +629,24 @@ export const N8nDiagramRenderer = forwardRef<
 ) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
   const animationTimersRef = useRef<NodeJS.Timeout[]>([]);
   const socketRef = useRef<Socket | null>(null);
+
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (node.type !== "n8nNode") return;
+    const subdiagram = getNodeMermaid(node.data as FlowNodeData, node.id);
+    if (subdiagram) setSelectedSubdiagram(subdiagram);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedSubdiagram) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectedSubdiagram(null);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedSubdiagram]);
 
   // Lưu callbacks trong ref để socket effect không bị re-run khi props thay đổi
   const onTraceReceivedRef = useRef(onTraceReceived);
@@ -844,6 +971,7 @@ export const N8nDiagramRenderer = forwardRef<
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodeClick={handleNodeClick}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={N8N_NODE_TYPES}
@@ -882,6 +1010,47 @@ export const N8nDiagramRenderer = forwardRef<
           className="!bg-slate-900 !border-slate-800 rounded-lg overflow-hidden"
         />
       </ReactFlow>
+
+      {selectedSubdiagram && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-6"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedSubdiagram(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workflow-subdiagram-title"
+            className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+          >
+            <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-700 px-4 py-3 sm:px-6">
+              <div className="min-w-0">
+                <h2 id="workflow-subdiagram-title" className="truncate text-base font-semibold text-slate-100 sm:text-lg">
+                  {selectedSubdiagram.nodeName}
+                </h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  Sơ đồ Mermaid{selectedSubdiagram.source ? ` · ${selectedSubdiagram.source}` : ""}
+                </p>
+                {selectedSubdiagram.children.length > 0 && (
+                  <p className="mt-1 break-words text-xs text-violet-300">
+                    Tài liệu liên quan: {selectedSubdiagram.children.join(", ")}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSubdiagram(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+                aria-label="Đóng sơ đồ con"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+            <MermaidDiagram definition={selectedSubdiagram.definition} />
+          </section>
+        </div>
+      )}
     </div>
   );
 });

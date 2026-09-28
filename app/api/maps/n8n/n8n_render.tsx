@@ -850,8 +850,17 @@ export const N8nDiagramRenderer = forwardRef<
       }
       if (eventName === "openclaw.gateway.chat") return;
 
-      const serviceNodeId = isServiceStage
+      const mappedServiceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
+        : undefined;
+      // Standard chat is emitted through the same service lifecycle as tools.
+      // Accept either its stable service_id or the explicit workflow node_id.
+      const serviceNodeId = isServiceStage
+        ? mappedServiceNodeId || (
+            payload.service_id === "standard_chat" || payload.node_id === CHAT_NODE_ID
+              ? CHAT_NODE_ID
+              : undefined
+          )
         : undefined;
       if (isServiceStage && !serviceNodeId) {
         const serviceLabel = typeof payload.service_id === "string" && payload.service_id

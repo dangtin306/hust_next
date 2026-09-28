@@ -93,7 +93,9 @@ export type HistoryEvent =
   | { type: "pull"; branch?: string; status?: string; date?: string }
   | { type: "push"; mode?: string; status?: string; date?: string }
   | { type: "pull_request"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; date?: string }
-  | { type: "merge"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; short_sha?: string; date?: string };
+  | { type: "merge"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; short_sha?: string; date?: string }
+  | { type: "update_code"; branch?: string; status?: string; message?: string; copied_count?: number; date?: string }
+  | { type: "vscode_sync"; branch?: string; status?: string; target?: string; target_inferred?: boolean; mirror_remote?: string; updated_branches?: string[]; remote_refs_available?: boolean; message?: string; error_code?: string; date?: string };
 export type HistoryResponse = {
   history_data?: HistoryEvent[];
   commits?: Commit[];
@@ -143,6 +145,17 @@ export type GitWorkflow = {
   authenticated_user: { username: string; id?: number; admin?: boolean };
   permission_known: boolean;
   capabilities: GitCapabilities;
+};
+export type GraphMirrorSyncResult = {
+  status?: "ok" | "error";
+  message?: string;
+  error_code?: string;
+  target?: "main" | "demo";
+  target_inferred?: boolean;
+  synced?: boolean;
+  mirror_remote?: string;
+  updated_branches?: string[];
+  remote_refs_available?: boolean;
 };
 export type Branch = { name: string; remote?: string; current?: boolean };
 
@@ -376,6 +389,13 @@ export class LaravelGitService {
       `${this.selectProjectPath()}/source/update-code`,
       "POST",
       { component: this.componentName() },
+    );
+  }
+  async syncGraphMirror(target?: "main" | "demo") {
+    return request<GraphMirrorSyncResult>(
+      `${this.selectProjectPath()}/source/sync-graph-mirror`,
+      "POST",
+      target ? { target } : {},
     );
   }
   async createBranch(name: string) {
