@@ -240,6 +240,20 @@ export default function N8nWorkflowMain() {
   const snapshotSource = graphSource(graphData);
   const snapshotWorkflowId = graphData?.workflow_id || graphData?.workflowId || graphData?.id || graphData?.workflow?.id;
   const verifiedSnapshot = isVerifiedN8nSource(snapshotSource);
+  const localFileSnapshot = String(snapshotSource).trim().toLowerCase() === "local-file";
+  const sourceBadgeClass = verifiedSnapshot
+    ? "bg-emerald-950/80 text-emerald-300 border-emerald-800"
+    : localFileSnapshot
+      ? "bg-slate-800/80 text-slate-300 border-slate-700"
+      : "bg-amber-950/80 text-amber-200 border-amber-700";
+  const sourceBadgeText = verifiedSnapshot
+    ? `Source: ${snapshotSource} · n8n API`
+    : localFileSnapshot
+      ? "Sơ đồ local · Node backend"
+      : `Source: ${snapshotSource} · chưa xác định`;
+  const sourcePanelClass = verifiedSnapshot || localFileSnapshot
+    ? "bg-slate-900/70 border-slate-800 text-slate-400"
+    : "bg-amber-950/50 border-amber-700/70 text-amber-100";
 
   return (
     <div className="p-4 md:p-6 w-full flex flex-col gap-4 text-slate-100">
@@ -313,8 +327,8 @@ export default function N8nWorkflowMain() {
                 <Boxes className="w-3 h-3 text-indigo-400" /> {graphData?.name || "Workflow graph"} ({snapshotWorkflowId || "workflow ID unavailable"})
               </span>
 
-              <span className={`inline-flex items-center gap-1 text-xs font-mono font-medium px-2.5 py-0.5 rounded-full border ${verifiedSnapshot ? "bg-emerald-950/80 text-emerald-300 border-emerald-800" : "bg-amber-950/80 text-amber-200 border-amber-700"}`}>
-                <Info className="w-3 h-3" /> Source: {snapshotSource}{verifiedSnapshot ? " · n8n API" : " · unverified"}
+              <span className={`inline-flex items-center gap-1 text-xs font-mono font-medium px-2.5 py-0.5 rounded-full border ${sourceBadgeClass}`}>
+                <Info className="w-3 h-3" /> {sourceBadgeText}
               </span>
 
               {/* Stale Warning Badge */}
@@ -548,15 +562,17 @@ export default function N8nWorkflowMain() {
       )}
 
       {/* Snapshot provenance and service-to-node mapping diagnostics */}
-      <div className={`px-4 py-2.5 rounded-xl border text-xs flex flex-col gap-2 ${verifiedSnapshot ? "bg-slate-900/70 border-slate-800 text-slate-400" : "bg-amber-950/50 border-amber-700/70 text-amber-100"}`}>
+      <div className={`px-4 py-2.5 rounded-xl border text-xs flex flex-col gap-2 ${sourcePanelClass}`}>
         <div className="flex items-center gap-2">
-          <Info className={`w-4 h-4 shrink-0 ${verifiedSnapshot ? "text-cyan-400" : "text-amber-300"}`} />
+          <Info className={`w-4 h-4 shrink-0 ${verifiedSnapshot ? "text-cyan-400" : localFileSnapshot ? "text-slate-400" : "text-amber-300"}`} />
           <span>
-            <strong className={verifiedSnapshot ? "text-slate-200" : "text-amber-100"}>Graph snapshot:</strong>{" "}
+            <strong className={verifiedSnapshot || localFileSnapshot ? "text-slate-200" : "text-amber-100"}>Graph snapshot:</strong>{" "}
             {graphData
               ? verifiedSnapshot
                 ? "Nguồn xác nhận là n8n API. SSE chỉ cập nhật trạng thái node; topology lấy nguyên trạng từ snapshot."
-                : `Nguồn “${snapshotSource}” chưa xác minh dữ liệu từ instance n8n; không thể khẳng định canvas đồng bộ trực tiếp với n8n.`
+                : localFileSnapshot
+                  ? "Sơ đồ lấy từ source local của Node backend; không đồng bộ trực tiếp với instance n8n."
+                  : `Nguồn “${snapshotSource}” chưa xác định; không thể khẳng định canvas đồng bộ với instance n8n.`
               : graphLoadError
                 ? `Graph unavailable/offline: ${graphLoadError}. Chưa có snapshot n8n API hợp lệ để giữ lại.`
                 : "Đang tải snapshot graph; chưa có topology để hiển thị."}
@@ -564,9 +580,18 @@ export default function N8nWorkflowMain() {
           </span>
         </div>
         {graphData?.sync && (
-          <div className="pl-6 font-mono text-[11px] text-slate-400">
-            Sync: {JSON.stringify(graphData.sync)}
-          </div>
+          <details className="pl-6 text-[11px] text-slate-400">
+            <summary className="cursor-pointer select-none">Chi tiết đồng bộ</summary>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 font-mono">
+              {graphData.sync.source && <span>source: {graphData.sync.source}</span>}
+              {graphData.sync.workflow_id && <span>workflow_id: {graphData.sync.workflow_id}</span>}
+              {typeof graphData.sync.live_api_configured === "boolean" && (
+                <span>live_api_configured: {String(graphData.sync.live_api_configured)}</span>
+              )}
+              {graphData.sync.last_success_at && <span>last_success: {graphData.sync.last_success_at}</span>}
+              {graphData.sync.last_error && <span>last_error: {graphData.sync.last_error}</span>}
+            </div>
+          </details>
         )}
         {graphLoadError && graphData && (
           <div className="pl-6 text-amber-200">Tải lại thất bại; đang hiển thị snapshot n8n API hợp lệ gần nhất. {graphLoadError}</div>

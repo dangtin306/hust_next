@@ -92,6 +92,10 @@
         "source": "/hustadmin/net_ports",
         "destination": "/shop/hustadmin/port_cron/net_ports"
       },
+      "orders": {
+        "source": "/hustadmin/orders",
+        "destination": "/shop/hustadmin/orders"
+      },
       "hustAdminNested": {
         "source": "/hustadmin/:path*",
         "destination": "/shop/hustadmin/:path*"

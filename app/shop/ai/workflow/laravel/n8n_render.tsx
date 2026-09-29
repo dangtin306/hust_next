@@ -338,7 +338,7 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
         width: `${data.width}px`,
         height: `${data.height}px`,
       }}
-      className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-none pointer-events-none transition-all duration-300 flex flex-col justify-start`}
+      className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-text nodrag nopan pointer-events-auto transition-all duration-300 flex flex-col justify-start`}
     >
       <div className="space-y-1.5">
         {contentLines.map((line, idx) => {
@@ -347,7 +347,7 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
             return (
               <div
                 key={idx}
-                className={`text-sm md:text-base font-bold tracking-wider uppercase flex items-center gap-2 ${theme.header}`}
+                className={`text-xl font-bold tracking-wider uppercase flex items-center gap-2 ${theme.header}`}
               >
                 <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
                 <span>{line.replace(/^###\s*/, "")}</span>
@@ -355,7 +355,7 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
             );
           }
           return (
-            <p key={idx} className="text-xs text-slate-400 leading-relaxed font-normal">
+            <p key={idx} className="text-[17px] text-slate-400 leading-5 font-normal">
               {line}
             </p>
           );
@@ -383,7 +383,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
 
   return (
     <div
-      className={`flex flex-col items-center justify-start w-[116px] select-none group pointer-events-auto ${
+      className={`flex flex-col items-center justify-start w-[116px] group pointer-events-auto ${
         hasMermaidDiagram ? "cursor-pointer" : "cursor-default"
       }`}
       title={hasMermaidDiagram ? `${data.name} — bấm để mở sơ đồ con` : data.name}
@@ -423,17 +423,17 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-slate-950 animate-ping" />
         )}
         {liveStatus === "success" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-slate-900 flex items-center justify-center text-[9px] font-bold text-white shadow">
+          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
             ✓
           </span>
         )}
         {liveStatus === "slow" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border border-slate-900 flex items-center justify-center text-[9px] font-bold text-white shadow">
+          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
             ⏱
           </span>
         )}
         {liveStatus === "error" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 border border-slate-900 flex items-center justify-center text-[9px] font-bold text-white shadow">
+          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
             ✕
           </span>
         )}
@@ -474,21 +474,21 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
       </div>
 
       {/* Tên node và version nằm bên dưới icon box, căn giữa, tối đa 2 dòng */}
-      <div className="mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
+      <div className="nodrag nopan select-text mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
         <span
-          className={`text-xs font-medium leading-snug line-clamp-2 max-w-[112px] break-words ${hasMermaidDiagram ? "text-violet-200" : "text-slate-200"}`}
+          className={`text-[17px] font-medium leading-5 line-clamp-2 max-w-[112px] break-words ${hasMermaidDiagram ? "text-violet-200" : "text-slate-200"}`}
           title={data.name}
         >
           {data.name}
         </span>
-        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400 font-mono">
+        <div className="flex items-center gap-1 mt-0.5 text-sm leading-4 text-slate-400 font-mono">
           <span className="truncate max-w-[85px]">{formatNodeType(data.nodeType)}</span>
           {data.typeVersion !== undefined && (
             <span className="text-slate-500 font-normal">v{data.typeVersion}</span>
           )}
         </div>
         {data.disabled && (
-          <span className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-rose-400">
+          <span className="mt-0.5 text-xs font-bold uppercase tracking-wider text-rose-400">
             Disabled
           </span>
         )}
@@ -971,6 +971,8 @@ export const N8nDiagramRenderer = forwardRef<
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        minZoom={0.35}
+        maxZoom={3}
         onNodeClick={handleNodeClick}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

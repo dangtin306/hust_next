@@ -316,14 +316,14 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
         width: `${data.width}px`,
         height: `${data.height}px`,
       }}
-      className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-none pointer-events-none transition-all duration-300 flex flex-col justify-start`}
+      className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-text nodrag nopan pointer-events-auto transition-all duration-300 flex flex-col justify-start`}
     >
       {contentLines[0] && (
-        <h4 className={`text-sm font-bold tracking-wide uppercase ${theme.header} mb-2`}>
+        <h4 className={`text-xl leading-5 font-bold tracking-wide uppercase ${theme.header} mb-2`}>
           {contentLines[0]}
         </h4>
       )}
-      <div className="text-xs text-slate-300/85 leading-relaxed space-y-1 whitespace-pre-wrap">
+      <div className="text-[17px] text-slate-300/85 leading-5 space-y-1 whitespace-pre-wrap">
         {contentLines.slice(1).join("\n")}
       </div>
     </div>
@@ -389,7 +389,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
 
   return (
     <div
-      className={`relative group flex flex-col items-center select-none transition-transform duration-200 ${
+      className={`relative group flex flex-col items-center transition-transform duration-200 ${
         liveStatus === "running" ? "scale-105" : ""
       }`}
     >
@@ -430,7 +430,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
               />
               {outputLabel && (
                 <span
-                  className="absolute z-10 -right-7 -translate-y-1/2 pointer-events-none text-[8px] leading-none font-semibold text-slate-200"
+                  className="absolute z-10 -right-7 -translate-y-1/2 pointer-events-none text-xs leading-none font-semibold text-slate-200"
                   style={handlePositionStyle}
                 >
                   {outputLabel}
@@ -447,16 +447,16 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
         )}
       </div>
 
-      <div className="mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
+      <div className="nodrag nopan select-text mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
         <span
-          className="text-xs font-medium text-slate-200 leading-snug line-clamp-2 max-w-[124px] break-words"
+          className="text-[17px] font-medium text-slate-200 leading-5 line-clamp-2 max-w-[124px] break-words"
           title={data.name}
         >
           {data.name}
         </span>
         {data.description && (
           <span
-            className="mt-0.5 text-[9px] leading-tight text-slate-400 max-w-[124px] line-clamp-2 break-words"
+            className="mt-0.5 text-[13px] leading-[14px] text-slate-400 max-w-[124px] line-clamp-2 break-words"
             title={data.description}
           >
             {data.description}
@@ -464,18 +464,18 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
         )}
         {httpRequestSummary && (
           <span
-            className="mt-0.5 text-[9px] leading-tight text-sky-300 font-mono max-w-[124px] truncate"
+            className="mt-0.5 text-[13px] leading-[14px] text-sky-300 font-mono max-w-[124px] truncate"
             title={httpRequestSummary}
           >
             {httpRequestSummary}
           </span>
         )}
         {data.subLabel && (
-          <span className="text-[10px] text-cyan-300 font-mono font-medium max-w-[120px] truncate">
+          <span className="text-sm leading-4 text-cyan-300 font-mono font-medium max-w-[120px] truncate">
             {data.subLabel}
           </span>
         )}
-        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400 font-mono">
+        <div className="flex items-center gap-1 mt-0.5 text-sm leading-4 text-slate-400 font-mono">
           <span className="truncate max-w-[90px]">{formatNodeType(data.nodeType)}</span>
         </div>
       </div>
@@ -1151,7 +1151,7 @@ export const N8nDiagramRenderer = forwardRef<
 
     setEdges(flowEdges);
 
-    // The remote graph can arrive after the fallback graph; refit so augmented service nodes stay visible.
+    // Refit when a new graph snapshot arrives.
     const fitFrame = requestAnimationFrame(() => {
       reactFlowInstanceRef.current?.fitView({ padding: 0.15, duration: 250 });
     });
@@ -1286,6 +1286,8 @@ export const N8nDiagramRenderer = forwardRef<
         }}
         nodes={nodes}
         edges={edges}
+        minZoom={0.35}
+        maxZoom={3}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={N8N_NODE_TYPES}

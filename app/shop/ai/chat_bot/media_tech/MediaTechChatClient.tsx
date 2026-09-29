@@ -27,7 +27,66 @@ export type Message = {
   isError?: boolean;
   imageUrl?: string;
   serviceDescription?: string;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 };
+
+function getTokenUsage(data: unknown): Message["usage"] {
+  const usage = (data as { usage?: unknown } | null)?.usage;
+  if (!usage || typeof usage !== "object") return undefined;
+  const tokenCounts = usage as Record<string, unknown>;
+  const getCount = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) ? value : undefined;
+
+  const inputTokens = getCount(tokenCounts.input_tokens) ?? getCount(tokenCounts.prompt_tokens);
+  const outputTokens = getCount(tokenCounts.output_tokens) ?? getCount(tokenCounts.completion_tokens);
+  const totalTokens =
+    getCount(tokenCounts.total_tokens) ??
+    (inputTokens !== undefined && outputTokens !== undefined
+      ? inputTokens + outputTokens
+      : undefined);
+
+  if (inputTokens === undefined && outputTokens === undefined && totalTokens === undefined) {
+    return undefined;
+  }
+  if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
+    return undefined;
+  }
+
+  return { inputTokens, outputTokens, totalTokens };
+}
+
+const tokenNumberFormat = new Intl.NumberFormat("vi-VN");
+const LARAVEL_CHAT_API =
+  process.env.NEXT_PUBLIC_CHAT_BOT_API_BASE || "https://laravel.hust.media/api/chat/bot";
+
+function mapLaravelHistory(items: any[]): Message[] {
+  let previousUpstream: Record<string, any> | null = null;
+
+  return items.map((item, index) => {
+    const isUser = item?.role === "user";
+    if (isUser && item?.upstream && typeof item.upstream === "object") {
+      previousUpstream = item.upstream;
+    }
+    const upstream = item?.upstream || (!isUser ? previousUpstream : null);
+    const timestamp = item?.created_at ? new Date(item.created_at) : null;
+    const time = timestamp && !Number.isNaN(timestamp.getTime())
+      ? timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    return {
+      id: String(item?.id ?? `history-${index}`),
+      sender: isUser ? "user" : "bot",
+      text: String(item?.content ?? ""),
+      time,
+      isError: !isUser && Number(upstream?.http_status) >= 400,
+      usage: !isUser ? getTokenUsage({ usage: upstream?.usage ?? upstream }) : undefined,
+    };
+  });
+}
 
 type MediaTechService =
   | "media_text_to_image"
@@ -280,10 +339,13 @@ export default function MediaTechChatClient({
   const [isServiceMenuExpanded, setIsServiceMenuExpanded] = useState(true);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isRestoringChat, setIsRestoringChat] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | string>(defaultUserId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const roomSyncPromisesRef = useRef(new Map<string, Promise<string | null>>());
+  const serviceMenuRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const isComposingRef = useRef(false);
@@ -321,21 +383,134 @@ export default function MediaTechChatClient({
 
   const activeModel = propModel;
 
+  const ensureLaravelRoom = (
+    upstreamConversationId: string,
+    title: string,
+    model: string,
+  ): Promise<string | null> => {
+    const existing = roomSyncPromisesRef.current.get(upstreamConversationId);
+    if (existing) return existing;
+
+    const pending = (async () => {
+      const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          upstream_conversation_id: upstreamConversationId,
+          title: title.slice(0, 255),
+          model,
+          agent: targetAgent,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Laravel room sync failed (${response.status})`);
+      }
+
+      const body = await response.json();
+      const roomId = body?.data?.room_id ?? body?.room_id;
+      if (roomId === undefined || roomId === null) {
+        throw new Error("Laravel room response did not include data.room_id");
+      }
+      return String(roomId);
+    })()
+      .catch((error) => {
+        roomSyncPromisesRef.current.delete(upstreamConversationId);
+        console.warn("Không đồng bộ được phòng chat với Laravel:", error);
+        return null;
+      });
+
+    roomSyncPromisesRef.current.set(upstreamConversationId, pending);
+    return pending;
+  };
+
+  const persistChatTurn = async ({
+    conversationId: upstreamConversationId,
+    title,
+    userMessage,
+    assistantMessage,
+    serviceId,
+    model,
+    responseData,
+    httpStatus,
+    errorMessage,
+  }: {
+    conversationId: string | null;
+    title: string;
+    userMessage: string;
+    assistantMessage: string | null;
+    serviceId: string;
+    model: string;
+    responseData?: Record<string, any>;
+    httpStatus: number;
+    errorMessage: string | null;
+  }) => {
+    if (!upstreamConversationId) return;
+
+    try {
+      const roomId = await ensureLaravelRoom(upstreamConversationId, title, model);
+      if (!roomId) return;
+
+      const usage = responseData?.usage && typeof responseData.usage === "object"
+        ? responseData.usage
+        : {};
+      const response = await fetch(
+        `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(roomId)}/messages`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_message: userMessage,
+            ...(assistantMessage !== null ? { assistant_message: assistantMessage } : {}),
+            service_id: serviceId,
+            model,
+            upstream_response_id: responseData?.id ?? null,
+            usage: {
+              input_tokens: usage.input_tokens ?? usage.prompt_tokens ?? 0,
+              output_tokens: usage.output_tokens ?? usage.completion_tokens ?? 0,
+              total_tokens: usage.total_tokens ?? 0,
+            },
+            http_status: httpStatus,
+            error_message: errorMessage,
+          }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Laravel message sync failed (${response.status})`);
+      }
+    } catch (error) {
+      console.warn("Không lưu được lượt chat vào Laravel; phản hồi Node.js vẫn được giữ:", error);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isTyping, selectedService, isServiceMenuExpanded]);
+  }, [messages, isTyping, selectedService]);
+
+  const wasServiceMenuExpandedRef = useRef(isServiceMenuExpanded);
+  useEffect(() => {
+    const justExpanded = isServiceMenuExpanded && !wasServiceMenuExpandedRef.current;
+    wasServiceMenuExpandedRef.current = isServiceMenuExpanded;
+    if (justExpanded) {
+      serviceMenuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isServiceMenuExpanded]);
 
   // Create or load conversation session
   const createConversation = async (overrideUserId?: number | string | null): Promise<string | null> => {
     try {
       const activeUid = overrideUserId !== undefined && overrideUserId !== null ? overrideUserId : userId;
+      const conversationSessionKey = baseSession.includes(":user_")
+        ? baseSession.replace(/:user_\d+$/, `:user_${activeUid}`)
+        : `${baseSession}:user_${activeUid}`;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
-        "x-openclaw-session-key": activeSessionKey,
+        "x-openclaw-session-key": conversationSessionKey,
       };
       if (targetUrl) {
         headers["x-openclaw-target"] = targetUrl;
@@ -349,7 +524,7 @@ export default function MediaTechChatClient({
             : isDrawer
             ? "hust_assistant_real"
             : "hust_assistant_test_1",
-          session_key: activeSessionKey,
+          session_key: conversationSessionKey,
           agent: agent || undefined,
         },
       };
@@ -381,6 +556,7 @@ export default function MediaTechChatClient({
           try {
             window.localStorage.setItem(activeStorageKey, convKey);
           } catch {}
+          void ensureLaravelRoom(convKey, "Cuộc trò chuyện mới", activeModel);
           return convKey;
         }
       }
@@ -391,25 +567,112 @@ export default function MediaTechChatClient({
   };
 
   useEffect(() => {
-    let savedConv: string | null = null;
-    let savedUid: string | null = null;
-    try {
-      savedConv = window.localStorage.getItem(activeStorageKey);
-      savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
-    } catch {}
+    let cancelled = false;
+    const initializeChat = async () => {
+      setIsRestoringChat(true);
+      let savedConv: string | null = null;
+      let savedUid: string | null = null;
+      let effectiveUserId: number | string | null = null;
+      try {
+        savedConv = window.localStorage.getItem(activeStorageKey);
+        savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
+      } catch {}
 
-    if (savedUid) {
-      const parsed = Number(savedUid);
-      setUserId(Number.isInteger(parsed) ? parsed : savedUid);
-    } else if (defaultUserId) {
-      setUserId(defaultUserId);
-    }
+      if (savedUid) {
+        const parsed = Number(savedUid);
+        effectiveUserId = Number.isInteger(parsed) ? parsed : savedUid;
+        setUserId(effectiveUserId);
+      } else if (defaultUserId) {
+        effectiveUserId = defaultUserId;
+        setUserId(defaultUserId);
+      }
 
-    if (savedConv) {
-      setConversationId(savedConv);
-    } else {
-      createConversation(savedUid || defaultUserId);
-    }
+      try {
+        // Existing cookie: Laravel returns this user's rooms. Without a cookie,
+        // GET /rooms returns 401; the fallback creates the Node conversation,
+        // then POST /rooms links it and Laravel issues its HttpOnly cookie.
+        const roomsResponse = await fetch(`${LARAVEL_CHAT_API}/rooms?page=1&per_page=30`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!roomsResponse.ok) {
+          throw new Error(`Laravel room list failed (${roomsResponse.status})`);
+        }
+        const roomsBody = await roomsResponse.json();
+        const roomItems = Array.isArray(roomsBody?.data)
+          ? roomsBody.data
+          : Array.isArray(roomsBody?.data?.data)
+          ? roomsBody.data.data
+          : [];
+        const latestRoom = roomItems.find((room: any) => Number(room?.status ?? 1) === 1);
+        const roomId = latestRoom?.room_id ?? latestRoom?.id;
+        const upstreamConversationId = latestRoom?.upstream_conversation_id;
+
+        if (roomId !== undefined && roomId !== null && upstreamConversationId) {
+          const historyResponse = await fetch(
+            `${LARAVEL_CHAT_API}/rooms/${encodeURIComponent(String(roomId))}/messages?per_page=50`,
+            { credentials: "include", cache: "no-store" },
+          );
+          if (!historyResponse.ok) {
+            throw new Error(`Laravel message history failed (${historyResponse.status})`);
+          }
+          const historyBody = await historyResponse.json();
+          const historyItems = Array.isArray(historyBody?.data)
+            ? historyBody.data
+            : Array.isArray(historyBody?.data?.data)
+            ? historyBody.data.data
+            : [];
+
+          if (cancelled) return;
+          const conversationIdValue = String(upstreamConversationId);
+          setConversationId(conversationIdValue);
+          roomSyncPromisesRef.current.set(conversationIdValue, Promise.resolve(String(roomId)));
+          const lastUpstreamTurn = [...historyItems].reverse().find(
+            (item: any) => item?.upstream?.response_id,
+          );
+          lastResponseIdRef.current =
+            latestRoom?.last_response_id ?? lastUpstreamTurn?.upstream?.response_id ?? null;
+          try {
+            window.localStorage.setItem(activeStorageKey, conversationIdValue);
+          } catch {}
+          setMessages(historyItems.length ? mapLaravelHistory(historyItems) : INITIAL_MESSAGES);
+          return;
+        }
+
+        if (savedConv) {
+          if (cancelled) return;
+          setConversationId(savedConv);
+          await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+          return;
+        }
+
+        if (!cancelled) {
+          const newConversation = await createConversation(effectiveUserId);
+          if (newConversation) {
+            await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
+          }
+        }
+      } catch (error) {
+        console.warn("Không khôi phục được lịch sử từ Laravel:", error);
+        if (cancelled) return;
+        if (savedConv) {
+          setConversationId(savedConv);
+          await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+        } else {
+          const newConversation = await createConversation(effectiveUserId);
+          if (newConversation) {
+            await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
+          }
+        }
+      } finally {
+        if (!cancelled) setIsRestoringChat(false);
+      }
+    };
+
+    void initializeChat();
+    return () => {
+      cancelled = true;
+    };
   }, [activeStorageKey]);
 
   const handleCopy = (id: string, text: string) => {
@@ -445,7 +708,7 @@ export default function MediaTechChatClient({
     displayService?: MediaTechService,
   ) => {
     const text = (textToSend ?? input).trim() || (attachedImage ? "media_image_to_text: OCR và phân tích hình ảnh." : "");
-    if (!text || isTyping) return;
+    if (!text || isTyping || isRestoringChat) return;
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -465,6 +728,10 @@ export default function MediaTechChatClient({
     setInput("");
     setIsTyping(true);
 
+    let activeConversationForPersistence = conversationId;
+    const serviceForPersistence = attachedImage ? "media_image_to_text" : apiService;
+    let modelForPersistence = activeModel;
+
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -474,6 +741,7 @@ export default function MediaTechChatClient({
       if (!activeConvId) {
         activeConvId = await createConversation();
       }
+      activeConversationForPersistence = activeConvId;
 
       const activeService = attachedImage ? "media_image_to_text" : apiService;
       const selectedServiceId = attachedImage ? "media_image_to_text" : displayService;
@@ -500,6 +768,7 @@ export default function MediaTechChatClient({
       const payload: any = {
         model: isImageGeneration ? "openai/gpt-image-2" : activeModel,
       };
+      modelForPersistence = String(payload.model || activeModel);
       if (!isImageGeneration && activeConvId) {
         payload.conversation_id = activeConvId;
       }
@@ -571,6 +840,7 @@ export default function MediaTechChatClient({
           payload.previous_completion_id = lastResponseIdRef.current;
         }
       }
+      modelForPersistence = String(payload.model || activeModel);
 
       let res = await fetch(endpoint, {
         method: "POST",
@@ -581,6 +851,7 @@ export default function MediaTechChatClient({
       // If room expired or 404, recreate and retry once
       if (!isImageGeneration && res.status === 404 && activeConvId) {
         activeConvId = await createConversation();
+        activeConversationForPersistence = activeConvId;
         payload.conversation_id = activeConvId || undefined;
         res = await fetch(endpoint, {
           method: "POST",
@@ -634,10 +905,11 @@ export default function MediaTechChatClient({
           }
         }
 
-        if (data.conversation_id && data.conversation_id !== activeConvId) {
-          setConversationId(data.conversation_id);
+        const responseConversationId = data.conversation_id || activeConvId;
+        if (responseConversationId && responseConversationId !== activeConvId) {
+          setConversationId(responseConversationId);
           try {
-            window.localStorage.setItem(activeStorageKey, data.conversation_id);
+            window.localStorage.setItem(activeStorageKey, responseConversationId);
           } catch {}
         }
 
@@ -649,8 +921,20 @@ export default function MediaTechChatClient({
             text: botReply,
             imageUrl,
             time: resTime,
+            usage: getTokenUsage(data),
           },
         ]);
+        void persistChatTurn({
+          conversationId: responseConversationId,
+          title: userMessage.text,
+          userMessage: userMessage.text,
+          assistantMessage: botReply,
+          serviceId: activeService,
+          model: String(payload.model || activeModel),
+          responseData: data,
+          httpStatus: res.status,
+          errorMessage: null,
+        });
       } else {
         const errJson = await res.json().catch(() => null);
         const errMsg = errJson?.error || errJson?.error?.message || `Máy chủ trả về mã lỗi HTTP ${res.status}`;
@@ -664,6 +948,16 @@ export default function MediaTechChatClient({
             isError: true,
           },
         ]);
+        void persistChatTurn({
+          conversationId: activeConvId,
+          title: userMessage.text,
+          userMessage: userMessage.text,
+          assistantMessage: null,
+          serviceId: activeService,
+          model: String(payload.model || activeModel),
+          httpStatus: res.status,
+          errorMessage: typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg),
+        });
       }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -679,6 +973,16 @@ export default function MediaTechChatClient({
           isError: true,
         },
       ]);
+      void persistChatTurn({
+        conversationId: activeConversationForPersistence,
+        title: userMessage.text,
+        userMessage: userMessage.text,
+        assistantMessage: null,
+        serviceId: serviceForPersistence,
+        model: modelForPersistence,
+        httpStatus: 502,
+        errorMessage: errMsg,
+      });
     } finally {
       setIsTyping(false);
     }
@@ -690,7 +994,7 @@ export default function MediaTechChatClient({
   ) => {
     const rawText = textToSend ?? textareaRef.current?.value ?? input;
     const text = rawText.trim();
-    if ((!text && !attachedImage) || isTyping) return;
+    if ((!text && !attachedImage) || isTyping || isRestoringChat) return;
 
     justSentRef.current = true;
     setInput("");
@@ -903,6 +1207,7 @@ export default function MediaTechChatClient({
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
           {/* Service picker collapses after selection so conversation remains the main view. */}
           <section
+            ref={serviceMenuRef}
             className={`${isServiceMenuExpanded ? "my-2" : "sticky top-0 z-10 my-1"} rounded-2xl border border-purple-100/70 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 shadow-sm`}
             aria-label="Dịch vụ API Media Tech"
           >
@@ -1066,6 +1371,34 @@ export default function MediaTechChatClient({
                       </button>
                     )}
                   </div>
+
+                  {isBot && !msg.isError && msg.usage && (
+                    <div
+                      className="mt-1.5 inline-flex max-w-full flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full border border-purple-100 bg-purple-50/80 px-2.5 py-1 text-[10px] leading-none text-slate-600 shadow-[0_1px_2px_rgba(88,28,135,0.05)]"
+                      aria-label="Mức sử dụng token của phản hồi"
+                      title="Usage do OpenClaw API trả về"
+                    >
+                      <span className="inline-flex items-center gap-1 font-semibold text-purple-700">
+                        <Sparkles className="h-3 w-3" aria-hidden="true" />
+                        Token
+                      </span>
+                      {msg.usage.inputTokens !== undefined && (
+                        <span>
+                          Vào <span className="font-medium text-slate-700">{tokenNumberFormat.format(msg.usage.inputTokens)}</span>
+                        </span>
+                      )}
+                      {msg.usage.outputTokens !== undefined && (
+                        <span>
+                          Ra <span className="font-medium text-slate-700">{tokenNumberFormat.format(msg.usage.outputTokens)}</span>
+                        </span>
+                      )}
+                      {msg.usage.totalTokens !== undefined && (
+                        <span>
+                          Tổng <span className="font-semibold text-purple-800">{tokenNumberFormat.format(msg.usage.totalTokens)}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* User Avatar on Right */}
@@ -1130,6 +1463,7 @@ export default function MediaTechChatClient({
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               rows={1}
+              disabled={isRestoringChat}
               placeholder={!selectedService || selectedService === "media_text_to_text" ? "Nhập câu hỏi hoặc nội dung bạn cần... (Enter để gửi, Shift+Enter xuống dòng)" : selectedService === "media_text_to_image" ? "Mô tả hình ảnh muốn tạo..." : selectedService === "media_image_to_text" ? "Đính kèm ảnh và nhập điều muốn nhận diện/phân tích..." : selectedService === "media_content_smart" ? "Dòng 1: tiêu đề. Dòng tiếp: mô tả/ý chính cần viết..." : selectedService === "media_spell_check" ? "Dán đoạn văn cần sửa chính tả..." : selectedService === "media_script_writing" ? "Nhập chủ đề, thời lượng, đối tượng và phong cách kịch bản..." : "Nhập văn bản muốn chuyển thành giọng nói..."}
               className="max-h-60 min-h-10 w-full resize-none bg-transparent py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none sm:text-[15px]"
             />
@@ -1138,7 +1472,7 @@ export default function MediaTechChatClient({
             <button
               type="button"
               onClick={() => onSendSubmit()}
-              disabled={(!input.trim() && !textareaRef.current?.value.trim()) || isTyping}
+              disabled={isRestoringChat || (!input.trim() && !textareaRef.current?.value.trim()) || isTyping}
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-purple-500/20 transition-all hover:from-purple-700 hover:to-pink-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               title="Gửi tin nhắn"
             >
