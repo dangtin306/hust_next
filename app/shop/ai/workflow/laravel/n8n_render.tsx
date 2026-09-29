@@ -367,7 +367,7 @@ const formatNodeType = (nodeType = "") => {
 
 // Custom Sticky Note Panel (Background) - KHÔNG có handle, zIndex thấp, không chặn tương tác
 function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
-  const theme = STICKY_COLOR_MAP[data.color] || STICKY_COLOR_MAP[7];
+  const theme = STICKY_COLOR_MAP[data.color] || STICKY_COLOR_MAP[5];
   const contentLines = String(data.content || "").split("\n");
 
   return (
@@ -378,26 +378,13 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
       }}
       className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-text nodrag nopan pointer-events-auto transition-all duration-300 flex flex-col justify-start`}
     >
-      <div className="space-y-1.5">
-        {contentLines.map((line, idx) => {
-          const isHeading = line.startsWith("###");
-          if (isHeading) {
-            return (
-              <div
-                key={idx}
-                className={`text-xl font-bold tracking-wider uppercase flex items-center gap-2 ${theme.header}`}
-              >
-                <span className="inline-block w-2 h-2 rounded-full bg-current"></span>
-                <span>{line.replace(/^###\s*/, "")}</span>
-              </div>
-            );
-          }
-          return (
-            <p key={idx} className="text-[17px] text-slate-400 leading-5 font-normal">
-              {line}
-            </p>
-          );
-        })}
+      {contentLines[0] && (
+        <h4 className={`text-xl leading-5 font-bold tracking-wide uppercase ${theme.header} mb-2`}>
+          {contentLines[0]}
+        </h4>
+      )}
+      <div className="text-[17px] text-slate-300/85 leading-5 space-y-1 whitespace-pre-wrap">
+        {contentLines.slice(1).join("\n")}
       </div>
     </div>
   );
@@ -420,14 +407,14 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
 
   return (
     <div
-      className={`flex flex-col items-center justify-start w-[116px] group pointer-events-auto ${
+      className={`flex flex-col items-center justify-start group pointer-events-auto ${
         hasMermaidDiagram ? "cursor-pointer" : "cursor-default"
       }`}
       title={hasMermaidDiagram ? `${data.name} — bấm để mở sơ đồ con` : data.name}
     >
       {/* Khung vuông icon chính (~64x64) mô phỏng chuẩn node n8n Editor */}
       <div
-        className={`relative w-16 h-16 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
+        className={`relative w-20 h-20 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
           liveClass ||
           (data.disabled
             ? "opacity-50 grayscale border-slate-700"
@@ -448,7 +435,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
 
         {/* Khung Icon màu theo phân loại n8n */}
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md transition-transform duration-300 ${
+          className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md transition-transform duration-300 ${
             data.disabled
               ? "bg-slate-800 text-slate-500"
               : liveStatus === "running"
@@ -456,7 +443,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
               : `${meta.bg} text-white`
           }`}
         >
-          <Icon className="w-5 h-5 stroke-[2.2]" />
+          <Icon className="w-6 h-6 stroke-[2.2]" />
         </div>
 
         {/* Huy hiệu mini trạng thái realtime trên góc icon */}
@@ -540,15 +527,29 @@ export const convertNormalizedGraphToFlow = (
       ? (inputGraph.graph as N8nNormalizedGraph)
       : (inputGraph as N8nNormalizedGraph);
 
+  const isStickyNote = (node: any) =>
+    Boolean(
+      node.isStickyNote ||
+      node.type === "stickyNote" ||
+      node.type === "n8n-nodes-base.stickyNote"
+    );
+
   // 1. Tách flowNodes (loại bỏ sticky note nếu lọt vào mảng nodes)
   const rawFlowNodes =
     graph.flowNodes ??
-    (graph.nodes || []).filter(
-      (n) => !n.isStickyNote && n.type !== "n8n-nodes-base.stickyNote"
-    );
+    (graph.nodes || []).filter((node) => !isStickyNote(node));
 
-  // 2. Tách stickyNotes
-  const rawStickyNotes = graph.stickyNotes ?? [];
+  // 2. Tách và gộp stickyNotes từ cả mảng riêng lẫn graph.nodes như OpenClaw.
+  const stickyNoteMap = new Map<string, any>();
+  const candidates: any[] = [
+    ...(graph.stickyNotes ?? []).map((note) => ({ ...note, isStickyNote: true as const })),
+    ...(graph.nodes ?? []).filter(isStickyNote).map((note) => ({ ...note, isStickyNote: true as const })),
+  ];
+  candidates.forEach((note, index) => {
+    const id = note.id || `sticky-note-${index}`;
+    if (!stickyNoteMap.has(id)) stickyNoteMap.set(id, { ...note, id });
+  });
+  const rawStickyNotes = [...stickyNoteMap.values()];
   const graphEdges = graph.edges ?? [];
 
   // Map Flow Nodes với normalizePosition ({ x, y } hoặc [x, y])
@@ -581,10 +582,10 @@ export const convertNormalizedGraphToFlow = (
     type: "stickyNote",
     position: normalizePosition(note.position),
     data: {
-      content: note.content,
-      color: note.color,
-      width: note.width,
-      height: note.height,
+      content: String(note.content || note.name || ""),
+      color: note.color !== undefined ? note.color : 7,
+      width: note.width || 320,
+      height: note.height || 220,
     },
     draggable: false,
     selectable: false,

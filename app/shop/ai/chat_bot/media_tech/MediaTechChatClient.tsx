@@ -31,36 +31,100 @@ export type Message = {
   usage?: {
     inputTokens?: number;
     outputTokens?: number;
+    cacheReadTokens?: number;
     totalTokens?: number;
+    contextPercentage?: number;
+    model?: string;
   };
 };
 
-function getTokenUsage(data: unknown): Message["usage"] {
-  const usage = (data as { usage?: unknown } | null)?.usage;
+function getTokenUsage(data: unknown, modelFallback?: string): Message["usage"] {
+  const response = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const usage = response.usage;
   if (!usage || typeof usage !== "object") return undefined;
   const tokenCounts = usage as Record<string, unknown>;
   const getCount = (value: unknown) =>
-    typeof value === "number" && Number.isFinite(value) ? value : undefined;
+    typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 
-  const inputTokens = getCount(tokenCounts.input_tokens) ?? getCount(tokenCounts.prompt_tokens);
+  const totalInputTokens = getCount(tokenCounts.input_tokens) ?? getCount(tokenCounts.prompt_tokens);
   const outputTokens = getCount(tokenCounts.output_tokens) ?? getCount(tokenCounts.completion_tokens);
+  const inputDetails = tokenCounts.input_tokens_details;
+  const promptDetails = tokenCounts.prompt_tokens_details;
+  const cacheReadTokens =
+    getCount(
+      inputDetails && typeof inputDetails === "object"
+        ? (inputDetails as Record<string, unknown>).cached_tokens
+        : undefined,
+    ) ??
+    getCount(
+      promptDetails && typeof promptDetails === "object"
+        ? (promptDetails as Record<string, unknown>).cached_tokens
+        : undefined,
+    );
+  const inputTokens = totalInputTokens === undefined
+    ? undefined
+    : Math.max(0, totalInputTokens - (cacheReadTokens ?? 0));
+  const calculatedTotal =
+    totalInputTokens !== undefined && outputTokens !== undefined
+      ? totalInputTokens + outputTokens
+      : undefined;
   const totalTokens =
     getCount(tokenCounts.total_tokens) ??
-    (inputTokens !== undefined && outputTokens !== undefined
-      ? inputTokens + outputTokens
+    (calculatedTotal !== undefined && Number.isFinite(calculatedTotal)
+      ? calculatedTotal
       : undefined);
+  const contextPercentage =
+    getCount(tokenCounts.context_percentage) ?? getCount(response.context_percentage);
+  const model =
+    (typeof response.model === "string" && response.model.trim() ? response.model : undefined) ??
+    modelFallback;
 
-  if (inputTokens === undefined && outputTokens === undefined && totalTokens === undefined) {
+  if (
+    inputTokens === undefined &&
+    outputTokens === undefined &&
+    cacheReadTokens === undefined &&
+    totalTokens === undefined &&
+    contextPercentage === undefined
+  ) {
     return undefined;
   }
-  if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
+  if (
+    inputTokens === 0 &&
+    outputTokens === 0 &&
+    cacheReadTokens === undefined &&
+    totalTokens === 0
+  ) {
     return undefined;
   }
 
-  return { inputTokens, outputTokens, totalTokens };
+  return {
+    inputTokens,
+    outputTokens,
+    cacheReadTokens: cacheReadTokens ?? 0,
+    totalTokens,
+    contextPercentage: contextPercentage !== undefined && contextPercentage <= 100
+      ? contextPercentage
+      : undefined,
+    model,
+  };
 }
 
 const tokenNumberFormat = new Intl.NumberFormat("vi-VN");
+const compactTokenNumberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+
+function formatCompactTokenCount(value: number) {
+  if (!Number.isFinite(value) || value < 0) return "0";
+  if (value < 1_000) return String(Math.trunc(value));
+
+  let unit = value >= 1_000_000 ? "m" : "k";
+  let scaled = value / (unit === "m" ? 1_000_000 : 1_000);
+  if (unit === "k" && Math.round(scaled * 10) / 10 >= 1_000) {
+    unit = "m";
+    scaled = value / 1_000_000;
+  }
+  return `${compactTokenNumberFormat.format(scaled).replace(/\.0$/, "")}${unit}`;
+}
+
 const LARAVEL_CHAT_API =
   process.env.NEXT_PUBLIC_CHAT_BOT_API_BASE || "https://laravel.hust.media/api/chat/bot";
 
@@ -84,7 +148,12 @@ function mapLaravelHistory(items: any[]): Message[] {
       text: String(item?.content ?? ""),
       time,
       isError: !isUser && Number(upstream?.http_status) >= 400,
-      usage: !isUser ? getTokenUsage({ usage: upstream?.usage ?? upstream }) : undefined,
+      usage: !isUser
+        ? getTokenUsage(
+            { usage: upstream?.usage ?? upstream, model: item?.model ?? upstream?.model },
+            item?.model,
+          )
+        : undefined,
     };
   });
 }
@@ -943,7 +1012,7 @@ export default function MediaTechChatClient({
             text: botReply,
             imageUrl,
             time: resTime,
-            usage: getTokenUsage(data),
+            usage: getTokenUsage(data, String(data?.model || payload.model || activeModel)),
           },
         ]);
         void persistChatTurn({
@@ -1430,28 +1499,36 @@ export default function MediaTechChatClient({
 
                   {isBot && !msg.isError && msg.usage && (
                     <div
-                      className="mt-1.5 inline-flex max-w-full flex-wrap items-center gap-x-2.5 gap-y-1 rounded-full border border-purple-100 bg-purple-50/80 px-2.5 py-1 text-[10px] leading-none text-slate-600 shadow-[0_1px_2px_rgba(88,28,135,0.05)]"
+                      className="mt-1.5 inline-flex max-w-full flex-wrap items-center gap-x-2 rounded-full border border-purple-100 bg-purple-50/80 px-2.5 py-1 text-[10px] leading-none text-slate-600 shadow-[0_1px_2px_rgba(88,28,135,0.05)]"
                       aria-label="Mức sử dụng token của phản hồi"
-                      title="Usage do OpenClaw API trả về"
+                      title={[
+                        msg.usage.inputTokens !== undefined
+                          ? `Input không cache: ${tokenNumberFormat.format(msg.usage.inputTokens)}`
+                          : undefined,
+                        `Cache-read: ${tokenNumberFormat.format(msg.usage.cacheReadTokens ?? 0)}`,
+                        msg.usage.outputTokens !== undefined
+                          ? `Output: ${tokenNumberFormat.format(msg.usage.outputTokens)}`
+                          : undefined,
+                        msg.usage.totalTokens !== undefined
+                          ? `Tổng: ${tokenNumberFormat.format(msg.usage.totalTokens)}`
+                          : undefined,
+                      ].filter(Boolean).join(" · ")}
                     >
-                      <span className="inline-flex items-center gap-1 font-semibold text-purple-700">
-                        <Sparkles className="h-3 w-3" aria-hidden="true" />
-                        Token
-                      </span>
+                      <Sparkles className="h-2.5 w-2.5 shrink-0 text-purple-600" aria-hidden="true" />
                       {msg.usage.inputTokens !== undefined && (
-                        <span>
-                          Vào <span className="font-medium text-slate-700">{tokenNumberFormat.format(msg.usage.inputTokens)}</span>
-                        </span>
+                        <span className="font-medium text-slate-700">↑{formatCompactTokenCount(msg.usage.inputTokens)}</span>
                       )}
                       {msg.usage.outputTokens !== undefined && (
-                        <span>
-                          Ra <span className="font-medium text-slate-700">{tokenNumberFormat.format(msg.usage.outputTokens)}</span>
-                        </span>
+                        <span className="font-medium text-slate-700">↓{formatCompactTokenCount(msg.usage.outputTokens)}</span>
                       )}
-                      {msg.usage.totalTokens !== undefined && (
-                        <span>
-                          Tổng <span className="font-semibold text-purple-800">{tokenNumberFormat.format(msg.usage.totalTokens)}</span>
-                        </span>
+                      <span className="font-medium text-slate-700">
+                        R{formatCompactTokenCount(msg.usage.cacheReadTokens ?? 0)}
+                      </span>
+                      {msg.usage.contextPercentage !== undefined && (
+                        <span className="font-medium text-slate-600">ctx {compactTokenNumberFormat.format(msg.usage.contextPercentage)}%</span>
+                      )}
+                      {msg.usage.model && (
+                        <span className="truncate font-medium text-slate-500">{msg.usage.model}</span>
                       )}
                     </div>
                   )}

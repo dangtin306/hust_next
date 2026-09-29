@@ -50,7 +50,6 @@ import {
   getSseProxyUrl,
   STANDARD_CHAT_NODE_ID,
   NODE_BACKEND_ARCHITECTURE_NODE_IDS,
-  OPENCLAW_REALTIME_WORKFLOW_ID,
 } from "./process";
 
 // ==========================================
@@ -400,7 +399,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
       }`}
     >
       <div
-        className={`w-16 h-16 rounded-2xl border-2 flex items-center justify-center shadow-lg relative transition-all duration-300 ${getBorderStatusClass()}`}
+        className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center shadow-lg relative transition-all duration-300 ${getBorderStatusClass()}`}
       >
         {targetHandleIds.map((handleId, index) => (
           <Handle
@@ -414,9 +413,9 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
         ))}
 
         <div
-          className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center text-white shadow-md transition-transform duration-200 group-hover:scale-105`}
+          className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center text-white shadow-md transition-transform duration-200 group-hover:scale-105`}
         >
-          <NodeIcon className="w-5 h-5 stroke-[2.2]" />
+          <NodeIcon className="w-6 h-6 stroke-[2.2]" />
         </div>
 
         {sourceHandleIds.map((handleId, index) => {
@@ -500,6 +499,14 @@ const N8N_NODE_TYPES = {
 
 const CHAT_NODE_ID = STANDARD_CHAT_NODE_ID;
 const OPENCLAW_FORMAT_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1";
+const BACKEND_NODE_ID_ALIASES: Record<string, string> = {
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse]: OPENCLAW_FORMAT_NODE_ID,
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision]: "b18073a2-c1a5-4ef4-a803-8e03ad67b3d1",
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess]: "a8b336c8-0af9-4e0e-a87e-2421c8aa0001",
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse]: "a8b336c8-0af9-4e0e-a87e-2421c8aa0002",
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure]: "a8b336c8-0af9-4e0e-a87e-2421c8aa0003",
+  [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop]: "a8b336c8-0af9-4e0e-a87e-2421c8aa0004",
+};
 const SAFE_OUTCOMES = new Set([
   "success", "completed", "ok", "failed", "error", "timeout", "cancelled", "aborted", "skipped",
 ]);
@@ -562,7 +569,10 @@ export const convertNormalizedGraphToFlow = (
       disabled: Boolean(node.disabled),
       liveStatus: "idle",
       subLabel: "",
-      description: describeWorkflowNode(node.name || "", node.type || ""),
+      description:
+        typeof node.description === "string" && node.description.trim()
+          ? node.description.trim()
+          : describeWorkflowNode(node.name || "", node.type || ""),
     },
   }));
 
@@ -675,160 +685,9 @@ export const convertNormalizedGraphToFlow = (
     };
   });
 
-  const graphWorkflowId = graph.workflow?.id || graph.workflowId;
-  const architectureNodes: Node[] = [];
-  const architectureEdges: Edge[] = [];
-  if (graphWorkflowId === OPENCLAW_REALTIME_WORKFLOW_ID && flowNodesWithHandles.length > 0) {
-    const positions = flowNodesWithHandles.map((node) => node.position);
-    const minX = Math.min(...positions.map((position) => position.x));
-    const maxY = Math.max(...positions.map((position) => position.y));
-    const originX = minX;
-    const originY = maxY + 620;
-    const specs = [
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress,
-        name: "Node API ingress",
-        description: "Responses / Chat Completions request received by Node.",
-        position: { x: originX, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler,
-        name: "Node API request handler",
-        description: "Node route lifetime; separate from n8n execution.",
-        position: { x: originX + 250, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput,
-        name: "Responses API · input",
-        description: "Decodes the request JSON and classifies input; normalization follows in Node preparation.",
-        position: { x: originX + 550, y: originY + 35 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages,
-        name: "Chat Completions · messages",
-        description: "Decodes the request JSON and identifies messages; normalization follows in Node preparation.",
-        position: { x: originX + 550, y: originY + 325 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation,
-        name: "Node request preparation",
-        description: "Resolves conversation/user/session metadata separately from prompt and normalizes content; order follows the actual service path.",
-        position: { x: originX + 850, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway,
-        name: "OpenClaw Gateway",
-        description: "Receives the prepared Node API request and runs the selected OpenClaw path.",
-        position: { x: originX + 1150, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse,
-        name: "Node API · format response",
-        description: "Formats the Node API result; not the n8n Format node.",
-        position: { x: originX + 1430, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse,
-        name: "Node API · return response",
-        description: "Completes this HTTP response to its caller.",
-        position: { x: originX + 2550, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision,
-        name: "Node API response readable?",
-        description: "Selects the readable response or failure/fallback path.",
-        position: { x: originX + 1710, y: originY + 180 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess,
-        name: "Node API successful response path",
-        description: "The formatted response is readable and can be returned.",
-        position: { x: originX + 1990, y: originY + 55 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure,
-        name: "Node API failure / fallback path",
-        description: "Formatting failure or a service error handled by a safe fallback.",
-        position: { x: originX + 1990, y: originY + 305 },
-      },
-      {
-        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop,
-        name: "Node API finalize failure path",
-        description: "Marks failed processing; a readable fallback can still return HTTP 200.",
-        position: { x: originX + 2270, y: originY + 305 },
-      },
-    ];
-
-    architectureNodes.push({
-      id: "node-backend-architecture-note",
-      type: "stickyNote",
-      position: { x: originX - 36, y: originY - 36 },
-      data: {
-        content: [
-          "NODE BACKEND ARCHITECTURE · NOT EXECUTABLE N8N NODES",
-          "The two Node APIs have separate payload parsers and share the Node request handler. Identity/session and content normalization run inside that handler; their order can vary by service path.",
-          "The real n8n lane remains in the workflow above: input (ChatTrigger) → media_tech → Prepare media_tech OpenClaw message. Node API calls do not pass through those n8n nodes.",
-          "Service errors can select the failure/fallback path and still return a safe HTTP 200 response.",
-        ].join("\n"),
-        color: 6,
-          width: 2880,
-          height: 560,
-      },
-      draggable: false,
-      selectable: false,
-      connectable: false,
-      zIndex: -1,
-    });
-
-    for (const spec of specs) {
-      architectureNodes.push({
-        id: spec.id,
-        type: "architectureNode",
-        position: spec.position,
-        data: {
-          name: spec.name,
-          nodeType: "node-backend-architecture",
-          liveStatus: "idle",
-          subLabel: "",
-          description: spec.description,
-          visualScope: "architecture",
-          sourceHandleIds: ["main-0"],
-          targetHandleIds: ["main-0"],
-        },
-      });
-    }
-
-    const addArchitectureEdge = (source: string, target: string, label?: string) => {
-      architectureEdges.push({
-        id: `arch-${source}-${target}`,
-        source,
-        target,
-        sourceHandle: "main-0",
-        targetHandle: "main-0",
-        type: "default",
-        ...(label ? { label, labelStyle: { fill: "#b8b0e8", fontSize: 12 } } : {}),
-        animated: false,
-        style: { stroke: "#8b7ad7", strokeWidth: 1.5, strokeDasharray: "6 6" },
-      });
-    };
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress, NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler, NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler, NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput, NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages, NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation, NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess, "true");
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess, NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure, "false");
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop);
-    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop, NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse);
-  }
-
   return {
-    allNodes: [...stickyNotes, ...flowNodesWithHandles, ...architectureNodes],
-    flowEdges: [...flowEdges, ...architectureEdges],
+    allNodes: [...stickyNotes, ...flowNodesWithHandles],
+    flowEdges,
   };
 };
 
@@ -1111,12 +970,7 @@ export const N8nDiagramRenderer = forwardRef<
       }
 
       const rawExplicitNodeId = typeof payload.node_id === "string" ? payload.node_id.trim() : "";
-      const isBackendPreparationEvent =
-        rawExplicitNodeId === NODE_BACKEND_ARCHITECTURE_NODE_IDS.normalizeContent ||
-        rawExplicitNodeId === NODE_BACKEND_ARCHITECTURE_NODE_IDS.resolveIdentity;
-      const explicitNodeId = isBackendPreparationEvent
-        ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation
-        : rawExplicitNodeId;
+      const explicitNodeId = BACKEND_NODE_ID_ALIASES[rawExplicitNodeId] || rawExplicitNodeId;
       const explicitNodeName = explicitNodeId
         ? graphNodeNamesRef.current.get(explicitNodeId)
         : undefined;

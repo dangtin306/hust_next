@@ -26,15 +26,17 @@ export const NODE_BACKEND_GRAPH_URL = "https://node_md.hust.media/openclaw/workf
 export const NODE_BACKEND_HOST = "node_md.hust.media";
 export const STANDARD_CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 
-// Presentation-only Node backend runtime nodes. These IDs are deliberately
-// distinct from executable n8n node IDs in media_tech_realtime.
+// Backend runtime/architecture IDs. The workflow source contains matching
+// disabled NoOp nodes so the live graph can display and light these stages.
 export const NODE_BACKEND_ARCHITECTURE_NODE_IDS = Object.freeze({
   ingress: "node-backend-api-ingress",
   handler: "node-backend-api-handler",
   responsesInput: "node-backend-responses-input",
   chatCompletionsMessages: "node-backend-chat-completions-messages",
-  preparation: "node-backend-api-preparation",
+  chatTriggerInput: "node-backend-n8n-chat-input",
+  chatTriggerPrepare: "node-backend-n8n-chat-prepare",
   openclawGateway: "node-backend-openclaw-gateway",
+  openclawChatApi: "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e0",
   normalizeContent: "node-backend-normalize-content",
   resolveIdentity: "node-backend-resolve-identity",
   formatResponse: "node-backend-format-response",
