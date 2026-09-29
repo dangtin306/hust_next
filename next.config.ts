@@ -54,7 +54,11 @@ const nextConfig: NextConfig = {
     return config;
   },
   async rewrites() {
-    return rewriteRules;
+    return {
+      beforeFiles: rewriteRules.filter((r) => r.destination.startsWith("http")),
+      afterFiles: rewriteRules.filter((r) => !r.destination.startsWith("http")),
+      fallback: [],
+    };
   },
 };
 

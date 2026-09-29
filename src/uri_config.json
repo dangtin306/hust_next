@@ -195,6 +195,10 @@
       "giteaTest": {
         "source": "/api/swagger/gitea_test",
         "destination": "/api/maps/gitea_test"
+      },
+      "chatBotApi": {
+        "source": "/api/chat/bot/:path*",
+        "destination": "https://laravel.hust.media/api/chat/bot/:path*"
       }
     }
   },

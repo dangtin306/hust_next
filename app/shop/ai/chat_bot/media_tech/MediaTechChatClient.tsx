@@ -18,6 +18,9 @@ import {
   Edit2,
   Hash,
   Loader2,
+  Lock,
+  Plus,
+  Menu,
 } from "lucide-react";
 
 export type Message = {
@@ -26,6 +29,7 @@ export type Message = {
   text: string;
   time: string;
   isError?: boolean;
+  isHistoryErrorPrompt?: boolean;
   imageUrl?: string;
   serviceDescription?: string;
   usage?: {
@@ -51,6 +55,8 @@ function getTokenUsage(data: unknown, modelFallback?: string): Message["usage"] 
   const inputDetails = tokenCounts.input_tokens_details;
   const promptDetails = tokenCounts.prompt_tokens_details;
   const cacheReadTokens =
+    getCount(tokenCounts.cached_tokens) ??
+    getCount(tokenCounts.cache_read_tokens) ??
     getCount(
       inputDetails && typeof inputDetails === "object"
         ? (inputDetails as Record<string, unknown>).cached_tokens
@@ -137,6 +143,7 @@ function mapLaravelHistory(items: any[]): Message[] {
       previousUpstream = item.upstream;
     }
     const upstream = item?.upstream || (!isUser ? previousUpstream : null);
+    const historyUsage = item?.usage ?? upstream?.usage ?? upstream;
     const timestamp = item?.created_at ? new Date(item.created_at) : null;
     const time = timestamp && !Number.isNaN(timestamp.getTime())
       ? timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -150,7 +157,7 @@ function mapLaravelHistory(items: any[]): Message[] {
       isError: !isUser && Number(upstream?.http_status) >= 400,
       usage: !isUser
         ? getTokenUsage(
-            { usage: upstream?.usage ?? upstream, model: item?.model ?? upstream?.model },
+            { usage: historyUsage, model: item?.model ?? upstream?.model },
             item?.model,
           )
         : undefined,
@@ -389,7 +396,7 @@ export default function MediaTechChatClient({
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [selectedService, setSelectedService] = useState<MediaTechService | null>(null);
-  const [isServiceMenuExpanded, setIsServiceMenuExpanded] = useState(true);
+  const [isServiceMenuExpanded, setIsServiceMenuExpanded] = useState(false);
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isRestoringChat, setIsRestoringChat] = useState(true);
@@ -398,6 +405,13 @@ export default function MediaTechChatClient({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | string>(defaultUserId);
+  const [historyFetchError, setHistoryFetchError] = useState<{
+    failedRoomId: string | number;
+    upstreamConversationId?: string;
+    errorStatus?: number | string;
+  } | null>(null);
+  const [isRetryingHistory, setIsRetryingHistory] = useState(false);
+  const isChatLocked = Boolean(historyFetchError);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const roomSyncPromisesRef = useRef(new Map<string, Promise<string | null>>());
   const serviceMenuRef = useRef<HTMLElement>(null);
@@ -435,6 +449,43 @@ export default function MediaTechChatClient({
 
   const activeModel = propModel;
 
+  const applyCookieHash = (cookieHash: string) => {
+    if (!cookieHash || typeof window === "undefined") return;
+    try {
+      const isHttps = window.location.protocol === "https:";
+      const secureFlag = isHttps ? "; Secure" : "";
+      const host = window.location.hostname;
+      const domainPart = host.endsWith("hust.media") ? "; domain=.hust.media" : "";
+
+      // 1. Set chat_bot_session and cookie_hash cookies on current path
+      document.cookie = `chat_bot_session=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
+      document.cookie = `cookie_hash=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
+
+      // 2. Set for .hust.media domain if applicable
+      if (domainPart) {
+        document.cookie = `chat_bot_session=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
+        document.cookie = `cookie_hash=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
+      }
+
+      // 3. Set SameSite=None; Secure for cross-site fetch credentials inclusion
+      if (isHttps) {
+        document.cookie = `chat_bot_session=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; SameSite=None; Secure`;
+        document.cookie = `cookie_hash=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; SameSite=None; Secure`;
+        if (domainPart) {
+          document.cookie = `chat_bot_session=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
+          document.cookie = `cookie_hash=${encodeURIComponent(cookieHash)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
+        }
+      }
+    } catch (e) {
+      console.warn("Không thể ghi document.cookie:", e);
+    }
+    try {
+      window.localStorage.setItem("chat_bot_session", cookieHash);
+      window.localStorage.setItem("cookie_hash", cookieHash);
+      window.localStorage.setItem(`${activeStorageKey}_cookie_hash`, cookieHash);
+    } catch {}
+  };
+
   const ensureLaravelRoom = (
     upstreamConversationId: string,
     title: string,
@@ -456,6 +507,19 @@ export default function MediaTechChatClient({
         }),
       });
       if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const errorCode = body?.error?.code || body?.code;
+        const cookieHash = body?.error?.cookie_hash || body?.cookie_hash;
+        if (errorCode === "CONVERSATION_ALREADY_LINKED") {
+          const err = new Error(
+            body?.error?.message ||
+              body?.message ||
+              "Cuộc trò chuyện đã được liên kết với phiên khác.",
+          );
+          (err as any).code = "CONVERSATION_ALREADY_LINKED";
+          (err as any).cookie_hash = cookieHash;
+          throw err;
+        }
         throw new Error(`Laravel room sync failed (${response.status})`);
       }
 
@@ -468,6 +532,9 @@ export default function MediaTechChatClient({
     })()
       .catch((error) => {
         roomSyncPromisesRef.current.delete(upstreamConversationId);
+        if (error?.code === "CONVERSATION_ALREADY_LINKED") {
+          throw error;
+        }
         console.warn("Không đồng bộ được phòng chat với Laravel:", error);
         return null;
       });
@@ -506,6 +573,18 @@ export default function MediaTechChatClient({
       const usage = responseData?.usage && typeof responseData.usage === "object"
         ? responseData.usage
         : {};
+      const inputTokenDetails = usage.input_tokens_details;
+      const promptTokenDetails = usage.prompt_tokens_details;
+      const cachedTokens =
+        usage.cached_tokens ??
+        usage.cache_read_tokens ??
+        (inputTokenDetails && typeof inputTokenDetails === "object"
+          ? (inputTokenDetails as Record<string, unknown>).cached_tokens
+          : undefined) ??
+        (promptTokenDetails && typeof promptTokenDetails === "object"
+          ? (promptTokenDetails as Record<string, unknown>).cached_tokens
+          : undefined) ??
+        0;
       const response = await fetch(
         `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(roomId)}/messages`,
         {
@@ -520,6 +599,7 @@ export default function MediaTechChatClient({
             upstream_response_id: responseData?.id ?? null,
             usage: {
               input_tokens: usage.input_tokens ?? usage.prompt_tokens ?? 0,
+              cached_tokens: cachedTokens,
               output_tokens: usage.output_tokens ?? usage.completion_tokens ?? 0,
               total_tokens: usage.total_tokens ?? 0,
             },
@@ -601,7 +681,11 @@ export default function MediaTechChatClient({
             window.localStorage.setItem(activeStorageKey, convKey);
           } catch {}
           onRoomLinkStart?.();
-          void ensureLaravelRoom(convKey, "Cuộc trò chuyện mới", activeModel);
+          void ensureLaravelRoom(convKey, "Cuộc trò chuyện mới", activeModel).catch((err) => {
+            if (err?.code !== "CONVERSATION_ALREADY_LINKED") {
+              console.warn("Không đồng bộ được phòng chat với Laravel:", err);
+            }
+          });
           return convKey;
         }
       }
@@ -614,147 +698,238 @@ export default function MediaTechChatClient({
   useEffect(() => {
     let cancelled = false;
     const initializeChat = async () => {
-      let savedConv: string | null = null;
-      let savedUid: string | null = null;
-      let effectiveUserId: number | string | null = null;
-      const updateProgress = (progress: number, status: string) => {
-        setRestoreProgress(progress);
-        setRestoreStatus(status);
-      };
-      const createAndLinkConversation = async () => {
-        updateProgress(45, "Chưa có phòng chat — đang khởi tạo cuộc trò chuyện…");
-        const newConversation = await createConversation(effectiveUserId, () => {
-          updateProgress(75, "Đang liên kết phòng chat với Laravel…");
-        });
-        if (!newConversation) return null;
+      let retryCount = 0;
+      const maxRetries = 2;
 
-        updateProgress(82, "Đang hoàn tất đồng bộ phòng chat…");
-        const roomId = await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
-        updateProgress(
-          96,
-          roomId
-            ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
-            : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
-        );
-        return newConversation;
-      };
+      while (!cancelled && retryCount <= maxRetries) {
+        let savedConv: string | null = null;
+        let savedUid: string | null = null;
+        let effectiveUserId: number | string | null = null;
+        const updateProgress = (progress: number, status: string) => {
+          setRestoreProgress(progress);
+          setRestoreStatus(status);
+        };
 
-      setIsRestoringChat(true);
-      updateProgress(0, "Đang khởi tạo phiên chat…");
-      try {
-        savedConv = window.localStorage.getItem(activeStorageKey);
-        savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
-      } catch {}
-
-      if (savedUid) {
-        const parsed = Number(savedUid);
-        effectiveUserId = Number.isInteger(parsed) ? parsed : savedUid;
-        setUserId(effectiveUserId);
-      } else if (defaultUserId) {
-        effectiveUserId = defaultUserId;
-        setUserId(defaultUserId);
-      }
-
-      try {
-        updateProgress(30, "Đang tìm phòng chat trên Laravel…");
-        // Existing cookie: Laravel returns this user's rooms. Without a cookie,
-        // GET /rooms returns 401; the fallback creates the Node conversation,
-        // then POST /rooms links it and Laravel issues its HttpOnly cookie.
-        const roomsResponse = await fetch(`${LARAVEL_CHAT_API}/rooms?page=1&per_page=30`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        if (roomsResponse.status === 401) {
-          await createAndLinkConversation();
-          return;
-        }
-        if (!roomsResponse.ok) {
-          throw new Error(`Laravel room list failed (${roomsResponse.status})`);
-        }
-        const roomsBody = await roomsResponse.json();
-        const roomItems = Array.isArray(roomsBody?.data)
-          ? roomsBody.data
-          : Array.isArray(roomsBody?.data?.data)
-          ? roomsBody.data.data
-          : [];
-        const latestRoom = roomItems.find((room: any) => Number(room?.status ?? 1) === 1);
-        const roomId = latestRoom?.room_id ?? latestRoom?.id;
-        const upstreamConversationId = latestRoom?.upstream_conversation_id;
-
-        if (roomId !== undefined && roomId !== null && upstreamConversationId) {
+        const restoreFromRoom = async (
+          targetRoomId: number | string,
+          upstreamConvId: string,
+          turnResponseId?: string | null,
+        ): Promise<boolean> => {
           updateProgress(60, "Đã tìm thấy phòng — đang tải lịch sử tin nhắn…");
-          const historyResponse = await fetch(
-            `${LARAVEL_CHAT_API}/rooms/${encodeURIComponent(String(roomId))}/messages?per_page=50`,
-            { credentials: "include", cache: "no-store" },
-          );
-          if (!historyResponse.ok) {
-            throw new Error(`Laravel message history failed (${historyResponse.status})`);
+          let historyItems: any[] = [];
+          try {
+            const historyResponse = await fetch(
+              `${LARAVEL_CHAT_API}/rooms/${encodeURIComponent(String(targetRoomId))}/messages?per_page=50`,
+              { credentials: "include", cache: "no-store" },
+            );
+            if (!historyResponse.ok) {
+              throw new Error(`HTTP ${historyResponse.status}`);
+            }
+            const historyBody = await historyResponse.json();
+            historyItems = Array.isArray(historyBody?.data)
+              ? historyBody.data
+              : Array.isArray(historyBody?.data?.data)
+              ? historyBody.data.data
+              : [];
+          } catch (historyErr: any) {
+            console.error("Lỗi khi tải lịch sử tin nhắn (/messages?per_page=50):", historyErr);
+            if (cancelled) return true;
+            const conversationIdValue = String(upstreamConvId);
+            setConversationId(conversationIdValue);
+            roomSyncPromisesRef.current.set(conversationIdValue, Promise.resolve(String(targetRoomId)));
+            setHistoryFetchError({
+              failedRoomId: String(targetRoomId),
+              upstreamConversationId: conversationIdValue,
+              errorStatus: historyErr?.message || "Lỗi tải dữ liệu",
+            });
+            setMessages([
+              {
+                id: "error-history-prompt",
+                sender: "bot",
+                text: `⚠️ **Không thể tải danh sách tin nhắn cũ** từ máy chủ (\`api/chat/bot/rooms/${targetRoomId}/messages?per_page=50\`).\n\nBạn có muốn thử **Tải lại** danh sách tin nhắn hay **Tạo mới** cuộc trò chuyện để bắt đầu lại?`,
+                time: "Hệ thống",
+                isError: true,
+                isHistoryErrorPrompt: true,
+              },
+            ]);
+            updateProgress(100, "Lỗi tải lịch sử tin nhắn");
+            return true;
           }
-          const historyBody = await historyResponse.json();
-          const historyItems = Array.isArray(historyBody?.data)
-            ? historyBody.data
-            : Array.isArray(historyBody?.data?.data)
-            ? historyBody.data.data
-            : [];
 
-          if (cancelled) return;
-          const conversationIdValue = String(upstreamConversationId);
+          if (cancelled) return true;
+          const conversationIdValue = String(upstreamConvId);
           setConversationId(conversationIdValue);
-          roomSyncPromisesRef.current.set(conversationIdValue, Promise.resolve(String(roomId)));
+          roomSyncPromisesRef.current.set(conversationIdValue, Promise.resolve(String(targetRoomId)));
           const lastUpstreamTurn = [...historyItems].reverse().find(
             (item: any) => item?.upstream?.response_id,
           );
           lastResponseIdRef.current =
-            latestRoom?.last_response_id ?? lastUpstreamTurn?.upstream?.response_id ?? null;
+            turnResponseId ?? lastUpstreamTurn?.upstream?.response_id ?? null;
           try {
             window.localStorage.setItem(activeStorageKey, conversationIdValue);
           } catch {}
           setMessages(historyItems.length ? mapLaravelHistory(historyItems) : INITIAL_MESSAGES);
           updateProgress(96, "Đã khôi phục lịch sử, sắp sẵn sàng…");
-          return;
+          return true;
+        };
+
+        const createAndLinkConversation = async () => {
+          updateProgress(45, "Chưa có phòng chat — đang khởi tạo cuộc trò chuyện…");
+          const newConversation = await createConversation(effectiveUserId, () => {
+            updateProgress(75, "Đang liên kết phòng chat với Laravel…");
+          });
+          if (!newConversation) return null;
+
+          updateProgress(82, "Đang hoàn tất đồng bộ phòng chat…");
+          const roomId = await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
+          if (roomId) {
+            await restoreFromRoom(roomId, newConversation, null);
+          }
+          return newConversation;
+        };
+
+        setIsRestoringChat(true);
+        if (retryCount === 0) {
+          updateProgress(0, "Đang khởi tạo phiên chat…");
+        }
+        let savedSessionCookie: string | null = null;
+        try {
+          savedConv = window.localStorage.getItem(activeStorageKey);
+          savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
+          savedSessionCookie =
+            window.localStorage.getItem("chat_bot_session") ||
+            window.localStorage.getItem("cookie_hash") ||
+            window.localStorage.getItem(`${activeStorageKey}_cookie_hash`);
+        } catch {}
+
+        if (savedSessionCookie) {
+          applyCookieHash(savedSessionCookie);
         }
 
-        if (savedConv) {
+        if (savedUid) {
+          const parsed = Number(savedUid);
+          effectiveUserId = Number.isInteger(parsed) ? parsed : savedUid;
+          setUserId(effectiveUserId);
+        } else if (defaultUserId) {
+          effectiveUserId = defaultUserId;
+          setUserId(defaultUserId);
+        }
+
+        try {
+          updateProgress(30, "Đang tìm phòng chat trên Laravel…");
+          const roomsResponse = await fetch(`${LARAVEL_CHAT_API}/rooms?page=1&per_page=30`, {
+            credentials: "include",
+            cache: "no-store",
+          });
+
+          if (roomsResponse.ok) {
+            const roomsBody = await roomsResponse.json();
+            const roomItems = Array.isArray(roomsBody?.data)
+              ? roomsBody.data
+              : Array.isArray(roomsBody?.data?.data)
+              ? roomsBody.data.data
+              : [];
+
+            const activeRoom =
+              (savedConv
+                ? roomItems.find((r: any) => r?.upstream_conversation_id === savedConv)
+                : null) ||
+              roomItems.find((room: any) => Number(room?.status ?? 1) === 1) ||
+              roomItems[0];
+            const roomId = activeRoom?.room_id ?? activeRoom?.id;
+            const upstreamConversationId = activeRoom?.upstream_conversation_id;
+
+            if (roomId !== undefined && roomId !== null && upstreamConversationId) {
+              const restored = await restoreFromRoom(
+                roomId,
+                upstreamConversationId,
+                activeRoom?.last_response_id,
+              );
+              if (restored) break;
+            }
+          }
+
+          if (roomsResponse.status === 401 && retryCount === 0 && !savedConv) {
+            await createAndLinkConversation();
+            break;
+          }
+
+          if (savedConv) {
+            if (cancelled) return;
+            updateProgress(70, "Đang liên kết cuộc trò chuyện đã lưu với Laravel…");
+            setConversationId(savedConv);
+            const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+            if (roomId) {
+              const restored = await restoreFromRoom(roomId, savedConv, null);
+              if (restored) break;
+            }
+            updateProgress(
+              96,
+              roomId
+                ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
+                : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
+            );
+            break;
+          }
+
+          if (!cancelled) {
+            await createAndLinkConversation();
+          }
+          break;
+        } catch (error: any) {
           if (cancelled) return;
-          updateProgress(70, "Đang liên kết cuộc trò chuyện đã lưu với Laravel…");
-          setConversationId(savedConv);
-          const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
-          updateProgress(
-            96,
-            roomId
-              ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
-              : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
-          );
-          return;
-        }
 
-        if (!cancelled) {
-          await createAndLinkConversation();
+          if (error?.code === "CONVERSATION_ALREADY_LINKED" && retryCount < maxRetries) {
+            const cookieHash = error.cookie_hash;
+            console.warn("Phát hiện CONVERSATION_ALREADY_LINKED từ Laravel, cookie_hash:", cookieHash);
+            if (cookieHash) {
+              applyCookieHash(cookieHash);
+            }
+            roomSyncPromisesRef.current.clear();
+            setIsRestoringChat(true);
+            updateProgress(0, "Phát hiện phiên đã liên kết — đang làm lại thao tác đầu…");
+            await new Promise((r) => setTimeout(r, 200));
+            retryCount++;
+            continue;
+          }
+
+          console.warn("Không khôi phục được lịch sử từ Laravel:", error);
+          try {
+            if (savedConv) {
+              updateProgress(70, "Đang nối lại cuộc trò chuyện đã lưu…");
+              setConversationId(savedConv);
+              const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+              if (roomId) {
+                await restoreFromRoom(roomId, savedConv, null);
+              }
+            } else {
+              await createAndLinkConversation();
+            }
+          } catch (innerErr: any) {
+            if (innerErr?.code === "CONVERSATION_ALREADY_LINKED" && retryCount < maxRetries) {
+              const cookieHash = innerErr.cookie_hash;
+              console.warn("Phát hiện CONVERSATION_ALREADY_LINKED ở bước phụ, cookie_hash:", cookieHash);
+              if (cookieHash) {
+                applyCookieHash(cookieHash);
+              }
+              roomSyncPromisesRef.current.clear();
+              setIsRestoringChat(true);
+              updateProgress(0, "Phát hiện phiên đã liên kết — đang làm lại thao tác đầu…");
+              await new Promise((r) => setTimeout(r, 200));
+              retryCount++;
+              continue;
+            }
+          }
+          break;
         }
-      } catch (error) {
-        console.warn("Không khôi phục được lịch sử từ Laravel:", error);
-        if (cancelled) return;
-        if (savedConv) {
-          updateProgress(70, "Đang nối lại cuộc trò chuyện đã lưu…");
-          setConversationId(savedConv);
-          const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
-          updateProgress(
-            96,
-            roomId
-              ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
-              : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
-          );
-        } else {
-          await createAndLinkConversation();
-        }
-      } finally {
-        if (!cancelled) {
-          setRestoreProgress(100);
-          setRestoreStatus("Sẵn sàng");
-          window.setTimeout(() => {
-            if (!cancelled) setIsRestoringChat(false);
-          }, 300);
-        }
+      }
+
+      if (!cancelled) {
+        setRestoreProgress(100);
+        setRestoreStatus("Sẵn sàng");
+        window.setTimeout(() => {
+          if (!cancelled) setIsRestoringChat(false);
+        }, 300);
       }
     };
 
@@ -770,7 +945,68 @@ export default function MediaTechChatClient({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleRetryHistory = async () => {
+    if (!historyFetchError?.failedRoomId) return;
+    setIsRetryingHistory(true);
+    try {
+      const roomId = historyFetchError.failedRoomId;
+      const historyResponse = await fetch(
+        `${LARAVEL_CHAT_API}/rooms/${encodeURIComponent(String(roomId))}/messages?per_page=50`,
+        { credentials: "include", cache: "no-store" },
+      );
+      if (!historyResponse.ok) {
+        throw new Error(`HTTP ${historyResponse.status}`);
+      }
+      const historyBody = await historyResponse.json();
+      const historyItems = Array.isArray(historyBody?.data)
+        ? historyBody.data
+        : Array.isArray(historyBody?.data?.data)
+        ? historyBody.data.data
+        : [];
+
+      const conversationIdValue = historyFetchError.upstreamConversationId || conversationId || "";
+      if (conversationIdValue) {
+        setConversationId(conversationIdValue);
+        roomSyncPromisesRef.current.set(conversationIdValue, Promise.resolve(String(roomId)));
+        try {
+          window.localStorage.setItem(activeStorageKey, conversationIdValue);
+        } catch {}
+      }
+      const lastUpstreamTurn = [...historyItems].reverse().find(
+        (item: any) => item?.upstream?.response_id,
+      );
+      lastResponseIdRef.current = lastUpstreamTurn?.upstream?.response_id ?? null;
+
+      setMessages(historyItems.length ? mapLaravelHistory(historyItems) : INITIAL_MESSAGES);
+      setHistoryFetchError(null);
+    } catch (err: any) {
+      console.error("Lỗi khi tải lại lịch sử tin nhắn:", err);
+      setMessages([
+        {
+          id: "error-history-prompt",
+          sender: "bot",
+          text: `⚠️ **Tải lại thất bại:** Vẫn không thể lấy danh sách tin nhắn (${err?.message || "Lỗi kết nối"}).\n\nBạn có muốn thử **Tải lại** lần nữa hay **Tạo mới** cuộc trò chuyện?`,
+          time: "Hệ thống",
+          isError: true,
+          isHistoryErrorPrompt: true,
+        },
+      ]);
+    } finally {
+      setIsRetryingHistory(false);
+    }
+  };
+
+  const handleCreateNewRoomFromError = async () => {
+    setIsRetryingHistory(true);
+    try {
+      await handleReset();
+    } finally {
+      setIsRetryingHistory(false);
+    }
+  };
+
   const handleReset = async (newUserId?: number | string) => {
+    setHistoryFetchError(null);
     try {
       window.localStorage.removeItem(activeStorageKey);
       if (newUserId !== undefined) {
@@ -785,7 +1021,7 @@ export default function MediaTechChatClient({
     setMessages(INITIAL_MESSAGES);
     setInput("");
     setSelectedService(null);
-    setIsServiceMenuExpanded(true);
+    setIsServiceMenuExpanded(false);
     setAttachedImage(null);
     setIsTyping(false);
     await createConversation(newUserId !== undefined ? newUserId : userId);
@@ -797,7 +1033,7 @@ export default function MediaTechChatClient({
     displayService?: MediaTechService,
   ) => {
     const text = (textToSend ?? input).trim() || (attachedImage ? "media_image_to_text: OCR và phân tích hình ảnh." : "");
-    if (!text || isTyping || isRestoringChat) return;
+    if (!text || isTyping || isRestoringChat || isChatLocked || isRetryingHistory) return;
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -857,6 +1093,9 @@ export default function MediaTechChatClient({
       const payload: any = {
         model: isImageGeneration ? "openai/gpt-image-2" : activeModel,
       };
+      if (selectedServiceId) {
+        payload.category = selectedServiceId;
+      }
       modelForPersistence = String(payload.model || activeModel);
       if (!isImageGeneration && activeConvId) {
         payload.conversation_id = activeConvId;
@@ -1083,9 +1322,10 @@ export default function MediaTechChatClient({
     textToSend?: string,
     apiService: MediaTechService = selectedService ?? "media_text_to_text",
   ) => {
+    if (isChatLocked || isRestoringChat || isTyping || isRetryingHistory) return;
     const rawText = textToSend ?? textareaRef.current?.value ?? input;
     const text = rawText.trim();
-    if ((!text && !attachedImage) || isTyping || isRestoringChat) return;
+    if (!text && !attachedImage) return;
 
     justSentRef.current = true;
     setInput("");
@@ -1134,6 +1374,7 @@ export default function MediaTechChatClient({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isChatLocked || isRestoringChat || isTyping || isRetryingHistory) return;
     if (e.key === "Enter" && !e.shiftKey) {
       if (isComposingRef.current || e.nativeEvent.isComposing) {
         return;
@@ -1262,6 +1503,22 @@ export default function MediaTechChatClient({
                   <span>OpenClaw ({userId ? `#${userId}` : "UI"})</span>
                   <ExternalLink className="h-2.5 w-2.5" />
                 </a>
+
+                {/* Open/Toggle Service Menu Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsServiceMenuExpanded((prev) => !prev)}
+                  title={isServiceMenuExpanded ? "Thu gọn menu dịch vụ" : "Mở menu dịch vụ"}
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors shadow-2xs active:scale-95 ${
+                    isServiceMenuExpanded
+                      ? "border-purple-300 bg-purple-100 text-purple-800"
+                      : "border-purple-200 bg-purple-50/70 text-purple-700 hover:bg-purple-100"
+                  }`}
+                  aria-expanded={isServiceMenuExpanded}
+                >
+                  <Menu className="h-3 w-3" />
+                  <span>{isServiceMenuExpanded ? "Đóng menu" : "Mở menu"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1296,7 +1553,7 @@ export default function MediaTechChatClient({
 
         {/* Message History Area */}
         <div
-          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6"
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200/80 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300"
           aria-busy={isRestoringChat}
         >
           {isRestoringChat && (
@@ -1357,6 +1614,7 @@ export default function MediaTechChatClient({
                       key={item.title}
                       type="button"
                       onClick={() => {
+                        if (isChatLocked) return;
                         setSelectedService(item.apiService);
                         setIsServiceMenuExpanded(false);
                         setInput("");
@@ -1366,7 +1624,8 @@ export default function MediaTechChatClient({
                           textareaRef.current?.focus();
                         }
                       }}
-                      className="group flex items-start gap-3 rounded-xl border border-white/80 bg-white/80 p-3 text-left shadow-sm transition-all hover:border-purple-300 hover:bg-white hover:shadow-md active:scale-[0.98]"
+                      disabled={isChatLocked}
+                      className="group flex items-start gap-3 rounded-xl border border-white/80 bg-white/80 p-3 text-left shadow-sm transition-all hover:border-purple-300 hover:bg-white hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <span className="text-xl">{item.icon}</span>
                       <div className="flex-1">
@@ -1417,10 +1676,10 @@ export default function MediaTechChatClient({
                 {/* Bot Avatar on Left */}
                 {isBot && (
                   <div
-                    className={`mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-xs ${
                       msg.isError
                         ? "bg-rose-500 shadow-rose-500/20"
-                        : "bg-gradient-to-tr from-purple-600 to-pink-500 shadow-purple-500/20"
+                        : "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/20"
                     }`}
                   >
                     {msg.isError ? (
@@ -1433,17 +1692,17 @@ export default function MediaTechChatClient({
 
                 {/* Message Bubble Content */}
                 <div
-                  className={`relative flex max-w-[85%] flex-col sm:max-w-[78%] ${
+                  className={`relative flex max-w-[88%] flex-col sm:max-w-[80%] ${
                     isBot ? "items-start" : "items-end"
                   }`}
                 >
                   <div
-                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm sm:text-[15px] ${
+                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed sm:text-[15px] ${
                       isBot
                         ? msg.isError
-                        ? "rounded-tl-xs border border-rose-200 bg-rose-50/95 text-rose-900"
-                        : "rounded-tl-xs border border-purple-100/90 bg-white/95 text-slate-800 backdrop-blur-sm"
-                        : "rounded-tr-xs bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white shadow-purple-500/20"
+                          ? "rounded-tl-xs border border-rose-200 bg-rose-50/95 text-rose-900 shadow-xs"
+                          : "rounded-tl-xs border border-slate-200/70 bg-white text-slate-800 shadow-xs"
+                        : "rounded-tr-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs"
                     }`}
                   >
                     {!isBot && msg.serviceDescription && (
@@ -1464,9 +1723,33 @@ export default function MediaTechChatClient({
                       />
                     )}
                     {isBot ? (
-                      <FormattedMessageContent
-                        text={msg.imageUrl ? "Mình đã tạo ảnh cho bạn đây." : msg.text}
-                      />
+                      <>
+                        <FormattedMessageContent
+                          text={msg.imageUrl ? "Mình đã tạo ảnh cho bạn đây." : msg.text}
+                        />
+                        {msg.isHistoryErrorPrompt && (
+                          <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-rose-200/80 pt-3">
+                            <button
+                              type="button"
+                              onClick={handleRetryHistory}
+                              disabled={isRetryingHistory}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-purple-500/20 transition hover:from-purple-700 hover:to-indigo-700 active:scale-95 disabled:opacity-50"
+                            >
+                              <RotateCcw className={`h-3.5 w-3.5 ${isRetryingHistory ? "animate-spin" : ""}`} />
+                              <span>{isRetryingHistory ? "Đang tải lại..." : "Tải lại"}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCreateNewRoomFromError}
+                              disabled={isRetryingHistory}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 disabled:opacity-50"
+                            >
+                              <Plus className="h-3.5 w-3.5 text-emerald-600" />
+                              <span>Tạo mới</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="whitespace-pre-wrap break-words">{msg.text}</div>
                     )}
@@ -1565,7 +1848,37 @@ export default function MediaTechChatClient({
 
         {/* Input Bar & Footer Controls */}
         <footer className="shrink-0 border-t border-purple-100/90 bg-white/75 p-3 backdrop-blur-md sm:p-4">
-          <div className="relative flex items-end gap-2 rounded-2xl border border-purple-200/80 bg-white/95 p-1.5 shadow-inner transition-all focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-400/30">
+          {isChatLocked && (
+            <div className="mb-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/95 px-3.5 py-2 text-xs text-amber-900 shadow-xs">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Khung chat đang bị khóa:</strong> Không thể tải danh sách tin nhắn cũ. Chọn <strong>Tải lại</strong> hoặc <strong>Tạo mới</strong> để tiếp tục.
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={handleRetryHistory}
+                  disabled={isRetryingHistory}
+                  className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+                >
+                  <RotateCcw className={`h-3 w-3 ${isRetryingHistory ? "animate-spin" : ""}`} />
+                  <span>{isRetryingHistory ? "Đang tải..." : "Tải lại"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateNewRoomFromError}
+                  disabled={isRetryingHistory}
+                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95 disabled:opacity-50"
+                >
+                  Tạo mới
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="relative flex items-end gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xs transition-all focus-within:border-purple-400 focus-within:ring-4 focus-within:ring-purple-500/10 hover:border-slate-300">
             <input
               ref={imageInputRef}
               type="file"
@@ -1576,7 +1889,8 @@ export default function MediaTechChatClient({
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600"
+              disabled={isRestoringChat || isChatLocked || isRetryingHistory}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               title="Đính kèm ảnh cho dịch vụ OCR"
             >
               <Paperclip className="h-4 w-4" />
@@ -1596,21 +1910,51 @@ export default function MediaTechChatClient({
               onCompositionStart={handleCompositionStart}
               onCompositionEnd={handleCompositionEnd}
               rows={1}
-              disabled={isRestoringChat}
-              placeholder={!selectedService || selectedService === "media_text_to_text" ? "Nhập câu hỏi hoặc nội dung bạn cần... (Enter để gửi, Shift+Enter xuống dòng)" : selectedService === "media_text_to_image" ? "Mô tả hình ảnh muốn tạo..." : selectedService === "media_image_to_text" ? "Đính kèm ảnh và nhập điều muốn nhận diện/phân tích..." : selectedService === "media_content_smart" ? "Dòng 1: tiêu đề. Dòng tiếp: mô tả/ý chính cần viết..." : selectedService === "media_spell_check" ? "Dán đoạn văn cần sửa chính tả..." : selectedService === "media_script_writing" ? "Nhập chủ đề, thời lượng, đối tượng và phong cách kịch bản..." : "Nhập văn bản muốn chuyển thành giọng nói..."}
-              className="max-h-60 min-h-10 w-full resize-none bg-transparent py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none sm:text-[15px]"
+              disabled={isRestoringChat || isChatLocked || isRetryingHistory}
+              placeholder={
+                isChatLocked
+                  ? "🔒 Khung chat đang bị khóa do không tải được lịch sử tin nhắn..."
+                  : !selectedService || selectedService === "media_text_to_text"
+                  ? "Nhập câu hỏi hoặc nội dung bạn cần..."
+                  : selectedService === "media_text_to_image"
+                  ? "Mô tả hình ảnh muốn tạo..."
+                  : selectedService === "media_image_to_text"
+                  ? "Đính kèm ảnh và nhập điều muốn nhận diện/phân tích..."
+                  : selectedService === "media_content_smart"
+                  ? "Dòng 1: tiêu đề. Dòng tiếp: mô tả/ý chính cần viết..."
+                  : selectedService === "media_spell_check"
+                  ? "Dán đoạn văn cần sửa chính tả..."
+                  : selectedService === "media_script_writing"
+                  ? "Nhập chủ đề, thời lượng, đối tượng và phong cách kịch bản..."
+                  : "Nhập văn bản muốn chuyển thành giọng nói..."
+              }
+              className="max-h-52 min-h-[38px] w-full resize-none bg-transparent py-2 text-sm leading-normal text-slate-800 placeholder-slate-400 focus:outline-none sm:text-[15px] disabled:cursor-not-allowed disabled:opacity-60 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             />
             </div>
 
-            <button
-              type="button"
-              onClick={() => onSendSubmit()}
-              disabled={isRestoringChat || (!input.trim() && !textareaRef.current?.value.trim()) || isTyping}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white shadow-md shadow-purple-500/20 transition-all hover:from-purple-700 hover:to-pink-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-              title="Gửi tin nhắn"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+            {(() => {
+              const canSend =
+                !isRestoringChat &&
+                !isChatLocked &&
+                !isRetryingHistory &&
+                !isTyping &&
+                Boolean(input.trim() || textareaRef.current?.value.trim() || attachedImage);
+              return (
+                <button
+                  type="button"
+                  onClick={() => onSendSubmit()}
+                  disabled={!canSend}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${
+                    canSend
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 active:scale-95 cursor-pointer"
+                      : "bg-slate-100 text-slate-300 cursor-not-allowed"
+                  }`}
+                  title={isChatLocked ? "Khung chat đang bị khóa" : canSend ? "Gửi tin nhắn" : "Nhập nội dung để gửi"}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              );
+            })()}
           </div>
 
           {attachedImage && (
@@ -1648,7 +1992,10 @@ export default function MediaTechChatClient({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="hidden md:inline text-[11px] text-slate-400">
+                Enter gửi • Shift+Enter xuống dòng
+              </span>
               <a
                 href={openClawUrl}
                 target="_blank"

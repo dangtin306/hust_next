@@ -4,12 +4,22 @@ const API_BASE_URL = process.env.GITEA_API_BASE_URL || "https://nginx.hust.media
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
-  const upstreamUrl = `${API_BASE_URL.replace(/\/$/, "")}/${path.join("/")}${request.nextUrl.search}`;
+  const isChat = path[0] === "chat" || path[0] === "chat_bot";
+  const baseTarget = isChat ? "https://laravel.hust.media/api" : API_BASE_URL;
+  const upstreamUrl = `${baseTarget.replace(/\/$/, "")}/${path.join("/")}${request.nextUrl.search}`;
 
   try {
     let upstream: Response | undefined;
-    const requestHeaders: HeadersInit = { accept: "application/json" };
-    const cookie = request.headers.get("cookie");
+    const requestHeaders: Record<string, string> = { accept: "application/json" };
+    let cookie = request.headers.get("cookie") || "";
+    const customSession =
+      request.headers.get("x-chat-bot-session") ||
+      request.headers.get("x-cookie-hash");
+    if (customSession && !cookie.includes("chat_bot_session=")) {
+      cookie = cookie
+        ? `${cookie}; chat_bot_session=${customSession}`
+        : `chat_bot_session=${customSession}`;
+    }
     const xsrfToken = request.headers.get("x-xsrf-token") || cookie?.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)?.[1];
     const contentType = request.headers.get("content-type");
     if (cookie) requestHeaders.cookie = cookie;

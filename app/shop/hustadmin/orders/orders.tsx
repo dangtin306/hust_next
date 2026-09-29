@@ -22,6 +22,7 @@ import {
   Sparkles,
   Link as LinkIcon,
   MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { alert_error, alert_success } from "@/app/AppContext";
 import StatusBadge from "./buttonstatus";
@@ -48,27 +49,6 @@ export type OrderRow = {
   [key: string]: any;
 };
 
-const INITIAL_MOCK_DATA: OrderRow[] = [
-  {
-    stt: 1,
-    name: "Service 1",
-    money: "1000",
-    id: "123",
-    minorder: "10",
-    category: "Category 1",
-    status: "Active",
-  },
-  {
-    stt: 2,
-    name: "Service 2",
-    money: "2000",
-    id: "124",
-    minorder: "20",
-    category: "Category 2",
-    status: "Inactive",
-  },
-];
-
 export default function MyTableComponent() {
   // Query States
   const [id_orders, set_id_orders] = useState("");
@@ -77,9 +57,9 @@ export default function MyTableComponent() {
   const [status, set_status] = useState("");
   const [value, set_value] = useState("");
 
-  // Data & Loading States
-  const [data, set_data] = useState<OrderRow[]>(INITIAL_MOCK_DATA);
-  const [isLoading, setIsLoading] = useState(false);
+  // Data & Loading States - Initialize with empty array and isLoading = true (No fake mock rows on start)
+  const [data, set_data] = useState<OrderRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Client-side quick filter
@@ -471,7 +451,102 @@ export default function MyTableComponent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-sans">
-              {filteredData.length === 0 ? (
+              {isLoading ? (
+                <>
+                  {/* Hàng thông báo Loading thân thiện */}
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-8 px-4 text-center border border-slate-200 bg-gradient-to-b from-purple-50/50 via-white to-slate-50/50"
+                    >
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="relative flex items-center justify-center">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/25">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          </div>
+                          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-cyan-500 border-2 border-white"></span>
+                          </span>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold text-slate-800 flex items-center justify-center gap-1.5">
+                            <span>Đang tải danh sách đơn hàng</span>
+                            <span className="inline-flex gap-1 text-purple-600 font-black animate-pulse">
+                              •••
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                            Hệ thống đang kết nối và đồng bộ dữ liệu thời gian thực từ máy chủ Hust Media...
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* 4 dòng Skeleton Shimmer tương thích 100% cột bảng */}
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <tr key={`skeleton-${idx}`} className="animate-pulse bg-slate-50/40">
+                      {/* Cột 1: Đơn & Khách */}
+                      <td className="py-3 px-3.5 border border-slate-200">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="h-5 w-16 bg-indigo-100/70 rounded-md"></div>
+                            <div className="h-4 w-12 bg-slate-200/70 rounded"></div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-slate-200/80 shrink-0"></div>
+                            <div className="h-4 w-20 bg-slate-200/70 rounded"></div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Cột 2: Dịch vụ & Link */}
+                      <td className="py-3 px-3.5 border border-slate-200">
+                        <div className="space-y-2">
+                          <div className="h-4 w-4/5 bg-slate-200/80 rounded"></div>
+                          <div className="h-3.5 w-1/2 bg-slate-200/60 rounded"></div>
+                          <div className="h-4 w-36 bg-sky-50 border border-sky-100 rounded-md"></div>
+                        </div>
+                      </td>
+
+                      {/* Cột 3: Chi phí & Tiến độ */}
+                      <td className="py-3 px-3 border border-slate-200">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-14 bg-amber-100/70 rounded-md"></div>
+                            <div className="h-3.5 w-14 bg-slate-200/60 rounded"></div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <div className="h-3 w-10 bg-slate-200/60 rounded"></div>
+                              <div className="h-3 w-10 bg-slate-200/60 rounded"></div>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Cột 4: Trạng thái & Giờ */}
+                      <td className="py-3 px-3 border border-slate-200">
+                        <div className="space-y-2">
+                          <div className="h-6 w-24 bg-slate-200/70 rounded-full"></div>
+                          <div className="h-3.5 w-28 bg-slate-200/60 rounded"></div>
+                        </div>
+                      </td>
+
+                      {/* Cột 5: Thao tác */}
+                      <td className="py-3 px-3 text-center border border-slate-200">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div className="h-7 w-12 bg-purple-100/60 rounded-lg"></div>
+                          <div className="h-7 w-12 bg-rose-100/60 rounded-lg"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-400 border border-slate-200">
                     <div className="flex flex-col items-center justify-center space-y-2">
