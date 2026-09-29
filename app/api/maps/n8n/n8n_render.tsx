@@ -49,6 +49,8 @@ import {
   mapStageToNodeId,
   getSseProxyUrl,
   STANDARD_CHAT_NODE_ID,
+  NODE_BACKEND_ARCHITECTURE_NODE_IDS,
+  OPENCLAW_REALTIME_WORKFLOW_ID,
 } from "./process";
 
 // ==========================================
@@ -150,6 +152,7 @@ export type FlowNodeData = {
   liveStatus: LiveNodeStatus;
   subLabel?: string;
   description?: string;
+  visualScope?: "architecture";
   [key: string]: unknown;
 };
 
@@ -207,6 +210,9 @@ const STICKY_COLOR_MAP: Record<
 };
 
 const getNodeCategory = (nodeType = "", name = "", nodeId = "") => {
+  if (nodeType === "node-backend-architecture") {
+    return { icon: Boxes, bg: "bg-[#7357d9]" };
+  }
   // Render the final OpenClaw workflow nodes by their n8n node type, never by label text.
   if (
     nodeId === "b18073a2-c1a5-4ef4-a803-8e03ad67b3d1" &&
@@ -448,6 +454,9 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
       </div>
 
       <div className="nodrag nopan select-text mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
+        {data.visualScope === "architecture" && (
+          <span className="text-[10px] uppercase tracking-wide text-violet-300">Node backend · architecture</span>
+        )}
         <span
           className="text-[17px] font-medium text-slate-200 leading-5 line-clamp-2 max-w-[124px] break-words"
           title={data.name}
@@ -485,6 +494,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
 
 const N8N_NODE_TYPES = {
   n8nNode: N8nFlowNodeRenderer,
+  architectureNode: N8nFlowNodeRenderer,
   stickyNote: N8nStickyNoteRenderer,
 };
 
@@ -665,9 +675,160 @@ export const convertNormalizedGraphToFlow = (
     };
   });
 
+  const graphWorkflowId = graph.workflow?.id || graph.workflowId;
+  const architectureNodes: Node[] = [];
+  const architectureEdges: Edge[] = [];
+  if (graphWorkflowId === OPENCLAW_REALTIME_WORKFLOW_ID && flowNodesWithHandles.length > 0) {
+    const positions = flowNodesWithHandles.map((node) => node.position);
+    const minX = Math.min(...positions.map((position) => position.x));
+    const maxY = Math.max(...positions.map((position) => position.y));
+    const originX = minX;
+    const originY = maxY + 620;
+    const specs = [
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress,
+        name: "Node API ingress",
+        description: "Responses / Chat Completions request received by Node.",
+        position: { x: originX, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler,
+        name: "Node API request handler",
+        description: "Node route lifetime; separate from n8n execution.",
+        position: { x: originX + 250, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput,
+        name: "Responses API · input",
+        description: "Decodes the request JSON and classifies input; normalization follows in Node preparation.",
+        position: { x: originX + 550, y: originY + 35 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages,
+        name: "Chat Completions · messages",
+        description: "Decodes the request JSON and identifies messages; normalization follows in Node preparation.",
+        position: { x: originX + 550, y: originY + 325 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation,
+        name: "Node request preparation",
+        description: "Resolves conversation/user/session metadata separately from prompt and normalizes content; order follows the actual service path.",
+        position: { x: originX + 850, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway,
+        name: "OpenClaw Gateway",
+        description: "Receives the prepared Node API request and runs the selected OpenClaw path.",
+        position: { x: originX + 1150, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse,
+        name: "Node API · format response",
+        description: "Formats the Node API result; not the n8n Format node.",
+        position: { x: originX + 1430, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse,
+        name: "Node API · return response",
+        description: "Completes this HTTP response to its caller.",
+        position: { x: originX + 2550, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision,
+        name: "Node API response readable?",
+        description: "Selects the readable response or failure/fallback path.",
+        position: { x: originX + 1710, y: originY + 180 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess,
+        name: "Node API successful response path",
+        description: "The formatted response is readable and can be returned.",
+        position: { x: originX + 1990, y: originY + 55 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure,
+        name: "Node API failure / fallback path",
+        description: "Formatting failure or a service error handled by a safe fallback.",
+        position: { x: originX + 1990, y: originY + 305 },
+      },
+      {
+        id: NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop,
+        name: "Node API finalize failure path",
+        description: "Marks failed processing; a readable fallback can still return HTTP 200.",
+        position: { x: originX + 2270, y: originY + 305 },
+      },
+    ];
+
+    architectureNodes.push({
+      id: "node-backend-architecture-note",
+      type: "stickyNote",
+      position: { x: originX - 36, y: originY - 36 },
+      data: {
+        content: [
+          "NODE BACKEND ARCHITECTURE · NOT EXECUTABLE N8N NODES",
+          "The two Node APIs have separate payload parsers and share the Node request handler. Identity/session and content normalization run inside that handler; their order can vary by service path.",
+          "The real n8n lane remains in the workflow above: input (ChatTrigger) → media_tech → Prepare media_tech OpenClaw message. Node API calls do not pass through those n8n nodes.",
+          "Service errors can select the failure/fallback path and still return a safe HTTP 200 response.",
+        ].join("\n"),
+        color: 6,
+          width: 2880,
+          height: 560,
+      },
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      zIndex: -1,
+    });
+
+    for (const spec of specs) {
+      architectureNodes.push({
+        id: spec.id,
+        type: "architectureNode",
+        position: spec.position,
+        data: {
+          name: spec.name,
+          nodeType: "node-backend-architecture",
+          liveStatus: "idle",
+          subLabel: "",
+          description: spec.description,
+          visualScope: "architecture",
+          sourceHandleIds: ["main-0"],
+          targetHandleIds: ["main-0"],
+        },
+      });
+    }
+
+    const addArchitectureEdge = (source: string, target: string, label?: string) => {
+      architectureEdges.push({
+        id: `arch-${source}-${target}`,
+        source,
+        target,
+        sourceHandle: "main-0",
+        targetHandle: "main-0",
+        type: "default",
+        ...(label ? { label, labelStyle: { fill: "#b8b0e8", fontSize: 12 } } : {}),
+        animated: false,
+        style: { stroke: "#8b7ad7", strokeWidth: 1.5, strokeDasharray: "6 6" },
+      });
+    };
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress, NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler, NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler, NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.responsesInput, NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.chatCompletionsMessages, NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation, NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess, "true");
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatSuccess, NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatDecision, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure, "false");
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatFailure, NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop);
+    addArchitectureEdge(NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatStop, NODE_BACKEND_ARCHITECTURE_NODE_IDS.returnResponse);
+  }
+
   return {
-    allNodes: [...stickyNotes, ...flowNodesWithHandles],
-    flowEdges,
+    allNodes: [...stickyNotes, ...flowNodesWithHandles, ...architectureNodes],
+    flowEdges: [...flowEdges, ...architectureEdges],
   };
 };
 
@@ -767,7 +928,7 @@ export const N8nDiagramRenderer = forwardRef<
 
       setNodes((current) =>
         current.map((n) => {
-          if (n.type !== "n8nNode") return n;
+          if (n.type !== "n8nNode" && n.type !== "architectureNode") return n;
           const nodeName = (n.data as FlowNodeData)?.name || "";
           const isMatch = targets.some(
             (t) =>
@@ -794,7 +955,7 @@ export const N8nDiagramRenderer = forwardRef<
         const resetTimer = setTimeout(() => {
           setNodes((current) =>
             current.map((n) => {
-              if (n.type !== "n8nNode") return n;
+              if (n.type !== "n8nNode" && n.type !== "architectureNode") return n;
               const nodeName = (n.data as FlowNodeData)?.name || "";
               const isMatch = targets.some(
                 (t) =>
@@ -922,7 +1083,7 @@ export const N8nDiagramRenderer = forwardRef<
       }
 
       // This generic gateway event does not identify a specific chat/service node.
-      if (isGatewayChatEvent) return;
+      // A Gateway lifecycle lights the Gateway architecture card only; it does not infer a service/chat category.
 
       const mappedServiceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
@@ -949,13 +1110,21 @@ export const N8nDiagramRenderer = forwardRef<
         return;
       }
 
-      const explicitNodeId = typeof payload.node_id === "string" ? payload.node_id.trim() : "";
+      const rawExplicitNodeId = typeof payload.node_id === "string" ? payload.node_id.trim() : "";
+      const isBackendPreparationEvent =
+        rawExplicitNodeId === NODE_BACKEND_ARCHITECTURE_NODE_IDS.normalizeContent ||
+        rawExplicitNodeId === NODE_BACKEND_ARCHITECTURE_NODE_IDS.resolveIdentity;
+      const explicitNodeId = isBackendPreparationEvent
+        ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.preparation
+        : rawExplicitNodeId;
       const explicitNodeName = explicitNodeId
         ? graphNodeNamesRef.current.get(explicitNodeId)
         : undefined;
-      const isGraphNodeEvent = !isServiceStage && Boolean(explicitNodeId);
+      const isGraphNodeEvent = !isServiceStage && Boolean(rawExplicitNodeId);
       const lifecycleTargetNodeId = isServiceStage
         ? serviceNodeId
+        : isGatewayChatEvent
+          ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway
         : isGraphNodeEvent
           ? explicitNodeName ? explicitNodeId : undefined
           : isFormatStage
@@ -963,6 +1132,8 @@ export const N8nDiagramRenderer = forwardRef<
             : mapStageToNodeId(payload.stage);
       const lifecycleNodeLabel = isServiceStage
         ? serviceNodeId === CHAT_NODE_ID ? "Chat thường" : payload.service_id || "openclaw.service"
+        : isGatewayChatEvent
+          ? "OpenClaw Gateway"
         : isFormatStage
           ? payload.node_name || explicitNodeName || "Format OpenClaw response"
           : payload.node_name || explicitNodeName || payload.stage || "Workflow node";
@@ -972,15 +1143,22 @@ export const N8nDiagramRenderer = forwardRef<
         case "request.started": {
           const method = payload.method || "REQ";
           const route = payload.route || "";
+          const isOpenClawChatApi = [
+            "/openclaw/v1/responses",
+            "/openclaw/v1/chat/completions",
+            "/openclaw/v1/images/generations",
+          ].includes(route);
           setNodeStatus(
-            [
+            isOpenClawChatApi
+              ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress
+              : [
               "3f989cd1-d89f-4f7a-a58f-e131ecf772b0",
               "media_tech",
               "b269e71f-00ec-4888-a6e0-827a360d7bd6",
               "Node Activity Trace Webhook",
               "node-backend-server",
               "node-request-started",
-            ],
+              ],
             "running",
             `${method} ${route}`,
             60000
@@ -1019,7 +1197,7 @@ export const N8nDiagramRenderer = forwardRef<
           const outcome = getSafeOutcomeLabel(payload.outcome, "failed");
           const label = `${lifecycleNodeLabel} • ${outcome} • ${duration}ms`;
           setNodeStatus(targetNodeId, "error", label, 8000);
-          if (!serviceNodeId && !isFormatStage && !isGraphNodeEvent) {
+          if (!serviceNodeId && !isFormatStage && !isGraphNodeEvent && !isGatewayChatEvent) {
             setNodeStatus(
               ["ce361f6c-bf94-4d14-9579-c5bf3ef818d1", "Acknowledge Node Activity", "node-request-outcome"],
               "error",
@@ -1035,22 +1213,36 @@ export const N8nDiagramRenderer = forwardRef<
           const statusCode = payload.status_code || 200;
           const isError = statusCode >= 400;
           const duration = payload.duration_ms || 0;
-          setNodeStatus(
-            [
-              "ce361f6c-bf94-4d14-9579-c5bf3ef818d1",
-              "Acknowledge Node Activity",
-              "node-request-outcome",
-            ],
-            isError ? "error" : duration > 1500 ? "slow" : "success",
-            `HTTP ${statusCode} (${duration}ms)`,
-            8000
-          );
-          setNodeStatus(
-            ["3f989cd1-d89f-4f7a-a58f-e131ecf772b0", "media_tech", "node-backend-server"],
-            isError ? "error" : "success",
-            `Done (${duration}ms)`,
-            4000
-          );
+          const isOpenClawChatApi = [
+            "/openclaw/v1/responses",
+            "/openclaw/v1/chat/completions",
+            "/openclaw/v1/images/generations",
+          ].includes(payload.route || "");
+          if (isOpenClawChatApi) {
+            setNodeStatus(
+              NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler,
+              isError ? "error" : duration > 1500 ? "slow" : "success",
+              `HTTP ${statusCode} (${duration}ms)`,
+              8000
+            );
+          } else {
+            setNodeStatus(
+              [
+                "ce361f6c-bf94-4d14-9579-c5bf3ef818d1",
+                "Acknowledge Node Activity",
+                "node-request-outcome",
+              ],
+              isError ? "error" : duration > 1500 ? "slow" : "success",
+              `HTTP ${statusCode} (${duration}ms)`,
+              8000
+            );
+            setNodeStatus(
+              ["3f989cd1-d89f-4f7a-a58f-e131ecf772b0", "media_tech", "node-backend-server"],
+              isError ? "error" : "success",
+              `Done (${duration}ms)`,
+              4000
+            );
+          }
           break;
         }
 
@@ -1088,7 +1280,7 @@ export const N8nDiagramRenderer = forwardRef<
         eventGroupsRef.current.clear();
         setNodes((current) =>
           current.map((n) =>
-            n.type === "n8nNode"
+            n.type === "n8nNode" || n.type === "architectureNode"
               ? { ...n, data: { ...n.data, liveStatus: "idle", subLabel: "" } }
               : n
           )
@@ -1111,7 +1303,7 @@ export const N8nDiagramRenderer = forwardRef<
     const { allNodes, flowEdges } = convertNormalizedGraphToFlow(graph);
     graphNodeNamesRef.current = new Map(
       allNodes
-        .filter((node) => node.type === "n8nNode")
+        .filter((node) => node.type === "n8nNode" || node.type === "architectureNode")
         .map((node) => [node.id, (node.data as FlowNodeData).name || ""]),
     );
 

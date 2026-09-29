@@ -166,23 +166,6 @@ export const INITIAL_MESSAGES: Message[] = [
   },
 ];
 
-export const OPENCLAW_SESSION_MAP: Record<string, string> = {
-  "502": "2864c9fe-3620-4240-9391-78734c438f5a",
-  "503": "bc5e63af-3ef3-47bc-b441-77d095aeca4d",
-  "504": "23e1307d-ecd1-46b0-9699-f79cadab540a",
-  "505": "e242f71d-0753-41a7-b1c1-91eeb7f4f6fa",
-  "506": "f64e2355-0f01-42a7-b395-e55647a4a544",
-  "507": "3243c2ed-f904-4561-81a4-f83a74d65849",
-  "511": "53d10567-449b-4ea1-b38a-d713455435ae",
-  "534": "e47ee527-a824-4615-8a4d-91ab34ac442c",
-  "535": "6f154a07-15a0-420e-ab34-4c9d548df2e7",
-  "536": "dd61a316-f935-4de7-b27e-d39488faee1e",
-  "537": "16fcdefe-c0ce-4459-be48-a14746944496",
-  "538": "757ae2d6-45e8-4f52-a865-28b5ec0eddd6",
-  "539": "5a42a7dd-8779-4aed-b701-c3cad06dd923",
-  "540": "ee1ad515-9cc0-4052-ba37-dec83e880c7c",
-};
-
 function createCorrelationId(): string {
   const cryptoApi = globalThis.crypto;
   if (typeof cryptoApi?.randomUUID === "function") {
@@ -379,10 +362,7 @@ export default function MediaTechChatClient({
   const activeSessionKey = effectiveSessionKey;
 
   const targetAgent = agent || (effectiveSessionKey.includes("chat_bot") ? "chat_bot" : "test");
-  const openClawSessionId = OPENCLAW_SESSION_MAP[String(userId)] || "";
-  const openClawUrl = openClawSessionId
-    ? `https://oc.hust.media/md_1/chat/${targetAgent}/${openClawSessionId}`
-    : `https://oc.hust.media/md_1/chat/${targetAgent}`;
+  const openClawUrl = `https://oc.hust.media/md_1/chat/${targetAgent}/user_${encodeURIComponent(String(userId))}`;
 
   const activeModel = propModel;
 
@@ -518,22 +498,11 @@ export default function MediaTechChatClient({
         "Content-Type": "application/json",
         "x-openclaw-session-key": conversationSessionKey,
       };
-      if (targetUrl) {
-        headers["x-openclaw-target"] = targetUrl;
-      }
+      if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-      const bodyPayload: any = {
-        model: activeModel,
-        metadata: {
-          source: agent
-            ? `agent_${agent}`
-            : isDrawer
-            ? "hust_assistant_real"
-            : "hust_assistant_test_1",
-          session_key: conversationSessionKey,
-          agent: agent || undefined,
-        },
-      };
+      // Keep conversation creation aligned with the documented request schema.
+      // Session routing remains in the request header; it is not duplicated in JSON metadata.
+      const bodyPayload: Record<string, unknown> = {};
 
       if (activeUid !== null && activeUid !== undefined && activeUid !== "") {
         const num = Number(activeUid);
@@ -881,7 +850,9 @@ export default function MediaTechChatClient({
             : "";
           payload.input = [{ role: "user", content: `${serviceInstruction}${text}` }];
         }
-        if (lastResponseIdRef.current) {
+        // A persisted conversation is the source of continuity; do not combine
+        // it with Responses API's previous_response_id chain.
+        if (!payload.conversation_id && lastResponseIdRef.current) {
           payload.previous_response_id = lastResponseIdRef.current;
         }
       } else {
@@ -1216,7 +1187,7 @@ export default function MediaTechChatClient({
                   href={openClawUrl}
                   target="_blank"
                   rel="noreferrer"
-                  title={`Mở trực tiếp phiên của User #${userId} trên OpenClaw UI${openClawSessionId ? ` (UUID: ${openClawSessionId})` : ""}`}
+                  title={`Mở phiên OpenClaw của User #${userId}`}
                   className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/70 px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100 shadow-2xs"
                 >
                   <span>OpenClaw ({userId ? `#${userId}` : "UI"})</span>
@@ -1605,7 +1576,7 @@ export default function MediaTechChatClient({
                 href={openClawUrl}
                 target="_blank"
                 rel="noreferrer"
-                title={`Mở trực tiếp phiên của User #${userId} trên OpenClaw UI${openClawSessionId ? ` (UUID: ${openClawSessionId})` : ""}`}
+                title={`Mở phiên OpenClaw của User #${userId}`}
                 className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
               >
                 <span>Mở OpenClaw UI (#{userId})</span>

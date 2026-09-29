@@ -26,6 +26,25 @@ export const NODE_BACKEND_GRAPH_URL = "https://node_md.hust.media/openclaw/workf
 export const NODE_BACKEND_HOST = "node_md.hust.media";
 export const STANDARD_CHAT_NODE_ID = "8cf09691-b004-47e7-9df7-e837aec504d8";
 
+// Presentation-only Node backend runtime nodes. These IDs are deliberately
+// distinct from executable n8n node IDs in media_tech_realtime.
+export const NODE_BACKEND_ARCHITECTURE_NODE_IDS = Object.freeze({
+  ingress: "node-backend-api-ingress",
+  handler: "node-backend-api-handler",
+  responsesInput: "node-backend-responses-input",
+  chatCompletionsMessages: "node-backend-chat-completions-messages",
+  preparation: "node-backend-api-preparation",
+  openclawGateway: "node-backend-openclaw-gateway",
+  normalizeContent: "node-backend-normalize-content",
+  resolveIdentity: "node-backend-resolve-identity",
+  formatResponse: "node-backend-format-response",
+  formatDecision: "node-backend-format-decision",
+  formatSuccess: "node-backend-format-success",
+  returnResponse: "node-backend-api-response",
+  formatFailure: "node-backend-format-failure",
+  formatStop: "node-backend-format-stop",
+});
+
 const OPENCLAW_SERVICE_NODE_IDS = {
   media_text_to_image: "ee84c439-2efc-47e7-8b0b-5ebafe22da07",
   media_text_to_text: "25478a40-28e5-4373-9b66-205c593f8794",
@@ -96,28 +115,17 @@ export function mapStageToNodeId(stageName) {
   const s = String(stageName).trim().toLowerCase();
 
   // 1. Khớp chính xác các stage thực tế từ Node backend OpenClaw
+  if (s === "openclaw.gateway.chat") {
+    return NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway;
+  }
   if (s === "openclaw.codex" || s.includes("codex")) {
-    return [
-      "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e0",
-      "OpenClaw Chat API",
-      "node-stage-codex",
-    ];
+    return NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler;
   }
   if (s === "openclaw.conversations" || s.includes("conversation")) {
-    return [
-      "b84a8b04-86ec-4a97-a35c-9b733490b9a2",
-      "Prepare media_tech OpenClaw message",
-      "node-stage-conversations",
-    ];
+    return NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler;
   }
   if (s === "openclaw.pairing_gate" || s.includes("pairing")) {
-    return [
-      "2f47be3b-91d7-4d22-9ac2-6c68ef1d20df",
-      "2f47be3b-91d7-4d22-9ac2-6c68ef1d20c4",
-      "Is OpenClaw?",
-      "Route chat command (/oc /level /v3 /v4)",
-      "node-stage-pairing-gate",
-    ];
+    return NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler;
   }
   if (s === "openclaw.native" || s.includes("native")) {
     return "node-stage-native";
