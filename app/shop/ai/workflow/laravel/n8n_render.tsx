@@ -114,12 +114,33 @@ export interface N8nTracePayload {
   duration_ms?: number;
   stage_node_ids?: string[];
   stages?: string[];
+  api_results?: N8nTracePayload;
+  data?: N8nTracePayload;
+  payload?: N8nTracePayload;
   trace?: {
     uri?: string;
     method?: string;
+    stage_node_ids?: string[];
   };
   timestamp?: string;
 }
+
+const normalizeSocketTrace = (input: N8nTracePayload): N8nTracePayload => {
+  const payload = input.api_results ?? input.data ?? input.payload ?? input;
+  const nestedStageIds = payload.trace?.stage_node_ids;
+  const stageNodeIds =
+    Array.isArray(payload.stage_node_ids) && payload.stage_node_ids.length > 0
+      ? payload.stage_node_ids
+      : Array.isArray(nestedStageIds)
+        ? nestedStageIds
+        : [];
+
+  return {
+    ...payload,
+    stage_node_ids: stageNodeIds,
+    trace: payload.trace,
+  };
+};
 
 export interface N8nGraphSocketPayload {
   event?: string;
@@ -896,8 +917,9 @@ export const N8nDiagramRenderer = forwardRef<
 
     const handleTrace = (payload: N8nTracePayload) => {
       if (!payload) return;
-      onTraceReceivedRef.current?.(payload);
-      animateTraceRef.current?.(payload);
+      const normalizedTrace = normalizeSocketTrace(payload);
+      onTraceReceivedRef.current?.(normalizedTrace);
+      animateTraceRef.current?.(normalizedTrace);
     };
 
     const handleGraph = (payload: N8nGraphSocketPayload) => {
