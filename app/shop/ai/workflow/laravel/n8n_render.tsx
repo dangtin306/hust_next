@@ -27,7 +27,6 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import {
-  AlertCircle,
   ArrowLeftRight,
   Boxes,
   Clock,
@@ -40,7 +39,6 @@ import {
   Radio,
   Sliders,
   X,
-  Zap,
 } from "lucide-react";
 
 // ==========================================
@@ -78,8 +76,8 @@ export interface N8nEdge {
   id: string;
   source: string;
   target: string;
-  sourceHandle?: string;
-  targetHandle?: string;
+  sourceHandle?: string | null;
+  targetHandle?: string | null;
   connectionType?: string;
   outputIndex?: number;
   targetIndex?: number;
@@ -144,8 +142,27 @@ export type FlowNodeData = {
   typeVersion?: number;
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
+  handles?: {
+    target: Array<string | null>;
+    source: Array<string | null>;
+  };
   [key: string]: unknown;
 };
+
+export const deriveNodeHandles = (edges: N8nEdge[], nodeId: string) => {
+  const target = new Set<string | null>();
+  const source = new Set<string | null>();
+
+  edges.forEach((edge) => {
+    if (edge.target === nodeId) target.add(edge.targetHandle ?? null);
+    if (edge.source === nodeId) source.add(edge.sourceHandle ?? null);
+  });
+
+  return { target: [...target], source: [...source] };
+};
+
+const handleTop = (index: number, count: number) =>
+  count <= 1 ? "50%" : `${((index + 1) / (count + 1)) * 100}%`;
 
 type MermaidSubdiagram = {
   nodeId: string;
@@ -370,9 +387,8 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
   const meta = getNodeCategory(data.nodeType);
   const Icon = meta.icon;
   const hasMermaidDiagram = Boolean(data.hasMermaidDiagram);
-  const isBranchNode =
-    String(data.nodeType || "").toLowerCase().includes("if") ||
-    String(data.nodeType || "").toLowerCase().includes("switch");
+  const targetHandles = data.handles?.target ?? [];
+  const sourceHandles = data.handles?.source ?? [];
   const liveStatus = data.liveStatus || "idle";
 
   let liveClass = "";
@@ -397,13 +413,17 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
             : "border-slate-700/80 hover:border-slate-500")
         } ${selected ? "!border-amber-400 !ring-2 !ring-amber-400/40" : ""}`}
       >
-        {/* Target Handle (Tròn nhỏ bên trái node: main-0) */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="main-0"
-          className="!w-2.5 !h-2.5 !-left-1.5 !bg-slate-300 !border-2 !border-slate-950 hover:!bg-amber-400 transition-colors"
-        />
+        {targetHandles.map((handleId, index) => (
+          <Handle
+            key={`target-${handleId ?? "default"}`}
+            type="target"
+            position={Position.Left}
+            id={handleId ?? undefined}
+            style={{ top: handleTop(index, targetHandles.length) }}
+            className="!w-2.5 !h-2.5 !-left-1.5 !bg-slate-300 !border-2 !border-slate-950 hover:!bg-amber-400 transition-colors"
+            title={`Input ${handleId ?? "default"}`}
+          />
+        ))}
 
         {/* Khung Icon màu theo phân loại n8n */}
         <div
@@ -443,34 +463,17 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
           </span>
         )}
 
-        {/* Source Handles (Tròn nhỏ bên phải node: main-0 và main-1 cho node rẽ nhánh) */}
-        {isBranchNode ? (
-          <>
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="main-0"
-              style={{ top: "35%" }}
-              className="!w-2.5 !h-2.5 !-right-1.5 !bg-emerald-400 !border-2 !border-slate-950 hover:!bg-emerald-300"
-              title="Output 0 (main-0)"
-            />
-            <Handle
-              type="source"
-              position={Position.Right}
-              id="main-1"
-              style={{ top: "65%" }}
-              className="!w-2.5 !h-2.5 !-right-1.5 !bg-rose-400 !border-2 !border-slate-950 hover:!bg-rose-300"
-              title="Output 1 (main-1)"
-            />
-          </>
-        ) : (
+        {sourceHandles.map((handleId, index) => (
           <Handle
+            key={`source-${handleId ?? "default"}`}
             type="source"
             position={Position.Right}
-            id="main-0"
-            className="!w-2.5 !h-2.5 !-right-1.5 !bg-slate-300 !border-2 !border-slate-950 hover:!bg-emerald-400 transition-colors"
+            id={handleId ?? undefined}
+            style={{ top: handleTop(index, sourceHandles.length) }}
+            className="!w-2.5 !h-2.5 !-right-1.5 !bg-emerald-400 !border-2 !border-slate-950 hover:!bg-emerald-300 transition-colors"
+            title={`Output ${handleId ?? "default"}`}
           />
-        )}
+        ))}
       </div>
 
       {/* Tên node và version nằm bên dưới icon box, căn giữa, tối đa 2 dòng */}
@@ -525,6 +528,7 @@ export const convertNormalizedGraphToFlow = (
 
   // 2. Tách stickyNotes
   const rawStickyNotes = graph.stickyNotes ?? [];
+  const graphEdges = graph.edges ?? [];
 
   // Map Flow Nodes với normalizePosition ({ x, y } hoặc [x, y])
   const flowNodes: Node[] = rawFlowNodes.map((node) => ({
@@ -537,6 +541,7 @@ export const convertNormalizedGraphToFlow = (
       typeVersion: node.typeVersion,
       disabled: Boolean(node.disabled),
       liveStatus: "idle",
+      handles: deriveNodeHandles(graphEdges, node.id),
       markdown: node.markdown,
       notes: node.notes,
       hasMermaidDiagram: Boolean(
@@ -567,12 +572,12 @@ export const convertNormalizedGraphToFlow = (
   }));
 
   // Map Edges: giữ nguyên source, target, sourceHandle, targetHandle, dùng đường cong n8n (type: "default")
-  const flowEdges: Edge[] = (graph.edges || []).map((edge) => ({
-    id: edge.id || `e-${edge.source}-${edge.target}`,
+  const flowEdges: Edge[] = graphEdges.map((edge, index) => ({
+    id: edge.id || `e-${index}-${edge.source}-${edge.target}`,
     source: edge.source,
     target: edge.target,
-    sourceHandle: edge.sourceHandle || "main-0",
-    targetHandle: edge.targetHandle || "main-0",
+    sourceHandle: edge.sourceHandle,
+    targetHandle: edge.targetHandle,
     type: "default",
     animated: false,
     style: { stroke: "#64748b", strokeWidth: 2 },
@@ -909,9 +914,11 @@ export const N8nDiagramRenderer = forwardRef<
 
     socket.on("n8n:trace", handleTrace);
     socket.on("n8n:graph", handleGraph);
+    socket.on("workflow_graph", handleGraph);
 
     return () => {
       socket.off("n8n:graph", handleGraph);
+      socket.off("workflow_graph", handleGraph);
       socket.off("n8n:trace", handleTrace);
       socket.off("connect", handleConnect);
       socket.off("disconnect", handleDisconnect);

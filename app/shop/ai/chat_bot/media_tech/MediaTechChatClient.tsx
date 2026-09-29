@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Edit2,
   Hash,
+  Loader2,
 } from "lucide-react";
 
 export type Message = {
@@ -340,6 +341,8 @@ export default function MediaTechChatClient({
   const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isRestoringChat, setIsRestoringChat] = useState(true);
+  const [restoreProgress, setRestoreProgress] = useState(0);
+  const [restoreStatus, setRestoreStatus] = useState("Đang khởi tạo phiên chat…");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | string>(defaultUserId);
@@ -502,7 +505,10 @@ export default function MediaTechChatClient({
   }, [isServiceMenuExpanded]);
 
   // Create or load conversation session
-  const createConversation = async (overrideUserId?: number | string | null): Promise<string | null> => {
+  const createConversation = async (
+    overrideUserId?: number | string | null,
+    onRoomLinkStart?: () => void,
+  ): Promise<string | null> => {
     try {
       const activeUid = overrideUserId !== undefined && overrideUserId !== null ? overrideUserId : userId;
       const conversationSessionKey = baseSession.includes(":user_")
@@ -556,6 +562,7 @@ export default function MediaTechChatClient({
           try {
             window.localStorage.setItem(activeStorageKey, convKey);
           } catch {}
+          onRoomLinkStart?.();
           void ensureLaravelRoom(convKey, "Cuộc trò chuyện mới", activeModel);
           return convKey;
         }
@@ -569,10 +576,33 @@ export default function MediaTechChatClient({
   useEffect(() => {
     let cancelled = false;
     const initializeChat = async () => {
-      setIsRestoringChat(true);
       let savedConv: string | null = null;
       let savedUid: string | null = null;
       let effectiveUserId: number | string | null = null;
+      const updateProgress = (progress: number, status: string) => {
+        setRestoreProgress(progress);
+        setRestoreStatus(status);
+      };
+      const createAndLinkConversation = async () => {
+        updateProgress(45, "Chưa có phòng chat — đang khởi tạo cuộc trò chuyện…");
+        const newConversation = await createConversation(effectiveUserId, () => {
+          updateProgress(75, "Đang liên kết phòng chat với Laravel…");
+        });
+        if (!newConversation) return null;
+
+        updateProgress(82, "Đang hoàn tất đồng bộ phòng chat…");
+        const roomId = await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
+        updateProgress(
+          96,
+          roomId
+            ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
+            : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
+        );
+        return newConversation;
+      };
+
+      setIsRestoringChat(true);
+      updateProgress(0, "Đang khởi tạo phiên chat…");
       try {
         savedConv = window.localStorage.getItem(activeStorageKey);
         savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
@@ -588,6 +618,7 @@ export default function MediaTechChatClient({
       }
 
       try {
+        updateProgress(30, "Đang tìm phòng chat trên Laravel…");
         // Existing cookie: Laravel returns this user's rooms. Without a cookie,
         // GET /rooms returns 401; the fallback creates the Node conversation,
         // then POST /rooms links it and Laravel issues its HttpOnly cookie.
@@ -595,6 +626,10 @@ export default function MediaTechChatClient({
           credentials: "include",
           cache: "no-store",
         });
+        if (roomsResponse.status === 401) {
+          await createAndLinkConversation();
+          return;
+        }
         if (!roomsResponse.ok) {
           throw new Error(`Laravel room list failed (${roomsResponse.status})`);
         }
@@ -609,6 +644,7 @@ export default function MediaTechChatClient({
         const upstreamConversationId = latestRoom?.upstream_conversation_id;
 
         if (roomId !== undefined && roomId !== null && upstreamConversationId) {
+          updateProgress(60, "Đã tìm thấy phòng — đang tải lịch sử tin nhắn…");
           const historyResponse = await fetch(
             `${LARAVEL_CHAT_API}/rooms/${encodeURIComponent(String(roomId))}/messages?per_page=50`,
             { credentials: "include", cache: "no-store" },
@@ -636,36 +672,51 @@ export default function MediaTechChatClient({
             window.localStorage.setItem(activeStorageKey, conversationIdValue);
           } catch {}
           setMessages(historyItems.length ? mapLaravelHistory(historyItems) : INITIAL_MESSAGES);
+          updateProgress(96, "Đã khôi phục lịch sử, sắp sẵn sàng…");
           return;
         }
 
         if (savedConv) {
           if (cancelled) return;
+          updateProgress(70, "Đang liên kết cuộc trò chuyện đã lưu với Laravel…");
           setConversationId(savedConv);
-          await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+          const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+          updateProgress(
+            96,
+            roomId
+              ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
+              : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
+          );
           return;
         }
 
         if (!cancelled) {
-          const newConversation = await createConversation(effectiveUserId);
-          if (newConversation) {
-            await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
-          }
+          await createAndLinkConversation();
         }
       } catch (error) {
         console.warn("Không khôi phục được lịch sử từ Laravel:", error);
         if (cancelled) return;
         if (savedConv) {
+          updateProgress(70, "Đang nối lại cuộc trò chuyện đã lưu…");
           setConversationId(savedConv);
-          await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+          const roomId = await ensureLaravelRoom(savedConv, "Cuộc trò chuyện", activeModel);
+          updateProgress(
+            96,
+            roomId
+              ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
+              : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
+          );
         } else {
-          const newConversation = await createConversation(effectiveUserId);
-          if (newConversation) {
-            await ensureLaravelRoom(newConversation, "Cuộc trò chuyện mới", activeModel);
-          }
+          await createAndLinkConversation();
         }
       } finally {
-        if (!cancelled) setIsRestoringChat(false);
+        if (!cancelled) {
+          setRestoreProgress(100);
+          setRestoreStatus("Sẵn sàng");
+          window.setTimeout(() => {
+            if (!cancelled) setIsRestoringChat(false);
+          }, 300);
+        }
       }
     };
 
@@ -1204,7 +1255,41 @@ export default function MediaTechChatClient({
         </header>
 
         {/* Message History Area */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+        <div
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6"
+          aria-busy={isRestoringChat}
+        >
+          {isRestoringChat && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="sticky top-0 z-10 mx-auto flex w-full max-w-xl items-center gap-3 rounded-2xl border border-purple-100 bg-white/95 p-3.5 shadow-[0_8px_24px_rgba(126,34,206,0.10)] backdrop-blur-md sm:p-4"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-100 via-pink-50 to-indigo-100 text-purple-700">
+                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800">
+                  Đang tải cuộc trò chuyện
+                </p>
+                <div className="mt-0.5 flex items-center justify-between gap-3">
+                  <p className="min-w-0 text-xs leading-relaxed text-slate-500">
+                    {restoreStatus}
+                  </p>
+                  <span className="shrink-0 text-xs font-semibold tabular-nums text-purple-700">
+                    {restoreProgress}%
+                  </span>
+                </div>
+                <div className="mt-2 h-1 overflow-hidden rounded-full bg-purple-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 transition-[width] duration-500 ease-out"
+                    style={{ width: `${restoreProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Service picker collapses after selection so conversation remains the main view. */}
           <section
             ref={serviceMenuRef}
