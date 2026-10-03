@@ -40,6 +40,8 @@ import {
   GitBranch,
   GitMerge,
   MessageSquare,
+  Pause,
+  Play,
   Radio,
   Sliders,
   X,
@@ -547,7 +549,7 @@ type EdgeRunVisual = {
 
 type TraceEdgeData = {
   activities?: EdgeRunVisual[];
-  reducedMotion?: boolean;
+  traceMotionEnabled?: boolean;
   [key: string]: unknown;
 };
 
@@ -617,7 +619,7 @@ function N8nTraceEdge({
     targetPosition,
     curvature: pathOptions?.curvature,
   });
-  const { activities = [], reducedMotion = false } = (data ?? {}) as TraceEdgeData;
+  const { activities = [], traceMotionEnabled = true } = (data ?? {}) as TraceEdgeData;
   const colors: Record<LiveNodeStatus, string> = {
     idle: "#64748b",
     running: "#22d3ee",
@@ -633,7 +635,7 @@ function N8nTraceEdge({
         const color = colors[activity.status];
         return (
           <g key={`${activity.requestKey}:${activity.version}`} aria-hidden="true" pointerEvents="none">
-            {activity.status === "running" && !reducedMotion
+            {activity.status === "running" && traceMotionEnabled
               ? [0, 1, 2].map((dotIndex) => (
                   <g key={dotIndex}>
                     <circle r={7} fill={color} opacity={0.24}>
@@ -808,7 +810,7 @@ export const N8nDiagramRenderer = forwardRef<
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [edgeVisuals, setEdgeVisuals] = useState<EdgeRunVisual[]>([]);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [traceMotionEnabled, setTraceMotionEnabled] = useState(true);
   const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
   const graphEdgesRef = useRef<Edge[]>([]);
   const runsRef = useRef<Map<string, TraceRun>>(new Map());
@@ -1051,14 +1053,6 @@ export const N8nDiagramRenderer = forwardRef<
     setEdges(flowEdges);
   }, [graph, setNodes, setEdges, stopRunTimers]);
 
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-
   useEffect(() => () => clearRuns(false), [clearRuns]);
 
   const renderedEdges = useMemo(() => edges.map((edge) => ({
@@ -1066,9 +1060,9 @@ export const N8nDiagramRenderer = forwardRef<
     data: {
       ...edge.data,
       activities: edgeVisuals.filter((activity) => activity.edgeId === edge.id),
-      reducedMotion: prefersReducedMotion,
+      traceMotionEnabled,
     } satisfies TraceEdgeData,
-  })), [edges, edgeVisuals, prefersReducedMotion]);
+  })), [edges, edgeVisuals, traceMotionEnabled]);
 
   // Lưu animateTrace trong ref để socket effect không phụ thuộc vào animateTrace
   const animateTraceRef = useRef(animateTrace);
@@ -1220,6 +1214,18 @@ export const N8nDiagramRenderer = forwardRef<
           `,
         }}
       />
+
+      <button
+        type="button"
+        onClick={() => setTraceMotionEnabled((enabled) => !enabled)}
+        aria-pressed={traceMotionEnabled}
+        aria-label={traceMotionEnabled ? "Tắt chuyển động chấm trace" : "Bật chuyển động chấm trace"}
+        title={traceMotionEnabled ? "Tắt chuyển động chấm trace" : "Bật chuyển động chấm trace"}
+        className="absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/95 px-3 py-2 text-xs font-medium text-slate-200 shadow-lg transition hover:border-cyan-500 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        {traceMotionEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+        Chấm trace: {traceMotionEnabled ? "Đang chạy" : "Tạm dừng"}
+      </button>
 
       <ReactFlow
         nodes={nodes}
