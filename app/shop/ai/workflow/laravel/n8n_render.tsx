@@ -554,6 +554,7 @@ type TraceEdgeData = {
 type TraceRun = {
   key: string;
   status: LiveNodeStatus;
+  edgeAnimationActive: boolean;
   visitedEdgeSlots: Array<string | null>;
   visitedNodeIds: string[];
   activeEdgeIds: string[];
@@ -874,10 +875,10 @@ export const N8nDiagramRenderer = forwardRef<
 
   const publishEdgeVisuals = useCallback(() => {
     setEdgeVisuals([...runsRef.current.values()].flatMap((run) =>
-      run.status === "running" ? run.activeEdgeIds.map((edgeId) => ({
+      run.edgeAnimationActive ? run.activeEdgeIds.map((edgeId) => ({
         edgeId,
         requestKey: run.key,
-        status: run.status,
+        status: "running" as const,
         version: run.edgeVersions.get(edgeId) ?? 0,
       })) : [],
     ));
@@ -946,11 +947,13 @@ export const N8nDiagramRenderer = forwardRef<
     // A completion may arrive before its start. In that case play its full path once.
     if (prior) stopRunTimers(prior);
     const run: TraceRun = prior ?? {
-      key, status: "running", visitedEdgeSlots: [], visitedNodeIds: [],
+      key, status: "running", edgeAnimationActive: true, visitedEdgeSlots: [], visitedNodeIds: [],
       activeEdgeIds: [], activatedNodeIds: [],
       edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
     };
     runsRef.current.set(key, run);
+    // Edge playback has its own lifecycle; a final node result must not hide it.
+    run.edgeAnimationActive = true;
     run.status = trace.phase === "complete" ? result : "running";
 
     // On completion, retain only the executed prefix; never light a speculative branch.
@@ -1011,6 +1014,7 @@ export const N8nDiagramRenderer = forwardRef<
       publishEdgeVisuals();
       publishNodeStatuses(run.activatedNodeIds);
       scheduleRunTimer(run, RESULT_HOLD_MS, () => {
+        run.edgeAnimationActive = false;
         runsRef.current.delete(key);
         publishEdgeVisuals();
         publishNodeStatuses();
