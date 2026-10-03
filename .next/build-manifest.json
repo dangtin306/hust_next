@@ -4,11 +4,11 @@
   ],
   "devFiles": [],
   "lowPriorityFiles": [
-    "static/J0vVLX30O0AW5FYRQJXZU/_buildManifest.js",
-    "static/J0vVLX30O0AW5FYRQJXZU/_ssgManifest.js"
+    "static/iwOnMaTC1xKXHkYZmub6s/_buildManifest.js",
+    "static/iwOnMaTC1xKXHkYZmub6s/_ssgManifest.js"
   ],
   "rootMainFiles": [
-    "static/chunks/webpack-5be3ca8c68d1804b.js",
+    "static/chunks/webpack-0d5a93103ac329c6.js",
     "static/chunks/e37c2aa4-1d1ef7a1a2bad2aa.js",
     "static/chunks/2977-c6b22983efa55429.js",
     "static/chunks/main-app-f8c89340a78f3081.js"

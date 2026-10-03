@@ -632,30 +632,26 @@ function N8nTraceEdge({
         const color = colors[activity.status];
         return (
           <g key={`${activity.requestKey}:${activity.version}`} aria-hidden="true" pointerEvents="none">
-            <path
-              d={path}
-              fill="none"
-              stroke={color}
-              strokeWidth={3.5}
-              strokeLinecap="round"
-              opacity={0.8}
-              style={{ filter: `drop-shadow(0 0 5px ${color})` }}
-            />
             {activity.status === "running" && !reducedMotion
               ? [0, 1, 2].map((dotIndex) => (
-                  <circle
-                    key={dotIndex}
-                    r={4}
-                    fill={color}
-                    style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-                  >
-                    <animateMotion
-                      path={path}
-                      dur="1.35s"
-                      begin={`${-dotIndex * 0.45}s`}
-                      repeatCount="indefinite"
-                    />
-                  </circle>
+                  <g key={dotIndex}>
+                    <circle r={7} fill={color} opacity={0.24}>
+                      <animateMotion
+                        path={path}
+                        dur="1.35s"
+                        begin={`${-dotIndex * 0.45}s`}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                    <circle r={3.5} fill={color}>
+                      <animateMotion
+                        path={path}
+                        dur="1.35s"
+                        begin={`${-dotIndex * 0.45}s`}
+                        repeatCount="indefinite"
+                      />
+                    </circle>
+                  </g>
                 ))
               : <circle cx={centerX} cy={centerY} r={4} fill={color} />}
           </g>
@@ -878,12 +874,12 @@ export const N8nDiagramRenderer = forwardRef<
 
   const publishEdgeVisuals = useCallback(() => {
     setEdgeVisuals([...runsRef.current.values()].flatMap((run) =>
-      run.activeEdgeIds.map((edgeId) => ({
+      run.status === "running" ? run.activeEdgeIds.map((edgeId) => ({
         edgeId,
         requestKey: run.key,
         status: run.status,
         version: run.edgeVersions.get(edgeId) ?? 0,
-      })),
+      })) : [],
     ));
   }, []);
 
@@ -944,6 +940,8 @@ export const N8nDiagramRenderer = forwardRef<
       ? `request:${trace.request_id}`
       : `single:${++anonymousRunCounterRef.current}`;
     const prior = runsRef.current.get(key);
+    const result: LiveNodeStatus = trace.status === "error" || (trace.status_code ?? 0) >= 400
+      ? "error" : trace.status === "slow" ? "slow" : "success";
 
     // A completion may arrive before its start. In that case play its full path once.
     if (prior) stopRunTimers(prior);
@@ -953,7 +951,7 @@ export const N8nDiagramRenderer = forwardRef<
       edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
     };
     runsRef.current.set(key, run);
-    run.status = "running";
+    run.status = trace.phase === "complete" ? result : "running";
 
     // On completion, retain only the executed prefix; never light a speculative branch.
     const edgePrefix = matchingPrefixLength(edgeSlots, run.visitedEdgeSlots);
@@ -1001,8 +999,6 @@ export const N8nDiagramRenderer = forwardRef<
       return;
     }
 
-    const result: LiveNodeStatus = trace.status === "error" || (trace.status_code ?? 0) >= 400
-      ? "error" : trace.status === "slow" ? "slow" : "success";
     const remainingSteps = steps - firstStep;
     const finishDelay = remainingSteps > 0
       ? (remainingSteps - 1) * EDGE_STEP_MS + 1350
