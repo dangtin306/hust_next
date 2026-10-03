@@ -557,6 +557,7 @@ type TraceRun = {
   key: string;
   status: LiveNodeStatus;
   edgeAnimationActive: boolean;
+  activeEdgeStartedAt: number | null;
   visitedEdgeSlots: Array<string | null>;
   visitedNodeIds: string[];
   activeEdgeIds: string[];
@@ -567,7 +568,7 @@ type TraceRun = {
   nodeFallbackTimers: Map<string, ReturnType<typeof setTimeout>>;
 };
 
-const EDGE_STEP_MS = 250;
+const EDGE_TRAVEL_MS = 1350;
 const NODE_FALLBACK_MS = 2000;
 const RESULT_HOLD_MS = 1000;
 
@@ -636,26 +637,15 @@ function N8nTraceEdge({
         return (
           <g key={`${activity.requestKey}:${activity.version}`} aria-hidden="true" pointerEvents="none">
             {activity.status === "running" && traceMotionEnabled
-              ? [0, 1, 2].map((dotIndex) => (
-                  <g key={dotIndex}>
-                    <circle r={7} fill={color} opacity={0.24}>
-                      <animateMotion
-                        path={path}
-                        dur="1.35s"
-                        begin={`${-dotIndex * 0.45}s`}
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                    <circle r={3.5} fill={color}>
-                      <animateMotion
-                        path={path}
-                        dur="1.35s"
-                        begin={`${-dotIndex * 0.45}s`}
-                        repeatCount="indefinite"
-                      />
-                    </circle>
-                  </g>
-                ))
+              ? (
+                  <circle r={4} fill={color}>
+                    <animateMotion
+                      path={path}
+                      dur={`${EDGE_TRAVEL_MS}ms`}
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                )
               : <circle cx={centerX} cy={centerY} r={4} fill={color} />}
           </g>
         );
@@ -928,7 +918,8 @@ export const N8nDiagramRenderer = forwardRef<
   }, [publishNodeStatuses, scheduleRunTimer]);
 
   const activateEdge = useCallback((run: TraceRun, edgeId: string) => {
-    if (!run.activeEdgeIds.includes(edgeId)) run.activeEdgeIds.push(edgeId);
+    run.activeEdgeIds = [edgeId];
+    run.activeEdgeStartedAt = Date.now();
     run.edgeVersions.set(edgeId, (run.edgeVersions.get(edgeId) ?? 0) + 1);
     publishEdgeVisuals();
   }, [publishEdgeVisuals]);
@@ -949,7 +940,8 @@ export const N8nDiagramRenderer = forwardRef<
     // A completion may arrive before its start. In that case play its full path once.
     if (prior) stopRunTimers(prior);
     const run: TraceRun = prior ?? {
-      key, status: "running", edgeAnimationActive: true, visitedEdgeSlots: [], visitedNodeIds: [],
+      key, status: "running", edgeAnimationActive: true, activeEdgeStartedAt: null,
+      visitedEdgeSlots: [], visitedNodeIds: [],
       activeEdgeIds: [], activatedNodeIds: [],
       edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
     };
@@ -961,9 +953,14 @@ export const N8nDiagramRenderer = forwardRef<
     // On completion, retain only the executed prefix; never light a speculative branch.
     const edgePrefix = matchingPrefixLength(edgeSlots, run.visitedEdgeSlots);
     const nodePrefix = matchingPrefixLength(nodeIds, run.visitedNodeIds);
+    const previousActiveEdgeId = run.activeEdgeIds[run.activeEdgeIds.length - 1] ?? null;
     run.visitedEdgeSlots = run.visitedEdgeSlots.slice(0, edgePrefix);
     run.visitedNodeIds = run.visitedNodeIds.slice(0, nodePrefix);
-    run.activeEdgeIds = run.visitedEdgeSlots.filter((id): id is string => id !== null);
+    const lastVisitedEdgeId = run.visitedEdgeSlots[run.visitedEdgeSlots.length - 1] ?? null;
+    run.activeEdgeIds = lastVisitedEdgeId ? [lastVisitedEdgeId] : [];
+    if (lastVisitedEdgeId !== previousActiveEdgeId) {
+      run.activeEdgeStartedAt = lastVisitedEdgeId ? Date.now() : null;
+    }
     run.activatedNodeIds = [...new Set(run.visitedNodeIds)];
     run.nodeStates.forEach((_status, id) => {
       if (!run.activatedNodeIds.includes(id)) run.nodeStates.delete(id);
@@ -983,32 +980,42 @@ export const N8nDiagramRenderer = forwardRef<
       run.nodeFallbackTimers.set(id, fallback);
     });
 
-    const steps = Math.max(nodeIds.length, edgeSlots.length + 1);
-    const firstStep = Math.min(nodePrefix, edgePrefix + 1, steps);
+    const steps = Math.max(nodeIds.length, edgeSlots.length);
+    const firstStep = Math.min(nodePrefix, edgePrefix, steps);
+    const activeEdgeRemainingMs = run.activeEdgeIds.length > 0 && run.activeEdgeStartedAt !== null
+      ? Math.max(0, EDGE_TRAVEL_MS - (Date.now() - run.activeEdgeStartedAt))
+      : 0;
+    let stepDelay = firstStep === 0 ? 0 : activeEdgeRemainingMs;
+    let finishDelay = stepDelay;
     for (let index = firstStep; index < steps; index += 1) {
-      scheduleRunTimer(run, (index - firstStep) * EDGE_STEP_MS, () => {
+      const delay = stepDelay;
+      scheduleRunTimer(run, delay, () => {
         if (index < nodeIds.length && index >= nodePrefix) activateNode(run, nodeIds[index]);
-        if (index > 0 && index - 1 < edgeSlots.length && index - 1 >= edgePrefix) {
-          const edgeId = edgeSlots[index - 1];
+        if (index < edgeSlots.length && index >= edgePrefix) {
+          const edgeId = edgeSlots[index];
           run.visitedEdgeSlots.push(edgeId);
-          if (edgeId !== null) activateEdge(run, edgeId);
+          if (edgeId !== null) {
+            activateEdge(run, edgeId);
+          } else {
+            run.activeEdgeIds = [];
+            run.activeEdgeStartedAt = null;
+            publishEdgeVisuals();
+          }
         }
       });
+
+      if (index >= edgePrefix && index < edgeSlots.length && edgeSlots[index] !== null) {
+        stepDelay += EDGE_TRAVEL_MS;
+      }
+      finishDelay = stepDelay;
     }
 
     if (trace.phase === "start") {
       if (firstStep === steps && nodeIds.length > 0) activateNode(run, nodeIds[nodeIds.length - 1], false);
-      if (firstStep === steps && run.activeEdgeIds.length > 0) {
-        activateEdge(run, run.activeEdgeIds[run.activeEdgeIds.length - 1]);
-      }
       return;
     }
 
-    const remainingSteps = steps - firstStep;
-    const finishDelay = remainingSteps > 0
-      ? (remainingSteps - 1) * EDGE_STEP_MS + 1350
-      : 100;
-    scheduleRunTimer(run, finishDelay, () => {
+    scheduleRunTimer(run, Math.max(100, finishDelay), () => {
       run.nodeFallbackTimers.forEach((timer) => { clearTimeout(timer); run.timers.delete(timer); });
       run.nodeFallbackTimers.clear();
       run.status = result;
