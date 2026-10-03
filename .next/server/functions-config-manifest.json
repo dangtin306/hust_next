@@ -11,6 +11,8 @@
       ]
     },
     "/api/node-activity/events": {},
-    "/api/node-activity/health": {}
+    "/api/node-activity/health": {},
+    "/api/openclaw/[...path]": {},
+    "/api/workspaces-proxy/[...path]": {}
   }
 }

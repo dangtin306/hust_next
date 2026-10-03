@@ -34,6 +34,7 @@ declare namespace __next_route_internal_types__ {
   type StaticRoutes = 
     | `/`
     | `/api/maps`
+    | `/api/maps/chat_public`
     | `/api/maps/chat_test`
     | `/api/maps/dashboard`
     | `/api/maps/git_auto`
@@ -42,11 +43,13 @@ declare namespace __next_route_internal_types__ {
     | `/api/maps/laravel`
     | `/api/maps/n8n`
     | `/api/maps/openclaw`
+    | `/api/maps/workspace`
     | `/api/node-activity/events`
     | `/api/node-activity/health`
     | `/api/resources/services-info`
     | `/api/sidebar-menu`
     | `/api/sidebar-menu/clear`
+    | `/api/test1234`
     | `/community/clear_silde_bar`
     | `/community/features`
     | `/community/services/development`
@@ -54,15 +57,17 @@ declare namespace __next_route_internal_types__ {
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
-    | `/next/api/swagger`
-    | `/next/api/swagger/chat_test`
-    | `/next/api/swagger/git_auto`
-    | `/next/api/swagger/git_test`
-    | `/next/api/swagger/gitea_test`
-    | `/next/api/swagger/home`
-    | `/next/api/swagger/laravel`
-    | `/next/api/swagger/n8n`
-    | `/next/api/swagger/openclaw`
+    | `/next/api/mt`
+    | `/next/api/mt/chat_public`
+    | `/next/api/mt/chat_test`
+    | `/next/api/mt/git_auto`
+    | `/next/api/mt/git_test`
+    | `/next/api/mt/gitea_test`
+    | `/next/api/mt/home`
+    | `/next/api/mt/laravel`
+    | `/next/api/mt/n8n`
+    | `/next/api/mt/openclaw`
+    | `/next/api/mt/workspace`
     | `/next/chat_bot/api_1`
     | `/next/chat_bot/main`
     | `/next/chat_bot/test_1`
@@ -76,6 +81,7 @@ declare namespace __next_route_internal_types__ {
     | `/next/hustadmin/cron_server`
     | `/next/hustadmin/n8n`
     | `/next/hustadmin/net_ports`
+    | `/next/hustadmin/orders`
     | `/next/info/about_us`
     | `/next/info/private_policy`
     | `/next/info/terms_service`
@@ -89,13 +95,13 @@ declare namespace __next_route_internal_types__ {
     | `/next/workflow/chat_bot/main`
     | `/next/workflow/chat_bot/test_1`
     | `/shop/ai`
-    | `/shop/ai/chat_bot`
-    | `/shop/ai/chat_bot/api_1`
-    | `/shop/ai/chat_bot/main`
-    | `/shop/ai/chat_bot/test_1`
+    | `/shop/ai/chat_bot/hust_media`
+    | `/shop/ai/chat_bot/hust_media/api`
+    | `/shop/ai/chat_bot/media_tech`
     | `/shop/ai/workflow`
     | `/shop/ai/workflow/laravel`
     | `/shop/hustadmin/home`
+    | `/shop/hustadmin/orders`
     | `/shop/hustadmin/port_cron/net_ports`
     | `/shop/hustadmin/port_cron/scheduler`
     | `/shop/hustadmin/service_money_list`
@@ -103,9 +109,11 @@ declare namespace __next_route_internal_types__ {
     | `/tabs_nav/navConfig.json`
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
+    | `/api/chat/${CatchAllSlug<T>}`
     | `/api/features-image/${CatchAllSlug<T>}`
     | `/api/gitea/${CatchAllSlug<T>}`
     | `/api/openclaw/${CatchAllSlug<T>}`
+    | `/api/workspaces-proxy/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
     | `/next/accounts/product/play/${SafeSlug<T>}`

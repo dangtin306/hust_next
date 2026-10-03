@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   useId,
@@ -14,14 +15,17 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  BaseEdge,
   Controls,
   MiniMap,
   Handle,
   Position,
+  getBezierPath,
   useNodesState,
   useEdgesState,
   type Node,
   type Edge,
+  type EdgeProps,
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -84,6 +88,11 @@ export interface N8nEdge {
   [key: string]: unknown;
 }
 
+export interface N8nStageEdge {
+  source: string;
+  target: string;
+}
+
 export interface N8nNormalizedGraph {
   workflow?: {
     id?: string;
@@ -109,10 +118,13 @@ export interface N8nTracePayload {
   event?: string;
   event_id?: string;
   workflow_id?: string;
-  status: "success" | "slow" | "error";
+  status?: "running" | "success" | "slow" | "error";
+  phase?: "start" | "complete";
+  request_id?: string;
   status_code?: number;
   duration_ms?: number;
   stage_node_ids?: string[];
+  stage_edges?: N8nStageEdge[];
   stages?: string[];
   api_results?: N8nTracePayload;
   data?: N8nTracePayload;
@@ -121,6 +133,9 @@ export interface N8nTracePayload {
     uri?: string;
     method?: string;
     stage_node_ids?: string[];
+    stage_edges?: N8nStageEdge[];
+    phase?: "start" | "complete";
+    request_id?: string;
   };
   timestamp?: string;
 }
@@ -138,6 +153,13 @@ const normalizeSocketTrace = (input: N8nTracePayload): N8nTracePayload => {
   return {
     ...payload,
     stage_node_ids: stageNodeIds,
+    stage_edges: Array.isArray(payload.stage_edges)
+      ? payload.stage_edges
+      : Array.isArray(payload.trace?.stage_edges)
+        ? payload.trace.stage_edges
+        : undefined,
+    phase: payload.phase ?? payload.trace?.phase ?? input.phase,
+    request_id: payload.request_id ?? payload.trace?.request_id ?? input.request_id,
     trace: payload.trace,
   };
 };
@@ -516,6 +538,135 @@ const N8N_NODE_TYPES = {
   stickyNote: N8nStickyNoteRenderer,
 };
 
+type EdgeRunVisual = {
+  edgeId: string;
+  requestKey: string;
+  status: LiveNodeStatus;
+  version: number;
+};
+
+type TraceEdgeData = {
+  activities?: EdgeRunVisual[];
+  reducedMotion?: boolean;
+  [key: string]: unknown;
+};
+
+type TraceRun = {
+  key: string;
+  status: LiveNodeStatus;
+  visitedEdgeSlots: Array<string | null>;
+  visitedNodeIds: string[];
+  activeEdgeIds: string[];
+  activatedNodeIds: string[];
+  edgeVersions: Map<string, number>;
+  nodeStates: Map<string, LiveNodeStatus>;
+  timers: Set<ReturnType<typeof setTimeout>>;
+  nodeFallbackTimers: Map<string, ReturnType<typeof setTimeout>>;
+};
+
+const EDGE_STEP_MS = 250;
+const NODE_FALLBACK_MS = 2000;
+const RESULT_HOLD_MS = 1000;
+
+function getTraceStageEdges(trace: N8nTracePayload): N8nStageEdge[] {
+  if (Array.isArray(trace.stage_edges) && trace.stage_edges.length > 0) {
+    return trace.stage_edges.filter(
+      (edge) => typeof edge?.source === "string" && typeof edge?.target === "string",
+    );
+  }
+
+  const ids = trace.stage_node_ids ?? [];
+  return ids.slice(1).map((target, index) => ({ source: ids[index], target }));
+}
+
+// The backend supplies node pairs, so only existing graph edges may be animated.
+function matchTraceEdges(trace: N8nTracePayload, graphEdges: Edge[]): Array<string | null> {
+  return getTraceStageEdges(trace).map(({ source, target }) => {
+    const edge = graphEdges.find((candidate) => candidate.source === source && candidate.target === target);
+    return edge?.id ?? null;
+  });
+}
+
+function matchingPrefixLength<T>(path: T[], visited: T[]): number {
+  let index = 0;
+  while (index < path.length && path[index] === visited[index]) index += 1;
+  return index;
+}
+
+function N8nTraceEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  pathOptions,
+  markerStart,
+  markerEnd,
+  style,
+  data,
+}: EdgeProps) {
+  const [path, centerX, centerY] = getBezierPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    curvature: pathOptions?.curvature,
+  });
+  const { activities = [], reducedMotion = false } = (data ?? {}) as TraceEdgeData;
+  const colors: Record<LiveNodeStatus, string> = {
+    idle: "#64748b",
+    running: "#22d3ee",
+    success: "#34d399",
+    slow: "#fbbf24",
+    error: "#fb7185",
+  };
+
+  return (
+    <>
+      <BaseEdge id={id} path={path} style={style} markerStart={markerStart} markerEnd={markerEnd} />
+      {activities.map((activity) => {
+        const color = colors[activity.status];
+        return (
+          <g key={`${activity.requestKey}:${activity.version}`} aria-hidden="true" pointerEvents="none">
+            <path
+              d={path}
+              fill="none"
+              stroke={color}
+              strokeWidth={3.5}
+              strokeLinecap="round"
+              opacity={0.8}
+              style={{ filter: `drop-shadow(0 0 5px ${color})` }}
+            />
+            {activity.status === "running" && !reducedMotion
+              ? [0, 1, 2].map((dotIndex) => (
+                  <circle
+                    key={dotIndex}
+                    r={4}
+                    fill={color}
+                    style={{ filter: `drop-shadow(0 0 6px ${color})` }}
+                  >
+                    <animateMotion
+                      path={path}
+                      dur="1.35s"
+                      begin={`${-dotIndex * 0.45}s`}
+                      repeatCount="indefinite"
+                    />
+                  </circle>
+                ))
+              : <circle cx={centerX} cy={centerY} r={4} fill={color} />}
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+const N8N_EDGE_TYPES = { traceEdge: N8nTraceEdge };
+
 // ==========================================
 // 4. CHUYỂN ĐỔI GRAPH CHUẨN HÓA SANG FLOW
 // ==========================================
@@ -529,7 +680,7 @@ export const convertNormalizedGraphToFlow = (
       ? (inputGraph.graph as N8nNormalizedGraph)
       : (inputGraph as N8nNormalizedGraph);
 
-  const isStickyNote = (node: any) =>
+  const isStickyNote = (node: N8nFlowNode | N8nStickyNote) =>
     Boolean(
       node.isStickyNote ||
       node.type === "stickyNote" ||
@@ -542,8 +693,9 @@ export const convertNormalizedGraphToFlow = (
     (graph.nodes || []).filter((node) => !isStickyNote(node));
 
   // 2. Tách và gộp stickyNotes từ cả mảng riêng lẫn graph.nodes như OpenClaw.
-  const stickyNoteMap = new Map<string, any>();
-  const candidates: any[] = [
+  type StickyCandidate = Partial<N8nStickyNote> & Pick<N8nFlowNode, "id" | "position">;
+  const stickyNoteMap = new Map<string, StickyCandidate>();
+  const candidates: StickyCandidate[] = [
     ...(graph.stickyNotes ?? []).map((note) => ({ ...note, isStickyNote: true as const })),
     ...(graph.nodes ?? []).filter(isStickyNote).map((note) => ({ ...note, isStickyNote: true as const })),
   ];
@@ -595,14 +747,14 @@ export const convertNormalizedGraphToFlow = (
     zIndex: -1,
   }));
 
-  // Map Edges: giữ nguyên source, target, sourceHandle, targetHandle, dùng đường cong n8n (type: "default")
+  // Map edges from the graph API; the custom edge uses React Flow's Bezier geometry.
   const flowEdges: Edge[] = graphEdges.map((edge, index) => ({
     id: edge.id || `e-${index}-${edge.source}-${edge.target}`,
     source: edge.source,
     target: edge.target,
     sourceHandle: edge.sourceHandle,
     targetHandle: edge.targetHandle,
-    type: "default",
+    type: "traceEdge",
     animated: false,
     style: { stroke: "#64748b", strokeWidth: 2 },
   }));
@@ -658,9 +810,12 @@ export const N8nDiagramRenderer = forwardRef<
 ) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [edgeVisuals, setEdgeVisuals] = useState<EdgeRunVisual[]>([]);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
-  const animationTimersRef = useRef<NodeJS.Timeout[]>([]);
-  const nodeFallbackTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const graphEdgesRef = useRef<Edge[]>([]);
+  const runsRef = useRef<Map<string, TraceRun>>(new Map());
+  const anonymousRunCounterRef = useRef(0);
   const socketRef = useRef<Socket | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -695,114 +850,177 @@ export const N8nDiagramRenderer = forwardRef<
     onSocketStatusChangeRef.current = onSocketStatusChange;
   }, [onSocketStatusChange]);
 
-  const clearTimers = useCallback(() => {
-    animationTimersRef.current.forEach((timer) => clearTimeout(timer));
-    animationTimersRef.current = [];
-    nodeFallbackTimersRef.current.forEach((timer) => clearTimeout(timer));
-    nodeFallbackTimersRef.current.clear();
+  const stopRunTimers = useCallback((run: TraceRun) => {
+    run.timers.forEach(clearTimeout);
+    run.timers.clear();
+    run.nodeFallbackTimers.clear();
   }, []);
 
-  // Thực hiện animation nhấp nháy tuần tự theo stage_node_ids (match chính xác qua node.id)
-  const animateTrace = useCallback(
-    (trace: N8nTracePayload) => {
-      clearTimers();
+  const clearRuns = useCallback((resetVisuals = true) => {
+    runsRef.current.forEach(stopRunTimers);
+    runsRef.current.clear();
+    if (resetVisuals) {
+      setEdgeVisuals([]);
+      setNodes((current) => current.map((node) =>
+        node.type === "stickyNote" ? node : { ...node, data: { ...node.data, liveStatus: "idle" } },
+      ));
+    }
+  }, [setNodes, stopRunTimers]);
 
-      const stageIds =
-        Array.isArray(trace.stage_node_ids) && trace.stage_node_ids.length > 0
-          ? trace.stage_node_ids
-          : [];
+  const scheduleRunTimer = useCallback((run: TraceRun, delay: number, callback: () => void) => {
+    const timer = setTimeout(() => {
+      run.timers.delete(timer);
+      if (runsRef.current.get(run.key) === run) callback();
+    }, delay);
+    run.timers.add(timer);
+    return timer;
+  }, []);
 
-      // Bước 1: Reset tất cả flow nodes về idle (không tác động stickyNote)
-      setNodes((current) =>
-        current.map((n) => {
-          if (n.type === "stickyNote") return n;
-          return {
-            ...n,
-            data: {
-              ...n.data,
-              liveStatus: "idle",
-            },
-          };
-        })
-      );
+  const publishEdgeVisuals = useCallback(() => {
+    setEdgeVisuals([...runsRef.current.values()].flatMap((run) =>
+      run.activeEdgeIds.map((edgeId) => ({
+        edgeId,
+        requestKey: run.key,
+        status: run.status,
+        version: run.edgeVersions.get(edgeId) ?? 0,
+      })),
+    ));
+  }, []);
 
-      if (stageIds.length === 0) return;
+  const publishNodeStatuses = useCallback((flashedIds: string[] = []) => {
+    const statuses = new Map<string, LiveNodeStatus>();
+    const priority: Record<LiveNodeStatus, number> = { idle: 0, success: 1, slow: 2, error: 3, running: 4 };
+    runsRef.current.forEach((run) => run.nodeStates.forEach((status, id) => {
+      if (priority[status] > priority[statuses.get(id) ?? "idle"]) statuses.set(id, status);
+    }));
+    const flashed = new Set(flashedIds);
+    setNodes((current) => current.map((node) => {
+      if (node.type === "stickyNote") return node;
+      const oldData = node.data as FlowNodeData;
+      const liveStatus = statuses.get(node.id) ?? "idle";
+      if (oldData.liveStatus === liveStatus && !flashed.has(node.id)) return node;
+      return { ...node, data: {
+        ...oldData,
+        liveStatus,
+        signalVersion: (oldData.signalVersion ?? 0) + (flashed.has(node.id) ? 1 : 0),
+      } };
+    }));
+  }, [setNodes]);
 
-      const stageDelayMs = 250;
+  const activateNode = useCallback((run: TraceRun, nodeId: string, recordStep = true) => {
+    if (!nodeId) return;
+    if (recordStep) run.visitedNodeIds.push(nodeId);
+    if (!run.activatedNodeIds.includes(nodeId)) run.activatedNodeIds.push(nodeId);
+    run.nodeStates.set(nodeId, "running");
+    const oldFallback = run.nodeFallbackTimers.get(nodeId);
+    if (oldFallback) {
+      clearTimeout(oldFallback);
+      run.timers.delete(oldFallback);
+    }
+    publishNodeStatuses([nodeId]);
+    const fallback = scheduleRunTimer(run, NODE_FALLBACK_MS, () => {
+      run.nodeFallbackTimers.delete(nodeId);
+      if (run.nodeStates.get(nodeId) === "running") {
+        run.nodeStates.delete(nodeId);
+        publishNodeStatuses();
+      }
+    });
+    run.nodeFallbackTimers.set(nodeId, fallback);
+  }, [publishNodeStatuses, scheduleRunTimer]);
 
-      // Bước 2: Mỗi node sáng khi được kích hoạt; nếu không có tín hiệu tắt thì tự tắt sau 2s.
-      stageIds.forEach((nodeId, index) => {
-        const timer = setTimeout(() => {
-          setNodes((current) =>
-            current.map((n) => {
-              if (n.type === "stickyNote") return n;
-              if (n.id === nodeId) {
-                return {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    liveStatus: "running",
-                    signalVersion: ((n.data as FlowNodeData).signalVersion ?? 0) + 1,
-                  },
-                };
-              }
-              return n;
-            })
-          );
+  const activateEdge = useCallback((run: TraceRun, edgeId: string) => {
+    if (!run.activeEdgeIds.includes(edgeId)) run.activeEdgeIds.push(edgeId);
+    run.edgeVersions.set(edgeId, (run.edgeVersions.get(edgeId) ?? 0) + 1);
+    publishEdgeVisuals();
+  }, [publishEdgeVisuals]);
 
-          const previousFallback = nodeFallbackTimersRef.current.get(nodeId);
-          if (previousFallback) clearTimeout(previousFallback);
-          const resetTimer = setTimeout(() => {
-            setNodes((current) =>
-              current.map((n) => {
-                if (n.type === "stickyNote" || n.id !== nodeId) return n;
-                return { ...n, data: { ...n.data, liveStatus: "idle" } };
-              })
-            );
-            nodeFallbackTimersRef.current.delete(nodeId);
-          }, 2000);
-          nodeFallbackTimersRef.current.set(nodeId, resetTimer);
-          animationTimersRef.current.push(resetTimer);
-        }, index * stageDelayMs);
+  const animateTrace = useCallback((trace: N8nTracePayload) => {
+    const stageEdges = getTraceStageEdges(trace);
+    const nodeIds = Array.isArray(trace.stage_node_ids) && trace.stage_node_ids.length > 0
+      ? trace.stage_node_ids.filter((id): id is string => typeof id === "string")
+      : stageEdges.flatMap((edge, index) => index === 0 ? [edge.source, edge.target] : [edge.target]);
+    const edgeSlots = matchTraceEdges(trace, graphEdgesRef.current);
+    const key = trace.request_id && (trace.phase === "start" || trace.phase === "complete")
+      ? `request:${trace.request_id}`
+      : `single:${++anonymousRunCounterRef.current}`;
+    const prior = runsRef.current.get(key);
 
-        animationTimersRef.current.push(timer);
+    // A completion may arrive before its start. In that case play its full path once.
+    if (prior) stopRunTimers(prior);
+    const run: TraceRun = prior ?? {
+      key, status: "running", visitedEdgeSlots: [], visitedNodeIds: [],
+      activeEdgeIds: [], activatedNodeIds: [],
+      edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
+    };
+    runsRef.current.set(key, run);
+    run.status = "running";
+
+    // On completion, retain only the executed prefix; never light a speculative branch.
+    const edgePrefix = matchingPrefixLength(edgeSlots, run.visitedEdgeSlots);
+    const nodePrefix = matchingPrefixLength(nodeIds, run.visitedNodeIds);
+    run.visitedEdgeSlots = run.visitedEdgeSlots.slice(0, edgePrefix);
+    run.visitedNodeIds = run.visitedNodeIds.slice(0, nodePrefix);
+    run.activeEdgeIds = run.visitedEdgeSlots.filter((id): id is string => id !== null);
+    run.activatedNodeIds = [...new Set(run.visitedNodeIds)];
+    run.nodeStates.forEach((_status, id) => {
+      if (!run.activatedNodeIds.includes(id)) run.nodeStates.delete(id);
+    });
+    publishEdgeVisuals();
+    publishNodeStatuses();
+    // Re-arm the per-node fallback after replacing this request's timers.
+    run.nodeStates.forEach((status, id) => {
+      if (status !== "running") return;
+      const fallback = scheduleRunTimer(run, NODE_FALLBACK_MS, () => {
+        run.nodeFallbackTimers.delete(id);
+        if (run.nodeStates.get(id) === "running") {
+          run.nodeStates.delete(id);
+          publishNodeStatuses();
+        }
       });
+      run.nodeFallbackTimers.set(id, fallback);
+    });
 
-      // Trace hoàn tất: phát trạng thái kết quả rồi tắt 100ms sau đó.
-      const finishTimer = setTimeout(() => {
-        nodeFallbackTimersRef.current.forEach((timer) => clearTimeout(timer));
-        nodeFallbackTimersRef.current.clear();
+    const steps = Math.max(nodeIds.length, edgeSlots.length + 1);
+    const firstStep = Math.min(nodePrefix, edgePrefix + 1, steps);
+    for (let index = firstStep; index < steps; index += 1) {
+      scheduleRunTimer(run, (index - firstStep) * EDGE_STEP_MS, () => {
+        if (index < nodeIds.length && index >= nodePrefix) activateNode(run, nodeIds[index]);
+        if (index > 0 && index - 1 < edgeSlots.length && index - 1 >= edgePrefix) {
+          const edgeId = edgeSlots[index - 1];
+          run.visitedEdgeSlots.push(edgeId);
+          if (edgeId !== null) activateEdge(run, edgeId);
+        }
+      });
+    }
 
-        setNodes((current) =>
-          current.map((n) => {
-            if (n.type === "stickyNote") return n;
-            return {
-              ...n,
-              data: {
-                ...n.data,
-                liveStatus: stageIds.includes(n.id) ? trace.status || "success" : "idle",
-                signalVersion: stageIds.includes(n.id)
-                  ? ((n.data as FlowNodeData).signalVersion ?? 0) + 1
-                  : (n.data as FlowNodeData).signalVersion ?? 0,
-              },
-            };
-          })
-        );
+    if (trace.phase === "start") {
+      if (firstStep === steps && nodeIds.length > 0) activateNode(run, nodeIds[nodeIds.length - 1], false);
+      if (firstStep === steps && run.activeEdgeIds.length > 0) {
+        activateEdge(run, run.activeEdgeIds[run.activeEdgeIds.length - 1]);
+      }
+      return;
+    }
 
-        const resetTimer = setTimeout(() => {
-          setNodes((current) =>
-            current.map((n) => {
-              if (n.type === "stickyNote") return n;
-              return { ...n, data: { ...n.data, liveStatus: "idle" } };
-            })
-          );
-        }, 1000);
-        animationTimersRef.current.push(resetTimer);
-      }, stageIds.length * stageDelayMs + 100);
-      animationTimersRef.current.push(finishTimer);
-    },
-    [clearTimers, setNodes]
-  );
+    const result: LiveNodeStatus = trace.status === "error" || (trace.status_code ?? 0) >= 400
+      ? "error" : trace.status === "slow" ? "slow" : "success";
+    const remainingSteps = steps - firstStep;
+    const finishDelay = remainingSteps > 0
+      ? (remainingSteps - 1) * EDGE_STEP_MS + 1350
+      : 100;
+    scheduleRunTimer(run, finishDelay, () => {
+      run.nodeFallbackTimers.forEach((timer) => { clearTimeout(timer); run.timers.delete(timer); });
+      run.nodeFallbackTimers.clear();
+      run.status = result;
+      run.activatedNodeIds.forEach((id) => run.nodeStates.set(id, result));
+      publishEdgeVisuals();
+      publishNodeStatuses(run.activatedNodeIds);
+      scheduleRunTimer(run, RESULT_HOLD_MS, () => {
+        runsRef.current.delete(key);
+        publishEdgeVisuals();
+        publishNodeStatuses();
+      });
+    });
+  }, [activateEdge, activateNode, publishEdgeVisuals, publishNodeStatuses, scheduleRunTimer, stopRunTimers]);
 
   // Expose các phương thức điều khiển cho parent
   useImperativeHandle(
@@ -812,64 +1030,45 @@ export const N8nDiagramRenderer = forwardRef<
         animateTrace(trace);
       },
       resetAllNodes: () => {
-        clearTimers();
-        setNodes((current) =>
-          current.map((n) => {
-            if (n.type === "stickyNote") return n;
-            return {
-              ...n,
-              data: { ...n.data, liveStatus: "idle" },
-            };
-          })
-        );
+        clearRuns();
       },
     }),
-    [animateTrace, clearTimers, setNodes]
+    [animateTrace, clearRuns]
   );
 
   // Khi graph data thay đổi (API trả về hoặc realtime n8n:graph), cập nhật nodes & edges
   // Lưu ý: setNodes và setEdges trong React Flow v12 không làm thay đổi viewport (giữ nguyên vị trí zoom và pan)
-  // Đồng thời bảo toàn liveStatus nếu node đang trong animation trace
   useEffect(() => {
     if (!graph) return;
     const { allNodes, flowEdges } = convertNormalizedGraphToFlow(graph);
-
-    setNodes((prevNodes) => {
-      if (!prevNodes || prevNodes.length === 0) {
-        return allNodes;
-      }
-
-      // Giữ lại liveStatus hiện tại của các node (running/success/slow/error)
-      const currentLiveStatusMap = new Map<string, LiveNodeStatus>();
-      prevNodes.forEach((n) => {
-        const live = (n.data as FlowNodeData)?.liveStatus;
-        if (n.type !== "stickyNote" && live && live !== "idle") {
-          currentLiveStatusMap.set(n.id, live);
-        }
-      });
-
-      if (currentLiveStatusMap.size === 0) {
-        return allNodes;
-      }
-
-      return allNodes.map((newNode) => {
-        if (newNode.type === "stickyNote") return newNode;
-        const currentLive = currentLiveStatusMap.get(newNode.id);
-        if (currentLive) {
-          return {
-            ...newNode,
-            data: {
-              ...newNode.data,
-              liveStatus: currentLive,
-            },
-          };
-        }
-        return newNode;
-      });
-    });
-
+    runsRef.current.forEach(stopRunTimers);
+    runsRef.current.clear();
+    // React Flow keeps its own nodes/edges state; a new graph invalidates every active path.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEdgeVisuals([]);
+    graphEdgesRef.current = flowEdges;
+    setNodes(allNodes);
     setEdges(flowEdges);
-  }, [graph, setNodes, setEdges]);
+  }, [graph, setNodes, setEdges, stopRunTimers]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => () => clearRuns(false), [clearRuns]);
+
+  const renderedEdges = useMemo(() => edges.map((edge) => ({
+    ...edge,
+    data: {
+      ...edge.data,
+      activities: edgeVisuals.filter((activity) => activity.edgeId === edge.id),
+      reducedMotion: prefersReducedMotion,
+    } satisfies TraceEdgeData,
+  })), [edges, edgeVisuals, prefersReducedMotion]);
 
   // Lưu animateTrace trong ref để socket effect không phụ thuộc vào animateTrace
   const animateTraceRef = useRef(animateTrace);
@@ -959,9 +1158,8 @@ export const N8nDiagramRenderer = forwardRef<
       socket.io.off("reconnect_failed", handleReconnectFailed);
       socket.disconnect();
       socketRef.current = null;
-      clearTimers();
     };
-  }, [enableRealtime, socketUrl, clearTimers]);
+  }, [enableRealtime, socketUrl]);
 
   return (
     <div className={`relative ${className}`}>
@@ -1010,21 +1208,31 @@ export const N8nDiagramRenderer = forwardRef<
               --signal-color: rgba(239, 68, 68, 0.9);
               animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
+            @media (prefers-reduced-motion: reduce) {
+              .n8n-node-signal-ping,
+              .n8n-node--running,
+              .n8n-node--success,
+              .n8n-node--slow,
+              .n8n-node--error {
+                animation: none !important;
+              }
+            }
           `,
         }}
       />
 
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={renderedEdges}
         minZoom={0.35}
         maxZoom={3}
         onNodeClick={handleNodeClick}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={N8N_NODE_TYPES}
+        edgeTypes={N8N_EDGE_TYPES}
         defaultEdgeOptions={{
-          type: "default",
+          type: "traceEdge",
           animated: false,
         }}
         fitView

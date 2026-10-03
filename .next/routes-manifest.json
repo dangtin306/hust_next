@@ -114,7 +114,7 @@
       },
       {
         "source": "/next/hustadmin/n8n",
-        "destination": "/next/shop/ai/laravel",
+        "destination": "/next/shop/ai/workflow/laravel",
         "regex": "^/next/hustadmin/n8n(?:/)?$"
       },
       {
@@ -126,6 +126,11 @@
         "source": "/next/hustadmin/net_ports",
         "destination": "/next/shop/hustadmin/port_cron/net_ports",
         "regex": "^/next/hustadmin/net_ports(?:/)?$"
+      },
+      {
+        "source": "/next/hustadmin/orders",
+        "destination": "/next/shop/hustadmin/orders",
+        "regex": "^/next/hustadmin/orders(?:/)?$"
       },
       {
         "source": "/next/hustadmin/:path*",
@@ -164,88 +169,106 @@
       },
       {
         "source": "/next/workflow/chat_bot/laravel",
-        "destination": "/next/shop/ai/laravel",
+        "destination": "/next/shop/ai/workflow/laravel",
         "regex": "^/next/workflow/chat_bot/laravel(?:/)?$"
       },
       {
         "source": "/next/workflow/chat_bot/test_1",
-        "destination": "/next/shop/ai/chat_bot/test_1",
+        "destination": "/next/shop/ai/chat_bot/hust_media",
         "regex": "^/next/workflow/chat_bot/test_1(?:/)?$"
       },
       {
         "source": "/next/chat_bot/test_1",
-        "destination": "/next/shop/ai/chat_bot/test_1",
+        "destination": "/next/shop/ai/chat_bot/hust_media",
         "regex": "^/next/chat_bot/test_1(?:/)?$"
       },
       {
         "source": "/next/workflow/chat_bot/api_1",
-        "destination": "/next/shop/ai/chat_bot/api_1",
+        "destination": "/next/shop/ai/chat_bot/hust_media/api",
         "regex": "^/next/workflow/chat_bot/api_1(?:/)?$"
       },
       {
         "source": "/next/chat_bot/api_1",
-        "destination": "/next/shop/ai/chat_bot/api_1",
+        "destination": "/next/shop/ai/chat_bot/hust_media/api",
         "regex": "^/next/chat_bot/api_1(?:/)?$"
       },
       {
         "source": "/next/workflow/chat_bot/main",
-        "destination": "/next/shop/ai/chat_bot/main",
+        "destination": "/next/shop/ai/chat_bot/media_tech",
         "regex": "^/next/workflow/chat_bot/main(?:/)?$"
       },
       {
         "source": "/next/chat_bot/main",
-        "destination": "/next/shop/ai/chat_bot/main",
+        "destination": "/next/shop/ai/chat_bot/media_tech",
         "regex": "^/next/chat_bot/main(?:/)?$"
       },
       {
-        "source": "/next/api/swagger",
+        "source": "/next/api/mt",
         "destination": "/next/api/maps",
-        "regex": "^/next/api/swagger(?:/)?$"
+        "regex": "^/next/api/mt(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/chat_test",
+        "source": "/next/api/mt/chat_test",
         "destination": "/next/api/maps/chat_test",
-        "regex": "^/next/api/swagger/chat_test(?:/)?$"
+        "regex": "^/next/api/mt/chat_test(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/openclaw",
+        "source": "/next/api/mt/chat_public",
+        "destination": "/next/api/maps/chat_public",
+        "regex": "^/next/api/mt/chat_public(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/openclaw",
         "destination": "/next/api/maps/openclaw",
-        "regex": "^/next/api/swagger/openclaw(?:/)?$"
+        "regex": "^/next/api/mt/openclaw(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/laravel",
+        "source": "/next/api/mt/laravel",
         "destination": "/next/api/maps/laravel",
-        "regex": "^/next/api/swagger/laravel(?:/)?$"
+        "regex": "^/next/api/mt/laravel(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/n8n",
+        "source": "/next/api/mt/n8n",
         "destination": "/next/api/maps/n8n",
-        "regex": "^/next/api/swagger/n8n(?:/)?$"
+        "regex": "^/next/api/mt/n8n(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/home",
+        "source": "/next/api/mt/workspace",
+        "destination": "/next/api/maps/workspace",
+        "regex": "^/next/api/mt/workspace(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/home",
         "destination": "/next/api/maps/dashboard",
-        "regex": "^/next/api/swagger/home(?:/)?$"
+        "regex": "^/next/api/mt/home(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/git_auto",
+        "source": "/next/api/mt/git_auto",
         "destination": "/next/api/maps/git_auto",
-        "regex": "^/next/api/swagger/git_auto(?:/)?$"
+        "regex": "^/next/api/mt/git_auto(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/git_test",
+        "source": "/next/api/mt/git_test",
         "destination": "/next/api/maps/git_test",
-        "regex": "^/next/api/swagger/git_test(?:/)?$"
+        "regex": "^/next/api/mt/git_test(?:/)?$"
       },
       {
-        "source": "/next/api/swagger/gitea_test",
+        "source": "/next/api/mt/gitea_test",
         "destination": "/next/api/maps/gitea_test",
-        "regex": "^/next/api/swagger/gitea_test(?:/)?$"
+        "regex": "^/next/api/mt/gitea_test(?:/)?$"
       }
     ],
     "fallback": []
   },
   "dynamicRoutes": [
+    {
+      "page": "/api/chat/[...path]",
+      "regex": "^/api/chat/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/chat/(?<nxtPpath>.+?)(?:/)?$"
+    },
     {
       "page": "/api/features-image/[...asset]",
       "regex": "^/api/features\\-image/(.+?)(?:/)?$",
@@ -269,6 +292,14 @@
         "nxtPpath": "nxtPpath"
       },
       "namedRegex": "^/api/openclaw/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/workspaces-proxy/[...path]",
+      "regex": "^/api/workspaces\\-proxy/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/workspaces\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
       "page": "/community/docs/[slug]",
@@ -345,6 +376,12 @@
       "namedRegex": "^/api/maps(?:/)?$"
     },
     {
+      "page": "/api/maps/chat_public",
+      "regex": "^/api/maps/chat_public(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/maps/chat_public(?:/)?$"
+    },
+    {
       "page": "/api/maps/chat_test",
       "regex": "^/api/maps/chat_test(?:/)?$",
       "routeKeys": {},
@@ -393,6 +430,12 @@
       "namedRegex": "^/api/maps/openclaw(?:/)?$"
     },
     {
+      "page": "/api/maps/workspace",
+      "regex": "^/api/maps/workspace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/maps/workspace(?:/)?$"
+    },
+    {
       "page": "/api/node-activity/events",
       "regex": "^/api/node\\-activity/events(?:/)?$",
       "routeKeys": {},
@@ -421,6 +464,12 @@
       "regex": "^/api/sidebar\\-menu/clear(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/sidebar\\-menu/clear(?:/)?$"
+    },
+    {
+      "page": "/api/test1234",
+      "regex": "^/api/test1234(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/test1234(?:/)?$"
     },
     {
       "page": "/community/clear_silde_bar",
@@ -483,28 +532,22 @@
       "namedRegex": "^/shop/ai(?:/)?$"
     },
     {
-      "page": "/shop/ai/chat_bot",
-      "regex": "^/shop/ai/chat_bot(?:/)?$",
+      "page": "/shop/ai/chat_bot/hust_media",
+      "regex": "^/shop/ai/chat_bot/hust_media(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/shop/ai/chat_bot(?:/)?$"
+      "namedRegex": "^/shop/ai/chat_bot/hust_media(?:/)?$"
     },
     {
-      "page": "/shop/ai/chat_bot/api_1",
-      "regex": "^/shop/ai/chat_bot/api_1(?:/)?$",
+      "page": "/shop/ai/chat_bot/hust_media/api",
+      "regex": "^/shop/ai/chat_bot/hust_media/api(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/shop/ai/chat_bot/api_1(?:/)?$"
+      "namedRegex": "^/shop/ai/chat_bot/hust_media/api(?:/)?$"
     },
     {
-      "page": "/shop/ai/chat_bot/main",
-      "regex": "^/shop/ai/chat_bot/main(?:/)?$",
+      "page": "/shop/ai/chat_bot/media_tech",
+      "regex": "^/shop/ai/chat_bot/media_tech(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/shop/ai/chat_bot/main(?:/)?$"
-    },
-    {
-      "page": "/shop/ai/chat_bot/test_1",
-      "regex": "^/shop/ai/chat_bot/test_1(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/shop/ai/chat_bot/test_1(?:/)?$"
+      "namedRegex": "^/shop/ai/chat_bot/media_tech(?:/)?$"
     },
     {
       "page": "/shop/ai/workflow",
@@ -523,6 +566,12 @@
       "regex": "^/shop/hustadmin/home(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/shop/hustadmin/home(?:/)?$"
+    },
+    {
+      "page": "/shop/hustadmin/orders",
+      "regex": "^/shop/hustadmin/orders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/shop/hustadmin/orders(?:/)?$"
     },
     {
       "page": "/shop/hustadmin/port_cron/net_ports",
