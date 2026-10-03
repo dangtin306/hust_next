@@ -23,7 +23,7 @@ export default function SwaggerHomePage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <Link
-          href="/api/swagger/laravel"
+          href="/api/mt/laravel"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -42,7 +42,7 @@ export default function SwaggerHomePage() {
         </Link>
 
         <Link
-          href="/api/swagger/openclaw"
+          href="/api/mt/openclaw"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -61,7 +61,7 @@ export default function SwaggerHomePage() {
         </Link>
 
         <Link
-          href="/api/swagger/n8n"
+          href="/api/mt/n8n"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -79,7 +79,7 @@ export default function SwaggerHomePage() {
         </Link>
 
         <Link
-          href="/api/swagger/git_auto"
+          href="/api/mt/git_auto"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -97,7 +97,7 @@ export default function SwaggerHomePage() {
         </Link>
 
         <Link
-          href="/api/swagger/git_test"
+          href="/api/mt/git_test"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
@@ -115,7 +115,7 @@ export default function SwaggerHomePage() {
         </Link>
 
         <Link
-          href="/api/swagger/gitea_test"
+          href="/api/mt/gitea_test"
           className="rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
         >
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">

@@ -173,24 +173,869 @@ code {
   display: none !important;
 }
 
-/* Swagger transparent background to show original root gradient */
+/* ==========================================================================
+   Modern High-Tech Swagger UI Theme & Wide Layout
+   ========================================================================== */
+
+/* 1. Eliminate cramped layout & wasted side gaps */
 .swagger-ui {
   background: transparent !important;
   background-color: transparent !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
-.swagger-ui .scheme-container {
-  background: transparent !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
+.swagger-ui .wrapper {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 640px) {
+  .swagger-ui .wrapper {
+    padding: 0 !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .swagger-ui .wrapper {
+    padding: 0 !important;
+  }
+}
+
+.swagger-ui .col-12,
+.swagger-ui .col-12-desktop,
+.swagger-ui section.block {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#openclaw-service-categories-slot,
+#laravel-service-contracts-slot {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .swagger-ui .topbar,
-.swagger-ui .wrapper,
 .swagger-ui .information-container,
-.swagger-ui .info,
 .swagger-ui .opblock-tag-section {
   background: transparent !important;
   background-color: transparent !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Sleek High-Tech Hero Info Card */
+.swagger-ui .information-container {
+  margin-bottom: 12px !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.swagger-ui .info {
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.85) !important;
+  border-radius: 1rem !important;
+  padding: 16px 20px !important;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.swagger-ui .info .title {
+  font-family: inherit !important;
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.025em !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.swagger-ui .info .title small {
+  background: #e0e7ff !important;
+  color: #4338ca !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 9999px !important;
+  border: 1px solid #c7d2fe !important;
+  vertical-align: middle !important;
+  top: 0 !important;
+}
+
+.swagger-ui .info .title small.version-stamp {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+
+.swagger-ui .info .title small pre {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-family: inherit !important;
+}
+
+.swagger-ui .info .description {
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: #334155 !important;
+  max-width: 1200px !important;
+}
+
+.swagger-ui .info .description p {
+  margin-bottom: 6px !important;
+}
+
+/* 3. High-Tech Server & Auth Control Bar */
+.swagger-ui .scheme-container {
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(203, 213, 225, 0.85) !important;
+  border-radius: 1rem !important;
+  padding: 10px 18px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.05) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.swagger-ui .schemes {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+}
+
+.swagger-ui .schemes > label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: #64748b !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.swagger-ui .schemes > label select {
+  min-width: 320px !important;
+  max-width: 580px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  background-color: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 0.75rem !important;
+  padding: 9px 36px 9px 14px !important;
+}
+
+.swagger-ui .auth-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.swagger-ui .btn.authorize {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 0.75rem !important;
+  padding: 9px 20px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.swagger-ui .btn.authorize:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45) !important;
+}
+
+.swagger-ui .btn.authorize svg {
+  fill: #ffffff !important;
+}
+
+.openclaw-api-url-editor .authorize__btn {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 0.75rem !important;
+  padding: 9px 18px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.openclaw-api-url-editor .authorize__btn:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* 4. Section Tag Headings */
+.swagger-ui .opblock-tag-section {
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+}
+
+.swagger-ui .no-margin {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.swagger-ui .opblock-tag {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  gap: 10px !important;
+  font-family: inherit !important;
+  font-size: 13.5px !important;
+  line-height: 1.2 !important;
+  min-height: 0 !important;
+  padding: 2px 14px !important;
+  margin: 6px 0 3px 0 !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1.5px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 1px 4px -1px rgba(15, 23, 42, 0.05) !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.swagger-ui .opblock-tag:hover {
+  background: #ffffff !important;
+  border-color: #93c5fd !important;
+  box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.12) !important;
+}
+
+.swagger-ui .opblock-tag a.nostyle,
+.swagger-ui .opblock-tag a {
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.swagger-ui .opblock-tag a span,
+.swagger-ui .opblock-tag span {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 3px 9px !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+}
+
+.swagger-ui .opblock-tag:hover a span,
+.swagger-ui .opblock-tag:hover span {
+  background: #e2e8f0 !important;
+  border-color: #94a3b8 !important;
+}
+
+.swagger-ui .opblock-tag small {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  margin: 0 0 0 6px !important;
+  padding: 0 !important;
+  border: none !important;
+  line-height: 1.25 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+}
+
+.swagger-ui .opblock-tag small:empty {
+  display: none !important;
+}
+
+.swagger-ui .opblock-tag > div {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.swagger-ui .opblock-tag .expand-operation,
+.swagger-ui .opblock-tag button {
+  background: transparent !important;
+  border: none !important;
+  padding: 2px !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  outline: none !important;
+  border-radius: 6px !important;
+  transition: background 0.15s ease !important;
+}
+
+.swagger-ui .opblock-tag button:hover {
+  background: #f1f5f9 !important;
+}
+
+.swagger-ui .opblock-tag svg {
+  width: 16px !important;
+  height: 16px !important;
+  fill: #64748b !important;
+  color: #64748b !important;
+  transition: transform 0.2s ease, fill 0.2s ease !important;
+}
+
+.swagger-ui .opblock-tag:hover svg {
+  fill: #0f172a !important;
+  color: #0f172a !important;
+}
+
+
+/* 5. Modern Operation Block Cards (Endpoints) */
+.swagger-ui .opblock {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 1.5px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 1px 4px -1px rgba(15, 23, 42, 0.05) !important;
+  margin: 0 0 4px 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui .opblock:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 4px 14px -3px rgba(59, 130, 246, 0.12) !important;
+}
+
+.swagger-ui .opblock.is-open {
+  border-color: #60a5fa !important;
+  box-shadow: 0 6px 16px -3px rgba(59, 130, 246, 0.15) !important;
+  margin-bottom: 8px !important;
+}
+
+/* Operation Summary Bar */
+.swagger-ui .opblock .opblock-summary,
+.swagger-ui .opblock-summary-control {
+  padding: 6px 14px !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  background: #ffffff !important;
+  border-radius: 0.75rem !important;
+  transition: background-color 0.15s ease !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.swagger-ui .opblock .opblock-summary:hover {
+  background-color: #f8fafc !important;
+}
+
+.swagger-ui .opblock.is-open .opblock-summary {
+  border-bottom: 1.5px solid rgba(226, 232, 240, 0.8) !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  background: #f8fafc !important;
+}
+
+.swagger-ui .opblock-summary-method {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  padding: 3px 10px !important;
+  border-radius: 0.375rem !important;
+  min-width: 62px !important;
+  text-align: center !important;
+  letter-spacing: 0.04em !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+  border: none !important;
+  text-shadow: none !important;
+  line-height: 1.2 !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+  -webkit-user-drag: none !important;
+}
+
+.swagger-ui .opblock-post .opblock-summary-method {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .opblock-get .opblock-summary-method {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .opblock-put .opblock-summary-method {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .opblock-delete .opblock-summary-method {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+}
+
+.swagger-ui .opblock-summary-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 700 !important;
+  font-size: 14.5px !important;
+  color: #0f172a !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+  -webkit-user-drag: none !important;
+}
+
+.swagger-ui .opblock-summary-path a,
+.swagger-ui .opblock-summary-path span {
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+  -webkit-user-drag: none !important;
+}
+
+.swagger-ui .opblock-summary-description {
+  font-size: 13px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  margin-left: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text !important;
+}
+
+/* 6. Body & Testing Controls: CỰC KỲ DỄ ẤN & HIỆN ĐẠI */
+.swagger-ui .opblock-body {
+  padding: 16px 20px 24px 20px !important;
+  background: #ffffff !important;
+}
+
+.swagger-ui .opblock .opblock-section-header {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 14px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border-bottom: 1.5px solid #e2e8f0 !important;
+  margin-bottom: 16px !important;
+}
+
+.swagger-ui .opblock .opblock-section-header h4 {
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #334155 !important;
+  margin: 0 !important;
+}
+
+/* Nút "Try it out" lớn, nổi bật, dễ bấm */
+.swagger-ui .try-out__btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 9px 24px !important;
+  border-radius: 0.625rem !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  letter-spacing: 0.02em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.swagger-ui .try-out__btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+}
+
+.swagger-ui .try-out__btn.cancel {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border: 1.5px solid #fca5a5 !important;
+  box-shadow: none !important;
+}
+
+.swagger-ui .try-out__btn.cancel:hover {
+  background: #fecaca !important;
+}
+
+/* Nút "Execute" (Gửi Request) phong cách công nghệ nổi bật */
+.swagger-ui .execute-wrapper {
+  padding: 16px 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.swagger-ui .btn.execute {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  padding: 13px 38px !important;
+  border-radius: 0.75rem !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+}
+
+.swagger-ui .btn.execute:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+}
+
+.swagger-ui .btn.execute:active {
+  transform: translateY(0) !important;
+}
+
+/* Nút "Clear" hủy kết quả */
+.swagger-ui .btn.btn-clear {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 0.75rem !important;
+  padding: 11px 26px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  margin-left: 0 !important;
+}
+
+.swagger-ui .btn.btn-clear:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+/* Form Controls & Dropdowns hiện đại */
+.swagger-ui select {
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 0.625rem !important;
+  padding: 9px 36px 9px 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3E%3C/svg%3E") !important;
+  background-position: right 10px center !important;
+  background-repeat: no-repeat !important;
+  background-size: 16px !important;
+}
+
+.swagger-ui select:hover {
+  border-color: #3b82f6 !important;
+  background-color: #f8fafc !important;
+}
+
+.swagger-ui select:focus {
+  outline: none !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+}
+
+.swagger-ui .body-param-options {
+  margin-bottom: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.swagger-ui .body-param-options label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #475569 !important;
+}
+
+/* Textarea Editor phong cách dark code hiện đại */
+.swagger-ui textarea.body-param__text,
+.swagger-ui textarea {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  border: 1.5px solid #334155 !important;
+  border-radius: 0.75rem !important;
+  padding: 16px 20px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+  min-height: 170px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.swagger-ui textarea:focus {
+  outline: none !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22) !important;
+}
+
+.swagger-ui input[type="text"] {
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 0.625rem !important;
+  padding: 9px 14px !important;
+  font-size: 13px !important;
+  background: #ffffff !important;
+  transition: all 0.2s ease !important;
+}
+
+.swagger-ui input[type="text"]:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+}
+
+/* Code Boxes (Example Value & Schema) */
+.swagger-ui .highlight-code,
+.swagger-ui pre.microlight {
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #1e293b !important;
+  border-radius: 0.75rem !important;
+  padding: 16px 20px !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.15) !important;
+  overflow-x: auto !important;
+}
+
+.swagger-ui .tab {
+  display: flex !important;
+  gap: 6px !important;
+  margin-bottom: 10px !important;
+}
+
+.swagger-ui .tab li button.tablinks {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  padding: 6px 14px !important;
+  border-radius: 0.5rem !important;
+  background: transparent !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.swagger-ui .tab li button.tablinks:hover {
+  color: #0f172a !important;
+  background: #e2e8f0 !important;
+}
+
+.swagger-ui .tab li.active button.tablinks {
+  color: #2563eb !important;
+  background: #eff6ff !important;
+  font-weight: 800 !important;
+}
+
+/* Responses Section */
+.swagger-ui .responses-wrapper {
+  padding: 16px 4px !important;
+}
+
+.swagger-ui .responses-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 8px !important;
+}
+
+.swagger-ui .response-col_status {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 800 !important;
+  font-size: 13.5px !important;
+  vertical-align: top !important;
+  padding: 10px 14px !important;
+  color: #0f172a !important;
+}
+
+.swagger-ui .response-col_description {
+  padding: 10px 14px !important;
+  color: #334155 !important;
+  font-size: 13px !important;
+}
+
+.swagger-ui .response[data-code="200"] .response-col_status,
+.swagger-ui .response[data-code="201"] .response-col_status {
+  color: #059669 !important;
+}
+
+.swagger-ui .response[data-code="400"] .response-col_status,
+.swagger-ui .response[data-code="500"] .response-col_status {
+  color: #dc2626 !important;
+}
+
+/* =========================================================================
+   12. Nested Swagger Instances (Portal-Injected Operations)
+   Ensures 100% flush alignment, zero indentation mismatch ("không thụt ra thụt vào"),
+   and completely hides duplicate tag headings ("không bị tách ra 1 đống").
+   ========================================================================= */
+.swagger-ui .swagger-ui {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  background: transparent !important;
+}
+
+.swagger-ui .swagger-ui .wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.swagger-ui .swagger-ui section.block {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.swagger-ui .swagger-ui .col-12,
+.swagger-ui .swagger-ui .col-12-desktop {
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.swagger-ui .swagger-ui .opblock-tag-section {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.swagger-ui .swagger-ui .no-margin {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* Ẩn hoàn toàn header tag trùng lặp trong instance con */
+.swagger-ui .swagger-ui .opblock-tag {
+  display: none !important;
+}
+
+.swagger-ui .swagger-ui .information-container,
+.swagger-ui .swagger-ui .scheme-container,
+.swagger-ui .swagger-ui .models {
+  display: none !important;
+}
+
+/* Đảm bảo khung card endpoint của instance con đồng bộ 100% với outer opblock */
+.swagger-ui .swagger-ui .opblock {
+  margin-top: 0 !important;
+  margin-bottom: 4px !important;
+  width: 100% !important;
+}
+
+#second-response-operation-slot,
+#conversation-response-operation-slot,
+#conversation-create-options-slot,
+#model-selection-operation-slot,
+.conversation-response-swagger {
+  width: 100% !important;
+  margin: 0 0 4px 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 13. Compact Schemas / Models Section */
+.swagger-ui section.models {
+  margin: 14px 0 !important;
+  border: 1.5px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 0.875rem !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05) !important;
+  overflow: hidden !important;
+}
+
+.swagger-ui section.models h4 {
+  padding: 10px 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
 }
 

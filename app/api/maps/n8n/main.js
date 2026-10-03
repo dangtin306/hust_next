@@ -695,6 +695,36 @@ export default function N8nWorkflowMain() {
           </button>
         </div>
       </div>
+
+      <div className="rounded-xl border border-slate-700/80 bg-slate-900/75 p-3 shadow-sm">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-200">
+          <Activity className="h-3.5 w-3.5 text-cyan-400" />
+          Quy tắc sáng/tắt của node
+        </div>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          <div className="flex items-start gap-2 rounded-lg border border-cyan-900/70 bg-cyan-950/30 p-2.5">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            <div>
+              <p className="text-[11px] font-bold text-cyan-300">ĐANG CHẠY</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">Sáng nhấp nháy. Có tín hiệu mới thì nháy lại.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border border-emerald-900/70 bg-emerald-950/25 p-2.5">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            <div>
+              <p className="text-[11px] font-bold text-emerald-300">HOÀN TẤT / LỖI</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">Giữ sáng ít nhất 1 giây rồi tắt.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border border-amber-900/70 bg-amber-950/25 p-2.5">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+            <div>
+              <p className="text-[11px] font-bold text-amber-300">MẤT TÍN HIỆU</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">Không có tín hiệu mới/tắt thì tự tắt sau 2 giây.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

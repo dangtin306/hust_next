@@ -2,6 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { Sparkles, Layers, Terminal, ChevronRight } from "lucide-react";
 
 export type ServiceCategory = {
   route: string | null;
@@ -18,7 +19,14 @@ const operationByService: Record<string, string> = {
   media_responses: "createResponse",
   media_conversations: "createConversation",
   media_model_switch: "listModels",
+  workspace: "listWorkspaces",
   media_text_to_image: "generateImage",
+  media_text_to_text: "createResponse",
+  media_content_smart: "createResponse",
+  media_spell_check: "createResponse",
+  media_script_writing: "createResponse",
+  media_image_to_text: "createResponse",
+  media_text_to_speech: "createResponse",
 };
 
 const formatServiceName = (value: string) =>
@@ -32,28 +40,29 @@ const formatServiceName = (value: string) =>
 
 const statusLabel = (status: string) => {
   if (status === "implemented") return "Đã triển khai";
+  if (status === "documented") return "Đã khai báo";
   if (status === "ui-only") return "Chỉ giao diện";
   return "Service response dùng chung";
 };
 
 const exampleByService: Record<string, string[]> = {
-  media_responses: ["hội thoại thông thường"],
-  media_text_to_text: ["hội thoại thông thường"],
-  media_content_smart: ["media_content_smart"],
-  media_spell_check: ["sửa lỗi chính tả"],
-  media_script_writing: ["media_script_writing"],
-  media_image_to_text: ["media_image_to_text"],
-  media_text_to_speech: ["media_text_to_speech"],
+  media_responses: ["hội thoại thông thường", "normalchat"],
+  media_text_to_text: ["hội thoại thông thường", "normalchat"],
+  media_content_smart: ["media_content_smart", "smartwriting"],
+  media_spell_check: ["sửa lỗi chính tả", "spellcheck"],
+  media_script_writing: ["media_script_writing", "scriptwriting"],
+  media_image_to_text: ["media_image_to_text", "imagetotext"],
+  media_text_to_speech: ["media_text_to_speech", "texttospeech"],
 };
 
 const exampleMatchers: Record<string, string[]> = {
-  Responses: ["hội thoại thông thường"],
-  media_text_to_text: ["hội thoại thông thường"],
-  media_content_smart: ["media_content_smart"],
-  media_spell_check: ["sửa lỗi chính tả"],
-  media_script_writing: ["media_script_writing"],
-  media_image_to_text: ["media_image_to_text"],
-  media_text_to_speech: ["media_text_to_speech"],
+  Responses: ["hội thoại thông thường", "normalchat"],
+  media_text_to_text: ["hội thoại thông thường", "normalchat"],
+  media_content_smart: ["media_content_smart", "smartwriting"],
+  media_spell_check: ["sửa lỗi chính tả", "spellcheck"],
+  media_script_writing: ["media_script_writing", "scriptwriting"],
+  media_image_to_text: ["media_image_to_text", "imagetotext"],
+  media_text_to_speech: ["media_text_to_speech", "texttospeech"],
 };
 
 export default function ServiceCategoryPanel({ categories, hidden = false }: ServiceCategoryPanelProps) {
@@ -63,32 +72,6 @@ export default function ServiceCategoryPanel({ categories, hidden = false }: Ser
     if (!portalNode) return;
     const configureExamplesByTag = () => {
       document.querySelectorAll<HTMLElement>(".opblock-tag-section").forEach((section) => {
-        const heading = section.querySelector<HTMLElement>(".opblock-tag");
-        const tag = Object.keys(exampleMatchers).find((name) =>
-          (heading?.textContent || "").trim().startsWith(name),
-        );
-        if (!tag) return;
-        const matchingOptions = Array.from(section.querySelectorAll<HTMLSelectElement>("select")).flatMap((select) =>
-          Array.from(select.options).filter((option) =>
-            exampleMatchers[tag].some((matcher) =>
-              (option.textContent || "").toLowerCase().includes(matcher),
-            ),
-          ),
-        );
-        section.querySelectorAll<HTMLSelectElement>("select").forEach((select) => {
-          const selectedOption = matchingOptions.find((option) => option.parentElement === select);
-          if (!selectedOption) return;
-          Array.from(select.options).forEach((option) => {
-            const shouldHide = option !== selectedOption;
-            option.hidden = shouldHide;
-          });
-          if (select.value !== selectedOption.value) {
-            const nativeSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
-            nativeSetter?.call(select, selectedOption.value);
-            select.dispatchEvent(new Event("input", { bubbles: true }));
-            select.dispatchEvent(new Event("change", { bubbles: true }));
-          }
-        });
         section.querySelectorAll<HTMLTextAreaElement>("textarea.body-param__text").forEach((textarea) => {
           textarea.readOnly = false;
           textarea.disabled = false;
@@ -162,20 +145,19 @@ export default function ServiceCategoryPanel({ categories, hidden = false }: Ser
     const operationId = operationByService[serviceKey] || "createResponse";
     const exampleMatchersForService = exampleByService[serviceKey];
     const findTarget = () => {
-      if (exampleMatchersForService) {
-        const taggedSection = Array.from(
-          document.querySelectorAll<HTMLElement>(".opblock-tag-section"),
-        ).find((section) =>
-          (section.querySelector<HTMLElement>(".opblock-tag")?.textContent || "")
-            .trim()
-            .startsWith(serviceKey),
-        );
-        if (taggedSection) return taggedSection;
-      }
+      const formattedName = formatServiceName(serviceKey).toLowerCase();
+      const taggedSection = Array.from(
+        document.querySelectorAll<HTMLElement>(".opblock-tag-section"),
+      ).find((section) => {
+        const text = (section.querySelector<HTMLElement>(".opblock-tag")?.textContent || "").trim().toLowerCase();
+        return text.startsWith(serviceKey.toLowerCase()) || text.includes(formattedName);
+      });
+      if (exampleMatchersForService && taggedSection) return taggedSection;
       return (
         document.getElementById(`operations-${operationId}`) ||
         document.querySelector(`[data-section-id="operations-${operationId}"]`) ||
-        document.querySelector(`[id$="-${operationId}"]`)
+        document.querySelector(`[id$="-${operationId}"]`) ||
+        taggedSection
       );
     };
     const selectExample = () => {
@@ -218,24 +200,93 @@ export default function ServiceCategoryPanel({ categories, hidden = false }: Ser
   };
 
   return createPortal(
-    <section className={`${hidden ? "hidden" : ""} mx-auto mb-6 max-w-[1480px] rounded-xl border border-slate-200 bg-white/85 p-5 shadow-sm backdrop-blur-sm`}>
-      <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Các service OpenClaw</p>
-        <h2 className="mt-1 text-2xl font-semibold text-slate-800">Nhóm service</h2>
-        <p className="mt-1 text-sm text-slate-600">Các service AI của Media Tech được cung cấp qua OpenClaw và route tương ứng.</p>
+    <section className={`${hidden ? "hidden" : ""} w-full mb-3.5 rounded-2xl border border-slate-200/80 bg-white/95 p-4 sm:p-5 shadow-xs backdrop-blur-md`}>
+      <div className="mb-3.5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50/90 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+            <span>OpenClaw Service Matrix</span>
+          </div>
+          <h2 className="mt-1.5 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+            Nhóm service OpenClaw
+          </h2>
+          <p className="mt-0.5 text-xs sm:text-sm text-slate-600">
+            Các service AI của Media Tech được cung cấp qua OpenClaw Gateway và route tương ứng.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-1 text-xs font-medium text-slate-600 shadow-xs">
+          <Layers className="h-3.5 w-3.5 text-slate-500" />
+          <span>{categories.length} Nhóm service</span>
+        </div>
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+
+      <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
         {categories.map(([key, service]) => (
-          <button key={key} type="button" className="rounded-lg border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400" onClick={() => scrollToOperation(key)}>
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-slate-800">{formatServiceName(key)}</h3>
-              <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${service.status === "ui-only" ? "bg-slate-100 text-slate-600" : service.status === "implemented" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {statusLabel(service.status)}
-              </span>
+          <button
+            key={key}
+            type="button"
+            disabled={!service.route}
+            className={`group relative flex flex-col justify-between overflow-hidden rounded-xl border border-slate-200/90 bg-white p-3.5 text-left shadow-xs transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+              service.route
+                ? "hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md hover:shadow-blue-500/5"
+                : "cursor-default opacity-80"
+            }`}
+            onClick={() => {
+              if (service.route) scrollToOperation(key);
+            }}
+          >
+            <div>
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold text-sm text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {formatServiceName(key)}
+                </h3>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide border whitespace-nowrap ${
+                    service.status === "ui-only"
+                      ? "border-slate-200 bg-slate-100/80 text-slate-600"
+                      : service.status === "implemented"
+                        ? "border-emerald-200/80 bg-emerald-50 text-emerald-700"
+                        : service.status === "documented"
+                          ? "border-blue-200/80 bg-blue-50 text-blue-700"
+                        : "border-amber-200/80 bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      service.status === "ui-only"
+                        ? "bg-slate-400"
+                        : service.status === "implemented"
+                          ? "bg-emerald-500"
+                          : service.status === "documented"
+                            ? "bg-blue-500"
+                          : "bg-amber-500"
+                    }`}
+                  />
+                  {statusLabel(service.status)}
+                </span>
+              </div>
+
+              <p className="mt-2.5 min-h-[40px] text-xs leading-relaxed text-slate-600 line-clamp-2">
+                {service.description}
+              </p>
+
+              <div className="mt-3 border-t border-slate-100 pt-3">
+                <span className="block font-medium text-slate-500 text-[11px] mb-1">Route endpoint:</span>
+                <div className="flex items-center gap-1.5 rounded-md border border-slate-200/70 bg-slate-50/80 px-2.5 py-1.5">
+                  <Terminal className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                  <code className="font-mono text-xs text-slate-700 truncate">
+                    {service.route || "Frontend only"}
+                  </code>
+                </div>
+              </div>
             </div>
-            <p className="mt-3 min-h-12 text-sm leading-5 text-slate-600">{service.description}</p>
-            <code className="mt-3 block break-all rounded bg-slate-50 px-2 py-1.5 text-xs text-slate-700">{service.route || "Frontend only"}</code>
-            <span className="mt-3 block text-xs font-semibold text-blue-700">Bấm để xem endpoint ↓</span>
+
+            <div className={`mt-3.5 flex items-center justify-between border-t border-slate-100/90 pt-2.5 text-xs font-semibold ${service.route ? "text-blue-600 group-hover:text-blue-700" : "text-slate-400"}`}>
+              <span>{service.route ? "Bấm để xem endpoint" : "Chưa có API riêng"}</span>
+              {service.route && (
+                <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              )}
+            </div>
           </button>
         ))}
       </div>

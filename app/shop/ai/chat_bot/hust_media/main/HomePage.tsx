@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import ChatBotClient from "./ChatBotClient";
-import ChatBotSwitcher from "../workflow/ChatBotSwitcher";
+import ChatBotSwitcher from "@/app/shop/ai/workflow/ChatBotSwitcher";
 
 export const metadata: Metadata = {
   title: "Hust AI Assistant | Chat Bot",

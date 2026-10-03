@@ -149,6 +149,7 @@ export type FlowNodeData = {
   targetHandleIds?: string[];
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
+  signalVersion?: number;
   subLabel?: string;
   description?: string;
   visualScope?: "architecture";
@@ -378,7 +379,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
   const getGlowDot = () => {
     switch (liveStatus) {
       case "running":
-        return "bg-cyan-400 animate-ping";
+        return "bg-cyan-400 n8n-node-signal-ping";
       case "success":
         return "bg-emerald-400";
       case "slow":
@@ -399,6 +400,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
       }`}
     >
       <div
+        key={data.signalVersion ?? 0}
         className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center shadow-lg relative transition-all duration-300 ${getBorderStatusClass()}`}
       >
         {targetHandleIds.map((handleId, index) => (
@@ -777,6 +779,8 @@ export const N8nDiagramRenderer = forwardRef<
       timeoutMs = 6000
     ) => {
       const targets = Array.isArray(target) ? target : [target];
+      const visibleDurationMs =
+        status === "running" ? 2000 : Math.max(1000, Math.min(timeoutMs, 1000));
 
       targets.forEach((targetKey) => {
         const existingTimer = nodeTimersRef.current.get(targetKey);
@@ -802,6 +806,8 @@ export const N8nDiagramRenderer = forwardRef<
               data: {
                 ...n.data,
                 liveStatus: status,
+                signalVersion:
+                  status === "idle" ? n.data.signalVersion ?? 0 : (n.data.signalVersion ?? 0) + 1,
                 ...(subLabel !== undefined ? { subLabel } : {}),
               },
             };
@@ -810,7 +816,7 @@ export const N8nDiagramRenderer = forwardRef<
         })
       );
 
-      if (status !== "idle" && timeoutMs > 0) {
+      if (status !== "idle" && visibleDurationMs > 0) {
         const resetTimer = setTimeout(() => {
           setNodes((current) =>
             current.map((n) => {
@@ -836,7 +842,7 @@ export const N8nDiagramRenderer = forwardRef<
             })
           );
           targets.forEach((t) => nodeTimersRef.current.delete(t));
-        }, timeoutMs);
+        }, visibleDurationMs);
 
         targets.forEach((t) => nodeTimersRef.current.set(t, resetTimer));
       }
@@ -1290,8 +1296,8 @@ export const N8nDiagramRenderer = forwardRef<
           __html: `
             @keyframes n8n-node-pulse {
               0%, 100% {
-                box-shadow: 0 0 14px rgba(34, 211, 238, 0.45);
-                border-color: rgba(34, 211, 238, 0.85);
+                box-shadow: none;
+                border-color: #1e293b;
                 transform: scale(1);
               }
               50% {
@@ -1300,6 +1306,17 @@ export const N8nDiagramRenderer = forwardRef<
                 transform: scale(1.04);
               }
             }
+            @keyframes n8n-node-result-flash {
+              0% { box-shadow: 0 0 22px var(--signal-color); border-color: var(--signal-color); }
+              100% { box-shadow: none; border-color: #1e293b; }
+            }
+            @keyframes n8n-node-ping-flash {
+              0% { opacity: 0.9; transform: scale(1); }
+              100% { opacity: 0; transform: scale(1.8); }
+            }
+            .n8n-node-signal-ping {
+              animation: n8n-node-ping-flash 1s ease-out infinite;
+            }
             .n8n-node--running {
               animation: n8n-node-pulse 0.8s ease-in-out infinite !important;
               box-shadow: 0 0 22px rgba(34, 211, 238, 0.85) !important;
@@ -1307,19 +1324,16 @@ export const N8nDiagramRenderer = forwardRef<
               z-index: 20 !important;
             }
             .n8n-node--success {
-              box-shadow: 0 0 20px rgba(34, 197, 94, 0.85) !important;
-              border-color: #22c55e !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(34, 197, 94, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
             .n8n-node--slow {
-              box-shadow: 0 0 20px rgba(234, 179, 8, 0.85) !important;
-              border-color: #eab308 !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(234, 179, 8, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
             .n8n-node--error {
-              box-shadow: 0 0 20px rgba(239, 68, 68, 0.9) !important;
-              border-color: #ef4444 !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(239, 68, 68, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
           `,
         }}

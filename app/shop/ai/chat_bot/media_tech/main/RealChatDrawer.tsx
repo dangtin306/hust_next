@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import ChatBotClient from "../ChatBotClient";
+import MediaTechChatClient from "./media_main";
 import { X } from "lucide-react";
 
 type RealChatDrawerProps = {
@@ -46,8 +46,8 @@ export default function RealChatDrawer({ isOpen, onClose }: RealChatDrawerProps)
         >
           <X className="h-4 w-4" />
         </button>
-        <div className="h-full min-h-0 w-full overflow-y-auto">
-          <ChatBotClient isDrawer onClose={onClose} />
+        <div className="h-full min-h-0 w-full overflow-hidden">
+          <MediaTechChatClient isDrawer onClose={onClose} />
         </div>
       </div>
     </div>

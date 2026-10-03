@@ -163,6 +163,7 @@ export type FlowNodeData = {
   typeVersion?: number;
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
+  signalVersion?: number;
   handles?: {
     target: Array<string | null>;
     source: Array<string | null>;
@@ -414,6 +415,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
     >
       {/* Khung vuông icon chính (~64x64) mô phỏng chuẩn node n8n Editor */}
       <div
+        key={data.signalVersion ?? 0}
         className={`relative w-20 h-20 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
           liveClass ||
           (data.disabled
@@ -658,6 +660,7 @@ export const N8nDiagramRenderer = forwardRef<
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
   const animationTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const nodeFallbackTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const socketRef = useRef<Socket | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -695,6 +698,8 @@ export const N8nDiagramRenderer = forwardRef<
   const clearTimers = useCallback(() => {
     animationTimersRef.current.forEach((timer) => clearTimeout(timer));
     animationTimersRef.current = [];
+    nodeFallbackTimersRef.current.forEach((timer) => clearTimeout(timer));
+    nodeFallbackTimersRef.current.clear();
   }, []);
 
   // Thực hiện animation nhấp nháy tuần tự theo stage_node_ids (match chính xác qua node.id)
@@ -725,7 +730,7 @@ export const N8nDiagramRenderer = forwardRef<
 
       const stageDelayMs = 250;
 
-      // Bước 2: Duyệt tuần tự stage_node_ids, mỗi node chuyển 'running' khoảng 250ms
+      // Bước 2: Mỗi node sáng khi được kích hoạt; nếu không có tín hiệu tắt thì tự tắt sau 2s.
       stageIds.forEach((nodeId, index) => {
         const timer = setTimeout(() => {
           setNodes((current) =>
@@ -737,60 +742,63 @@ export const N8nDiagramRenderer = forwardRef<
                   data: {
                     ...n.data,
                     liveStatus: "running",
+                    signalVersion: ((n.data as FlowNodeData).signalVersion ?? 0) + 1,
                   },
                 };
               }
               return n;
             })
           );
+
+          const previousFallback = nodeFallbackTimersRef.current.get(nodeId);
+          if (previousFallback) clearTimeout(previousFallback);
+          const resetTimer = setTimeout(() => {
+            setNodes((current) =>
+              current.map((n) => {
+                if (n.type === "stickyNote" || n.id !== nodeId) return n;
+                return { ...n, data: { ...n.data, liveStatus: "idle" } };
+              })
+            );
+            nodeFallbackTimersRef.current.delete(nodeId);
+          }, 2000);
+          nodeFallbackTimersRef.current.set(nodeId, resetTimer);
+          animationTimersRef.current.push(resetTimer);
         }, index * stageDelayMs);
 
         animationTimersRef.current.push(timer);
       });
 
-      // Bước 3: Gán trạng thái cuối (success / slow / error) cho các node trong stage_node_ids
-      const totalDuration = stageIds.length * stageDelayMs + 100;
+      // Trace hoàn tất: phát trạng thái kết quả rồi tắt 100ms sau đó.
       const finishTimer = setTimeout(() => {
+        nodeFallbackTimersRef.current.forEach((timer) => clearTimeout(timer));
+        nodeFallbackTimersRef.current.clear();
+
         setNodes((current) =>
           current.map((n) => {
             if (n.type === "stickyNote") return n;
-            if (stageIds.includes(n.id)) {
-              return {
-                ...n,
-                data: {
-                  ...n.data,
-                  liveStatus: trace.status || "success",
-                },
-              };
-            }
             return {
               ...n,
               data: {
                 ...n.data,
-                liveStatus: "idle",
+                liveStatus: stageIds.includes(n.id) ? trace.status || "success" : "idle",
+                signalVersion: stageIds.includes(n.id)
+                  ? ((n.data as FlowNodeData).signalVersion ?? 0) + 1
+                  : (n.data as FlowNodeData).signalVersion ?? 0,
               },
             };
           })
         );
 
-        // Sau 5s tự động khôi phục về idle
         const resetTimer = setTimeout(() => {
           setNodes((current) =>
             current.map((n) => {
               if (n.type === "stickyNote") return n;
-              return {
-                ...n,
-                data: {
-                  ...n.data,
-                  liveStatus: "idle",
-                },
-              };
+              return { ...n, data: { ...n.data, liveStatus: "idle" } };
             })
           );
-        }, 5000);
+        }, 1000);
         animationTimersRef.current.push(resetTimer);
-      }, totalDuration);
-
+      }, stageIds.length * stageDelayMs + 100);
       animationTimersRef.current.push(finishTimer);
     },
     [clearTimers, setNodes]
@@ -973,6 +981,17 @@ export const N8nDiagramRenderer = forwardRef<
                 transform: scale(1.04);
               }
             }
+            @keyframes n8n-node-result-flash {
+              0% { box-shadow: 0 0 22px var(--signal-color); border-color: var(--signal-color); }
+              100% { box-shadow: none; border-color: #334155; }
+            }
+            @keyframes n8n-node-ping-flash {
+              0% { opacity: 0.9; transform: scale(1); }
+              100% { opacity: 0; transform: scale(1.8); }
+            }
+            .n8n-node-signal-ping {
+              animation: n8n-node-ping-flash 1s ease-out infinite;
+            }
             .n8n-node--running {
               animation: n8n-node-pulse 0.8s ease-in-out infinite !important;
               box-shadow: 0 0 22px rgba(34, 211, 238, 0.85) !important;
@@ -980,19 +999,16 @@ export const N8nDiagramRenderer = forwardRef<
               z-index: 20 !important;
             }
             .n8n-node--success {
-              box-shadow: 0 0 20px rgba(34, 197, 94, 0.85) !important;
-              border-color: #22c55e !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(34, 197, 94, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
             .n8n-node--slow {
-              box-shadow: 0 0 20px rgba(234, 179, 8, 0.85) !important;
-              border-color: #eab308 !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(234, 179, 8, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
             .n8n-node--error {
-              box-shadow: 0 0 20px rgba(239, 68, 68, 0.9) !important;
-              border-color: #ef4444 !important;
-              transition: box-shadow 0.3s ease, border-color 0.3s ease;
+              --signal-color: rgba(239, 68, 68, 0.9);
+              animation: n8n-node-result-flash 1000ms ease-out 1 both !important;
             }
           `,
         }}

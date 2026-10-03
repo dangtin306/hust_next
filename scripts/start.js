@@ -10,7 +10,7 @@ process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR = "1";
 const command = isWindows ? "next" : process.execPath;
 const args = isWindows
   ? ["start", "-p", "3003"]
-  : [path.resolve(__dirname, "start-dev.js")];
+  : [path.resolve(__dirname, "start-dev.js"), "3003"];
 
 const child = spawn(command, args, {
   stdio: "inherit",

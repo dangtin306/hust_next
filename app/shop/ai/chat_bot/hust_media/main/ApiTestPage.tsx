@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SwaggerEmbedClient from "./SwaggerEmbedClient";
+import SwaggerEmbedClient from "../api/SwaggerEmbedClient";
 import ChatBotSwitcher from "@/app/shop/ai/workflow/ChatBotSwitcher";
 
 export const metadata: Metadata = {

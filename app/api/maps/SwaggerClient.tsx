@@ -10,6 +10,8 @@ type SwaggerClientProps = {
   hideLoading?: boolean;
   className?: string;
   compact?: boolean;
+  serverStorageKey?: string;
+  proxyOpenClawRequests?: boolean;
 };
 
 const SERVER_URL_STORAGE_KEY = "openclaw_swagger_server_url";
@@ -31,9 +33,12 @@ export default function SwaggerClient({
   hideLoading = false,
   className = "",
   compact = false,
+  serverStorageKey = SERVER_URL_STORAGE_KEY,
+  proxyOpenClawRequests = false,
 }: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [serverUrl, setServerUrl] = useState(() => getInitialServerUrl(spec));
+  const defaultServerUrl = getInitialServerUrl(spec);
+  const [serverUrl, setServerUrl] = useState(defaultServerUrl);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -41,7 +46,7 @@ export default function SwaggerClient({
   }, [serverOnly, isReady]);
 
   useEffect(() => {
-    const rawSavedServer = window.localStorage.getItem(SERVER_URL_STORAGE_KEY);
+    const rawSavedServer = window.localStorage.getItem(serverStorageKey);
     let savedServerUrl = "";
 
     try {
@@ -55,17 +60,21 @@ export default function SwaggerClient({
       if (isValid) {
         savedServerUrl = savedServer.url.trim();
       } else if (rawSavedServer) {
-        window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+        window.localStorage.removeItem(serverStorageKey);
       }
     } catch {
-      window.localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+      window.localStorage.removeItem(serverStorageKey);
     }
 
-    if (savedServerUrl && savedServerUrl !== serverUrl) {
+    const nextServerUrl = savedServerUrl
+      ? savedServerUrl.replace(/\/$/, "")
+      : defaultServerUrl;
+
+    if (nextServerUrl !== serverUrl) {
       setIsReady(false);
-      setServerUrl(savedServerUrl.replace(/\/$/, ""));
+      setServerUrl(nextServerUrl);
     }
-  }, [serverUrl]);
+  }, [defaultServerUrl, serverStorageKey, serverUrl]);
 
   useEffect(() => {
     let disposed = false;
@@ -99,9 +108,35 @@ export default function SwaggerClient({
       ui = SwaggerUIBundle({
         domNode: containerRef.current,
         spec: activeSpec,
+        requestInterceptor: (request: { url: string; headers?: Record<string, string> }) => {
+          if (!proxyOpenClawRequests || typeof window === "undefined") return request;
+
+          try {
+            const requestUrl = new URL(request.url, window.location.origin);
+            if (requestUrl.origin === window.location.origin) return request;
+
+            const openClawPath = requestUrl.pathname.match(/^(.*?\/openclaw)(?:\/(.*))?$/i);
+            if (!openClawPath) return request;
+
+            const upstreamBase = `${requestUrl.origin}${openClawPath[1]}`;
+            const apiPath = openClawPath[2] || "";
+            const basePath = window.location.pathname.match(/^\/[^/]+/)?.[0] || "";
+            request.url = `${window.location.origin}${basePath}/api/openclaw/${apiPath}${requestUrl.search}`;
+            request.headers = {
+              ...request.headers,
+              "x-openclaw-target": upstreamBase,
+            };
+          } catch {
+            // Leave malformed or non-OpenClaw URLs to Swagger's normal request handling.
+          }
+
+          return request;
+        },
         deepLinking: true,
         layout: "BaseLayout",
         persistAuthorization: true,
+        tryItOutEnabled: true,
+        displayRequestDuration: true,
         onComplete: () => {
           if (spec.components && typeof spec.components === "object") {
             ui?.preauthorizeApiKey?.("BearerAuth", "media_tech");
@@ -114,6 +149,8 @@ export default function SwaggerClient({
         if (serverControls.querySelector(".openclaw-api-url-editor")) return;
 
         serverControls.style.position = "relative";
+        serverControls.style.zIndex = "1000";
+        serverControls.style.overflow = "visible";
         serverControls.style.display = "flex";
         serverControls.style.alignItems = "flex-end";
         serverControls.style.justifyContent = "space-between";
@@ -125,6 +162,7 @@ export default function SwaggerClient({
         const editor = document.createElement("div");
         editor.className = "openclaw-api-url-editor";
         editor.style.position = "relative";
+        editor.style.zIndex = "1001";
         editor.style.flexShrink = "0";
         editor.style.marginRight = "4px";
 
@@ -138,7 +176,7 @@ export default function SwaggerClient({
         popover.style.position = "absolute";
         popover.style.right = "0";
         popover.style.top = "calc(100% + 8px)";
-        popover.style.zIndex = "20";
+        popover.style.zIndex = "1002";
         popover.style.width = "360px";
         popover.style.padding = "16px";
         popover.style.background = "#fff";
@@ -171,8 +209,13 @@ export default function SwaggerClient({
         const apply = () => {
           const nextUrl = input.value.trim().replace(/\/$/, "");
           if (!nextUrl) return;
+          const currentUrl = serverUrl.trim().replace(/\/$/, "");
+          if (nextUrl === currentUrl) {
+            popover.hidden = true;
+            return;
+          }
           window.localStorage.setItem(
-            SERVER_URL_STORAGE_KEY,
+            serverStorageKey,
             JSON.stringify({ url: nextUrl, savedAt: Date.now() }),
           );
           popover.hidden = true;
@@ -200,16 +243,18 @@ export default function SwaggerClient({
         const serverControls = swaggerRoot?.querySelector(".scheme-container");
 
         if (compact && swaggerRoot) {
-          swaggerRoot.style.setProperty("width", "100%");
-          swaggerRoot.querySelectorAll<HTMLElement>(".wrapper, .opblock-tag-section, .opblock").forEach((element) => {
-            element.style.setProperty("max-width", "none");
-            element.style.setProperty("margin-left", "0");
-            element.style.setProperty("margin-right", "0");
-            element.style.setProperty("padding-left", "0");
-            element.style.setProperty("padding-right", "0");
+          swaggerRoot.style.setProperty("width", "100%", "important");
+          swaggerRoot.style.setProperty("margin", "0", "important");
+          swaggerRoot.style.setProperty("padding", "0", "important");
+          swaggerRoot.querySelectorAll<HTMLElement>(".wrapper, .opblock-tag-section, .no-margin").forEach((element) => {
+            element.style.setProperty("max-width", "none", "important");
+            element.style.setProperty("margin", "0", "important");
+            element.style.setProperty("padding", "0", "important");
           });
           [".information-container", ".scheme-container", ".models", ".opblock-tag"].forEach((selector) => {
-            swaggerRoot.querySelector<HTMLElement>(selector)?.style.setProperty("display", "none");
+            swaggerRoot.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+              el.style.setProperty("display", "none", "important");
+            });
           });
         }
 
@@ -244,9 +289,46 @@ export default function SwaggerClient({
         observer.observe(containerRef.current, { childList: true, subtree: true });
       }
 
+      const handleTagClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+
+        const isTagText = Boolean(target.closest(".opblock-tag a, .opblock-tag small"));
+        const isSummaryTextBox = Boolean(
+          target.closest(".opblock-summary-method, .opblock-summary-path, .opblock-summary-description")
+        );
+
+        if (isTagText || isSummaryTextBox) {
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          if (target.closest("a")) {
+            event.preventDefault();
+          }
+        }
+      };
+
+      const handleMouseDown = (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+        const link = target.closest<HTMLElement>("a");
+        if (link) {
+          link.setAttribute("draggable", "false");
+        }
+      };
+
+      const container = containerRef.current;
+      container?.addEventListener("click", handleTagClick, true);
+      container?.addEventListener("mousedown", handleMouseDown, true);
+      document.addEventListener("click", handleTagClick, true);
+      document.addEventListener("mousedown", handleMouseDown, true);
+
       const originalDestroy = ui?.destroy;
       if (ui) {
         ui.destroy = () => {
+          container?.removeEventListener("click", handleTagClick, true);
+          container?.removeEventListener("mousedown", handleMouseDown, true);
+          document.removeEventListener("click", handleTagClick, true);
+          document.removeEventListener("mousedown", handleMouseDown, true);
           observer.disconnect();
           originalDestroy?.();
         };
@@ -265,7 +347,7 @@ export default function SwaggerClient({
       disposed = true;
       ui?.destroy?.();
     };
-  }, [compact, hideEmptySpecNotice, serverUrl, spec]);
+  }, [compact, hideEmptySpecNotice, proxyOpenClawRequests, serverStorageKey, serverUrl, spec]);
 
   return (
     <>

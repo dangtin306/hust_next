@@ -6,6 +6,10 @@ info:
   description: |
     Contract downstream giữa Laravel và Node.js OpenClaw Gateway.
 
+    Tài liệu cũng có nhóm `Chat Bot` cho các API Laravel cũ tại
+    `https://laravel.hust.media`; đây là các route frontend gọi vào Laravel,
+    tách biệt với các route downstream Laravel gọi Node.js bên dưới.
+
     Tài liệu này không mô tả frontend và không mô tả các API gọi trực tiếp
     OpenAI hoặc Gemini. Laravel gọi một endpoint chung của OpenClaw Gateway:
 
@@ -37,12 +41,22 @@ info:
       previous_response_id -> response.id trước đó được gửi để tiếp tục phiên
 
 servers:
+  - url: https://laravel_mt.hust.media
+    description: Laravel MT API mặc định
   - url: http://127.0.0.1:8818
     description: Gateway OpenClaw Node.js local
   - url: https://nginx.hust.media/go/ai/test
     description: Gateway OpenClaw Node.js test
 
 tags:
+  - name: Chat Bot
+    description: |
+      Các API thuộc Laravel Chat Bot cũ. Session xác thực được gửi trong JSON body
+      bằng `chat_bot_session`; không dùng Bearer token, cookie hoặc user_id làm danh tính.
+      Khi chưa có session, POST /api/chat/bot/rooms tạo user nội bộ và trả token một lần.
+      Các mã lỗi phổ biến: 401, 403, 404, 409, 422, 429, 500 và 503.
+  - name: Workspace
+    description: Lấy danh sách và quản lý dữ liệu Workspace trên Laravel.
   - name: Chat
     description: Payload chat thường gửi qua OpenClaw
   - name: Smart Writing
@@ -60,6 +74,815 @@ tags:
     description: Request downstream từ Laravel đến OpenClaw Gateway
 
 paths:
+  /api/workspaces/main/data:
+    get:
+      operationId: listLaravelMainWorkspaces
+      tags: [Workspace]
+      summary: Lấy danh sách workspace
+      description: |
+        Trả về danh sách workspace cùng liên kết và metadata phân trang.
+        Frontend chat có thể gọi không cần query; trang quản lý hỗ trợ lọc bằng `q`, `status` và `per_page`.
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Từ khóa tìm kiếm workspace.
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Lọc theo trạng thái workspace.
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          required: false
+          description: Số workspace trên một trang.
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Danh sách workspace và phân trang.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, workspace_name, work_space_code, status]
+                      properties:
+                        id:
+                          type: integer
+                          example: 5
+                        work_space_code:
+                          type: string
+                          example: workspace-test
+                        workspace_name:
+                          type: string
+                          example: Workspace Test
+                        parent_workspace_code:
+                          type: string
+                          nullable: true
+                          example: null
+                        slug:
+                          type: string
+                          example: workspace-test
+                        description:
+                          type: string
+                          example: Workspace mẹ test
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                  links:
+                    type: object
+                    additionalProperties: true
+                  meta:
+                    type: object
+                    additionalProperties: true
+              example:
+                data:
+                  - id: 5
+                    work_space_code: workspace-test
+                    workspace_name: Workspace Test
+                    parent_workspace_code: null
+                    slug: workspace-test
+                    description: Workspace mẹ test
+                    status: active
+                    created_at: "2026-10-01T15:52:28.000000Z"
+                    updated_at: "2026-10-01T15:52:28.000000Z"
+                links:
+                  first: https://laravel_mt.hust.media/api/workspaces/main/data?page=1
+                  last: https://laravel_mt.hust.media/api/workspaces/main/data?page=1
+                  prev: null
+                  next: null
+                meta:
+                  current_page: 1
+                  from: 1
+                  last_page: 1
+                  per_page: 20
+                  to: 1
+                  total: 1
+
+  /api/workspaces/user/data:
+    get:
+      operationId: listUserWorkspaces
+      tags: [Workspace]
+      summary: Lấy workspace của user
+      description: |
+        Trả về các workspace có session đang `active` của user. Laravel đối chiếu
+        `user_id` với cột `upstream_user_id` trong bảng `work_space_session`.
+
+        Mặc định tra user `502`, không cần truyền query parameter. Có thể truyền
+        `user_id` để tra user khác, ví dụ `/api/workspaces/user/data?user_id=123`;
+        nếu user không có session active, `data` là mảng rỗng.
+      security: []
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          description: User ID cần tra; mặc định là 502.
+          schema:
+            type: integer
+            minimum: 1
+            default: 502
+          example: 502
+      responses:
+        '200':
+          description: Danh sách workspace có session active của user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - workspace_name
+                        - agent_code
+                        - work_space_code
+                        - parent_workspace_code
+                        - slug
+                        - status
+                      properties:
+                        id:
+                          type: integer
+                          example: 4
+                        workspace_name:
+                          type: string
+                          example: Hỗ trợ OpenClaw
+                        agent_code:
+                          type: string
+                          example: test
+                        work_space_code:
+                          type: string
+                          example: workspace_openclaw_support
+                        parent_workspace_code:
+                          type: string
+                          example: workspace-test
+                        slug:
+                          type: string
+                          example: workspace-openclaw-support
+                        description:
+                          type: string
+                          example: Hỗ trợ cấu hình OpenClaw
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: "2026-10-01T08:52:28.000000Z"
+                        updated_at:
+                          type: string
+                          format: date-time
+                          example: "2026-10-02T09:14:06.000000Z"
+              examples:
+                activeWorkspaces:
+                  summary: User có workspace active
+                  value:
+                    data:
+                      - id: 4
+                        workspace_name: Hỗ trợ OpenClaw
+                        agent_code: test
+                        work_space_code: workspace_openclaw_support
+                        parent_workspace_code: workspace-test
+                        slug: workspace-openclaw-support
+                        description: Hỗ trợ cấu hình OpenClaw
+                        status: active
+                        created_at: "2026-10-01T08:52:28.000000Z"
+                        updated_at: "2026-10-02T09:14:06.000000Z"
+                noActiveWorkspaces:
+                  summary: User không có session active
+                  value:
+                    data: []
+
+  /api/workspaces/routing/update:
+    get:
+      operationId: getWorkspaceRoutingUpdate
+      tags: [Workspace]
+      summary: Đồng bộ routing workspace (GET)
+      description: |
+        Đồng bộ workspace con của `workspace-test`. Laravel lấy danh sách từ Node API
+        `GET /openclaw/v2/list` rồi cập nhật bảng `work_space_main`.
+
+        Workspace mẹ không bị sửa; workspace con không bị xóa chỉ vì vắng mặt trong
+        danh sách Node. Không cần query parameters hoặc request body.
+      security: []
+      responses:
+        '200':
+          description: Đồng bộ routing workspace thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: true
+        '404':
+          description: Không tìm thấy workspace mẹ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '409':
+          description: Workspace mẹ chưa có agent_code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '500':
+          description: Lỗi nội bộ khi đồng bộ workspace routing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '502':
+          description: Node không phản hồi hoặc trả dữ liệu không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+
+  /api/chat/bot/rooms:
+    servers:
+      - url: https://laravel.hust.media
+        description: Laravel Chat Bot cũ
+    get:
+      operationId: getLaravelChatBotRooms
+      tags: [Chat Bot]
+      summary: Lấy danh sách phòng (GET cũ)
+      description: GET route vẫn tồn tại nhưng client nên dùng POST `/rooms/list`, vì GET body không được hỗ trợ ổn định.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 30
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+      responses:
+        '200':
+          description: Danh sách phòng.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+    post:
+      operationId: createLaravelChatBotRoom
+      tags: [Chat Bot]
+      summary: Tạo hoặc liên kết phòng chat
+      description: |
+        `upstream_conversation_id` có thể bỏ qua; khi bỏ qua Laravel sẽ yêu cầu
+        OpenClaw tạo conversation. Lần đầu tạo session, response trả
+        `data.chat_bot_session`; lưu token này để gửi trong JSON body ở các request sau.
+        Nếu conversation đã liên kết với user khác, trả HTTP 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chat_bot_session:
+                  type: string
+                  description: Token session hiện có; bỏ qua khi tạo session lần đầu.
+                title:
+                  type: string
+                  maxLength: 255
+                  example: Cuộc trò chuyện mới
+                model:
+                  type: string
+                  maxLength: 128
+                  example: gpt-5.6-luna
+                agent:
+                  type: string
+                  maxLength: 100
+                  example: chat_bot
+                upstream_conversation_id:
+                  type: string
+                  maxLength: 255
+                  example: conversation-id
+            example:
+              title: Cuộc trò chuyện mới
+              model: model-name
+              agent: chat_bot
+              upstream_conversation_id: conversation-id
+      responses:
+        '200':
+          description: Phòng đã được liên kết.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '201':
+          description: Đã tạo phòng mới.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      room_id:
+                        type: integer
+                        example: 123
+                      upstream_conversation_id:
+                        type: string
+                        example: conversation-id
+                      title:
+                        type: string
+                        example: Cuộc trò chuyện mới
+                      model:
+                        type: string
+                        example: model-name
+                      agent:
+                        type: string
+                        example: chat_bot
+                      status:
+                        type: integer
+                        example: 1
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: "2026-10-01T10:00:00Z"
+                      updated_at:
+                        type: string
+                        format: date-time
+                        example: "2026-10-01T10:00:00Z"
+                      chat_bot_session:
+                        type: string
+                        description: Token thô chỉ trả khi tạo session lần đầu.
+                        example: raw-session-token
+        '409':
+          description: Conversation đã liên kết với user khác.
+        '503':
+          description: Không tạo được phòng, thường do cần gọi OpenClaw.
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+        '500':
+          $ref: '#/components/responses/ChatBotError'
+
+  /api/chat/bot/rooms/list:
+    servers:
+      - url: https://laravel.hust.media
+        description: Laravel Chat Bot cũ
+    post:
+      operationId: listLaravelChatBotRooms
+      tags: [Chat Bot]
+      summary: Lấy danh sách phòng chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+                page:
+                  type: integer
+                  minimum: 1
+                  default: 1
+                per_page:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 30
+            example:
+              chat_bot_session: raw-session-token
+              page: 1
+              per_page: 30
+      responses:
+        '200':
+          description: Danh sách phòng và phân trang.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 30
+                      total:
+                        type: integer
+                        example: 42
+                      last_page:
+                        type: integer
+                        example: 2
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+
+  /api/chat/bot/rooms/{roomId}/messages/list:
+    servers:
+      - url: https://laravel.hust.media
+        description: Laravel Chat Bot cũ
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 123
+    post:
+      operationId: listLaravelChatBotRoomMessages
+      tags: [Chat Bot]
+      summary: Lấy lịch sử tin nhắn
+      description: Gửi `before_id` bằng `next_before_id` của response trước để lấy trang cũ hơn.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+                before_id:
+                  type: integer
+                  example: 456
+                per_page:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 50
+            examples:
+              latest:
+                summary: Lịch sử mới nhất
+                value:
+                  chat_bot_session: raw-session-token
+                  per_page: 50
+              olderPage:
+                summary: Trang cũ hơn
+                value:
+                  chat_bot_session: raw-session-token
+                  before_id: 456
+                  per_page: 50
+      responses:
+        '200':
+          description: Lịch sử tin nhắn và thông tin phân trang.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 456
+                        role:
+                          type: string
+                          example: user
+                        content:
+                          type: string
+                          example: Xin chào
+                        service_id:
+                          type: string
+                          nullable: true
+                        model:
+                          type: string
+                          example: model-name
+                        created_at:
+                          type: string
+                          format: date-time
+                        usage:
+                          type: object
+                          additionalProperties: true
+                        upstream:
+                          type: object
+                          additionalProperties: true
+                  pagination:
+                    type: object
+                    properties:
+                      per_page:
+                        type: integer
+                        example: 50
+                      has_more:
+                        type: boolean
+                        example: true
+                      next_before_id:
+                        type: integer
+                        example: 456
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '404':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+
+  /api/chat/bot/rooms/{roomId}/messages:
+    servers:
+      - url: https://laravel.hust.media
+        description: Laravel Chat Bot cũ
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 123
+    get:
+      operationId: getLaravelChatBotRoomMessages
+      tags: [Chat Bot]
+      summary: Lấy lịch sử tin nhắn (GET cũ)
+      description: GET route vẫn tồn tại nhưng client nên dùng POST `/messages/list`, vì GET body không được hỗ trợ ổn định.
+      parameters:
+        - name: before_id
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+      responses:
+        '200':
+          description: Lịch sử tin nhắn.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '404':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+    post:
+      operationId: saveLaravelChatBotTurn
+      tags: [Chat Bot]
+      summary: Lưu một lượt chat
+      description: |
+        Chỉ lưu kết quả do frontend/upstream tạo; endpoint không tự gọi model.
+        `user_message` và `http_status` bắt buộc. Assistant chỉ được lưu khi upstream
+        trả HTTP 2xx, không có `error_message`, và `assistant_message` không rỗng.
+        User message cùng thông tin lỗi/upstream vẫn được lưu nếu upstream thất bại.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session, user_message, http_status]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+                user_message:
+                  type: string
+                  example: Xin chào
+                assistant_message:
+                  type: string
+                  nullable: true
+                  example: Chào bạn!
+                service_id:
+                  type: string
+                  example: openai
+                model:
+                  type: string
+                  example: model-name
+                upstream_response_id:
+                  type: string
+                  example: resp_abc123
+                usage:
+                  type: object
+                  properties:
+                    input_tokens:
+                      type: integer
+                      minimum: 0
+                      example: 10
+                    cached_tokens:
+                      type: integer
+                      minimum: 0
+                      example: 0
+                    output_tokens:
+                      type: integer
+                      minimum: 0
+                      example: 12
+                    total_tokens:
+                      type: integer
+                      minimum: 0
+                      example: 22
+                http_status:
+                  type: integer
+                  example: 200
+                error_message:
+                  type: string
+                  nullable: true
+                  example: null
+            example:
+              chat_bot_session: raw-session-token
+              user_message: Xin chào
+              assistant_message: Chào bạn!
+              service_id: openai
+              model: model-name
+              upstream_response_id: resp_abc123
+              usage:
+                input_tokens: 10
+                cached_tokens: 0
+                output_tokens: 12
+                total_tokens: 22
+              http_status: 200
+              error_message: null
+      responses:
+        '201':
+          description: Đã lưu lượt chat.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '404':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+        '500':
+          $ref: '#/components/responses/ChatBotError'
+
+  /api/chat/bot/rooms/{roomId}:
+    servers:
+      - url: https://laravel.hust.media
+        description: Laravel Chat Bot cũ
+    parameters:
+      - name: roomId
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 123
+    patch:
+      operationId: updateLaravelChatBotRoom
+      tags: [Chat Bot]
+      summary: Cập nhật phòng chat
+      description: |
+        Có thể gửi `title`, `status`, hoặc cả hai. Phòng có `status: 0` không hiện trong danh sách.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_bot_session]
+              anyOf:
+                - required: [title]
+                - required: [status]
+              properties:
+                chat_bot_session:
+                  type: string
+                  example: raw-session-token
+                title:
+                  type: string
+                  example: Tên phòng mới
+                status:
+                  type: integer
+                  enum: [0, 1]
+                  example: 1
+            example:
+              chat_bot_session: raw-session-token
+              title: Tên phòng mới
+              status: 1
+      responses:
+        '200':
+          description: Phòng sau cập nhật.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/ChatBotError'
+        '403':
+          $ref: '#/components/responses/ChatBotError'
+        '404':
+          $ref: '#/components/responses/ChatBotError'
+        '422':
+          $ref: '#/components/responses/ChatBotError'
+        '429':
+          $ref: '#/components/responses/ChatBotError'
+
   /openclaw/v1/responses:
     post:
       operationId: createLaravelOpenClawResponse
@@ -176,6 +999,12 @@ paths:
 
 components:
   schemas:
+    WorkspaceRoutingUpdateResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
     OpenClawRequest:
       type: object
       required:
@@ -390,10 +1219,30 @@ components:
       properties:
         input_tokens:
           type: integer
+        cached_tokens:
+          type: integer
         output_tokens:
           type: integer
         total_tokens:
           type: integer
+
+    ChatBotError:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: CHAT_SESSION_INVALID
+            message:
+              type: string
+              example: Chat session is invalid.
 
     Error:
       type: object
@@ -430,3 +1279,10 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+
+    ChatBotError:
+      description: Lỗi Chat Bot theo mã HTTP; nội dung dùng chung success=false và error.code/error.message.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ChatBotError'

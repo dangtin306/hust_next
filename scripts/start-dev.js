@@ -8,6 +8,7 @@ process.env.NEXT_PUBLIC_HIDE_DEV_INDICATOR = "1";
 
 const uriConfigPath = path.resolve(__dirname, "../src/uri_config.json");
 const nextCommand = process.platform === "win32" ? "next.cmd" : "next";
+const port = process.argv[2] || "8820";
 const watchedDirectories = [
   path.resolve(__dirname, "../app"),
   path.resolve(__dirname, "../src"),
@@ -22,7 +23,7 @@ let changeLogTimer;
 const pendingChanges = new Set();
 
 const startNext = () => {
-  child = spawn(nextCommand, ["dev", "--webpack", "-p", "3003"], {
+  child = spawn(nextCommand, ["dev", "--webpack", "-p", port], {
     stdio: "inherit",
     shell: false,
   });

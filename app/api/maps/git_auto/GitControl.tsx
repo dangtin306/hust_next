@@ -389,8 +389,9 @@ function HistoryPanel({
       {history.length ? (
         history.map((event, index) => {
           const isCommit = event.type === "commit";
+          const shortSha = isCommit ? event.short_sha || event.sha.slice(0, 7) : "";
           const eventLabel = isCommit
-            ? event.short_sha || event.sha.slice(0, 7)
+            ? "COMMIT"
             : event.type === "pull_request"
               ? "PULL REQUEST"
               : event.type === "vscode_sync"
@@ -430,12 +431,12 @@ function HistoryPanel({
           <button
             key={isCommit ? event.sha : `${event.type}-${event.date || index}`}
             onClick={() => onSelect(event)}
-            className="flex w-full items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
+            className="flex w-full select-text items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
           >
             <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : event.type === "pull" ? "bg-sky-50" : event.type === "push" ? "bg-emerald-50" : event.type === "pull_request" ? "bg-indigo-50" : event.type === "merge" ? "bg-violet-50" : event.type === "vscode_sync" ? "bg-cyan-50" : event.type === "update_code" ? "bg-sky-50" : "bg-slate-50"}`}>
               {eventLabel}
             </span>
-            {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{eventLabel}</span>}
+            {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{shortSha}</span>}
             <span className="min-w-0 flex-1 truncate text-xs font-semibold">
               {eventDescription}
             </span>
@@ -788,7 +789,7 @@ export default function GitControl() {
             preflight: typed,
           }));
         } else {
-          setRefreshWarning("Unable to refresh latest data.");
+          setRefreshWarning(`Unable to refresh latest data: ${apiError(error as GitApiError)}`);
         }
       }).finally(() => {
         setLoading((old) => ({

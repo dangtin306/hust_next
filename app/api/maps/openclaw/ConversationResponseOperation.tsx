@@ -7,14 +7,19 @@ import SwaggerClient from "../SwaggerClient";
 const conversationResponseSpec = {
   openapi: "3.0.3",
   info: { title: "Conversation response", version: "1.0.0" },
-  servers: [{ url: "http://localhost:8818", description: "Backend OpenClaw" }],
+  servers: [
+    { url: "https://node_js.hust.media/openclaw", description: "OpenClaw Production Gateway" },
+    { url: "http://localhost:2999/openclaw", description: "Node.js Gateway Local (cổng 2999)" },
+    { url: "http://localhost:8818", description: "Backend Node.js local (cổng 8818)" },
+    { url: "https://nginx.hust.media/go/ai/test", description: "Backend test" },
+  ],
   security: [{ BearerAuth: [] }],
-  tags: [{ name: "Conversations" }],
+  tags: [{ name: "Responses" }],
   paths: {
     "/openclaw/v1/responses": {
       post: {
         operationId: "createConversationResponse",
-        tags: ["Conversations"],
+        tags: ["Responses"],
         summary: "Gửi tin nhắn để OpenClaw xử lý",
         description: "Gửi tin nhắn mới và liên kết với conversation bằng conversation_id.",
         requestBody: {
@@ -53,15 +58,28 @@ export default function ConversationResponseOperation() {
   useEffect(() => {
     const ensureSlot = () => {
       const section = Array.from(document.querySelectorAll<HTMLElement>(".opblock-tag-section")).find(
-        (item) => (item.querySelector<HTMLElement>(".opblock-tag")?.textContent || "").trim().startsWith("Conversations"),
+        (item) => (item.querySelector<HTMLElement>(".opblock-tag")?.textContent || "").trim().startsWith("Responses"),
       );
       if (!section) return;
-      let slot = section.querySelector<HTMLElement>("#conversation-response-operation-slot");
+      let slot = document.getElementById("conversation-response-operation-slot") as HTMLElement | null;
       if (!slot) {
         slot = document.createElement("div");
         slot.id = "conversation-response-operation-slot";
       }
-      if (slot.parentElement !== section) section.appendChild(slot);
+      const secondSlot = section.querySelector<HTMLElement>("#second-response-operation-slot");
+      const baseResponse = Array.from(section.querySelectorAll<HTMLElement>(".opblock")).find(
+        (item) =>
+          !item.closest("#second-response-operation-slot, #conversation-response-operation-slot") &&
+          item.textContent?.includes("/openclaw/v1/responses"),
+      );
+      const targetElement = secondSlot || baseResponse;
+      if (targetElement?.parentElement) {
+        if (slot.parentElement !== targetElement.parentElement || slot.previousElementSibling !== targetElement) {
+          targetElement.parentElement.insertBefore(slot, targetElement.nextSibling);
+        }
+      } else if (slot.parentElement !== section) {
+        section.appendChild(slot);
+      }
       setPortalNode(slot);
     };
 

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Cloud,
   Code2,
+  Database,
   FileCode2,
   FolderGit2,
   GitBranch,
@@ -567,8 +568,11 @@ function HistoryPanel({
           const eventType = event.type;
           const isCommit = eventType === "commit";
           const sha = event.type === "commit" && typeof event.sha === "string" ? event.sha : "";
+          const shortSha = isCommit ? event.short_sha || sha.slice(0, 7) || "—" : "";
           const eventLabel = isCommit
-            ? event.short_sha || sha.slice(0, 7) || "—"
+            ? "COMMIT"
+            : eventType === "uncommit"
+              ? "UNCOMMIT"
             : eventType === "pull_request"
               ? "PULL REQUEST"
               : eventType === "vscode_sync"
@@ -578,6 +582,8 @@ function HistoryPanel({
               : eventType.toUpperCase();
           const eventDescription = isCommit
             ? event.message?.trim()
+            : eventType === "uncommit"
+              ? [event.message?.trim() || "Undo commit", event.status].filter(Boolean).join(" · ")
             : eventType === "pull"
               ? `Pull ${event.branch || "—"} · ${event.status || "—"}`
               : eventType === "push"
@@ -593,6 +599,8 @@ function HistoryPanel({
                 : "Unknown history event";
           const eventColor = isCommit
             ? "text-indigo-600"
+            : eventType === "uncommit"
+              ? "text-amber-700"
             : eventType === "pull"
               ? "text-sky-600"
               : eventType === "push"
@@ -610,12 +618,12 @@ function HistoryPanel({
           <button
             key={event.type === "commit" ? sha || index : `${eventType}-${event.date || index}`}
             onClick={() => onSelect(event)}
-            className="flex w-full items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
+            className="flex w-full select-text items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
           >
-            <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : eventType === "pull" ? "bg-sky-50" : eventType === "push" ? "bg-emerald-50" : eventType === "pull_request" ? "bg-indigo-50" : eventType === "merge" ? "bg-violet-50" : eventType === "vscode_sync" ? "bg-cyan-50" : eventType === "update_code" ? "bg-sky-50" : "bg-slate-50"}`}>
+            <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : eventType === "uncommit" ? "bg-amber-50" : eventType === "pull" ? "bg-sky-50" : eventType === "push" ? "bg-emerald-50" : eventType === "pull_request" ? "bg-indigo-50" : eventType === "merge" ? "bg-violet-50" : eventType === "vscode_sync" ? "bg-cyan-50" : eventType === "update_code" ? "bg-sky-50" : "bg-slate-50"}`}>
               {eventLabel}
             </span>
-            {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{eventLabel}</span>}
+            {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{shortSha}</span>}
             <span className="min-w-0 flex-1 truncate text-xs font-semibold">
               {eventDescription}
             </span>
@@ -639,6 +647,8 @@ function HistoryPanel({
           <p className="font-semibold">
             {selectedCommit.type === "commit"
               ? selectedCommit.message?.trim()
+              : selectedCommit.type === "uncommit"
+                ? [selectedCommit.message?.trim() || "Undo commit", selectedCommit.status].filter(Boolean).join(" · ")
               : selectedCommit.type === "pull"
                 ? `Pull ${selectedCommit.branch || "—"} · ${selectedCommit.status || "—"}`
               : selectedCommit.type === "push"
@@ -678,7 +688,7 @@ export default function GitControl() {
   const [lastRefresh, setLastRefresh] = useState<Date>();
   const [selectedFile, setSelectedFile] = useState<ChangedFile>();
   const [selectedCommit, setSelectedCommit] = useState<HistoryEvent>();
-  const [commitType, setCommitType] = useState("chore");
+  const [commitType, setCommitType] = useState("update");
   const [giteaUsername, setGiteaUsername] = useState("");
   const [commitMessage, setCommitMessage] = useState("");
   const [commitDone, setCommitDone] = useState(false);
@@ -815,7 +825,7 @@ export default function GitControl() {
             preflight: typed,
           }));
         } else {
-          setRefreshWarning("Unable to refresh latest data.");
+          setRefreshWarning(`Unable to refresh latest data: ${apiError(error as GitApiError)}`);
         }
       }).finally(() => {
         setLoading((old) => ({
@@ -1426,6 +1436,33 @@ export default function GitControl() {
                 >
                   <RefreshCw size={14} className={loading.update_code ? "animate-spin" : ""} />
                   {loading.update_code ? "Updating…" : "Full/Sync"}
+                </Button>
+              </Tooltip>
+              <Tooltip description="Sao lưu và lưu dữ liệu SQL từ https://laravel_mt.hust.media/api/chat/bot/sql_save">
+                <Button
+                  disabled={Boolean(loading.sql_save)}
+                  onClick={() => {
+                    setUpdateNotice("SQL save in progress…");
+                    void run(
+                      "sql_save",
+                      laravelGitService.saveSql.bind(laravelGitService),
+                      (result) => {
+                        const message =
+                          result?.message ||
+                          (typeof result === "string" ? result : "SQL save completed successfully");
+                        setUpdateNotice(message);
+                        notify(message);
+                      },
+                      (error) => {
+                        const message = `SQL save failed: ${apiError(error)}`;
+                        setUpdateNotice(message);
+                        notify(message);
+                      },
+                    );
+                  }}
+                >
+                  <Database size={14} className={loading.sql_save ? "animate-spin" : ""} />
+                  {loading.sql_save ? "Saving SQL…" : "SQL"}
                 </Button>
               </Tooltip>
             </div>

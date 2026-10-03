@@ -91,6 +91,7 @@ export type Commit = {
 };
 export type HistoryEvent =
   | (Commit & { type: "commit" })
+  | { type: "uncommit"; status?: string; branch?: string; message?: string; date?: string }
   | { type: "pull"; branch?: string; status?: string; date?: string }
   | { type: "push"; mode?: string; status?: string; date?: string }
   | { type: "pull_request"; pr_index?: number; source_branch?: string; target_branch?: string; status?: string; date?: string }
@@ -296,6 +297,7 @@ export class LaravelGitService {
   async getDashboardState(sections?: string[]) {
     const query = new URLSearchParams({ component: COMPONENT });
     if (sections?.length) query.set("sections", sections.join(","));
+    query.set("view", "refresh");
     return request<GitDashboardState>(
       `projects/source/dashboard-state?${query.toString()}`,
     );
@@ -517,6 +519,48 @@ export class LaravelGitService {
       "POST",
       {},
     );
+  }
+  async saveSql(): Promise<{ message?: string; status?: string; file?: string }> {
+    const res = await fetch("https://laravel_mt.hust.media/api/chat/bot/sql_save", {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+      },
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    const contentType = res.headers.get("content-type") || "";
+    const disposition = res.headers.get("content-disposition") || "";
+
+    if (contentType.includes("application/json")) {
+      return await res.json();
+    }
+
+    if (
+      disposition.includes("attachment") ||
+      contentType.includes("sql") ||
+      contentType.includes("octet-stream") ||
+      contentType.includes("zip")
+    ) {
+      const blob = await res.blob();
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      const filename =
+        match?.[1]?.replace(/['"]/g, "") ||
+        `backup_${new Date().toISOString().slice(0, 10)}.sql`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      return { message: `Đã lưu file SQL: ${filename}` };
+    }
+
+    const text = await res.text();
+    return { message: text || "SQL save completed successfully" };
   }
 }
 

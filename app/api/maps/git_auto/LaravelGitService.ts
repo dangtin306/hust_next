@@ -300,6 +300,7 @@ export class LaravelGitService {
   async getDashboardState(sections?: string[]) {
     const query = new URLSearchParams({ component: this.componentName() });
     if (sections?.length) query.set("sections", sections.join(","));
+    query.set("view", "refresh");
     return request<GitDashboardState>(
       `${this.selectProjectPath()}/source/dashboard-state?${query.toString()}`,
     );

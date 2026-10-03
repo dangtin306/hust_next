@@ -13,7 +13,7 @@ info:
     history cũ.
 
 servers:
-  - url: https://node_js.hust.media/openclaw
+  - url: https://node_md.hust.media/
     description: OpenClaw Production Gateway
   - url: http://localhost:2999/openclaw
     description: Node.js Gateway Local (cổng 2999)
@@ -27,15 +27,17 @@ security:
   - SessionKey: []
 
 tags:
+  - name: Health
+    description: Kiểm tra health của backend
   - name: Responses
     description: Endpoint tương thích OpenResponses chính và các nhóm service
   - name: Conversations
     description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
   - name: Model Selection
-    description: Xem danh sách model để chọn model cho request.
-  - name: Health
-    description: Kiểm tra health của backend
-  - name: media_text_to_image
+    description: Xem danh sách model, chọn model cho request và reset chat bằng lệnh /reset.
+  - name: Workspace
+    description: Lấy danh sách workspace.
+  - name: Text To Image
     description: Tạo hình ảnh thông qua image route của OpenClaw.
   - name: media_text_to_text
     description: Hội thoại thông thường thông qua endpoint Responses.
@@ -61,7 +63,11 @@ x-service-categories:
   media_model_switch:
     route: /openclaw/v1/models
     status: implemented
-    description: Xem model và chọn model cho request.
+    description: Xem model, chọn model cho request hoặc gửi /reset qua Responses để reset chat.
+  workspace:
+    route: /openclaw/v2/list
+    status: documented
+    description: Lấy danh sách workspace.
   media_text_to_text:
     route: /openclaw/v1/responses
     status: implemented
@@ -108,6 +114,18 @@ paths:
             schema:
               $ref: '#/components/schemas/ConversationCreateRequest'
             examples:
+              existingUser:
+                summary: Người dùng cũ — dùng lại User ID
+                value:
+                  user_id: 69
+                  metadata:
+                    source: frontend
+              newUser:
+                summary: Người dùng mới — không có user_id
+                value:
+                  user_id: false
+                  metadata:
+                    source: frontend
               withItems:
                 summary: Tạo conversation kèm item ban đầu
                 value:
@@ -224,6 +242,30 @@ paths:
                   input:
                     - role: user
                       content: Chào bạn
+              resetChat:
+                summary: Reset hoàn toàn chat (/reset)
+                description: Gửi lệnh /reset như nội dung tin nhắn user qua cùng Responses endpoint.
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                    - role: user
+                      content: "/reset"
+              secondMessage:
+                summary: Tin nhắn thứ hai (previous_response_id)
+                value:
+                  model: gpt-5.6-luna
+                  previous_response_id: resp_abc123
+                  input:
+                    - role: user
+                      content: Hãy viết tiếp phần kết luận.
+              withConversation:
+                summary: Gửi tin nhắn liên kết conversation (conversation_id)
+                value:
+                  model: gpt-5.6-luna
+                  conversation_id: conv_550e8400-e29b-41d4-a716-446655440000
+                  input:
+                    - role: user
+                      content: Xin chào, hãy giới thiệu về Media Tech
               spellCheck:
                 summary: Sửa lỗi chính tả
                 value:
@@ -285,7 +327,8 @@ paths:
   /openclaw/v1/chat/completions:
     post:
       operationId: createChatCompletion
-      tags: [Responses]
+      tags:
+        - Conversations
       summary: Tạo response tương thích Chat Completions
       description: |
         Gateway nhận input Chat Completions, sử dụng transport Codex Responses
@@ -317,7 +360,7 @@ paths:
     post:
       operationId: generateImage
       tags:
-        - media_text_to_image
+        - Text To Image
       summary: Tạo hình ảnh thông qua OpenClaw
       description: |
         Gateway gọi tool image_generate của OpenClaw, theo dõi task thông qua
@@ -416,6 +459,724 @@ paths:
                     created: 0
                     owned_by: google
 
+  /openclaw/v2/list:
+    get:
+      operationId: listWorkspaces
+      tags:
+        - Workspace
+      summary: Lấy danh sách workspace
+      description: |
+        Lấy workspace cha `workspace-test` từ SQL và danh sách skill workspace mà OpenClaw nhận diện.
+        Không cần request body hoặc tham số.
+
+        Cách tổng hợp dữ liệu:
+        1. Gọi Gateway WebSocket `agents.list` để lấy danh sách agent.
+        2. Gọi `skills.status` cho từng agent để lấy inventory skill OpenClaw nhận diện.
+        3. Lọc skill có `name` chứa `workspace` (không phân biệt hoa thường).
+        4. Đưa `skill.name` vào `children[].work_space_code` và giữ metadata skill trả về.
+        5. Tìm workspace cha trong SQL bằng `work_space_code = "workspace-test"`, rồi gắn các skill vào `children`.
+
+        `GET /openclaw/v1/workspace/data` chỉ đọc SQL, không truy vấn Gateway WebSocket.
+        Trong `children`, `agent_code` là mã agent; metadata như `emoji` hoặc `homepage`
+        chỉ có nếu OpenClaw trả về. Skill bị disabled hoặc không eligible vẫn có thể xuất hiện
+        kèm trạng thái tương ứng.
+
+        Chỉ skill có trong inventory `skills.status` tại thời điểm gọi mới được đưa vào danh sách;
+        thư mục skill tồn tại nhưng OpenClaw không nhận diện (ví dụ `SKILL.md` không đọc được)
+        sẽ không xuất hiện. HTTP 200 với `data: []` nghĩa là không có skill khớp hoặc không
+        tìm thấy workspace cha `workspace-test` trong SQL.
+
+        URL production: `https://node_md.hust.media/openclaw/v2/list`.
+        Gửi `Accept: application/json` và `Authorization: Bearer media_tech`.
+
+        Local: giữ nguyên server/port đã cấu hình trong Swagger (không đổi sang cổng 8818
+        ghi trong tài liệu nguồn). Gọi trực tiếp theo cấu hình hiện tại:
+        `http://localhost:3003/openclaw/v2/list`.
+
+        Ví dụ PowerShell:
+        ```powershell
+        curl.exe -X GET "https://node_md.hust.media/openclaw/v2/list" `
+          -H "Accept: application/json" `
+          -H "Authorization: Bearer media_tech"
+        ```
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, work_space_code, workspace_name, status]
+                      properties:
+                        id:
+                          type: integer
+                          example: 5
+                        work_space_code:
+                          type: string
+                          example: workspace-test
+                        workspace_name:
+                          type: string
+                          example: "..."
+                        parent_workspace_code:
+                          type: string
+                          nullable: true
+                          example: openclaw
+                        slug:
+                          type: string
+                          example: workspace-test
+                        description:
+                          type: string
+                          example: "..."
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          example: "..."
+                        updated_at:
+                          type: string
+                          example: "..."
+                        children:
+                          type: array
+                          description: Các skill workspace do OpenClaw nhận diện cho từng agent.
+                          items:
+                            type: object
+                            required: [agent_code, work_space_code]
+                            properties:
+                              agent_code:
+                                type: string
+                                description: Mã agent OpenClaw sở hữu skill.
+                                example: test
+                              work_space_code:
+                                type: string
+                                description: Tên skill chính xác do OpenClaw dùng để nhận diện/gọi.
+                                example: workspace_backend_support
+                              path:
+                                type: string
+                                example: skills/workspace_backend_support
+                              description:
+                                type: string
+                                example: Mô tả skill do OpenClaw trả về
+                              source:
+                                type: string
+                                example: openclaw-workspace
+                              bundled:
+                                type: boolean
+                                example: false
+                              filePath:
+                                type: string
+                                description: Đường dẫn tuyệt đối tới SKILL.md.
+                                example: D:\\hustmedia\\workspace\\skills\\workspace_backend_support\\SKILL.md
+                              baseDir:
+                                type: string
+                                description: Đường dẫn tuyệt đối tới thư mục skill.
+                                example: D:\\hustmedia\\workspace\\skills\\workspace_backend_support
+                              skillKey:
+                                type: string
+                                example: workspace_backend_support
+                              always:
+                                type: boolean
+                                example: false
+                              disabled:
+                                type: boolean
+                                example: false
+                              blockedByAllowlist:
+                                type: boolean
+                                example: false
+                              blockedByAgentFilter:
+                                type: boolean
+                                example: false
+                              eligible:
+                                type: boolean
+                                example: true
+                              platformIncompatible:
+                                type: boolean
+                                example: false
+                              modelVisible:
+                                type: boolean
+                                example: true
+                              userInvocable:
+                                type: boolean
+                                example: true
+                              commandVisible:
+                                type: boolean
+                                example: true
+                              requirements:
+                                $ref: "#/components/schemas/WorkspaceSkillRequirements"
+                              missing:
+                                $ref: "#/components/schemas/WorkspaceSkillRequirements"
+                              configChecks:
+                                type: array
+                                items:
+                                  type: object
+                                  additionalProperties: true
+                              install:
+                                type: array
+                                items:
+                                  type: object
+                                  additionalProperties: true
+              example:
+                ok: true
+                data:
+                  - id: 5
+                    work_space_code: workspace-test
+                    workspace_name: Workspace Test
+                    parent_workspace_code: openclaw
+                    slug: workspace-test
+                    description: Workspace mẹ test
+                    status: active
+                    created_at: "2026-10-01T08:52:28.000Z"
+                    updated_at: "2026-10-01T08:52:28.000Z"
+                    children:
+                      - agent_code: test
+                        work_space_code: workspace_backend_support
+                        path: skills/workspace_backend_support
+                        description: Mô tả skill do OpenClaw trả về
+                        source: openclaw-workspace
+                        bundled: false
+                        filePath: D:\\hustmedia\\workspace\\skills\\workspace_backend_support\\SKILL.md
+                        baseDir: D:\\hustmedia\\workspace\\skills\\workspace_backend_support
+                        skillKey: workspace_backend_support
+                        always: false
+                        disabled: false
+                        blockedByAllowlist: false
+                        blockedByAgentFilter: false
+                        eligible: true
+                        platformIncompatible: false
+                        modelVisible: true
+                        userInvocable: true
+                        commandVisible: true
+                        requirements:
+                          bins: []
+                          anyBins: []
+                          env: []
+                          config: []
+                          os: []
+                        missing:
+                          bins: []
+                          anyBins: []
+                          env: []
+                          config: []
+                          os: []
+                        configChecks: []
+                        install: []
+                      - agent_code: test
+                        work_space_code: workspace_openclaw_support
+                        path: skills/workspace_openclaw_support
+                        description: Mô tả skill do OpenClaw trả về
+                        source: openclaw-workspace
+                        bundled: false
+                        skillKey: workspace_openclaw_support
+                        always: false
+                        disabled: false
+                        blockedByAllowlist: false
+                        blockedByAgentFilter: false
+                        eligible: true
+                        platformIncompatible: false
+                        modelVisible: true
+                        userInvocable: true
+                        commandVisible: true
+                        requirements:
+                          bins: []
+                          anyBins: []
+                          env: []
+                          config: []
+                          os: []
+                        missing:
+                          bins: []
+                          anyBins: []
+                          env: []
+                          config: []
+                          os: []
+                        configChecks: []
+                        install: []
+        '405':
+          description: Method Not Allowed; endpoint chỉ nhận GET.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+        '503':
+          description: Service Unavailable; Gateway/WebSocket hoặc database không khả dụng.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum: [openclaw_unavailable, database_unavailable]
+              example:
+                ok: false
+                error: database_unavailable
+              examples:
+                openclawUnavailable:
+                  summary: Không gọi được Gateway/WebSocket
+                  value:
+                    ok: false
+                    error: openclaw_unavailable
+                databaseUnavailable:
+                  summary: Không truy vấn được database
+                  value:
+                    ok: false
+                    error: database_unavailable
+
+  /openclaw/v2/workspace/user:
+    get:
+      operationId: getUserWorkspaces
+      tags:
+        - Workspace
+      summary: Lấy workspace của user
+      description: Trả workspace session hiện tại của user và cờ `work_space_selected`.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          description: ID user cần tra workspace.
+          schema:
+            type: integer
+            minimum: 1
+          example: 502
+      responses:
+        '200':
+          description: Tìm thấy workspace session của user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - user_id
+                      - work_space_selected
+                      - work_space_code
+                      - workspace_id
+                      - work_session_id
+                    properties:
+                      user_id:
+                        type: integer
+                        example: 501
+                      work_space_selected:
+                        type: boolean
+                        description: true nghĩa là user đã chọn workspace; false nghĩa là chưa chọn.
+                        example: true
+                      work_space_code:
+                        type: string
+                        example: workspace-test
+                      workspace_id:
+                        type: integer
+                        example: 5
+                      work_session_id:
+                        type: integer
+                        example: 3
+              example:
+                ok: true
+                data:
+                  user_id: 501
+                  work_space_selected: true
+                  work_space_code: workspace-test
+                  workspace_id: 5
+                  work_session_id: 3
+        '404':
+          description: User chưa có workspace session.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_session_not_found
+              example:
+                ok: false
+                error: workspace_session_not_found
+
+  /openclaw/v2/workspace/new:
+    post:
+      operationId: createWorkspace
+      tags:
+        - Workspace
+      summary: Tạo workspace mới
+      description: |
+        Tạo session workspace cho User ID nhận từ API tạo conversation.
+        API tự gắn workspace mặc định `workspace-test` (workspace_id 5) và tạo
+        `created_at`, `updated_at`. Nếu User ID đã có session, bản ghi cũ không bị ghi đè.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id:
+                  type: integer
+                  minimum: 1
+                  description: User ID dương đã nhận từ API tạo conversation.
+                  example: 69
+            example:
+              user_id: 69
+      responses:
+        '201':
+          description: Đã tạo session workspace mới.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - user_id
+                      - openclaw_session_key
+                      - workspace_id
+                      - work_space_code
+                      - status
+                      - created_at
+                      - updated_at
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      user_id:
+                        type: integer
+                        example: 69
+                      openclaw_session_key:
+                        type: string
+                        nullable: true
+                        example: null
+                      workspace_id:
+                        type: integer
+                        example: 5
+                      work_space_code:
+                        type: string
+                        example: workspace-test
+                      status:
+                        type: string
+                        example: active
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: "2026-10-01T10:00:00.000Z"
+                      updated_at:
+                        type: string
+                        format: date-time
+                        example: "2026-10-01T10:00:00.000Z"
+              example:
+                ok: true
+                data:
+                  id: 2
+                  user_id: 69
+                  openclaw_session_key: null
+                  workspace_id: 5
+                  work_space_code: workspace-test
+                  status: active
+                  created_at: "2026-10-01T10:00:00.000Z"
+                  updated_at: "2026-10-01T10:00:00.000Z"
+        '400':
+          description: Body không phải JSON hợp lệ.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: invalid_json
+        '405':
+          description: Method không được hỗ trợ; endpoint chỉ nhận POST.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: method_not_allowed
+        '422':
+          description: Thiếu user_id hoặc user_id không phải số nguyên dương.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: invalid_request
+                required:
+                  - user_id
+        '409':
+          description: User ID đã có session; bản ghi cũ không bị ghi đè.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: workspace_session_already_exists
+        '500':
+          description: Không tìm thấy workspace mặc định đang active.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: default_workspace_not_found
+        '503':
+          description: Không kết nối hoặc ghi được database.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: database_unavailable
+
+  /openclaw/v2/workspace/select:
+    post:
+      operationId: selectWorkspace
+      tags:
+        - Workspace
+      summary: Chọn workspace
+      description: |
+        Chọn skill/workspace cho user bằng cách gửi lệnh `/skill {work_space_code}` qua luồng chat OpenClaw.
+
+        `work_space_code` phải khớp chính xác mã skill nằm trong `children` của kết quả
+        `GET /openclaw/v2/list`. API trả nội dung phản hồi của OpenClaw để kiểm tra kết quả.
+        API này không cập nhật SQL hoặc `user_session.json`.
+
+        Ví dụ gọi local:
+        ```bash
+        curl -X POST "http://localhost:3003/openclaw/v2/workspace/select" \\
+          -H "Content-Type: application/json" \\
+          -d '{"user_id":502,"work_space_code":"workspace_openclaw_support"}'
+        ```
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, work_space_code]
+              properties:
+                user_id:
+                  type: integer
+                  minimum: 1
+                  description: User ID đã được tạo ở luồng chat.
+                  example: 502
+                work_space_code:
+                  type: string
+                  minLength: 1
+                  description: Mã skill chính xác lấy từ `children` trong API `/openclaw/v2/list`.
+                  example: workspace_openclaw_support
+            example:
+              user_id: 502
+              work_space_code: workspace_openclaw_support
+      responses:
+        '200':
+          description: OpenClaw đã trả phản hồi không rỗng cho lệnh chọn skill.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                      - user_id
+                      - work_space_code
+                      - skill_code
+                      - agent_code
+                      - command
+                      - status
+                      - response_text
+                      - chat_result
+                    properties:
+                      user_id:
+                        type: integer
+                        example: 502
+                      work_space_code:
+                        type: string
+                        example: workspace_openclaw_support
+                      skill_code:
+                        type: string
+                        example: workspace_openclaw_support
+                      agent_code:
+                        type: string
+                        example: test
+                      command:
+                        type: string
+                        example: /skill workspace_openclaw_support
+                      status:
+                        type: string
+                        example: response_received
+                      response_text:
+                        type: string
+                        description: Nội dung phản hồi OpenClaw.
+                        example: Nội dung OpenClaw trả lời
+                      chat_result:
+                        type: object
+                        description: Kết quả chat gốc trả về từ OpenClaw.
+                        additionalProperties: true
+              example:
+                ok: true
+                data:
+                  user_id: 502
+                  work_space_code: workspace_openclaw_support
+                  skill_code: workspace_openclaw_support
+                  agent_code: test
+                  command: /skill workspace_openclaw_support
+                  status: response_received
+                  response_text: Nội dung OpenClaw trả lời
+                  chat_result: {}
+        '400':
+          description: Request body không phải JSON hợp lệ.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: invalid_json
+              example:
+                ok: false
+                error: invalid_json
+        '405':
+          description: Endpoint chỉ nhận method POST.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+        '422':
+          description: Thiếu hoặc sai user_id/work_space_code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: invalid_request
+              example:
+                ok: false
+                error: invalid_request
+        '404':
+          description: Không tìm thấy skill khớp chính xác với work_space_code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_skill_not_found
+              example:
+                ok: false
+                error: workspace_skill_not_found
+        '502':
+          description: OpenClaw trả về phản hồi rỗng cho lệnh chọn skill.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_skill_empty_response
+              example:
+                ok: false
+                error: workspace_skill_empty_response
+        '503':
+          description: Không gọi được OpenClaw hoặc xảy ra lỗi ngoài các trường hợp đã nêu.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: openclaw_unavailable
+              example:
+                ok: false
+                error: openclaw_unavailable
+
 components:
   securitySchemes:
     BearerAuth:
@@ -439,6 +1200,29 @@ components:
       example: conv_550e8400-e29b-41d4-a716-446655440000
 
   schemas:
+    WorkspaceSkillRequirements:
+      type: object
+      properties:
+        bins:
+          type: array
+          items:
+            type: string
+        anyBins:
+          type: array
+          items:
+            type: string
+        env:
+          type: array
+          items:
+            type: string
+        config:
+          type: array
+          items:
+            type: string
+        os:
+          type: array
+          items:
+            type: string
     ConversationCreateRequest:
       type: object
       properties:

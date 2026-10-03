@@ -11,6 +11,7 @@ import LaravelServicePanel from "./laravel/LaravelServicePanel";
 import ConversationResponseOperation from "./openclaw/ConversationResponseOperation";
 import SecondResponseOperation from "./openclaw/SecondResponseOperation";
 import ModelSelectionOperation from "./openclaw/ModelSelectionOperation";
+import CloneConversationOperation from "./openclaw/CloneConversationOperation";
 
 type SwaggerLayoutClientProps = {
   children: React.ReactNode;
@@ -28,15 +29,19 @@ export default function SwaggerLayoutClient({
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
-  const isHome = pathname.endsWith("/api/swagger/home");
-  const isLaravel = pathname.endsWith("/api/swagger/laravel");
-  const isN8n = pathname.endsWith("/api/swagger/n8n") || pathname.endsWith("/api/maps/n8n");
-  const isGitAuto = pathname.endsWith("/api/swagger/git_auto");
-  const isGitTest = pathname.endsWith("/api/swagger/git_test");
-  const isGiteaTest = pathname.endsWith("/api/swagger/gitea_test");
+  const isHome = pathname.endsWith("/api/mt/home");
+  const isLaravel = pathname.endsWith("/api/mt/laravel");
+  const isOpenClaw = pathname.endsWith("/api/mt/openclaw");
+  const isN8n = pathname.endsWith("/api/mt/n8n") || pathname.endsWith("/api/maps/n8n");
+  const isGitAuto = pathname.endsWith("/api/mt/git_auto");
+  const isGitTest = pathname.endsWith("/api/mt/git_test");
+  const isGiteaTest = pathname.endsWith("/api/mt/gitea_test");
+  const isWorkspace = pathname.includes("/workspace");
+  const isChatPublic = pathname.includes("/chat_public");
   const isChatTest =
-    pathname.endsWith("/api/swagger/chat_test") ||
-    pathname.endsWith("/api/maps/chat_test");
+    pathname.includes("/chat_test") ||
+    pathname.includes("/chat_bot") ||
+    pathname.includes("/test_1");
 
   useEffect(() => {
     const resetScroll = () =>
@@ -53,13 +58,16 @@ export default function SwaggerLayoutClient({
 
   return (
     <main
-      className={`min-h-screen min-w-0 overflow-x-hidden bg-transparent ${
-        isGitAuto || isGitTest
-          ? "px-1 py-4 sm:px-6 sm:py-6"
-          : "p-4 sm:p-6"
+      className={`min-w-0 overflow-x-hidden bg-transparent ${
+        isChatTest
+          ? "h-[calc(100vh-48px)] h-[calc(100dvh-48px)] max-h-[calc(100dvh-48px)] flex flex-col p-1.5 pb-1 sm:px-3 sm:pt-1.5 sm:pb-1 overflow-hidden"
+          : isGitAuto || isGitTest
+            ? "min-h-screen px-1 py-4 sm:px-6 sm:py-6"
+            : "min-h-screen w-full max-w-[1840px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5"
       }`}
     >
       <SwaggerSwitcher
+        className={isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
         active={
           isHome
             ? "home"
@@ -67,19 +75,27 @@ export default function SwaggerLayoutClient({
               ? "laravel"
               : isN8n
                 ? "n8n"
-              : isGitAuto
-                ? "git_auto"
-                : isGitTest
-                  ? "git_test"
-                : isGiteaTest
-                  ? "gitea_test"
-                : isChatTest
-                  ? "chat_test"
-                  : "openclaw"
+                : isWorkspace
+                  ? "workspace"
+                : isGitAuto
+                  ? "git_auto"
+                  : isGitTest
+                    ? "git_test"
+                  : isGiteaTest
+                    ? "gitea_test"
+                  : isChatPublic
+                    ? "chat_public"
+                  : isChatTest
+                    ? "chat_test"
+                    : "openclaw"
         }
       />
 
-      {isGitAuto || isGitTest || isGiteaTest || isN8n || isChatTest ? (
+      {isChatTest ? (
+        <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
+          {children}
+        </div>
+      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (
         <>
@@ -95,12 +111,23 @@ export default function SwaggerLayoutClient({
           ) : (
             <ServiceCategoryPanel categories={categories} />
           )}
-          <SwaggerClient spec={isLaravel ? laravelSpec : spec} />
+          <SwaggerClient
+            spec={isLaravel ? laravelSpec : spec}
+            serverStorageKey={
+              isLaravel
+                ? "laravel_swagger_server_url_v2"
+                : isOpenClaw
+                  ? "openclaw_main_swagger_server_url_v2"
+                  : undefined
+            }
+            proxyOpenClawRequests={isOpenClaw}
+          />
           {!isLaravel ? (
             <>
               <ConversationResponseOperation />
               <SecondResponseOperation />
               <ModelSelectionOperation />
+              <CloneConversationOperation />
             </>
           ) : null}
           <div className={isLaravel ? "block" : "hidden"}>{children}</div>

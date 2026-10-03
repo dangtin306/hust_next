@@ -526,7 +526,14 @@ const CronServerAdmin = () => {
               );
             });
 
-            return { ...topic, services_cron: filteredServices };
+            // Sắp xếp các tác vụ con (phần con của danh sách) theo thứ tự bảng chữ cái A-Z
+            const sortedServices = [...filteredServices].sort((a, b) => {
+              const nameA = String(a?.name_cron || a?.task_cron || "").trim();
+              const nameB = String(b?.name_cron || b?.task_cron || "").trim();
+              return nameA.localeCompare(nameB, "vi", { sensitivity: "base", numeric: true });
+            });
+
+            return { ...topic, services_cron: sortedServices };
           })
           .filter((topic) => topic.services_cron.length > 0 || !q);
 

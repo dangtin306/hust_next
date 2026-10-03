@@ -7,7 +7,12 @@ import SwaggerClient from "../SwaggerClient";
 const secondResponseSpec = {
   openapi: "3.0.3",
   info: { title: "Second response", version: "1.0.0" },
-  servers: [{ url: "http://localhost:8818", description: "Backend OpenClaw" }],
+  servers: [
+    { url: "https://node_js.hust.media/openclaw", description: "OpenClaw Production Gateway" },
+    { url: "http://localhost:2999/openclaw", description: "Node.js Gateway Local (cổng 2999)" },
+    { url: "http://localhost:8818", description: "Backend Node.js local (cổng 8818)" },
+    { url: "https://nginx.hust.media/go/ai/test", description: "Backend test" },
+  ],
   security: [{ BearerAuth: [] }],
   tags: [{ name: "Responses" }],
   paths: {
@@ -57,7 +62,9 @@ export default function SecondResponseOperation() {
       );
       if (!section) return;
       const responseOperation = Array.from(section.querySelectorAll<HTMLElement>(".opblock")).find(
-        (item) => item.textContent?.includes("/openclaw/v1/responses"),
+        (item) =>
+          !item.closest("#second-response-operation-slot, #conversation-response-operation-slot") &&
+          item.textContent?.includes("/openclaw/v1/responses"),
       );
       if (!responseOperation?.parentElement) return;
       let slot = section.querySelector<HTMLElement>("#second-response-operation-slot");

@@ -1,4 +1,20 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
 export default function FooterWeb({ initialHost = "", initialLatestVersion = "" }) {
+  const pathname = usePathname() || "";
+  const isChatRoute =
+    pathname.includes("/chat_bot") ||
+    pathname.includes("/chat_test") ||
+    pathname.includes("/test_1");
+
+  if (isChatRoute) {
+    return (
+      <footer className="mt-auto w-full border-t border-white/20 flex-none" />
+    );
+  }
+
   const normalizedHost = String(initialHost || "").toLowerCase();
   const resolvedLatestVersion = String(initialLatestVersion || "");
   const hasResolvedLatestVersion = resolvedLatestVersion !== "";
