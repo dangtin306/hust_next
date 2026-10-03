@@ -10,6 +10,8 @@ import React, {
 } from "react";
 import {
   ReactFlow,
+  BaseEdge,
+  getBezierPath,
   Background,
   BackgroundVariant,
   Controls,
@@ -20,6 +22,7 @@ import {
   useEdgesState,
   type Node,
   type Edge,
+  type EdgeProps,
   type NodeProps,
   type ReactFlowInstance,
 } from "@xyflow/react";
@@ -127,6 +130,8 @@ export interface NodeActivitySSEPayload {
   workflow_id?: string;
   execution_id?: string;
   node_id?: string;
+  source_node_id?: string;
+  target_node_id?: string;
   node_name?: string;
   method?: string;
   route?: string;
@@ -499,7 +504,69 @@ const N8N_NODE_TYPES = {
   stickyNote: N8nStickyNoteRenderer,
 };
 
+type RealtimeSignalEdgeData = {
+  signalActive?: boolean;
+  signalVersion?: number;
+  signalDurationMs?: number;
+};
+
+type RealtimeProgressStep = {
+  nodeId: string;
+  label: string;
+  startedAt: number;
+  terminal: boolean;
+  terminalStatus: LiveNodeStatus;
+  terminalLabel?: string;
+  sourceNodeId?: string;
+  arrivedAt?: number;
+  requestStart?: boolean;
+};
+
+type RealtimeProgressRun = {
+  active: RealtimeProgressStep | null;
+  queue: RealtimeProgressStep[];
+  deferredServices: RealtimeProgressStep[];
+  transitStep: RealtimeProgressStep | null;
+  apiObserved: boolean;
+  inTransit: boolean;
+  requestFinished?: boolean;
+};
+
+const SIGNAL_TRAVEL_MS = 700;
+const NODE_MIN_LIGHT_MS = 1000;
+
+function RealtimeSignalEdge(props: EdgeProps) {
+  const [path] = getBezierPath(props);
+  const data = (props.data || {}) as RealtimeSignalEdgeData;
+  const version = data.signalVersion ?? 0;
+  const duration = data.signalDurationMs ?? SIGNAL_TRAVEL_MS;
+
+  return (
+    <g
+      data-realtime-edge-id={props.id}
+      data-signal-active={data.signalActive ? "true" : "false"}
+      data-signal-source={props.source}
+      data-signal-target={props.target}
+    >
+      <BaseEdge id={props.id} path={path} style={props.style} markerEnd={props.markerEnd} />
+      {data.signalActive && (
+        <circle
+          key={version}
+          r="4"
+          fill="#a5f3fc"
+          filter="drop-shadow(0 0 5px #22d3ee)"
+        >
+          <animateMotion path={path} dur={`${duration}ms`} begin="0s" fill="freeze" />
+        </circle>
+      )}
+    </g>
+  );
+}
+
+const N8N_EDGE_TYPES = { realtimeSignal: RealtimeSignalEdge };
+
 const CHAT_NODE_ID = STANDARD_CHAT_NODE_ID;
+const OPENCLAW_API_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e0";
 const OPENCLAW_FORMAT_NODE_ID = "2f47be3b-91d7-4d22-9ac2-6c68ef1d20e1";
 const BACKEND_NODE_ID_ALIASES: Record<string, string> = {
   [NODE_BACKEND_ARCHITECTURE_NODE_IDS.formatResponse]: OPENCLAW_FORMAT_NODE_ID,
@@ -603,7 +670,7 @@ export const convertNormalizedGraphToFlow = (
       target: edge.target,
       sourceHandle: edge.sourceHandle || "main-0",
       targetHandle: edge.targetHandle || "main-0",
-      type: "default",
+      type: "realtimeSignal",
       animated: false,
       style: edge.style || { stroke: "#64748b", strokeWidth: 2 },
     }));
@@ -632,7 +699,7 @@ export const convertNormalizedGraphToFlow = (
               target: targetId,
               sourceHandle: `${connType}-${outputIndex}`,
               targetHandle: `main-${targetIndex}`,
-              type: "default",
+              type: "realtimeSignal",
               animated: false,
               style: { stroke: "#64748b", strokeWidth: 2 },
             });
@@ -741,6 +808,9 @@ export const N8nDiagramRenderer = forwardRef<
   const [reconnectNonce, setReconnectNonce] = useState(0);
 
   const nodeTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const signalTimersRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const progressRunsRef = useRef<Map<string, RealtimeProgressRun>>(new Map());
+  const edgesRef = useRef<Edge[]>([]);
   const graphNodeNamesRef = useRef<Map<string, string>>(new Map());
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -780,7 +850,7 @@ export const N8nDiagramRenderer = forwardRef<
     ) => {
       const targets = Array.isArray(target) ? target : [target];
       const visibleDurationMs =
-        status === "running" ? 2000 : Math.max(1000, Math.min(timeoutMs, 1000));
+        status === "running" ? Math.max(2000, Math.min(timeoutMs, 120000)) : 1000;
 
       targets.forEach((targetKey) => {
         const existingTimer = nodeTimersRef.current.get(targetKey);
@@ -807,7 +877,7 @@ export const N8nDiagramRenderer = forwardRef<
                 ...n.data,
                 liveStatus: status,
                 signalVersion:
-                  status === "idle" ? n.data.signalVersion ?? 0 : (n.data.signalVersion ?? 0) + 1,
+                  status === "idle" ? Number(n.data.signalVersion || 0) : Number(n.data.signalVersion || 0) + 1,
                 ...(subLabel !== undefined ? { subLabel } : {}),
               },
             };
@@ -851,6 +921,119 @@ export const N8nDiagramRenderer = forwardRef<
   );
 
   // Xử lý sự kiện SSE từ Node backend
+  const enqueueSignalProgress = useCallback((
+    runKey: string,
+    incoming: RealtimeProgressStep | null,
+    options: { started?: boolean; deferredService?: boolean; flushDeferred?: boolean } = {},
+  ) => {
+    const run = progressRunsRef.current.get(runKey) || {
+      active: null, queue: [], deferredServices: [], transitStep: null, apiObserved: false, inTransit: false,
+    };
+    progressRunsRef.current.set(runKey, run);
+    const schedule = (callback: () => void, delayMs: number) => {
+      const timer = setTimeout(() => { signalTimersRef.current.delete(timer); callback(); }, delayMs);
+      signalTimersRef.current.add(timer);
+    };
+    const updateStep = (step: RealtimeProgressStep) => {
+      if (!incoming?.terminal) return;
+      step.terminal = incoming.terminal;
+      step.terminalStatus = incoming.terminalStatus;
+      step.terminalLabel = incoming.terminalLabel;
+    };
+    const advance = () => {
+      const active = run.active;
+      if (!active || run.inTransit || !active.terminal || !run.queue.length) return;
+      const heldMs = Date.now() - (active.arrivedAt || Date.now());
+      if (heldMs < NODE_MIN_LIGHT_MS) { schedule(advance, NODE_MIN_LIGHT_MS - heldMs); return; }
+      const next = run.queue.shift()!;
+      const edge = edgesRef.current.find((candidate) => candidate.source === active.nodeId && candidate.target === next.nodeId);
+      if (next.sourceNodeId && next.sourceNodeId !== active.nodeId) {
+        console.warn(`[RealtimeGraph] Event source ${next.sourceNodeId} does not match active node ${active.nodeId}.`);
+      }
+      run.inTransit = true;
+      run.transitStep = next;
+      setNodeStatus(active.nodeId, "idle");
+      if (edge) {
+        setEdges((current) => {
+          const updated = current.map((item) => item.id === edge.id
+            ? { ...item, data: { ...(item.data || {}), signalActive: true, signalDurationMs: SIGNAL_TRAVEL_MS,
+                signalVersion: Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) + 1 } }
+            : item);
+          edgesRef.current = updated;
+          return updated;
+        });
+      } else {
+        console.warn(`[RealtimeGraph] No displayed edge from ${active.nodeId} to ${next.nodeId}; skipping particle.`);
+      }
+      schedule(() => {
+        if (edge) setEdges((current) => {
+          const updated = current.map((item) => item.id === edge.id
+            ? { ...item, data: { ...(item.data || {}), signalActive: false } } : item);
+          edgesRef.current = updated;
+          return updated;
+        });
+        run.inTransit = false;
+        run.transitStep = null;
+        next.arrivedAt = Date.now();
+        run.active = next;
+        if (next.requestStart) {
+          setNodeStatus(next.nodeId, "running", next.label, NODE_MIN_LIGHT_MS);
+          schedule(() => {
+            setNodeStatus(next.nodeId, "success", next.terminalLabel || "Request nhận được", NODE_MIN_LIGHT_MS);
+            advance();
+          }, NODE_MIN_LIGHT_MS);
+        } else {
+          setNodeStatus(next.nodeId, next.terminal ? next.terminalStatus : "running",
+            next.terminalLabel || `${next.label} • đang chạy`, next.terminal ? NODE_MIN_LIGHT_MS : 120000);
+          if (next.terminal) advance();
+        }
+      }, edge ? SIGNAL_TRAVEL_MS : 0);
+    };
+    if (incoming) {
+      const existing = [run.active, run.transitStep, ...run.queue, ...run.deferredServices]
+        .find((step) => step?.nodeId === incoming.nodeId) as RealtimeProgressStep | undefined;
+      if (options.deferredService && !run.apiObserved) {
+        if (existing) updateStep(existing); else run.deferredServices.push(incoming);
+      } else if (existing) {
+        updateStep(existing);
+        if (incoming.terminal && run.active === existing) {
+          setNodeStatus(existing.nodeId, incoming.terminalStatus, incoming.terminalLabel || existing.label, NODE_MIN_LIGHT_MS);
+        }
+      } else if (!options.started) {
+        run.queue.push(incoming);
+      } else if (!run.active && !run.inTransit) {
+        incoming.arrivedAt = Date.now();
+        run.active = incoming;
+        if (incoming.requestStart) {
+          setNodeStatus(incoming.nodeId, "running", incoming.label, NODE_MIN_LIGHT_MS);
+          schedule(() => {
+            setNodeStatus(incoming.nodeId, "success", incoming.terminalLabel || "Request nhận được", NODE_MIN_LIGHT_MS);
+            advance();
+          }, NODE_MIN_LIGHT_MS);
+        } else {
+          setNodeStatus(incoming.nodeId, incoming.terminal ? incoming.terminalStatus : "running",
+            incoming.terminalLabel || `${incoming.label} • đang chạy`, incoming.terminal ? NODE_MIN_LIGHT_MS : 120000);
+          if (incoming.terminal) advance();
+        }
+      } else {
+        run.queue.push(incoming);
+      }
+      if (incoming.nodeId === OPENCLAW_API_NODE_ID) {
+        run.apiObserved = true;
+        run.queue.push(...run.deferredServices.splice(0));
+      }
+      advance();
+    }
+    if (options.flushDeferred) {
+      run.requestFinished = true;
+      run.queue.push(...run.deferredServices.splice(0));
+      advance();
+      schedule(() => {
+        if (progressRunsRef.current.get(runKey) === run) progressRunsRef.current.delete(runKey);
+      }, 120000);
+    }
+  }, [setEdges, setNodeStatus]);
+
   const processIncomingSSEEvent = useCallback(
     (eventName: string, payload: NodeActivitySSEPayload) => {
       if (!payload) return;
@@ -911,10 +1094,10 @@ export const N8nDiagramRenderer = forwardRef<
           }
         }
       };
-      const requestGroupId = effectiveTraceId
-        ? `trace:${effectiveTraceId}`
-        : effectiveCorrelationId
+      const requestGroupId = effectiveCorrelationId
         ? `correlation:${effectiveCorrelationId}`
+        : effectiveTraceId
+        ? `trace:${effectiveTraceId}`
         : payload.request_id
         ? `request:${payload.request_id}`
         : undefined;
@@ -947,8 +1130,15 @@ export const N8nDiagramRenderer = forwardRef<
         }
       }
 
-      // This generic gateway event does not identify a specific chat/service node.
-      // A Gateway lifecycle lights the Gateway architecture card only; it does not infer a service/chat category.
+      if (
+        ["openclaw.pairing_gate", "openclaw.conversations", "openclaw.codex"].includes(payload.stage || "") &&
+        !payload.node_id
+      ) {
+        return;
+      }
+
+      // The Gateway lifecycle duplicates the OpenClaw API node's timing signal;
+      // the n8n workflow-node lifecycle drives that visual step once.
 
       const mappedServiceNodeId = isServiceStage
         ? mapServiceIdToNodeId(payload.service_id)
@@ -984,9 +1174,13 @@ export const N8nDiagramRenderer = forwardRef<
       const lifecycleTargetNodeId = isServiceStage
         ? serviceNodeId
         : isGatewayChatEvent
-          ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.openclawGateway
+          ? (typeof payload.target_node_id === "string" && graphNodeNamesRef.current.has(payload.target_node_id)
+              ? payload.target_node_id
+              : OPENCLAW_API_NODE_ID)
         : isGraphNodeEvent
-          ? explicitNodeName ? explicitNodeId : undefined
+          ? (typeof payload.target_node_id === "string" && graphNodeNamesRef.current.has(payload.target_node_id)
+              ? payload.target_node_id
+              : explicitNodeName ? explicitNodeId : undefined)
           : isFormatStage
             ? OPENCLAW_FORMAT_NODE_ID
             : mapStageToNodeId(payload.stage);
@@ -999,6 +1193,62 @@ export const N8nDiagramRenderer = forwardRef<
           : payload.node_name || explicitNodeName || payload.stage || "Workflow node";
 
       // 2. Xử lý theo từng loại event chuẩn từ Node backend
+      const isOpenClawRequest = [
+        "/openclaw/v1/responses",
+        "/openclaw/v1/chat/completions",
+        "/openclaw/v1/images/generations",
+      ].includes(payload.route || "");
+      const shouldSequenceEvent = Boolean(requestGroupId) && (
+        eventName === "stage.started" || eventName === "stage.completed" ||
+        eventName === "stage.failed" || (eventName === "request.started" && isOpenClawRequest)
+      ) && !isGatewayChatEvent;
+      if (shouldSequenceEvent) {
+        const targetNodeId = eventName === "request.started"
+          ? NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress
+          : lifecycleTargetNodeId;
+        if (targetNodeId) {
+          const isTerminal = eventName === "stage.completed" || eventName === "stage.failed";
+          const duration = payload.duration_ms || 0;
+          const terminalStatus: LiveNodeStatus = eventName === "stage.failed"
+            ? "error"
+            : duration > 1500 ? "slow" : "success";
+          const outcome = getSafeOutcomeLabel(payload.outcome, eventName === "stage.failed" ? "failed" : "completed");
+          const label = isTerminal
+            ? `${lifecycleNodeLabel} • ${outcome} • ${duration}ms`
+            : `${lifecycleNodeLabel} • đang chạy`;
+          const step: RealtimeProgressStep = {
+            nodeId: targetNodeId,
+            label,
+            startedAt: Date.now(),
+            terminal: isTerminal || eventName === "request.started",
+            terminalStatus,
+            ...(isTerminal ? { terminalLabel: label } : {}),
+            ...(typeof payload.source_node_id === "string" ? { sourceNodeId: payload.source_node_id } : {}),
+            ...(eventName === "request.started" ? { requestStart: true } : {}),
+          };
+          enqueueSignalProgress(requestGroupId!, step, {
+            started: eventName === "request.started" || eventName === "stage.started",
+            deferredService: isServiceStage,
+          });
+        }
+        if (eventName === "stage.failed" && !serviceNodeId && !isFormatStage && !isGraphNodeEvent && !isGatewayChatEvent) {
+          setNodeStatus(
+            ["ce361f6c-bf94-4d14-9579-c5bf3ef818d1", "Acknowledge Node Activity", "node-request-outcome"],
+            "error",
+            "Stage Failed",
+            8000,
+          );
+        }
+        return;
+      }
+      if (isGatewayChatEvent && ["stage.started", "stage.completed", "stage.failed"].includes(eventName)) {
+        return;
+      }
+      if (eventName === "request.completed" && requestGroupId) {
+        enqueueSignalProgress(requestGroupId, null, { flushDeferred: true });
+        if (isOpenClawRequest) return;
+      }
+
       switch (eventName) {
         case "request.started": {
           const method = payload.method || "REQ";
@@ -1079,12 +1329,8 @@ export const N8nDiagramRenderer = forwardRef<
             "/openclaw/v1/images/generations",
           ].includes(payload.route || "");
           if (isOpenClawChatApi) {
-            setNodeStatus(
-              NODE_BACKEND_ARCHITECTURE_NODE_IDS.handler,
-              isError ? "error" : duration > 1500 ? "slow" : "success",
-              `HTTP ${statusCode} (${duration}ms)`,
-              8000
-            );
+            // The request lifecycle already advanced through the handler and
+            // response nodes; do not flash the handler again at the end.
           } else {
             setNodeStatus(
               [
@@ -1122,7 +1368,7 @@ export const N8nDiagramRenderer = forwardRef<
           break;
       }
     },
-    [setNodeStatus]
+    [enqueueSignalProgress, setNodeStatus]
   );
 
   // Expose imperative methods cho component cha
@@ -1135,6 +1381,17 @@ export const N8nDiagramRenderer = forwardRef<
       resetAllNodes: () => {
         nodeTimersRef.current.forEach((t) => clearTimeout(t));
         nodeTimersRef.current.clear();
+        signalTimersRef.current.forEach((t) => clearTimeout(t));
+        signalTimersRef.current.clear();
+        progressRunsRef.current.clear();
+        setEdges((current) => {
+          const updated = current.map((edge) => ({
+            ...edge,
+            data: { ...(edge.data || {}), signalActive: false },
+          }));
+          edgesRef.current = updated;
+          return updated;
+        });
         traceCorrelationRef.current.clear();
         correlationTraceRef.current.clear();
         eventGroupsRef.current.clear();
@@ -1201,7 +1458,13 @@ export const N8nDiagramRenderer = forwardRef<
       });
     });
 
-    setEdges(flowEdges);
+    const activeEdges = new Map(edgesRef.current.map((edge) => [edge.id, edge.data]));
+    const nextEdges = flowEdges.map((edge) => ({
+      ...edge,
+      data: { ...(activeEdges.get(edge.id) || {}), ...(edge.data || {}) },
+    }));
+    edgesRef.current = nextEdges;
+    setEdges(nextEdges);
 
     // Refit when a new graph snapshot arrives.
     const fitFrame = requestAnimationFrame(() => {
@@ -1285,6 +1548,13 @@ export const N8nDiagramRenderer = forwardRef<
       }
       nodeTimersRef.current.forEach((t) => clearTimeout(t));
       nodeTimersRef.current.clear();
+      signalTimersRef.current.forEach((t) => clearTimeout(t));
+      signalTimersRef.current.clear();
+      progressRunsRef.current.clear();
+      edgesRef.current = edgesRef.current.map((edge) => ({
+        ...edge,
+        data: { ...(edge.data || {}), signalActive: false },
+      }));
     };
   }, [enableRealtime, sseUrl, reconnectNonce, processIncomingSSEEvent]);
 
@@ -1351,8 +1621,9 @@ export const N8nDiagramRenderer = forwardRef<
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={N8N_NODE_TYPES}
+        edgeTypes={N8N_EDGE_TYPES}
         defaultEdgeOptions={{
-          type: "default",
+          type: "realtimeSignal",
           animated: false,
         }}
         fitView
