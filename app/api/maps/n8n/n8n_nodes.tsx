@@ -366,4 +366,3 @@ export const N8N_NODE_TYPES = {
   architectureNode: N8nFlowNodeRenderer,
   stickyNote: N8nStickyNoteRenderer,
 };
-
