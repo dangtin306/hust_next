@@ -180,8 +180,8 @@ type RealtimeProgressRun = {
 const SIGNAL_TRAVEL_MS = 700;
 const REALTIME_SIGNAL_TRAVEL_MS = 160;
 const REALTIME_NODE_MIN_LIGHT_MS = 80;
-const SLOW_SIGNAL_TRAVEL_MS = 5000;
-const SLOW_NODE_FLASH_MS = 650;
+const SLOW_SIGNAL_TRAVEL_MS = 15000;
+const SLOW_NODE_FLASH_MS = 250;
 type SignalDisplayMode = "realtime" | "slow";
 
 function RealtimeSignalEdge(props: EdgeProps) {
@@ -189,24 +189,54 @@ function RealtimeSignalEdge(props: EdgeProps) {
   const data = (props.data || {}) as RealtimeSignalEdgeData;
   const version = data.signalVersion ?? 0;
   const duration = data.signalDurationMs ?? SIGNAL_TRAVEL_MS;
+  const active = data.signalActive === true;
+  const motionPathRef = useRef<SVGPathElement>(null);
+  const signalRef = useRef<SVGCircleElement>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    const motionPath = motionPathRef.current;
+    const signal = signalRef.current;
+    if (!motionPath || !signal) return;
+
+    const pathLength = motionPath.getTotalLength();
+    const durationMs = Math.max(1, duration);
+    const startedAt = performance.now();
+    let frameId = 0;
+
+    const moveSignal = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / durationMs);
+      const point = motionPath.getPointAtLength(pathLength * progress);
+      signal.setAttribute("cx", String(point.x));
+      signal.setAttribute("cy", String(point.y));
+      if (progress < 1) frameId = requestAnimationFrame(moveSignal);
+    };
+
+    const startPoint = motionPath.getPointAtLength(0);
+    signal.setAttribute("cx", String(startPoint.x));
+    signal.setAttribute("cy", String(startPoint.y));
+    frameId = requestAnimationFrame(moveSignal);
+    return () => cancelAnimationFrame(frameId);
+  }, [active, duration, path, version]);
 
   return (
     <g
       data-realtime-edge-id={props.id}
-      data-signal-active={data.signalActive ? "true" : "false"}
+      data-signal-active={active ? "true" : "false"}
+      data-signal-duration-ms={active ? duration : undefined}
       data-signal-source={props.source}
       data-signal-target={props.target}
     >
       <BaseEdge id={props.id} path={path} style={props.style} markerEnd={props.markerEnd} />
-      {data.signalActive && (
+      <path ref={motionPathRef} d={path} fill="none" stroke="none" aria-hidden="true" />
+      {active && (
         <circle
           key={version}
+          ref={signalRef}
           r="4"
           fill="#a5f3fc"
           filter="drop-shadow(0 0 5px #22d3ee)"
-        >
-          <animateMotion path={path} dur={`${duration}ms`} begin="0s" fill="freeze" />
-        </circle>
+        />
       )}
     </g>
   );
