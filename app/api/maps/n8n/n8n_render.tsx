@@ -689,10 +689,18 @@ export const N8nDiagramRenderer = forwardRef<
       if (next.sourceNodeId && next.sourceNodeId !== active.nodeId) {
         console.warn(`[RealtimeGraph] Event source ${next.sourceNodeId} does not match active node ${active.nodeId}.`);
       }
-      const measuredStartToStartMs = next.startedAt - active.startedAt;
-      const measuredSegmentMs = Number.isFinite(measuredStartToStartMs) && measuredStartToStartMs >= 0
-        ? measuredStartToStartMs
-        : Math.max(0, active.durationMs || 0) + Math.max(0, next.transitionGapMs || 0);
+      const measuredProcessingMs = Number.isFinite(active.durationMs)
+        ? Math.max(0, active.durationMs || 0)
+        : Number.isFinite(active.completedAt)
+          ? Math.max(0, (active.completedAt || 0) - active.startedAt)
+          : 0;
+      const sourceCompletedAt = Number.isFinite(active.completedAt)
+        ? active.completedAt || 0
+        : active.startedAt + measuredProcessingMs;
+      const measuredGapMs = Number.isFinite(next.transitionGapMs)
+        ? Math.max(0, next.transitionGapMs || 0)
+        : Math.max(0, next.startedAt - sourceCompletedAt);
+      const measuredSegmentMs = measuredProcessingMs + measuredGapMs;
       const travelMs = run.displayMode === "slow"
         ? Math.max(SLOW_SIGNAL_MIN_TRAVEL_MS, measuredSegmentMs * SLOW_SIGNAL_DURATION_SCALE)
         : REALTIME_SIGNAL_TRAVEL_MS;
@@ -982,7 +990,9 @@ export const N8nDiagramRenderer = forwardRef<
               ? Number(payload.started_monotonic_ms)
               : Number.isFinite(payload.started_at_ms) ? Number(payload.started_at_ms)
               : Number.isFinite(payload.timestamp_ms) ? Number(payload.timestamp_ms) : Date.now(),
-            ...(Number.isFinite(payload.completed_at_ms) ? { completedAt: Number(payload.completed_at_ms) } : {}),
+            ...(Number.isFinite(payload.completed_monotonic_ms)
+              ? { completedAt: Number(payload.completed_monotonic_ms) }
+              : Number.isFinite(payload.completed_at_ms) ? { completedAt: Number(payload.completed_at_ms) } : {}),
             ...(isTerminal ? { durationMs: duration } : {}),
             ...(Number.isFinite(payload.transition_gap_ms) ? { transitionGapMs: Number(payload.transition_gap_ms) } : {}),
             terminal: isTerminal || eventName === "request.started",
