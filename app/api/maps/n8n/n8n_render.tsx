@@ -109,8 +109,15 @@ export interface N8nNormalizedGraph {
 
 export interface NodeActivitySSEPayload {
   id?: string;
+  signal_id?: string;
   type?: string;
   timestamp?: string;
+  timestamp_ms?: number;
+  started_at_ms?: number;
+  completed_at_ms?: number;
+  started_monotonic_ms?: number;
+  completed_monotonic_ms?: number;
+  transition_gap_ms?: number;
   request_id?: string;
   trace_id?: string;
   correlation_id?: string;
@@ -155,9 +162,12 @@ type RealtimeSignalEdgeData = {
 
 type RealtimeProgressStep = {
   nodeId: string;
+  activityId?: string;
   label: string;
   startedAt: number;
+  completedAt?: number;
   durationMs?: number;
+  transitionGapMs?: number;
   terminal: boolean;
   terminalStatus: LiveNodeStatus;
   terminalLabel?: string;
@@ -627,6 +637,8 @@ export const N8nDiagramRenderer = forwardRef<
       step.terminalStatus = incoming.terminalStatus;
       step.terminalLabel = incoming.terminalLabel;
       step.durationMs = incoming.durationMs;
+      step.completedAt = incoming.completedAt;
+      step.transitionGapMs = incoming.transitionGapMs;
     };
     function startStep(step: RealtimeProgressStep) {
       step.arrivedAt = Date.now();
@@ -645,11 +657,8 @@ export const N8nDiagramRenderer = forwardRef<
       }
 
       if (step.requestStart) {
-        setNodeStatus(step.nodeId, "running", step.label, REALTIME_NODE_MIN_LIGHT_MS);
-        schedule(() => {
-          setNodeStatus(step.nodeId, "success", step.terminalLabel || "Request nhận được", REALTIME_NODE_MIN_LIGHT_MS);
-          advance();
-        }, REALTIME_NODE_MIN_LIGHT_MS);
+        setNodeStatus(step.nodeId, "success", step.terminalLabel || "Request nhận được", REALTIME_NODE_MIN_LIGHT_MS);
+        advance();
         return;
       }
 
@@ -673,33 +682,28 @@ export const N8nDiagramRenderer = forwardRef<
       if (!active.terminal || !run.queue.length) return;
       if (run.displayMode === "slow" && !run.requestFinished) return;
 
-      const minimumHoldMs = run.displayMode === "slow"
-        ? 0
-        : REALTIME_NODE_MIN_LIGHT_MS;
-      const measuredStageMs = Number.isFinite(active.durationMs)
-        ? Math.max(0, active.durationMs || 0)
-        : 0;
-      const travelMs = run.displayMode === "slow"
-        ? Math.max(SLOW_SIGNAL_MIN_TRAVEL_MS, measuredStageMs * SLOW_SIGNAL_DURATION_SCALE)
-        : REALTIME_SIGNAL_TRAVEL_MS;
-      const heldMs = Date.now() - (active.arrivedAt || Date.now());
-      if (heldMs < minimumHoldMs) {
-        schedule(advance, minimumHoldMs - heldMs);
-        return;
-      }
-
-      const next = run.queue.shift()!;
+      const nextIndex = run.queue.findIndex((step) => step.sourceNodeId === active.nodeId);
+      const next = run.queue.splice(nextIndex >= 0 ? nextIndex : 0, 1)[0];
+      if (!next) return;
       const edge = edgesRef.current.find((candidate) => candidate.source === active.nodeId && candidate.target === next.nodeId);
       if (next.sourceNodeId && next.sourceNodeId !== active.nodeId) {
         console.warn(`[RealtimeGraph] Event source ${next.sourceNodeId} does not match active node ${active.nodeId}.`);
       }
-      run.inTransit = true;
-      run.transitStep = next;
+      const measuredStartToStartMs = next.startedAt - active.startedAt;
+      const measuredSegmentMs = Number.isFinite(measuredStartToStartMs) && measuredStartToStartMs >= 0
+        ? measuredStartToStartMs
+        : Math.max(0, active.durationMs || 0) + Math.max(0, next.transitionGapMs || 0);
+      const travelMs = run.displayMode === "slow"
+        ? Math.max(SLOW_SIGNAL_MIN_TRAVEL_MS, measuredSegmentMs * SLOW_SIGNAL_DURATION_SCALE)
+        : REALTIME_SIGNAL_TRAVEL_MS;
+      const edgeSignalVersion = edge
+        ? Number((edge.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) + 1
+        : 0;
       if (edge) {
         setEdges((current) => {
           const updated = current.map((item) => item.id === edge.id
             ? { ...item, data: { ...(item.data || {}), signalActive: true, signalDurationMs: travelMs,
-                signalVersion: Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) + 1 } }
+                signalVersion: edgeSignalVersion } }
             : item);
           edgesRef.current = updated;
           return updated;
@@ -707,9 +711,30 @@ export const N8nDiagramRenderer = forwardRef<
       } else {
         console.warn(`[RealtimeGraph] No displayed edge from ${active.nodeId} to ${next.nodeId}; skipping particle.`);
       }
+
+      if (run.displayMode === "realtime") {
+        // Keep live node state tied to backend events. The particle is a visual
+        // cue only and must not delay the next node's real start.
+        if (edge) schedule(() => setEdges((current) => {
+          const updated = current.map((item) => item.id === edge.id
+            && Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) === edgeSignalVersion
+            ? { ...item, data: { ...(item.data || {}), signalActive: false } } : item);
+          edgesRef.current = updated;
+          return updated;
+        }), travelMs);
+        setNodeStatus(active.nodeId, "idle");
+        run.inTransit = false;
+        run.transitStep = null;
+        startStep(next);
+        return;
+      }
+
+      run.inTransit = true;
+      run.transitStep = next;
       schedule(() => {
         if (edge) setEdges((current) => {
           const updated = current.map((item) => item.id === edge.id
+            && Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) === edgeSignalVersion
             ? { ...item, data: { ...(item.data || {}), signalActive: false } } : item);
           edgesRef.current = updated;
           return updated;
@@ -723,7 +748,9 @@ export const N8nDiagramRenderer = forwardRef<
 
     if (incoming) {
       const existing = [run.active, run.transitStep, ...run.queue, ...run.deferredServices]
-        .find((step) => step?.nodeId === incoming.nodeId) as RealtimeProgressStep | undefined;
+        .find((step) => step && (incoming.activityId
+          ? step.activityId === incoming.activityId
+          : !step.activityId && step.nodeId === incoming.nodeId)) as RealtimeProgressStep | undefined;
       if (run.displayMode === "slow" && options.started && !incoming.requestStart) {
         const requestStartStep = [run.active, ...run.queue].find((step) => step?.requestStart && step.durationMs === undefined);
         if (requestStartStep) {
@@ -949,9 +976,15 @@ export const N8nDiagramRenderer = forwardRef<
             : `${lifecycleNodeLabel} • đang chạy`;
           const step: RealtimeProgressStep = {
             nodeId: targetNodeId,
+            ...(typeof payload.signal_id === "string" ? { activityId: payload.signal_id } : {}),
             label,
-            startedAt: Date.now(),
+            startedAt: Number.isFinite(payload.started_monotonic_ms)
+              ? Number(payload.started_monotonic_ms)
+              : Number.isFinite(payload.started_at_ms) ? Number(payload.started_at_ms)
+              : Number.isFinite(payload.timestamp_ms) ? Number(payload.timestamp_ms) : Date.now(),
+            ...(Number.isFinite(payload.completed_at_ms) ? { completedAt: Number(payload.completed_at_ms) } : {}),
             ...(isTerminal ? { durationMs: duration } : {}),
+            ...(Number.isFinite(payload.transition_gap_ms) ? { transitionGapMs: Number(payload.transition_gap_ms) } : {}),
             terminal: isTerminal || eventName === "request.started",
             terminalStatus,
             ...(isTerminal ? { terminalLabel: label } : {}),
