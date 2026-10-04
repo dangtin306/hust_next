@@ -16,6 +16,7 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
+  Panel,
   Handle,
   Position,
   useNodesState,
@@ -29,20 +30,15 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import {
-  AlertCircle,
   ArrowLeftRight,
   Boxes,
   Clock,
   Code2,
-  Database,
   GitBranch,
   GitFork,
-  GitMerge,
   Globe,
   HelpCircle,
-  MessageSquare,
   Radio,
-  Sliders,
   Terminal,
   Zap,
 } from "lucide-react";
@@ -534,6 +530,9 @@ type RealtimeProgressRun = {
 
 const SIGNAL_TRAVEL_MS = 700;
 const NODE_MIN_LIGHT_MS = 1000;
+const REALTIME_SIGNAL_TRAVEL_MS = 160;
+const REALTIME_NODE_MIN_LIGHT_MS = 80;
+type SignalDisplayMode = "realtime" | "slow";
 
 function RealtimeSignalEdge(props: EdgeProps) {
   const [path] = getBezierPath(props);
@@ -806,10 +805,13 @@ export const N8nDiagramRenderer = forwardRef<
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [reconnectNonce, setReconnectNonce] = useState(0);
+  const [signalDisplayMode, setSignalDisplayMode] = useState<SignalDisplayMode>("realtime");
 
   const nodeTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const signalTimersRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const progressRunsRef = useRef<Map<string, RealtimeProgressRun>>(new Map());
+  const advanceRunsRef = useRef<Map<string, () => void>>(new Map());
+  const signalDisplayModeRef = useRef<SignalDisplayMode>("realtime");
   const edgesRef = useRef<Edge[]>([]);
   const graphNodeNamesRef = useRef<Map<string, string>>(new Map());
   const seenEventIdsRef = useRef<Set<string>>(new Set());
@@ -943,8 +945,11 @@ export const N8nDiagramRenderer = forwardRef<
     const advance = () => {
       const active = run.active;
       if (!active || run.inTransit || !active.terminal || !run.queue.length) return;
+      const realtime = signalDisplayModeRef.current === "realtime";
+      const minLightMs = realtime ? REALTIME_NODE_MIN_LIGHT_MS : NODE_MIN_LIGHT_MS;
+      const travelMs = realtime ? REALTIME_SIGNAL_TRAVEL_MS : SIGNAL_TRAVEL_MS;
       const heldMs = Date.now() - (active.arrivedAt || Date.now());
-      if (heldMs < NODE_MIN_LIGHT_MS) { schedule(advance, NODE_MIN_LIGHT_MS - heldMs); return; }
+      if (heldMs < minLightMs) { schedule(advance, minLightMs - heldMs); return; }
       const next = run.queue.shift()!;
       const edge = edgesRef.current.find((candidate) => candidate.source === active.nodeId && candidate.target === next.nodeId);
       if (next.sourceNodeId && next.sourceNodeId !== active.nodeId) {
@@ -956,7 +961,7 @@ export const N8nDiagramRenderer = forwardRef<
       if (edge) {
         setEdges((current) => {
           const updated = current.map((item) => item.id === edge.id
-            ? { ...item, data: { ...(item.data || {}), signalActive: true, signalDurationMs: SIGNAL_TRAVEL_MS,
+            ? { ...item, data: { ...(item.data || {}), signalActive: true, signalDurationMs: travelMs,
                 signalVersion: Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) + 1 } }
             : item);
           edgesRef.current = updated;
@@ -977,18 +982,25 @@ export const N8nDiagramRenderer = forwardRef<
         next.arrivedAt = Date.now();
         run.active = next;
         if (next.requestStart) {
-          setNodeStatus(next.nodeId, "running", next.label, NODE_MIN_LIGHT_MS);
+          const arrivalHoldMs = signalDisplayModeRef.current === "realtime"
+            ? REALTIME_NODE_MIN_LIGHT_MS
+            : NODE_MIN_LIGHT_MS;
+          setNodeStatus(next.nodeId, "running", next.label, arrivalHoldMs);
           schedule(() => {
-            setNodeStatus(next.nodeId, "success", next.terminalLabel || "Request nhận được", NODE_MIN_LIGHT_MS);
+            setNodeStatus(next.nodeId, "success", next.terminalLabel || "Request nhận được", arrivalHoldMs);
             advance();
-          }, NODE_MIN_LIGHT_MS);
+          }, arrivalHoldMs);
         } else {
+          const arrivalHoldMs = signalDisplayModeRef.current === "realtime"
+            ? REALTIME_NODE_MIN_LIGHT_MS
+            : NODE_MIN_LIGHT_MS;
           setNodeStatus(next.nodeId, next.terminal ? next.terminalStatus : "running",
-            next.terminalLabel || `${next.label} • đang chạy`, next.terminal ? NODE_MIN_LIGHT_MS : 120000);
+            next.terminalLabel || `${next.label} • đang chạy`, next.terminal ? arrivalHoldMs : 120000);
           if (next.terminal) advance();
         }
-      }, edge ? SIGNAL_TRAVEL_MS : 0);
+      }, edge ? travelMs : 0);
     };
+    advanceRunsRef.current.set(runKey, advance);
     if (incoming) {
       const existing = [run.active, run.transitStep, ...run.queue, ...run.deferredServices]
         .find((step) => step?.nodeId === incoming.nodeId) as RealtimeProgressStep | undefined;
@@ -1005,14 +1017,20 @@ export const N8nDiagramRenderer = forwardRef<
         incoming.arrivedAt = Date.now();
         run.active = incoming;
         if (incoming.requestStart) {
-          setNodeStatus(incoming.nodeId, "running", incoming.label, NODE_MIN_LIGHT_MS);
+          const arrivalHoldMs = signalDisplayModeRef.current === "realtime"
+            ? REALTIME_NODE_MIN_LIGHT_MS
+            : NODE_MIN_LIGHT_MS;
+          setNodeStatus(incoming.nodeId, "running", incoming.label, arrivalHoldMs);
           schedule(() => {
-            setNodeStatus(incoming.nodeId, "success", incoming.terminalLabel || "Request nhận được", NODE_MIN_LIGHT_MS);
+            setNodeStatus(incoming.nodeId, "success", incoming.terminalLabel || "Request nhận được", arrivalHoldMs);
             advance();
-          }, NODE_MIN_LIGHT_MS);
+          }, arrivalHoldMs);
         } else {
+          const arrivalHoldMs = signalDisplayModeRef.current === "realtime"
+            ? REALTIME_NODE_MIN_LIGHT_MS
+            : NODE_MIN_LIGHT_MS;
           setNodeStatus(incoming.nodeId, incoming.terminal ? incoming.terminalStatus : "running",
-            incoming.terminalLabel || `${incoming.label} • đang chạy`, incoming.terminal ? NODE_MIN_LIGHT_MS : 120000);
+            incoming.terminalLabel || `${incoming.label} • đang chạy`, incoming.terminal ? arrivalHoldMs : 120000);
           if (incoming.terminal) advance();
         }
       } else {
@@ -1029,10 +1047,21 @@ export const N8nDiagramRenderer = forwardRef<
       run.queue.push(...run.deferredServices.splice(0));
       advance();
       schedule(() => {
-        if (progressRunsRef.current.get(runKey) === run) progressRunsRef.current.delete(runKey);
+        if (progressRunsRef.current.get(runKey) === run) {
+          progressRunsRef.current.delete(runKey);
+          advanceRunsRef.current.delete(runKey);
+        }
       }, 120000);
     }
   }, [setEdges, setNodeStatus]);
+
+  const changeSignalDisplayMode = useCallback((mode: SignalDisplayMode) => {
+    signalDisplayModeRef.current = mode;
+    setSignalDisplayMode(mode);
+    // If switching to real time while a step is waiting in the slow-mode hold,
+    // let the queued path continue immediately using the newly selected pace.
+    advanceRunsRef.current.forEach((advance) => advance());
+  }, []);
 
   const processIncomingSSEEvent = useCallback(
     (eventName: string, payload: NodeActivitySSEPayload) => {
@@ -1384,6 +1413,7 @@ export const N8nDiagramRenderer = forwardRef<
         signalTimersRef.current.forEach((t) => clearTimeout(t));
         signalTimersRef.current.clear();
         progressRunsRef.current.clear();
+        advanceRunsRef.current.clear();
         setEdges((current) => {
           const updated = current.map((edge) => ({
             ...edge,
@@ -1411,7 +1441,7 @@ export const N8nDiagramRenderer = forwardRef<
         setReconnectNonce((n) => n + 1);
       },
     }),
-    [processIncomingSSEEvent, setNodes]
+    [processIncomingSSEEvent, setEdges, setNodes]
   );
 
   // Cập nhật graph khi có dữ liệu mới
@@ -1476,6 +1506,11 @@ export const N8nDiagramRenderer = forwardRef<
   // Kết nối EventSource SSE tới Next.js Route Handler
   useEffect(() => {
     if (!enableRealtime) return;
+
+    const nodeTimers = nodeTimersRef.current;
+    const signalTimers = signalTimersRef.current;
+    const progressRuns = progressRunsRef.current;
+    const advanceRuns = advanceRunsRef.current;
 
     const targetUrl = sseUrl || getSseProxyUrl();
     onConnectionStatusChangeRef.current?.("connecting");
@@ -1546,11 +1581,12 @@ export const N8nDiagramRenderer = forwardRef<
         eventSource.close();
         eventSourceRef.current = null;
       }
-      nodeTimersRef.current.forEach((t) => clearTimeout(t));
-      nodeTimersRef.current.clear();
-      signalTimersRef.current.forEach((t) => clearTimeout(t));
-      signalTimersRef.current.clear();
-      progressRunsRef.current.clear();
+      nodeTimers.forEach((t) => clearTimeout(t));
+      nodeTimers.clear();
+      signalTimers.forEach((t) => clearTimeout(t));
+      signalTimers.clear();
+      progressRuns.clear();
+      advanceRuns.clear();
       edgesRef.current = edgesRef.current.map((edge) => ({
         ...edge,
         data: { ...(edge.data || {}), signalActive: false },
@@ -1634,6 +1670,34 @@ export const N8nDiagramRenderer = forwardRef<
         colorMode="dark"
         className="bg-slate-950"
       >
+        <Panel position="top-right" className="!m-3">
+          <div
+            role="group"
+            aria-label="Chế độ hiển thị tín hiệu"
+            className="flex items-center gap-0.5 rounded-xl border border-slate-700 bg-slate-950/95 p-1 shadow-xl backdrop-blur"
+          >
+            <button
+              type="button"
+              aria-pressed={signalDisplayMode === "realtime"}
+              title="Hiển thị tín hiệu ngay khi nhận được"
+              onClick={() => changeSignalDisplayMode("realtime")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${signalDisplayMode === "realtime" ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50" : "text-slate-300 hover:bg-slate-800"}`}
+            >
+              <Radio className="h-4 w-4" />
+              Thời gian thực
+            </button>
+            <button
+              type="button"
+              aria-pressed={signalDisplayMode === "slow"}
+              title="Phát chậm từng bước để dễ theo dõi"
+              onClick={() => changeSignalDisplayMode("slow")}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${signalDisplayMode === "slow" ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/50" : "text-slate-300 hover:bg-slate-800"}`}
+            >
+              <Clock className="h-4 w-4" />
+              Xem chậm
+            </button>
+          </div>
+        </Panel>
         <Background variant={BackgroundVariant.Dots} color="#334155" gap={20} size={1.5} />
         <Controls className="!bg-slate-900 !border-slate-800 !fill-slate-200 !text-slate-200 [&>button]:!border-slate-800 [&>button]:!bg-slate-900 [&>button:hover]:!bg-slate-800" />
         <MiniMap
