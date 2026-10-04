@@ -1302,6 +1302,10 @@ export const N8nDiagramRenderer = forwardRef<
             .n8n-slow-view .n8n-node--running {
               animation: n8n-node-pulse ${SLOW_NODE_FLASH_MS}ms ease-in-out 1 both !important;
             }
+            .n8n-slow-view .n8n-node-signal-ping {
+              animation-duration: ${SLOW_NODE_FLASH_MS}ms !important;
+              animation-iteration-count: 1 !important;
+            }
             .n8n-slow-view .n8n-node--success,
             .n8n-slow-view .n8n-node--slow,
             .n8n-slow-view .n8n-node--error {
