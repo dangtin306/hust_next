@@ -180,8 +180,9 @@ type RealtimeProgressRun = {
 const SIGNAL_TRAVEL_MS = 700;
 const REALTIME_SIGNAL_TRAVEL_MS = 160;
 const REALTIME_NODE_MIN_LIGHT_MS = 80;
-const SLOW_SIGNAL_TRAVEL_MS = 15000;
-const SLOW_NODE_FLASH_MS = 250;
+const SLOW_SIGNAL_DURATION_SCALE = 5;
+const SLOW_SIGNAL_MIN_TRAVEL_MS = 500;
+const SLOW_NODE_FLASH_MS = 500;
 type SignalDisplayMode = "realtime" | "slow";
 
 function RealtimeSignalEdge(props: EdgeProps) {
@@ -639,11 +640,7 @@ export const N8nDiagramRenderer = forwardRef<
           SLOW_NODE_FLASH_MS,
           0,
         );
-        schedule(() => {
-          setNodeStatus(step.nodeId, "idle");
-          step.arrivedAt = Date.now();
-          advance();
-        }, SLOW_NODE_FLASH_MS);
+        advance();
         return;
       }
 
@@ -679,8 +676,11 @@ export const N8nDiagramRenderer = forwardRef<
       const minimumHoldMs = run.displayMode === "slow"
         ? 0
         : REALTIME_NODE_MIN_LIGHT_MS;
+      const measuredStageMs = Number.isFinite(active.durationMs)
+        ? Math.max(0, active.durationMs || 0)
+        : 0;
       const travelMs = run.displayMode === "slow"
-        ? SLOW_SIGNAL_TRAVEL_MS
+        ? Math.max(SLOW_SIGNAL_MIN_TRAVEL_MS, measuredStageMs * SLOW_SIGNAL_DURATION_SCALE)
         : REALTIME_SIGNAL_TRAVEL_MS;
       const heldMs = Date.now() - (active.arrivedAt || Date.now());
       if (heldMs < minimumHoldMs) {
@@ -1401,7 +1401,7 @@ export const N8nDiagramRenderer = forwardRef<
             <button
               type="button"
               aria-pressed={signalDisplayMode === "slow"}
-              title="Áp dụng cho lượt gọi mới; sau khi xong, các nút chớp ngắn và chấm đi chậm"
+              title="Áp dụng lượt gọi mới: nút nháy 500 ms; chấm đi theo duration_ms ×5, tối thiểu 500 ms"
               onClick={() => changeSignalDisplayMode("slow")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${signalDisplayMode === "slow" ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/50" : "text-slate-300 hover:bg-slate-800"}`}
             >
