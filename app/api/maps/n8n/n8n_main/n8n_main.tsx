@@ -1552,7 +1552,7 @@ export const N8nDiagramRenderer = forwardRef<
         }}
         nodes={nodes}
         edges={edges}
-        minZoom={0.35}
+        minZoom={0.25}
         maxZoom={3}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
