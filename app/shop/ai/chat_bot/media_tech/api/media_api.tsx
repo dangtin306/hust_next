@@ -19,11 +19,14 @@ export type WorkspaceOption = {
   id: number | string;
   workspace_name: string;
   work_space_code: string;
+  agent_code?: string;
   parent_workspace_code?: string | null;
   slug?: string;
   description?: string;
   status?: string;
+  is_selectable?: boolean;
   work_space_selected?: boolean;
+  children?: WorkspaceOption[];
 };
 
 let workspacesRequestInFlight: Promise<WorkspaceOption[]> | null = null;
@@ -40,13 +43,32 @@ export function apiFetchWorkspaces(): Promise<WorkspaceOption[]> {
     if (!response.ok) throw new Error(`Workspace API trả về HTTP ${response.status}`);
     const body = await response.json();
     if (!Array.isArray(body?.data)) return [];
-    return body.data.filter(
-      (item: unknown): item is WorkspaceOption =>
+
+    const rows: WorkspaceOption[] = (body.data as unknown[]).filter(
+      (item: unknown): item is WorkspaceOption => Boolean(item) && typeof item === "object",
+    );
+    const hasTreeShape = rows.some((item) => Array.isArray(item.children));
+    const parentCodes = new Set(
+      rows
+        .map((item: WorkspaceOption) => item.parent_workspace_code)
+        .filter((code: unknown): code is string => typeof code === "string"),
+    );
+    const selectableRows = hasTreeShape
+      ? rows.flatMap((item: WorkspaceOption) => (Array.isArray(item.children) ? item.children : []))
+      : rows.filter(
+          (item: WorkspaceOption) =>
+            item.is_selectable !== false &&
+            typeof item.work_space_code === "string" &&
+            !parentCodes.has(item.work_space_code),
+        );
+
+    return selectableRows.filter(
+      (item) =>
         Boolean(item) &&
-        typeof item === "object" &&
-        typeof (item as WorkspaceOption).workspace_name === "string" &&
-        typeof (item as WorkspaceOption).work_space_code === "string" &&
-        ((item as WorkspaceOption).status == null || (item as WorkspaceOption).status === "active"),
+        typeof item.workspace_name === "string" &&
+        typeof item.work_space_code === "string" &&
+        item.is_selectable !== false &&
+        (item.status == null || item.status === "active"),
     );
   });
 

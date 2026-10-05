@@ -255,6 +255,7 @@ export const INITIAL_MESSAGES: Message[] = [
     time: "Vừa xong",
   },
 ];
+const EMPTY_MESSAGES: Message[] = [];
 
 export function createCorrelationId(): string {
   const cryptoApi = globalThis.crypto;
@@ -363,20 +364,7 @@ export type MediaTechChatClientProps = {
 };
 
 function getDefaultWorkspaceCode(workspaceList: WorkspaceOption[]): string {
-  const parent =
-    workspaceList.find(
-      (workspace) =>
-        workspace.slug && workspace.parent_workspace_code === workspace.slug,
-    ) ??
-    workspaceList.find((workspace) =>
-      workspaceList.some(
-        (child) =>
-          child.parent_workspace_code === workspace.slug ||
-          child.parent_workspace_code === workspace.work_space_code,
-      ),
-    ) ??
-    workspaceList[0];
-  return parent?.work_space_code ?? "";
+  return workspaceList[0]?.work_space_code ?? "";
 }
 
 export function useMediaChatProcess({
@@ -392,7 +380,7 @@ export function useMediaChatProcess({
   showWelcomeMessage = true,
   serviceDescriptions = {},
 }: MediaTechChatClientProps = {}) {
-  const initialMessages = showWelcomeMessage ? INITIAL_MESSAGES : [];
+  const initialMessages = showWelcomeMessage ? INITIAL_MESSAGES : EMPTY_MESSAGES;
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
@@ -1022,7 +1010,7 @@ export function useMediaChatProcess({
     return () => {
       cancelled = true;
     };
-  }, [activeStorageKey]);
+  }, [activeStorageKey, initialMessages]);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard?.writeText(text);

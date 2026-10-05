@@ -643,7 +643,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
   const [isWorkspacePromptDismissed, setIsWorkspacePromptDismissed] = useState(false);
   const currentSuggestion = SUGGESTIONS.find((item) => item.apiService === selectedService);
-  // Show the complete list returned by Laravel, including the parent Workspace Test.
+  // The chat API loader provides only selectable child workspaces; parent nodes stay in management.
   const workspaceChoices = workspaces;
 
   useEffect(() => {
