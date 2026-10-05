@@ -25,9 +25,9 @@ import {
   DEMO_SSE_EVENTS,
   fetchWorkflowGraph,
   mapServiceIdToNodeId,
-} from "./process";
+} from "./n8n_main/config";
 
-import N8nDiagramRenderer from "./n8n_render";
+import N8nDiagramRenderer from "./n8n_main/n8n_main";
 
 function graphSource(graph) {
   return graph?.source || graph?.sync?.source || "unknown";

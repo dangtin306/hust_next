@@ -10,8 +10,6 @@ import React, {
 } from "react";
 import {
   ReactFlow,
-  BaseEdge,
-  getBezierPath,
   Background,
   BackgroundVariant,
   Controls,
@@ -21,7 +19,6 @@ import {
   useEdgesState,
   type Node,
   type Edge,
-  type EdgeProps,
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -34,7 +31,7 @@ import {
   getSseProxyUrl,
   STANDARD_CHAT_NODE_ID,
   NODE_BACKEND_ARCHITECTURE_NODE_IDS,
-} from "./process";
+} from "./config";
 import {
   N8N_NODE_TYPES,
   describeWorkflowNode,
@@ -42,6 +39,24 @@ import {
   type LiveNodeStatus,
   type StickyNoteData,
 } from "./n8n_nodes";
+import {
+  RealtimeSignalEdge,
+  type RealtimeSignalEdgeData,
+  type RealtimeSignalParticle,
+} from "./realtime/RealtimeSignalEdge";
+import {
+  REALTIME_BUFFER_INCREMENT_MS,
+  REALTIME_INITIAL_BUFFER_MS,
+  REALTIME_MAX_BUFFER_INCREASES,
+  getRealtimeDisplayTime,
+  getRealtimeParticleStartAt,
+} from "./realtime/timing";
+import {
+  DELAY_PLAYBACK_TIME_SCALE,
+  getDelayedTimelineDuration,
+  getDelayedTimelineTime,
+} from "./delay/timing";
+import { getTransitionDurationMs } from "./timing";
 
 // ==========================================
 // 1. DATA CONTRACTS
@@ -154,19 +169,6 @@ export function normalizePosition(position: unknown): { x: number; y: number } {
 }
 
 
-type RealtimeSignalEdgeData = {
-  particles?: RealtimeSignalParticle[];
-};
-
-type RealtimeSignalParticle = {
-  id: string;
-  startedAt: number;
-  durationMs: number;
-  laneOffset: number;
-};
-
-const EMPTY_SIGNAL_PARTICLES: RealtimeSignalParticle[] = [];
-
 type RealtimeProgressStep = {
   nodeId: string;
   activityId?: string;
@@ -206,85 +208,8 @@ type RealtimeProgressRun = {
 
 const REALTIME_NODE_PULSE_MS = 1000;
 const REALTIME_NODE_SIGNAL_TIMEOUT_MS = 2000;
-const REALTIME_INITIAL_BUFFER_MS = 1000;
-const REALTIME_MAX_BUFFER_INCREASES = 10;
 const REALTIME_NODE_MIN_LIGHT_MS = 1000;
-const SLOW_PLAYBACK_TIME_SCALE = 4;
-const MIN_MEASURED_TIMELINE_MS = 80;
 type SignalDisplayMode = "realtime" | "slow";
-
-function RealtimeSignalEdge(props: EdgeProps) {
-  const [path] = getBezierPath(props);
-  const data = (props.data || {}) as RealtimeSignalEdgeData;
-  const particles = data.particles ?? EMPTY_SIGNAL_PARTICLES;
-  const motionPathRef = useRef<SVGPathElement>(null);
-  const particleRefs = useRef<Map<string, SVGCircleElement>>(new Map());
-
-  useEffect(() => {
-    if (!particles.length) return;
-    const motionPath = motionPathRef.current;
-    if (!motionPath) return;
-
-    const pathLength = motionPath.getTotalLength();
-    let frameId = 0;
-
-    const moveSignal = (now: number) => {
-      let moving = false;
-      particles.forEach((particle) => {
-        const signal = particleRefs.current.get(particle.id);
-        if (!signal) return;
-        const elapsed = now - particle.startedAt;
-        if (elapsed < 0) {
-          const startPoint = motionPath.getPointAtLength(0);
-          signal.setAttribute("cx", String(startPoint.x));
-          signal.setAttribute("cy", String(startPoint.y));
-          moving = true;
-          return;
-        }
-        const progress = Math.min(1, elapsed / Math.max(1, particle.durationMs));
-        const point = motionPath.getPointAtLength(pathLength * progress);
-        const before = motionPath.getPointAtLength(Math.max(0, pathLength * progress - 1));
-        const after = motionPath.getPointAtLength(Math.min(pathLength, pathLength * progress + 1));
-        const tangentX = after.x - before.x;
-        const tangentY = after.y - before.y;
-        const tangentLength = Math.max(1, Math.hypot(tangentX, tangentY));
-        signal.setAttribute("cx", String(point.x - (tangentY / tangentLength) * particle.laneOffset));
-        signal.setAttribute("cy", String(point.y + (tangentX / tangentLength) * particle.laneOffset));
-        if (progress < 1) moving = true;
-      });
-      if (moving) frameId = requestAnimationFrame(moveSignal);
-    };
-
-    frameId = requestAnimationFrame(moveSignal);
-    return () => cancelAnimationFrame(frameId);
-  }, [particles, path]);
-
-  return (
-    <g
-      data-realtime-edge-id={props.id}
-      data-signal-active={particles.length ? "true" : "false"}
-      data-signal-count={particles.length}
-      data-signal-source={props.source}
-      data-signal-target={props.target}
-    >
-      <BaseEdge id={props.id} path={path} style={props.style} markerEnd={props.markerEnd} />
-      <path ref={motionPathRef} d={path} fill="none" stroke="none" aria-hidden="true" />
-      {particles.map((particle) => (
-        <circle
-          key={particle.id}
-          ref={(element) => {
-            if (element) particleRefs.current.set(particle.id, element);
-            else particleRefs.current.delete(particle.id);
-          }}
-          data-signal-particle={particle.id}
-          r="4"
-          fill="#a5f3fc"
-          filter="drop-shadow(0 0 5px #22d3ee)"
-        />
-      ))}
-    </g>
-  );
-}
 
 const N8N_EDGE_TYPES = { realtimeSignal: RealtimeSignalEdge };
 
@@ -607,7 +532,9 @@ export const N8nDiagramRenderer = forwardRef<
                 ...n.data,
                 liveStatus: status,
                 signalVersion:
-                  status === "idle" ? Number(n.data.signalVersion || 0) : Number(n.data.signalVersion || 0) + 1,
+                  status === "idle" || signalDisplayModeRef.current === "slow"
+                    ? Number(n.data.signalVersion || 0)
+                    : Number(n.data.signalVersion || 0) + 1,
                 signalPulseDurationMs: status === "running" && Number.isFinite(pulseDurationMs)
                   ? Math.max(1, pulseDurationMs || 0)
                   : undefined,
@@ -760,8 +687,12 @@ export const N8nDiagramRenderer = forwardRef<
         clearTimeout(step.visualTimer);
         signalTimersRef.current.delete(step.visualTimer);
       }
-      const backendOffset = Math.max(0, step.startedAt - (run.firstStartedAt || step.startedAt));
-      const plannedAt = (run.firstArrivedPerf || performance.now()) + backendOffset + run.renderDelayMs;
+      const plannedAt = getRealtimeDisplayTime(
+        run.firstArrivedPerf || performance.now(),
+        run.firstStartedAt || step.startedAt,
+        step.startedAt,
+        run.renderDelayMs,
+      );
       step.visualStartAt = Math.max(performance.now(), plannedAt);
       step.visualTimer = scheduleAt(() => showNode(step), step.visualStartAt);
     };
@@ -812,7 +743,7 @@ export const N8nDiagramRenderer = forwardRef<
         const unresolved = Array.from(run.steps.values()).some((step) => !step.requestStart && !step.terminal);
         if (!unresolved || run.requestFinished || run.delayIncrements >= REALTIME_MAX_BUFFER_INCREASES) return;
         run.delayIncrements += 1;
-        run.renderDelayMs += 1000;
+        run.renderDelayMs += REALTIME_BUFFER_INCREMENT_MS;
         scheduleAdaptiveBufferIncrease();
         run.steps.forEach(scheduleRealtimeNode);
         run.steps.forEach((step) => {
@@ -868,30 +799,25 @@ export const N8nDiagramRenderer = forwardRef<
           return;
         }
 
-        const startSeparation = Math.max(0, target.startedAt - source.startedAt);
-        const processingAndGap = processingMs(source) + Math.max(
+        const transitionGapMs = Math.max(
           0,
           target.transitionGapMs ?? (target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source))),
         );
-        const measuredMs = Math.max(
-          MIN_MEASURED_TIMELINE_MS,
-          run.displayMode === "realtime"
-            ? processingAndGap
-            : startSeparation || processingAndGap,
-        );
-        const scale = run.displayMode === "slow" ? SLOW_PLAYBACK_TIME_SCALE : 1;
+        const measuredMs = getTransitionDurationMs(processingMs(source), transitionGapMs);
+        const scale = run.displayMode === "slow" ? DELAY_PLAYBACK_TIME_SCALE : 1;
         const travelMs = measuredMs * scale;
         let particleStartAt: number;
         if (run.displayMode === "slow") {
           const replayBase = run.replayStartedAt || performance.now();
           const timelineBase = run.firstStartedAt || source.startedAt;
-          particleStartAt = replayBase + Math.max(0, source.startedAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
+          particleStartAt = getDelayedTimelineTime(replayBase, timelineBase, source.startedAt);
         } else {
           const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
-          const deferredBuffer = Math.max(0, run.renderDelayMs - sourceBuffer);
-          particleStartAt = Math.max(
+          particleStartAt = getRealtimeParticleStartAt(
             performance.now(),
-            (source.visualStartAt ?? performance.now()) + deferredBuffer,
+            source.visualStartAt ?? performance.now(),
+            sourceBuffer,
+            run.renderDelayMs,
           );
         }
         run.transitions.add(transitionKey);
@@ -974,14 +900,18 @@ export const N8nDiagramRenderer = forwardRef<
         const replayBase = run.replayStartedAt;
         const timelineBase = run.firstStartedAt || Math.min(...Array.from(run.steps.values()).map((step) => step.startedAt));
         Array.from(run.steps.values()).forEach((step) => {
-          const startAt = replayBase + Math.max(0, step.startedAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
-          const finishAt = replayBase + Math.max(0, (step.completedAt ?? step.startedAt) - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
+          const startAt = getDelayedTimelineTime(replayBase, timelineBase, step.startedAt);
+          const finishAt = getDelayedTimelineTime(replayBase, timelineBase, step.completedAt ?? step.startedAt);
           scheduleAt(() => {
+            const displayedRunDuration = Math.max(
+              REALTIME_NODE_MIN_LIGHT_MS,
+              finishAt - startAt,
+            );
             setNodeStatus(
               step.nodeId,
               "running",
               step.label + " • đang chạy",
-              REALTIME_NODE_MIN_LIGHT_MS,
+              displayedRunDuration,
               REALTIME_NODE_MIN_LIGHT_MS,
               0,
               REALTIME_NODE_PULSE_MS,
@@ -1003,7 +933,9 @@ export const N8nDiagramRenderer = forwardRef<
       tryScheduleTransitions();
       const lastEventAt = Math.max(...Array.from(run.steps.values()).map((step) => step.completedAt ?? step.startedAt));
       const timelineBase = run.firstStartedAt || lastEventAt;
-      const tail = run.displayMode === "slow" ? Math.max(0, lastEventAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE : 0;
+      const tail = run.displayMode === "slow"
+        ? getDelayedTimelineDuration(Math.max(0, lastEventAt - timelineBase))
+        : 0;
       const cleanupTimer = setTimeout(() => {
         signalTimersRef.current.delete(cleanupTimer);
         if (progressRunsRef.current.get(runKey) === run) progressRunsRef.current.delete(runKey);
@@ -1595,6 +1527,9 @@ export const N8nDiagramRenderer = forwardRef<
             }
             .n8n-slow-view .n8n-node--running {
               animation: n8n-node-pulse var(--n8n-node-pulse-duration, 0.4s) ease-in-out 1 both !important;
+            }
+            .n8n-slow-view .n8n-node-signal-ping {
+              animation: n8n-node-ping-flash 1s ease-out 1 both !important;
             }
             .n8n-node--success {
               --signal-color: rgba(34, 197, 94, 0.9);
