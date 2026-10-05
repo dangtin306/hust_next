@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -13,6 +13,8 @@ import {
   type Edge,
   Handle,
   Position,
+  useReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -29,6 +31,8 @@ import {
   Workflow,
   X,
   Zap,
+  Maximize2,
+  Sparkles,
 } from "lucide-react";
 
 // ==========================================
@@ -37,6 +41,204 @@ import {
 const BASE_DOMAIN = "https://node_md.hust.media";
 const MAPS_MAIN_GRAPH_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/graph`;
 const MAPS_MAIN_FILE_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/file`;
+
+// ==========================================
+// HÀM TỰ ĐỘNG CĂN CHỈNH ĐỒ THỊ THEO CHUẨN .MD (AUTO-LAYOUT ENGINE)
+// Tự sửa, tự căn giữa, cân đối tuyệt đối cho bất kỳ số lượng workspace nào
+// ==========================================
+export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes: Node[]; edges: Edge[] } {
+  if (!rawNodes || rawNodes.length === 0) return { nodes: [], edges: [] };
+
+  // 1. Phân loại các node
+  const workspaceNodes: Node[] = [];
+  const sessionAndFileNodes: Node[] = [];
+  const pipelineNodes: Node[] = [];
+  let agentNode: Node | null = null;
+  let soulNode: Node | null = null;
+  let identityNode: Node | null = null;
+  let headerTier1: Node | null = null;
+  let headerTier2: Node | null = null;
+
+  rawNodes.forEach((node) => {
+    if (node.id === "header-tier1") {
+      headerTier1 = node;
+    } else if (node.id === "header-tier2") {
+      headerTier2 = node;
+    } else if (node.id === "vault-agents-md") {
+      agentNode = node;
+    } else if (node.id === "vault-soul-md") {
+      soulNode = node;
+    } else if (node.id === "vault-identity-md") {
+      identityNode = node;
+    } else if (
+      node.data?.category === "workspace" ||
+      node.id.startsWith("vault-ws-")
+    ) {
+      workspaceNodes.push(node);
+    } else if (
+      node.data?.category === "session" ||
+      node.id.startsWith("vault-chat-") ||
+      node.id.startsWith("vault-file-")
+    ) {
+      sessionAndFileNodes.push(node);
+    } else if (
+      node.type === "pipelineNode" ||
+      node.id.startsWith("pipe-")
+    ) {
+      pipelineNodes.push(node);
+    } else {
+      // Nhóm mặc định nếu có node mới phát sinh
+      workspaceNodes.push(node);
+    }
+  });
+
+  // Thứ tự ưu tiên sắp xếp workspace nếu có
+  const preferredOrder = ["workspace_backend", "workspace_media", "workspace_tech", "workspace_openclaw"];
+  workspaceNodes.sort((a, b) => {
+    const nameA = (a.data?.label || a.id) as string;
+    const nameB = (b.data?.label || b.id) as string;
+    const ia = preferredOrder.indexOf(nameA);
+    const ib = preferredOrder.indexOf(nameB);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return nameA.localeCompare(nameB);
+  });
+
+  // 2. Tính toán lưới tọa độ tự động cho Tầng 1
+  const nWs = Math.max(workspaceNodes.length, 1);
+  const startX = 60;
+  const colSpacingX = 290;
+  const totalVaultWidth = (nWs - 1) * colSpacingX;
+  const vaultCenterX = startX + totalVaultWidth / 2;
+
+  // Tọa độ Tầng 2 (Pipeline Engine) luôn đặt bên phải Tầng 1 với khoảng cách an toàn
+  const tier2X = Math.max(startX + nWs * colSpacingX + 110, 1260);
+
+  const positionedNodes: Node[] = [];
+
+  // A. Header Tầng 1 (Tự động căn giữa toàn bộ các cột workspace)
+  if (headerTier1) {
+    positionedNodes.push({
+      ...headerTier1,
+      position: { x: Math.round(vaultCenterX - 170), y: -80 },
+    });
+  }
+
+  // B. Agent Node chính (AGENTS.md - Trung tâm hàng 1)
+  if (agentNode) {
+    positionedNodes.push({
+      ...agentNode,
+      position: { x: Math.round(vaultCenterX - 130), y: 40 },
+    });
+  }
+
+  // C. SOUL.md (Căn bên trái AGENTS.md)
+  if (soulNode) {
+    const soulX = Math.round(Math.max(vaultCenterX - 420, startX - 20));
+    positionedNodes.push({
+      ...soulNode,
+      position: { x: soulX, y: 40 },
+    });
+  }
+
+  // D. IDENTITY.md (Căn bên phải AGENTS.md)
+  if (identityNode) {
+    const identityX = Math.round(Math.min(vaultCenterX + 160, startX + totalVaultWidth));
+    positionedNodes.push({
+      ...identityNode,
+      position: { x: identityX, y: 40 },
+    });
+  }
+
+  // E. Workspaces (Hàng 2: Y = 210, chia đều các cột)
+  const wsIndexMap = new Map<string, number>();
+  workspaceNodes.forEach((ws, idx) => {
+    const posX = startX + idx * colSpacingX;
+    wsIndexMap.set(ws.id, idx);
+    positionedNodes.push({
+      ...ws,
+      position: { x: posX, y: 210 },
+    });
+  });
+
+  // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace)
+  const wsChildCountMap = new Map<number, number>();
+  sessionAndFileNodes.forEach((child) => {
+    // Tìm edge nối tới child này để biết thuộc workspace nào
+    const parentEdge = rawEdges.find((e) => e.target === child.id);
+    let colIdx = 0;
+    if (parentEdge && wsIndexMap.has(parentEdge.source)) {
+      colIdx = wsIndexMap.get(parentEdge.source)!;
+    } else {
+      // Thử suy luận từ id (ví dụ vault-chat-workspace_tech-0)
+      for (const [wsId, idx] of wsIndexMap.entries()) {
+        const rawName = wsId.replace("vault-ws-", "");
+        if (child.id.includes(rawName)) {
+          colIdx = idx;
+          break;
+        }
+      }
+    }
+
+    const currentCount = wsChildCountMap.get(colIdx) || 0;
+    wsChildCountMap.set(colIdx, currentCount + 1);
+
+    const childX = startX + colIdx * colSpacingX + (currentCount % 2) * 15;
+    const childY = 380 + currentCount * 140;
+
+    positionedNodes.push({
+      ...child,
+      position: { x: childX, y: childY },
+    });
+  });
+
+  // G. Header Tầng 2
+  if (headerTier2) {
+    positionedNodes.push({
+      ...headerTier2,
+      position: { x: tier2X - 35, y: -80 },
+    });
+  }
+
+  // H. Pipeline Nodes Tầng 2 (Thẳng hàng X = tier2X)
+  const pipelineOrder = [
+    "pipe-webhook",
+    "pipe-resolver",
+    "pipe-openclaw",
+    "pipe-media-tools",
+    "pipe-sse-broadcast",
+  ];
+
+  pipelineNodes.sort((a, b) => {
+    const ia = pipelineOrder.indexOf(a.id);
+    const ib = pipelineOrder.indexOf(b.id);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    return a.id.localeCompare(b.id);
+  });
+
+  pipelineNodes.forEach((p, idx) => {
+    positionedNodes.push({
+      ...p,
+      position: { x: tier2X, y: 40 + idx * 120 },
+    });
+  });
+
+  // 3. Chuẩn hóa Edges & Handles tự động
+  const updatedEdges = rawEdges.map((edge) => {
+    // Cầu nối liên tầng: luôn cắm từ cạnh trái Pipeline sang cạnh phải của node Tầng 1
+    if (edge.id.includes("bridge") || edge.source.startsWith("pipe-") && edge.target.startsWith("vault-")) {
+      return {
+        ...edge,
+        sourceHandle: "source-left",
+        targetHandle: "target-right",
+      };
+    }
+    return edge;
+  });
+
+  return { nodes: positionedNodes, edges: updatedEdges };
+}
 
 // ==========================================
 // CUSTOM NODE COMPONENTS
@@ -68,7 +270,7 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
         isSelected ? "ring-2 ring-purple-400 shadow-purple-500/30 shadow-2xl scale-[1.02]" : "hover:border-slate-400"
       }`}
     >
-      {/* HANDLES ON ALL 4 SIDES TO PREVENT LINE TANGLING */}
+      {/* 4-WAY HANDLES TRÁNH RỐI DÂY NỐI */}
       <Handle type="target" position={Position.Top} id="target-top" className="!bg-purple-400 !w-2.5 !h-2.5" />
       <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-emerald-400 !w-2.5 !h-2.5" />
       <Handle type="target" position={Position.Left} id="target-left" className="!bg-purple-400 !w-2.5 !h-2.5" />
@@ -119,7 +321,6 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
         isSelected ? "ring-2 ring-indigo-400 shadow-indigo-500/30 shadow-2xl scale-[1.02]" : "hover:border-indigo-400"
       }`}
     >
-      {/* HANDLES */}
       <Handle type="target" position={Position.Top} id="target-top" className="!bg-indigo-400 !w-2.5 !h-2.5" />
       <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-indigo-400 !w-2.5 !h-2.5" />
       <Handle type="target" position={Position.Left} id="target-left" className="!bg-amber-400 !w-2.5 !h-2.5" />
@@ -185,17 +386,16 @@ const nodeTypes = {
 };
 
 // ==========================================
-// FALLBACK DATA (CÂN ĐỐI)
+// FALLBACK DATA DỰ PHÒNG CHUẨN
 // ==========================================
-
-const FALLBACK_NODES: Node[] = [
+const INITIAL_FALLBACK_NODES: Node[] = [
   {
     id: "header-tier1",
     type: "sectionLabelNode",
-    position: { x: 340, y: -80 },
+    position: { x: 335, y: -80 },
     data: {
       title: "TẦNG 1: Markdown Knowledge Vault",
-      subtitle: "Không gian tri thức toán học c ∈ W ∈ A gắn với các file .md trong OpenClaw",
+      subtitle: "Không gian tri thức toán học K(c) gồm 4 domain workspaces trong OpenClaw",
       icon: "vault",
     },
     selectable: false,
@@ -203,7 +403,7 @@ const FALLBACK_NODES: Node[] = [
   {
     id: "header-tier2",
     type: "sectionLabelNode",
-    position: { x: 1040, y: -80 },
+    position: { x: 1290, y: -80 },
     data: {
       title: "TẦNG 2: n8n Execution Engine",
       subtitle: "Pipeline thực thi động 5 node nạp động file .md qua Dynamic Path Resolution",
@@ -214,7 +414,7 @@ const FALLBACK_NODES: Node[] = [
   {
     id: "vault-agents-md",
     type: "vaultNode",
-    position: { x: 380, y: 40 },
+    position: { x: 495, y: 40 },
     data: {
       label: "AGENTS.md",
       category: "agent",
@@ -226,43 +426,65 @@ const FALLBACK_NODES: Node[] = [
   },
 ];
 
-const FALLBACK_EDGES: Edge[] = [];
+const INITIAL_FALLBACK_EDGES: Edge[] = [];
 
 // ==========================================
-// MAIN COMPONENT
+// FLOW INNER COMPONENT (HỖ TRỢ FITVIEW & CONTROLS)
 // ==========================================
-
-export default function MapsMainCanvas() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(FALLBACK_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(FALLBACK_EDGES);
+function MapsMainCanvasInner() {
+  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_FALLBACK_NODES);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_FALLBACK_EDGES);
   const [activeFilter, setActiveFilter] = useState<"all" | "vault" | "pipeline">("all");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const { fitView } = useReactFlow();
 
-  // Hàm load dữ liệu từ domain mẹ
+  // Hàm load dữ liệu từ domain mẹ và tự động căn chỉnh
   const loadGraphFromDomain = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch(MAPS_MAIN_GRAPH_URL, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-      if (json.success && json.graph) {
-        setNodes(json.graph.nodes || []);
-        setEdges(json.graph.edges || []);
+
+      // Hỗ trợ cả hai dạng response (ok / data) và (success / graph)
+      const rawNodes: Node[] = json.data?.nodes || json.graph?.nodes || json.nodes || [];
+      const rawEdges: Edge[] = json.data?.edges || json.graph?.edges || json.edges || [];
+
+      if (rawNodes.length > 0) {
+        // TỰ ĐỘNG CĂN CHỈNH ĐỐI XỨNG CÂN ĐỐI DỰA TRÊN CẤU TRÚC THỰC TẾ
+        const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(rawNodes, rawEdges);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
         setLastSyncTime(new Date().toLocaleTimeString());
+
+        // Tự động fitView sau khi DOM cập nhật
+        setTimeout(() => {
+          fitView({ padding: 0.18, duration: 400 });
+        }, 100);
       }
     } catch (err) {
-      console.warn("Could not load from parent domain, using fallback:", err);
+      console.warn("Could not load from parent domain, applying fallback:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, fitView]);
 
   useEffect(() => {
     loadGraphFromDomain();
   }, [loadGraphFromDomain]);
+
+  // Nút người dùng click để tự động căn giữa lại toàn bộ sơ đồ
+  const handleReAlign = useCallback(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(nodes, edges);
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+    setTimeout(() => {
+      fitView({ padding: 0.18, duration: 400 });
+    }, 50);
+  }, [nodes, edges, setNodes, setEdges, fitView]);
 
   // Khi click vào node, load nội dung file .md trực tiếp từ API domain mẹ
   const onNodeClick = useCallback(async (_: any, node: Node) => {
@@ -277,8 +499,9 @@ export default function MapsMainCanvas() {
         const res = await fetch(url, { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
-          if (json.success && json.content) {
-            setFileContent(json.content);
+          const content = json.content || json.data?.content;
+          if (content) {
+            setFileContent(content);
             return;
           }
         }
@@ -322,7 +545,7 @@ export default function MapsMainCanvas() {
             <h1 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
               Bản đồ Tổng thể Tri thức & Thực thi (Maps Main)
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/30">
-                Live Topology
+                Auto-Align Live
               </span>
             </h1>
             <p className="text-[11px] text-slate-400 font-mono">
@@ -366,6 +589,16 @@ export default function MapsMainCanvas() {
             </button>
           </div>
 
+          {/* NÚT TỰ CĂN CHỈNH KHÔNG CẦN CHỈNH BẰNG TAY */}
+          <button
+            onClick={handleReAlign}
+            title="Tự động tính toán và căn chỉnh đều toàn bộ các node"
+            className="flex items-center gap-1.5 rounded-lg border border-indigo-500/40 bg-indigo-950/60 px-2.5 py-1 text-xs text-indigo-300 hover:text-white hover:bg-indigo-900/80 transition-colors shadow-sm"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+            Tự căn chỉnh
+          </button>
+
           <button
             onClick={loadGraphFromDomain}
             disabled={isLoading}
@@ -375,13 +608,13 @@ export default function MapsMainCanvas() {
             Sync
           </button>
 
-          <div className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/90 px-2.5 py-1 text-[11px] text-slate-300">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            Connected
-          </div>
+          <button
+            onClick={() => fitView({ padding: 0.18, duration: 300 })}
+            title="Căn giữa toàn màn hình"
+            className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/90 p-1 text-slate-300 hover:text-white transition-colors"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
@@ -394,7 +627,7 @@ export default function MapsMainCanvas() {
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.18 }}
         minZoom={0.2}
         maxZoom={1.8}
         className="pt-14"
@@ -412,7 +645,7 @@ export default function MapsMainCanvas() {
         />
       </ReactFlow>
 
-      {/* INSPECTOR DRAWER */}
+      {/* INSPECTOR DRAWER ĐỌC NỘI DUNG FILE .MD */}
       {selectedNode && (
         <div className="absolute right-4 top-16 bottom-4 z-20 w-80 md:w-96 rounded-xl border border-slate-800 bg-slate-900/95 p-4 shadow-2xl backdrop-blur-xl flex flex-col justify-between overflow-hidden animate-in fade-in slide-in-from-right-4 duration-200">
           <div>
@@ -420,7 +653,7 @@ export default function MapsMainCanvas() {
               <div className="flex items-center gap-2">
                 <Info className="h-4 w-4 text-indigo-400" />
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Chi tiết Thực thể
+                  Chi tiết Thực thể Tri thức (.md)
                 </span>
               </div>
               <button
@@ -448,40 +681,56 @@ export default function MapsMainCanvas() {
 
               {selectedNode.data.description && (
                 <div>
-                  <div className="text-[11px] font-medium text-slate-400">Chức năng & Quy tắc</div>
-                  <div className="text-xs leading-relaxed text-slate-300 mt-0.5 bg-slate-950/60 p-2.5 rounded-lg border border-white/5">
+                  <div className="text-[11px] font-medium text-slate-400">Mô tả</div>
+                  <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
                     {selectedNode.data.description}
-                  </div>
+                  </p>
                 </div>
               )}
 
               {selectedNode.data.path && (
                 <div>
-                  <div className="text-[11px] font-medium text-slate-400">Đường dẫn file (.md)</div>
-                  <div className="text-[10px] font-mono text-emerald-400 break-all mt-0.5 bg-slate-950/60 p-2 rounded border border-white/5">
+                  <div className="text-[11px] font-medium text-slate-400">Tệp tin .md liên kết</div>
+                  <div className="mt-0.5 text-xs font-mono text-emerald-400 bg-black/50 px-2 py-1.5 rounded border border-emerald-500/20 break-all">
                     {selectedNode.data.path}
                   </div>
                 </div>
               )}
 
+              {/* KHỐI NỘI DUNG MARKDOWN THỰC TẾ CỦA FILE */}
               <div>
-                <div className="text-[11px] font-medium text-slate-400 flex items-center justify-between">
-                  <span>Nội dung file trực tiếp</span>
-                  <span className="text-[9px] text-indigo-400 font-mono">Live from node_md</span>
-                </div>
-                <pre className="text-[10px] font-mono text-slate-300 bg-black/60 p-2.5 rounded-lg border border-white/5 overflow-x-auto whitespace-pre-wrap max-h-48 mt-1">
-                  {fileContent || "Đang tải nội dung file..."}
-                </pre>
+                <div className="text-[11px] font-medium text-slate-400 mb-1">Nội dung tệp (.md preview)</div>
+                {fileContent ? (
+                  <pre className="text-[11px] font-mono text-slate-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
+                    {fileContent}
+                  </pre>
+                ) : (
+                  <div className="text-[11px] italic text-slate-500 bg-slate-950/50 p-2 rounded border border-slate-800">
+                    Đang nạp nội dung file từ API domain mẹ...
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="border-t border-slate-800 pt-3 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Trạng thái: Đồng bộ Live</span>
-            <span className="text-emerald-400 font-mono">Isolated (W_1 ∩ W_2 = ∅)</span>
+          <div className="border-t border-slate-800 pt-3">
+            <button
+              onClick={() => setSelectedNode(null)}
+              className="w-full rounded-lg bg-slate-800 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+            >
+              Đóng bảng chi tiết
+            </button>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function MapsMainCanvas() {
+  return (
+    <ReactFlowProvider>
+      <MapsMainCanvasInner />
+    </ReactFlowProvider>
   );
 }
