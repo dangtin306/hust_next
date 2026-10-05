@@ -53,8 +53,8 @@ import {
 } from "./realtime/timing";
 import {
   DELAY_PLAYBACK_TIME_SCALE,
+  getDelayedParticlePlan,
   getDelayedTimelineDuration,
-  getDelayedTransitionDuration,
   getDelayedTimelineTime,
 } from "./delay/timing";
 import { getTransitionDurationMs } from "./timing";
@@ -201,6 +201,7 @@ type RealtimeProgressRun = {
   renderDelayMs: number;
   delayIncrements: number;
   transitions: Set<string>;
+  delayedNodeStartAt: Map<string, number>;
   replayStartedAt?: number;
   bufferTimer?: NodeJS.Timeout;
   particleSequence: number;
@@ -596,6 +597,7 @@ export const N8nDiagramRenderer = forwardRef<
       renderDelayMs: REALTIME_INITIAL_BUFFER_MS,
       delayIncrements: 0,
       transitions: new Set<string>(),
+      delayedNodeStartAt: new Map<string, number>(),
       particleSequence: 0,
     };
     progressRunsRef.current.set(runKey, run);
@@ -754,7 +756,8 @@ export const N8nDiagramRenderer = forwardRef<
       signalTimersRef.current.add(run.bufferTimer);
     };
     function tryScheduleTransitions() {
-      Array.from(run.steps.values()).forEach((target) => {
+      const targets = Array.from(run.steps.values()).sort((left, right) => left.startedAt - right.startedAt);
+      targets.forEach((target) => {
         if (!target.sourceNodeId) return;
         const transitionKey = getKey(target);
         if (run.transitions.has(transitionKey)) return;
@@ -785,6 +788,14 @@ export const N8nDiagramRenderer = forwardRef<
         const edge = edgesRef.current.find((candidate) => candidate.source === sourceId && candidate.target === target.nodeId);
         if (!edge) {
           console.warn("[RealtimeGraph] No displayed edge from " + sourceId + " to " + target.nodeId + "; skipping particle.");
+          if (run.displayMode === "slow") {
+            const replayBase = run.replayStartedAt || performance.now();
+            const timelineBase = run.firstStartedAt || source.startedAt;
+            run.delayedNodeStartAt.set(
+              getKey(target),
+              getDelayedTimelineTime(replayBase, timelineBase, target.startedAt),
+            );
+          }
           run.transitions.add(transitionKey);
           return;
         }
@@ -793,22 +804,26 @@ export const N8nDiagramRenderer = forwardRef<
           0,
           target.transitionGapMs ?? (target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source))),
         );
-        const measuredMs = run.displayMode === "slow"
-          ? getDelayedTransitionDuration(
-              source.startedAt,
-              target.startedAt,
-              processingMs(source),
-              transitionGapMs,
-            )
-          : getTransitionDurationMs(processingMs(source), transitionGapMs);
-        const scale = run.displayMode === "slow" ? DELAY_PLAYBACK_TIME_SCALE : 1;
-        const travelMs = measuredMs * scale;
+        let travelMs: number;
         let particleStartAt: number;
         if (run.displayMode === "slow") {
           const replayBase = run.replayStartedAt || performance.now();
           const timelineBase = run.firstStartedAt || source.startedAt;
-          particleStartAt = getDelayedTimelineTime(replayBase, timelineBase, source.startedAt);
+          const plan = getDelayedParticlePlan(
+            replayBase,
+            timelineBase,
+            source.startedAt,
+            target.startedAt,
+            processingMs(source),
+            transitionGapMs,
+            run.delayedNodeStartAt.get(getKey(source)),
+          );
+          particleStartAt = plan.startedAt;
+          travelMs = plan.durationMs;
+          run.delayedNodeStartAt.set(transitionKey, plan.targetVisualStartedAt);
         } else {
+          const measuredMs = getTransitionDurationMs(processingMs(source), transitionGapMs);
+          travelMs = measuredMs;
           const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
           particleStartAt = getRealtimeParticleStartAt(
             performance.now(),
@@ -894,11 +909,14 @@ export const N8nDiagramRenderer = forwardRef<
       run.requestFinished = true;
       if (run.displayMode === "slow" && !run.replayStartedAt) {
         run.replayStartedAt = performance.now();
+        tryScheduleTransitions();
         const replayBase = run.replayStartedAt;
         const timelineBase = run.firstStartedAt || Math.min(...Array.from(run.steps.values()).map((step) => step.startedAt));
         Array.from(run.steps.values()).forEach((step) => {
-          const startAt = getDelayedTimelineTime(replayBase, timelineBase, step.startedAt);
-          const finishAt = getDelayedTimelineTime(replayBase, timelineBase, step.completedAt ?? step.startedAt);
+          const startAt = run.delayedNodeStartAt.get(getKey(step))
+            ?? getDelayedTimelineTime(replayBase, timelineBase, step.startedAt);
+          const finishAt = startAt + Math.max(0, (step.completedAt ?? step.startedAt) - step.startedAt)
+            * DELAY_PLAYBACK_TIME_SCALE;
           scheduleAt(() => {
             setNodeStatus(
               step.nodeId,
