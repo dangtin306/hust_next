@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   ReactFlow,
   Background,
@@ -15,6 +15,7 @@ import {
   Position,
   useReactFlow,
   ReactFlowProvider,
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -33,6 +34,9 @@ import {
   Zap,
   Maximize2,
   Sparkles,
+  Copy,
+  Check,
+  Layers,
 } from "lucide-react";
 
 // ==========================================
@@ -87,7 +91,6 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     ) {
       pipelineNodes.push(node);
     } else {
-      // Nhóm mặc định nếu có node mới phát sinh
       workspaceNodes.push(node);
     }
   });
@@ -112,12 +115,12 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
   const totalVaultWidth = (nWs - 1) * colSpacingX;
   const vaultCenterX = startX + totalVaultWidth / 2;
 
-  // Tọa độ Tầng 2 (Pipeline Engine) luôn đặt bên phải Tầng 1 với khoảng cách an toàn
-  const tier2X = Math.max(startX + nWs * colSpacingX + 110, 1260);
+  // Tầng 2 (Pipeline Engine) luôn đặt bên phải Tầng 1 với khoảng cách an toàn
+  const tier2X = Math.max(startX + nWs * colSpacingX + 120, 1280);
 
   const positionedNodes: Node[] = [];
 
-  // A. Header Tầng 1 (Tự động căn giữa toàn bộ các cột workspace)
+  // A. Header Tầng 1 (Căn giữa toàn bộ các cột workspace)
   if (headerTier1) {
     positionedNodes.push({
       ...headerTier1,
@@ -165,13 +168,11 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
   // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace)
   const wsChildCountMap = new Map<number, number>();
   sessionAndFileNodes.forEach((child) => {
-    // Tìm edge nối tới child này để biết thuộc workspace nào
     const parentEdge = rawEdges.find((e) => e.target === child.id);
     let colIdx = 0;
     if (parentEdge && wsIndexMap.has(parentEdge.source)) {
       colIdx = wsIndexMap.get(parentEdge.source)!;
     } else {
-      // Thử suy luận từ id (ví dụ vault-chat-workspace_tech-0)
       for (const [wsId, idx] of wsIndexMap.entries()) {
         const rawName = wsId.replace("vault-ws-", "");
         if (child.id.includes(rawName)) {
@@ -184,8 +185,8 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     const currentCount = wsChildCountMap.get(colIdx) || 0;
     wsChildCountMap.set(colIdx, currentCount + 1);
 
-    const childX = startX + colIdx * colSpacingX + (currentCount % 2) * 15;
-    const childY = 380 + currentCount * 140;
+    const childX = startX + colIdx * colSpacingX;
+    const childY = 380 + (currentCount - 1) * 140;
 
     positionedNodes.push({
       ...child,
@@ -224,17 +225,85 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     });
   });
 
-  // 3. Chuẩn hóa Edges & Handles tự động
-  const updatedEdges = rawEdges.map((edge) => {
-    // Cầu nối liên tầng: luôn cắm từ cạnh trái Pipeline sang cạnh phải của node Tầng 1
-    if (edge.id.includes("bridge") || edge.source.startsWith("pipe-") && edge.target.startsWith("vault-")) {
+  // 3. Chuẩn hóa Edges & Handles với đường cong mượt mà (smoothstep)
+  const rightmostWs = workspaceNodes[workspaceNodes.length - 1];
+  const rightmostWsId = rightmostWs ? rightmostWs.id : null;
+
+  const updatedEdges: Edge[] = rawEdges.map((edge) => {
+    const isBridge = edge.id.includes("bridge") || (edge.source.startsWith("pipe-") && edge.target.startsWith("vault-"));
+
+    if (isBridge) {
       return {
         ...edge,
+        type: "smoothstep",
         sourceHandle: "source-left",
         targetHandle: "target-right",
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 14,
+          height: 14,
+          color: edge.id.includes("sse") ? "#06b6d4" : "#f59e0b",
+        },
+        style: {
+          stroke: edge.id.includes("sse") ? "#06b6d4" : "#f59e0b",
+          strokeDasharray: "5 5",
+          strokeWidth: 2,
+        },
       };
     }
-    return edge;
+
+    if (edge.source === "vault-agents-md") {
+      if (edge.target === "vault-soul-md") {
+        return {
+          ...edge,
+          type: "smoothstep",
+          sourceHandle: "source-left",
+          targetHandle: "target-right",
+          style: { stroke: "#a855f7", strokeDasharray: "4 4", strokeWidth: 2 },
+        };
+      }
+      if (edge.target === "vault-identity-md") {
+        return {
+          ...edge,
+          type: "smoothstep",
+          sourceHandle: "source-right",
+          targetHandle: "target-left",
+          style: { stroke: "#a855f7", strokeDasharray: "4 4", strokeWidth: 2 },
+        };
+      }
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: "source-bottom",
+        targetHandle: "target-top",
+        style: { stroke: "#a855f7", strokeWidth: 2 },
+      };
+    }
+
+    if (edge.source.startsWith("vault-ws-")) {
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: "source-bottom",
+        targetHandle: "target-top",
+        style: { stroke: "#10b981", strokeWidth: 2 },
+      };
+    }
+
+    if (edge.source.startsWith("pipe-")) {
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: "source-bottom",
+        targetHandle: "target-top",
+        style: { stroke: "#6366f1", strokeWidth: 2.5 },
+      };
+    }
+
+    return {
+      ...edge,
+      type: "smoothstep",
+    };
   });
 
   return { nodes: positionedNodes, edges: updatedEdges };
@@ -266,17 +335,17 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
 
   return (
     <div
-      className={`w-[260px] rounded-xl border p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${bgClass} ${
+      className={`w-[260px] rounded-xl border p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 relative ${bgClass} ${
         isSelected ? "ring-2 ring-purple-400 shadow-purple-500/30 shadow-2xl scale-[1.02]" : "hover:border-slate-400"
       }`}
     >
-      {/* 4-WAY HANDLES TRÁNH RỐI DÂY NỐI */}
+      {/* 4-WAY SEPARATED HANDLES */}
       <Handle type="target" position={Position.Top} id="target-top" className="!bg-purple-400 !w-2.5 !h-2.5" />
       <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-emerald-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Left} id="target-left" className="!bg-purple-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Left} id="source-left" className="!bg-purple-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Right} id="target-right" className="!bg-emerald-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} id="source-right" className="!bg-emerald-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!bg-purple-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!bg-purple-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!bg-emerald-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!bg-emerald-400 !w-2.5 !h-2.5" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -317,16 +386,16 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
   const isSelected = selected;
   return (
     <div
-      className={`w-[270px] rounded-xl border border-indigo-500/80 bg-indigo-950/40 p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${
+      className={`w-[270px] rounded-xl border border-indigo-500/80 bg-indigo-950/40 p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 relative ${
         isSelected ? "ring-2 ring-indigo-400 shadow-indigo-500/30 shadow-2xl scale-[1.02]" : "hover:border-indigo-400"
       }`}
     >
       <Handle type="target" position={Position.Top} id="target-top" className="!bg-indigo-400 !w-2.5 !h-2.5" />
       <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Left} id="target-left" className="!bg-amber-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Left} id="source-left" className="!bg-amber-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Right} id="target-right" className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} id="source-right" className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!bg-amber-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!bg-amber-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!bg-indigo-400 !w-2.5 !h-2.5" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -395,7 +464,7 @@ const INITIAL_FALLBACK_NODES: Node[] = [
     position: { x: 335, y: -80 },
     data: {
       title: "TẦNG 1: Markdown Knowledge Vault",
-      subtitle: "Không gian tri thức toán học K(c) gồm 4 domain workspaces trong OpenClaw",
+      subtitle: "Không gian tri thức toán học K(c) gồm các domain workspaces trong OpenClaw",
       icon: "vault",
     },
     selectable: false,
@@ -439,9 +508,10 @@ function MapsMainCanvasInner() {
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const [copied, setCopied] = useState<boolean>(false);
   const { fitView } = useReactFlow();
 
-  // Hàm load dữ liệu từ domain mẹ và tự động căn chỉnh
+  // Load dữ liệu từ domain mẹ và tự động căn chỉnh
   const loadGraphFromDomain = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -449,18 +519,15 @@ function MapsMainCanvasInner() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
-      // Hỗ trợ cả hai dạng response (ok / data) và (success / graph)
       const rawNodes: Node[] = json.data?.nodes || json.graph?.nodes || json.nodes || [];
       const rawEdges: Edge[] = json.data?.edges || json.graph?.edges || json.edges || [];
 
       if (rawNodes.length > 0) {
-        // TỰ ĐỘNG CĂN CHỈNH ĐỐI XỨNG CÂN ĐỐI DỰA TRÊN CẤU TRÚC THỰC TẾ
         const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(rawNodes, rawEdges);
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
         setLastSyncTime(new Date().toLocaleTimeString());
 
-        // Tự động fitView sau khi DOM cập nhật
         setTimeout(() => {
           fitView({ padding: 0.18, duration: 400 });
         }, 100);
@@ -491,6 +558,7 @@ function MapsMainCanvasInner() {
     if (node.type === "sectionLabelNode") return;
     setSelectedNode(node);
     setFileContent(null);
+    setCopied(false);
 
     const relativePath = node.data?.path as string | undefined;
     if (relativePath) {
@@ -511,6 +579,13 @@ function MapsMainCanvasInner() {
     }
     setFileContent((node.data?.content as string) || null);
   }, []);
+
+  const handleCopyContent = useCallback(() => {
+    if (!fileContent) return;
+    navigator.clipboard.writeText(fileContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [fileContent]);
 
   const filteredNodes = useMemo(() => {
     if (activeFilter === "vault") {
@@ -533,6 +608,13 @@ function MapsMainCanvasInner() {
     );
   }, [edges, filteredNodes]);
 
+  const stats = useMemo(() => {
+    const wsCount = nodes.filter((n) => n.data?.category === "workspace").length;
+    const sessionCount = nodes.filter((n) => n.data?.category === "session").length;
+    const pipeCount = nodes.filter((n) => n.type === "pipelineNode").length;
+    return { wsCount, sessionCount, pipeCount };
+  }, [nodes]);
+
   return (
     <div className="relative h-[88vh] w-full rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl overflow-hidden font-sans">
       {/* HEADER BAR */}
@@ -548,8 +630,14 @@ function MapsMainCanvasInner() {
                 Auto-Align Live
               </span>
             </h1>
-            <p className="text-[11px] text-slate-400 font-mono">
-              Domain mẹ: <span className="text-indigo-400">node_md.hust.media</span> &bull; {lastSyncTime ? `Đồng bộ: ${lastSyncTime}` : "Đang tải..."}
+            <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
+              <span>Domain: <strong className="text-indigo-400">node_md.hust.media</strong></span>
+              <span>&bull;</span>
+              <span>{stats.wsCount} Workspaces</span>
+              <span>&bull;</span>
+              <span>{stats.sessionCount} Sessions</span>
+              <span>&bull;</span>
+              <span>{stats.pipeCount} Pipeline Nodes</span>
             </p>
           </div>
         </div>
@@ -565,7 +653,7 @@ function MapsMainCanvasInner() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              Toàn cảnh (Dual-Tier)
+              Toàn cảnh
             </button>
             <button
               onClick={() => setActiveFilter("vault")}
@@ -575,7 +663,7 @@ function MapsMainCanvasInner() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              Cây Tri thức (.md)
+              Tri thức (.md)
             </button>
             <button
               onClick={() => setActiveFilter("pipeline")}
@@ -589,7 +677,7 @@ function MapsMainCanvasInner() {
             </button>
           </div>
 
-          {/* NÚT TỰ CĂN CHỈNH KHÔNG CẦN CHỈNH BẰNG TAY */}
+          {/* NÚT TỰ CĂN CHỈNH */}
           <button
             onClick={handleReAlign}
             title="Tự động tính toán và căn chỉnh đều toàn bộ các node"
@@ -625,6 +713,7 @@ function MapsMainCanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onPaneClick={() => setSelectedNode(null)}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.18 }}
@@ -699,7 +788,18 @@ function MapsMainCanvasInner() {
 
               {/* KHỐI NỘI DUNG MARKDOWN THỰC TẾ CỦA FILE */}
               <div>
-                <div className="text-[11px] font-medium text-slate-400 mb-1">Nội dung tệp (.md preview)</div>
+                <div className="flex items-center justify-between text-[11px] font-medium text-slate-400 mb-1">
+                  <span>Nội dung tệp (.md preview)</span>
+                  {fileContent && (
+                    <button
+                      onClick={handleCopyContent}
+                      className="flex items-center gap-1 text-[10px] text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      <span>{copied ? "Đã chép" : "Sao chép"}</span>
+                    </button>
+                  )}
+                </div>
                 {fileContent ? (
                   <pre className="text-[11px] font-mono text-slate-200 bg-slate-950 p-2.5 rounded-lg border border-slate-800 whitespace-pre-wrap max-h-48 overflow-y-auto leading-relaxed">
                     {fileContent}
