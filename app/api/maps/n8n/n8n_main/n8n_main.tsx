@@ -804,10 +804,17 @@ export const N8nDiagramRenderer = forwardRef<
         const transitionGapMs = Math.max(0, target.transitionGapMs ?? observedGapMs);
         const sourceProcessingMs = processingMs(source);
         const targetProcessingMs = processingMs(target);
+        const sourceEndAt = source.completedAt ?? source.startedAt + sourceProcessingMs;
+        const targetEndAt = target.completedAt ?? target.startedAt + targetProcessingMs;
+        const overlapMs = Math.max(
+          0,
+          Math.min(sourceEndAt, targetEndAt) - Math.max(source.startedAt, target.startedAt),
+        );
         const rawTravelMs = getRawTransitionDurationMs(
           sourceProcessingMs,
           targetProcessingMs,
           transitionGapMs,
+          overlapMs,
         );
         let travelMs: number;
         let particleStartAt: number;
@@ -821,6 +828,7 @@ export const N8nDiagramRenderer = forwardRef<
             sourceProcessingMs,
             targetProcessingMs,
             transitionGapMs,
+            overlapMs,
             source.visualMidpointAt ?? run.delayedNodeStartAt.get(getKey(source)),
           );
           particleStartAt = plan.startedAt;
@@ -834,6 +842,7 @@ export const N8nDiagramRenderer = forwardRef<
             sourceProcessingMs,
             targetProcessingMs,
             transitionGapMs,
+            overlapMs,
           );
           travelMs = measuredMs;
           const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
@@ -852,6 +861,7 @@ export const N8nDiagramRenderer = forwardRef<
           to: { id: target.nodeId, label: target.label },
           sourceProcessingSeconds: Number((sourceProcessingMs / 1000).toFixed(3)),
           gapSeconds: Number((transitionGapMs / 1000).toFixed(3)),
+          overlapSeconds: Number((overlapMs / 1000).toFixed(3)),
           targetProcessingSeconds: Number((targetProcessingMs / 1000).toFixed(3)),
           rawTravelSeconds: Number((rawTravelMs / 1000).toFixed(3)),
           particleTravelSeconds: Number((travelMs / 1000).toFixed(3)),

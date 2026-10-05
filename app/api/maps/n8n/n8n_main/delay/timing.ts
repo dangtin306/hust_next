@@ -19,8 +19,9 @@ export function getDelayedTransitionDuration(
   sourceProcessingMs: number,
   targetProcessingMs: number,
   gapMs: number,
+  overlapMs: number,
 ) {
-  return getTransitionDurationMs(sourceProcessingMs, targetProcessingMs, gapMs);
+  return getTransitionDurationMs(sourceProcessingMs, targetProcessingMs, gapMs, overlapMs);
 }
 
 export function getDelayedParticlePlan(
@@ -30,6 +31,7 @@ export function getDelayedParticlePlan(
   sourceProcessingMs: number,
   targetProcessingMs: number,
   gapMs: number,
+  overlapMs: number,
   sourceVisualMidpointAt?: number,
 ) {
   const nominalStartAt = getDelayedTimelineTime(
@@ -45,6 +47,7 @@ export function getDelayedParticlePlan(
     sourceProcessingMs,
     targetProcessingMs,
     gapMs,
+    overlapMs,
   );
   const durationMs = Math.max(MIN_DELAYED_PARTICLE_TRAVEL_MS, measuredDurationMs)
     * DELAY_PLAYBACK_TIME_SCALE;
