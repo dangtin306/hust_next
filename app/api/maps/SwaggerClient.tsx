@@ -11,11 +11,12 @@ type SwaggerClientProps = {
   className?: string;
   compact?: boolean;
   serverStorageKey?: string;
-  proxyOpenClawRequests?: boolean;
 };
 
+export const OPENCLAW_SERVER_URL_STORAGE_KEY = "openclaw_main_swagger_server_url_v2";
 const SERVER_URL_STORAGE_KEY = "openclaw_swagger_server_url";
 const SERVER_URL_TTL_MS = 12 * 60 * 60 * 1000;
+const SERVER_URL_CHANGE_EVENT = "swagger-server-url-change";
 
 const getInitialServerUrl = (spec: Record<string, unknown>) => {
   const servers = spec.servers;
@@ -34,7 +35,6 @@ export default function SwaggerClient({
   className = "",
   compact = false,
   serverStorageKey = SERVER_URL_STORAGE_KEY,
-  proxyOpenClawRequests = false,
 }: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const defaultServerUrl = getInitialServerUrl(spec);
@@ -77,6 +77,20 @@ export default function SwaggerClient({
   }, [defaultServerUrl, serverStorageKey, serverUrl]);
 
   useEffect(() => {
+    const handleServerUrlChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string; url?: string }>).detail;
+      if (detail?.key !== serverStorageKey || typeof detail.url !== "string") return;
+      const nextUrl = detail.url.trim().replace(/\/$/, "");
+      if (!nextUrl) return;
+      setIsReady(false);
+      setServerUrl(nextUrl);
+    };
+
+    window.addEventListener(SERVER_URL_CHANGE_EVENT, handleServerUrlChange);
+    return () => window.removeEventListener(SERVER_URL_CHANGE_EVENT, handleServerUrlChange);
+  }, [serverStorageKey]);
+
+  useEffect(() => {
     let disposed = false;
     let ui: { destroy?: () => void; preauthorizeApiKey?: (key: string, value: string) => void } | undefined;
 
@@ -108,30 +122,6 @@ export default function SwaggerClient({
       ui = SwaggerUIBundle({
         domNode: containerRef.current,
         spec: activeSpec,
-        requestInterceptor: (request: { url: string; headers?: Record<string, string> }) => {
-          if (!proxyOpenClawRequests || typeof window === "undefined") return request;
-
-          try {
-            const requestUrl = new URL(request.url, window.location.origin);
-            if (requestUrl.origin === window.location.origin) return request;
-
-            const openClawPath = requestUrl.pathname.match(/^(.*?\/openclaw)(?:\/(.*))?$/i);
-            if (!openClawPath) return request;
-
-            const upstreamBase = `${requestUrl.origin}${openClawPath[1]}`;
-            const apiPath = openClawPath[2] || "";
-            const basePath = window.location.pathname.match(/^\/[^/]+/)?.[0] || "";
-            request.url = `${window.location.origin}${basePath}/api/openclaw/${apiPath}${requestUrl.search}`;
-            request.headers = {
-              ...request.headers,
-              "x-openclaw-target": upstreamBase,
-            };
-          } catch {
-            // Leave malformed or non-OpenClaw URLs to Swagger's normal request handling.
-          }
-
-          return request;
-        },
         deepLinking: true,
         layout: "BaseLayout",
         persistAuthorization: true,
@@ -217,6 +207,11 @@ export default function SwaggerClient({
           window.localStorage.setItem(
             serverStorageKey,
             JSON.stringify({ url: nextUrl, savedAt: Date.now() }),
+          );
+          window.dispatchEvent(
+            new CustomEvent(SERVER_URL_CHANGE_EVENT, {
+              detail: { key: serverStorageKey, url: nextUrl },
+            }),
           );
           popover.hidden = true;
           setIsReady(false);
@@ -347,7 +342,7 @@ export default function SwaggerClient({
       disposed = true;
       ui?.destroy?.();
     };
-  }, [compact, hideEmptySpecNotice, proxyOpenClawRequests, serverStorageKey, serverUrl, spec]);
+  }, [compact, hideEmptySpecNotice, serverStorageKey, serverUrl, spec]);
 
   return (
     <>

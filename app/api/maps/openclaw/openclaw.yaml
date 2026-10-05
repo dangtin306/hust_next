@@ -489,9 +489,8 @@ paths:
         URL production: `https://node_md.hust.media/openclaw/v2/list`.
         Gửi `Accept: application/json` và `Authorization: Bearer media_tech`.
 
-        Local: giữ nguyên server/port đã cấu hình trong Swagger (không đổi sang cổng 8818
-        ghi trong tài liệu nguồn). Gọi trực tiếp theo cấu hình hiện tại:
-        `http://localhost:3003/openclaw/v2/list`.
+        Swagger gửi request trực tiếp đến server đang chọn ở phần Servers. Không chuyển request
+        qua Next.js proxy; nếu đổi API URL, tất cả operation dùng server URL đã chọn.
 
         Ví dụ PowerShell:
         ```powershell
@@ -991,9 +990,9 @@ paths:
         `GET /openclaw/v2/list`. API trả nội dung phản hồi của OpenClaw để kiểm tra kết quả.
         API này không cập nhật SQL hoặc `user_session.json`.
 
-        Ví dụ gọi local:
+        Ví dụ gọi production trực tiếp:
         ```bash
-        curl -X POST "http://localhost:3003/openclaw/v2/workspace/select" \\
+        curl -X POST "https://node_md.hust.media/openclaw/v2/workspace/select" \\
           -H "Content-Type: application/json" \\
           -d '{"user_id":502,"work_space_code":"workspace_openclaw_support"}'
         ```

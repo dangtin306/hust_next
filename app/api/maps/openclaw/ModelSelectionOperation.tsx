@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import SwaggerClient from "../SwaggerClient";
+import SwaggerClient, { OPENCLAW_SERVER_URL_STORAGE_KEY } from "../SwaggerClient";
 
 const modelSelectionSpec = {
   openapi: "3.0.3",
@@ -137,8 +137,16 @@ export default function ModelSelectionOperation() {
   if (!portalNode) return null;
   return createPortal(
     <div className="model-selection-operations">
-      <SwaggerClient spec={modelSelectionSpec} compact />
-      <SwaggerClient spec={resetChatSpec} compact />
+      <SwaggerClient
+        spec={modelSelectionSpec}
+        compact
+        serverStorageKey={OPENCLAW_SERVER_URL_STORAGE_KEY}
+      />
+      <SwaggerClient
+        spec={resetChatSpec}
+        compact
+        serverStorageKey={OPENCLAW_SERVER_URL_STORAGE_KEY}
+      />
     </div>,
     portalNode,
   );

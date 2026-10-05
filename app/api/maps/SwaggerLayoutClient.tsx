@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import ServiceCategoryPanel, {
   type ServiceCategory,
 } from "./openclaw/ServiceCategoryPanel";
-import SwaggerClient from "./SwaggerClient";
+import SwaggerClient, { OPENCLAW_SERVER_URL_STORAGE_KEY } from "./SwaggerClient";
 import SwaggerSwitcher from "./SwaggerSwitcher";
 import LaravelServicePanel from "./laravel/LaravelServicePanel";
 import ConversationResponseOperation from "./openclaw/ConversationResponseOperation";
@@ -117,10 +117,9 @@ export default function SwaggerLayoutClient({
               isLaravel
                 ? "laravel_swagger_server_url_v2"
                 : isOpenClaw
-                  ? "openclaw_main_swagger_server_url_v2"
+                  ? OPENCLAW_SERVER_URL_STORAGE_KEY
                   : undefined
             }
-            proxyOpenClawRequests={isOpenClaw}
           />
           {!isLaravel ? (
             <>

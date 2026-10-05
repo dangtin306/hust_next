@@ -2,13 +2,13 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import SwaggerClient from "../SwaggerClient";
+import SwaggerClient, { OPENCLAW_SERVER_URL_STORAGE_KEY } from "../SwaggerClient";
 
 const secondResponseSpec = {
   openapi: "3.0.3",
   info: { title: "Second response", version: "1.0.0" },
   servers: [
-    { url: "https://node_js.hust.media/openclaw", description: "OpenClaw Production Gateway" },
+    { url: "https://node_md.hust.media/", description: "OpenClaw Production Gateway" },
     { url: "http://localhost:2999/openclaw", description: "Node.js Gateway Local (cổng 2999)" },
     { url: "http://localhost:8818", description: "Backend Node.js local (cổng 8818)" },
     { url: "https://nginx.hust.media/go/ai/test", description: "Backend test" },
@@ -91,7 +91,11 @@ export default function SecondResponseOperation() {
 
   if (!portalNode) return null;
   return createPortal(
-    <SwaggerClient spec={secondResponseSpec} compact />,
+    <SwaggerClient
+      spec={secondResponseSpec}
+      compact
+      serverStorageKey={OPENCLAW_SERVER_URL_STORAGE_KEY}
+    />,
     portalNode,
   );
 }
