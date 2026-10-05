@@ -155,10 +155,17 @@ export function normalizePosition(position: unknown): { x: number; y: number } {
 
 
 type RealtimeSignalEdgeData = {
-  signalActive?: boolean;
-  signalVersion?: number;
-  signalDurationMs?: number;
+  particles?: RealtimeSignalParticle[];
 };
+
+type RealtimeSignalParticle = {
+  id: string;
+  startedAt: number;
+  durationMs: number;
+  laneOffset: number;
+};
+
+const EMPTY_SIGNAL_PARTICLES: RealtimeSignalParticle[] = [];
 
 type RealtimeProgressStep = {
   nodeId: string;
@@ -172,83 +179,109 @@ type RealtimeProgressStep = {
   terminalStatus: LiveNodeStatus;
   terminalLabel?: string;
   sourceNodeId?: string;
+  serviceSignal?: boolean;
+  formatSignal?: boolean;
   arrivedAt?: number;
+  arrivedPerf?: number;
+  visualStartAt?: number;
+  visualBufferMs?: number;
+  visualStarted?: boolean;
+  visualTimer?: NodeJS.Timeout;
   requestStart?: boolean;
 };
 
 type RealtimeProgressRun = {
   displayMode: SignalDisplayMode;
-  active: RealtimeProgressStep | null;
-  queue: RealtimeProgressStep[];
-  deferredServices: RealtimeProgressStep[];
-  transitStep: RealtimeProgressStep | null;
-  apiObserved: boolean;
-  inTransit: boolean;
+  steps: Map<string, RealtimeProgressStep>;
+  firstStartedAt?: number;
+  firstArrivedPerf?: number;
+  renderDelayMs: number;
+  delayIncrements: number;
+  transitions: Set<string>;
+  replayStartedAt?: number;
+  bufferTimer?: NodeJS.Timeout;
+  particleSequence: number;
   requestFinished?: boolean;
 };
 
-const SIGNAL_TRAVEL_MS = 700;
-const REALTIME_SIGNAL_TRAVEL_MS = 160;
-const REALTIME_NODE_MIN_LIGHT_MS = 80;
-const SLOW_SIGNAL_DURATION_SCALE = 5;
-const SLOW_SIGNAL_MIN_TRAVEL_MS = 500;
-const SLOW_NODE_FLASH_MS = 500;
+const REALTIME_NODE_PULSE_MS = 1000;
+const REALTIME_NODE_SIGNAL_TIMEOUT_MS = 2000;
+const REALTIME_INITIAL_BUFFER_MS = 1000;
+const REALTIME_MAX_BUFFER_INCREASES = 10;
+const REALTIME_NODE_MIN_LIGHT_MS = 1000;
+const SLOW_PLAYBACK_TIME_SCALE = 4;
+const MIN_MEASURED_TIMELINE_MS = 80;
 type SignalDisplayMode = "realtime" | "slow";
 
 function RealtimeSignalEdge(props: EdgeProps) {
   const [path] = getBezierPath(props);
   const data = (props.data || {}) as RealtimeSignalEdgeData;
-  const version = data.signalVersion ?? 0;
-  const duration = data.signalDurationMs ?? SIGNAL_TRAVEL_MS;
-  const active = data.signalActive === true;
+  const particles = data.particles ?? EMPTY_SIGNAL_PARTICLES;
   const motionPathRef = useRef<SVGPathElement>(null);
-  const signalRef = useRef<SVGCircleElement>(null);
+  const particleRefs = useRef<Map<string, SVGCircleElement>>(new Map());
 
   useEffect(() => {
-    if (!active) return;
+    if (!particles.length) return;
     const motionPath = motionPathRef.current;
-    const signal = signalRef.current;
-    if (!motionPath || !signal) return;
+    if (!motionPath) return;
 
     const pathLength = motionPath.getTotalLength();
-    const durationMs = Math.max(1, duration);
-    const startedAt = performance.now();
     let frameId = 0;
 
     const moveSignal = (now: number) => {
-      const progress = Math.min(1, (now - startedAt) / durationMs);
-      const point = motionPath.getPointAtLength(pathLength * progress);
-      signal.setAttribute("cx", String(point.x));
-      signal.setAttribute("cy", String(point.y));
-      if (progress < 1) frameId = requestAnimationFrame(moveSignal);
+      let moving = false;
+      particles.forEach((particle) => {
+        const signal = particleRefs.current.get(particle.id);
+        if (!signal) return;
+        const elapsed = now - particle.startedAt;
+        if (elapsed < 0) {
+          const startPoint = motionPath.getPointAtLength(0);
+          signal.setAttribute("cx", String(startPoint.x));
+          signal.setAttribute("cy", String(startPoint.y));
+          moving = true;
+          return;
+        }
+        const progress = Math.min(1, elapsed / Math.max(1, particle.durationMs));
+        const point = motionPath.getPointAtLength(pathLength * progress);
+        const before = motionPath.getPointAtLength(Math.max(0, pathLength * progress - 1));
+        const after = motionPath.getPointAtLength(Math.min(pathLength, pathLength * progress + 1));
+        const tangentX = after.x - before.x;
+        const tangentY = after.y - before.y;
+        const tangentLength = Math.max(1, Math.hypot(tangentX, tangentY));
+        signal.setAttribute("cx", String(point.x - (tangentY / tangentLength) * particle.laneOffset));
+        signal.setAttribute("cy", String(point.y + (tangentX / tangentLength) * particle.laneOffset));
+        if (progress < 1) moving = true;
+      });
+      if (moving) frameId = requestAnimationFrame(moveSignal);
     };
 
-    const startPoint = motionPath.getPointAtLength(0);
-    signal.setAttribute("cx", String(startPoint.x));
-    signal.setAttribute("cy", String(startPoint.y));
     frameId = requestAnimationFrame(moveSignal);
     return () => cancelAnimationFrame(frameId);
-  }, [active, duration, path, version]);
+  }, [particles, path]);
 
   return (
     <g
       data-realtime-edge-id={props.id}
-      data-signal-active={active ? "true" : "false"}
-      data-signal-duration-ms={active ? duration : undefined}
+      data-signal-active={particles.length ? "true" : "false"}
+      data-signal-count={particles.length}
       data-signal-source={props.source}
       data-signal-target={props.target}
     >
       <BaseEdge id={props.id} path={path} style={props.style} markerEnd={props.markerEnd} />
       <path ref={motionPathRef} d={path} fill="none" stroke="none" aria-hidden="true" />
-      {active && (
+      {particles.map((particle) => (
         <circle
-          key={version}
-          ref={signalRef}
+          key={particle.id}
+          ref={(element) => {
+            if (element) particleRefs.current.set(particle.id, element);
+            else particleRefs.current.delete(particle.id);
+          }}
+          data-signal-particle={particle.id}
           r="4"
           fill="#a5f3fc"
           filter="drop-shadow(0 0 5px #22d3ee)"
         />
-      )}
+      ))}
     </g>
   );
 }
@@ -541,6 +574,7 @@ export const N8nDiagramRenderer = forwardRef<
       timeoutMs = 6000,
       terminalHoldMs = 1000,
       minimumRunningMs = 2000,
+      pulseDurationMs?: number,
     ) => {
       const targets = Array.isArray(target) ? target : [target];
       const visibleDurationMs =
@@ -574,6 +608,9 @@ export const N8nDiagramRenderer = forwardRef<
                 liveStatus: status,
                 signalVersion:
                   status === "idle" ? Number(n.data.signalVersion || 0) : Number(n.data.signalVersion || 0) + 1,
+                signalPulseDurationMs: status === "running" && Number.isFinite(pulseDurationMs)
+                  ? Math.max(1, pulseDurationMs || 0)
+                  : undefined,
                 ...(subLabel !== undefined ? { subLabel } : {}),
               },
             };
@@ -600,6 +637,7 @@ export const N8nDiagramRenderer = forwardRef<
                   data: {
                     ...n.data,
                     liveStatus: "idle",
+                    signalPulseDurationMs: undefined,
                     subLabel: "",
                   },
                 };
@@ -620,181 +658,359 @@ export const N8nDiagramRenderer = forwardRef<
   const enqueueSignalProgress = useCallback((
     runKey: string,
     incoming: RealtimeProgressStep | null,
-    options: { started?: boolean; deferredService?: boolean; flushDeferred?: boolean } = {},
+    options: { started?: boolean; flushDeferred?: boolean } = {},
   ) => {
     const run = progressRunsRef.current.get(runKey) || {
       displayMode: signalDisplayModeRef.current,
-      active: null, queue: [], deferredServices: [], transitStep: null, apiObserved: false, inTransit: false,
+      steps: new Map<string, RealtimeProgressStep>(),
+      renderDelayMs: REALTIME_INITIAL_BUFFER_MS,
+      delayIncrements: 0,
+      transitions: new Set<string>(),
+      particleSequence: 0,
     };
     progressRunsRef.current.set(runKey, run);
-    const schedule = (callback: () => void, delayMs: number) => {
-      const timer = setTimeout(() => { signalTimersRef.current.delete(timer); callback(); }, delayMs);
+
+    const scheduleAt = (callback: () => void, when: number) => {
+      const timer = setTimeout(() => {
+        signalTimersRef.current.delete(timer);
+        callback();
+      }, Math.max(0, when - performance.now()));
       signalTimersRef.current.add(timer);
+      return timer;
     };
-    const updateStep = (step: RealtimeProgressStep) => {
-      if (!incoming?.terminal) return;
-      step.terminal = incoming.terminal;
-      step.terminalStatus = incoming.terminalStatus;
-      step.terminalLabel = incoming.terminalLabel;
-      step.durationMs = incoming.durationMs;
-      step.completedAt = incoming.completedAt;
-      step.transitionGapMs = incoming.transitionGapMs;
+    const getKey = (step: RealtimeProgressStep) => step.requestStart
+      ? "request-start"
+      : step.activityId
+        ? "signal:" + step.activityId
+        : "node:" + step.nodeId + ":" + step.startedAt;
+    const processingMs = (step: RealtimeProgressStep) => Number.isFinite(step.durationMs)
+      ? Math.max(0, step.durationMs || 0)
+      : Number.isFinite(step.completedAt)
+        ? Math.max(0, (step.completedAt || 0) - step.startedAt)
+        : 0;
+    const resolveSource = (target: RealtimeProgressStep) => {
+      // The format lifecycle's backend context records the public API node as
+      // its source. When this request actually dispatched an OpenClaw service,
+      // the visual execution path must continue from the last service that
+      // completed before formatting began.
+      if (target.formatSignal) {
+        const completedServices = Array.from(run.steps.values()).filter((step) =>
+          step !== target &&
+          step.serviceSignal &&
+          step.terminal &&
+          Number.isFinite(step.completedAt) &&
+          (step.completedAt || 0) <= target.startedAt + 1000 &&
+          edgesRef.current.some((edge) => edge.source === step.nodeId && edge.target === target.nodeId),
+        );
+        const lastService = completedServices.sort((left, right) =>
+          (right.completedAt || 0) - (left.completedAt || 0),
+        )[0];
+        if (lastService) return lastService;
+      }
+      const requestedSource = target.sourceNodeId
+        ? BACKEND_NODE_ID_ALIASES[target.sourceNodeId] || target.sourceNodeId
+        : "";
+      const possibleSources = Array.from(run.steps.values()).filter((step) =>
+        step !== target &&
+        step.nodeId !== target.nodeId &&
+        step.startedAt <= target.startedAt + 1000 &&
+        (!requestedSource || step.nodeId === requestedSource) &&
+        edgesRef.current.some((edge) => edge.source === step.nodeId && edge.target === target.nodeId),
+      );
+      return possibleSources.sort((left, right) => {
+        const leftEnded = left.terminal && Number.isFinite(left.completedAt) ? 1 : 0;
+        const rightEnded = right.terminal && Number.isFinite(right.completedAt) ? 1 : 0;
+        return rightEnded - leftEnded || Math.abs(left.startedAt - target.startedAt) - Math.abs(right.startedAt - target.startedAt);
+      })[0];
     };
-    function startStep(step: RealtimeProgressStep) {
-      step.arrivedAt = Date.now();
-      run.active = step;
-      if (run.displayMode === "slow") {
+    const showNode = (step: RealtimeProgressStep) => {
+      step.visualStarted = true;
+      step.visualTimer = undefined;
+      step.visualBufferMs = run.renderDelayMs;
+      if (step.terminal) {
+        setNodeStatus(
+          step.nodeId,
+          step.terminalStatus,
+          step.terminalLabel || step.label,
+          REALTIME_NODE_MIN_LIGHT_MS,
+          REALTIME_NODE_MIN_LIGHT_MS,
+        );
+      } else {
         setNodeStatus(
           step.nodeId,
           "running",
-          step.terminalLabel || step.label,
-          SLOW_NODE_FLASH_MS,
-          SLOW_NODE_FLASH_MS,
-          0,
+          step.label + " • đang chạy",
+          REALTIME_NODE_SIGNAL_TIMEOUT_MS,
+          REALTIME_NODE_MIN_LIGHT_MS,
+          REALTIME_NODE_SIGNAL_TIMEOUT_MS,
+          REALTIME_NODE_PULSE_MS,
         );
-        advance();
-        return;
       }
-
-      if (step.requestStart) {
-        setNodeStatus(step.nodeId, "success", step.terminalLabel || "Request nhận được", REALTIME_NODE_MIN_LIGHT_MS);
-        advance();
-        return;
+      if (run.displayMode === "realtime") tryScheduleTransitions();
+    };
+    const scheduleRealtimeNode = (step: RealtimeProgressStep) => {
+      if (
+        run.displayMode !== "realtime" ||
+        step.visualStarted ||
+        Boolean(step.sourceNodeId) ||
+        !Number.isFinite(run.firstStartedAt) ||
+        !Number.isFinite(run.firstArrivedPerf)
+      ) return;
+      if (step.visualTimer) {
+        clearTimeout(step.visualTimer);
+        signalTimersRef.current.delete(step.visualTimer);
       }
-
-      setNodeStatus(
-        step.nodeId,
-        step.terminal ? step.terminalStatus : "running",
-        step.terminalLabel || `${step.label} • đang chạy`,
-        step.terminal ? REALTIME_NODE_MIN_LIGHT_MS : 120000,
-      );
-      if (step.terminal) advance();
-    }
-
-    function advance() {
-      if (run.inTransit) return;
-      const active = run.active;
-      if (!active) {
-        if (!run.queue.length || (run.displayMode === "slow" && !run.requestFinished)) return;
-        startStep(run.queue.shift()!);
-        return;
-      }
-      if (!active.terminal || !run.queue.length) return;
-      if (run.displayMode === "slow" && !run.requestFinished) return;
-
-      const nextIndex = run.queue.findIndex((step) => step.sourceNodeId === active.nodeId);
-      const next = run.queue.splice(nextIndex >= 0 ? nextIndex : 0, 1)[0];
-      if (!next) return;
-      const edge = edgesRef.current.find((candidate) => candidate.source === active.nodeId && candidate.target === next.nodeId);
-      if (next.sourceNodeId && next.sourceNodeId !== active.nodeId) {
-        console.warn(`[RealtimeGraph] Event source ${next.sourceNodeId} does not match active node ${active.nodeId}.`);
-      }
-      const measuredProcessingMs = Number.isFinite(active.durationMs)
-        ? Math.max(0, active.durationMs || 0)
-        : Number.isFinite(active.completedAt)
-          ? Math.max(0, (active.completedAt || 0) - active.startedAt)
-          : 0;
-      const sourceCompletedAt = Number.isFinite(active.completedAt)
-        ? active.completedAt || 0
-        : active.startedAt + measuredProcessingMs;
-      const measuredGapMs = Number.isFinite(next.transitionGapMs)
-        ? Math.max(0, next.transitionGapMs || 0)
-        : Math.max(0, next.startedAt - sourceCompletedAt);
-      const measuredSegmentMs = measuredProcessingMs + measuredGapMs;
-      const travelMs = run.displayMode === "slow"
-        ? Math.max(SLOW_SIGNAL_MIN_TRAVEL_MS, measuredSegmentMs * SLOW_SIGNAL_DURATION_SCALE)
-        : REALTIME_SIGNAL_TRAVEL_MS;
-      const edgeSignalVersion = edge
-        ? Number((edge.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) + 1
-        : 0;
-      if (edge) {
+      const backendOffset = Math.max(0, step.startedAt - (run.firstStartedAt || step.startedAt));
+      const plannedAt = (run.firstArrivedPerf || performance.now()) + backendOffset + run.renderDelayMs;
+      step.visualStartAt = Math.max(performance.now(), plannedAt);
+      step.visualTimer = scheduleAt(() => showNode(step), step.visualStartAt);
+    };
+    const addParticle = (edgeId: string, particle: RealtimeSignalParticle) => {
+      setEdges((current) => {
+        const updated = current.map((edge) => {
+          if (edge.id !== edgeId) return edge;
+          const data = (edge.data || {}) as RealtimeSignalEdgeData;
+          const particles = data.particles || [];
+          if (particles.some((existing) => existing.id === particle.id)) return edge;
+          const occupiedLanes = new Set(particles.map((existing) => existing.laneOffset));
+          let laneOffset = 0;
+          for (let lane = 0; lane <= particles.length; lane += 1) {
+            const candidates = lane === 0 ? [0] : [lane * 3, lane * -3];
+            const available = candidates.find((candidate) => !occupiedLanes.has(candidate));
+            if (available !== undefined) {
+              laneOffset = available;
+              break;
+            }
+          }
+          return { ...edge, data: { ...data, particles: [...particles, { ...particle, laneOffset }] } };
+        });
+        edgesRef.current = updated;
+        return updated;
+      });
+      scheduleAt(() => {
         setEdges((current) => {
-          const updated = current.map((item) => item.id === edge.id
-            ? { ...item, data: { ...(item.data || {}), signalActive: true, signalDurationMs: travelMs,
-                signalVersion: edgeSignalVersion } }
-            : item);
+          const updated = current.map((edge) => {
+            if (edge.id !== edgeId) return edge;
+            const data = (edge.data || {}) as RealtimeSignalEdgeData;
+            return {
+              ...edge,
+              data: { ...data, particles: (data.particles || []).filter((item) => item.id !== particle.id) },
+            };
+          });
           edgesRef.current = updated;
           return updated;
         });
-      } else {
-        console.warn(`[RealtimeGraph] No displayed edge from ${active.nodeId} to ${next.nodeId}; skipping particle.`);
-      }
+      }, particle.startedAt + particle.durationMs);
+    };
 
-      if (run.displayMode === "realtime") {
-        // Keep live node state tied to backend events. The particle is a visual
-        // cue only and must not delay the next node's real start.
-        if (edge) schedule(() => setEdges((current) => {
-          const updated = current.map((item) => item.id === edge.id
-            && Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) === edgeSignalVersion
-            ? { ...item, data: { ...(item.data || {}), signalActive: false } } : item);
-          edgesRef.current = updated;
-          return updated;
-        }), travelMs);
-        setNodeStatus(active.nodeId, "idle");
-        run.inTransit = false;
-        run.transitStep = null;
-        startStep(next);
-        return;
-      }
-
-      run.inTransit = true;
-      run.transitStep = next;
-      schedule(() => {
-        if (edge) setEdges((current) => {
-          const updated = current.map((item) => item.id === edge.id
-            && Number((item.data as RealtimeSignalEdgeData | undefined)?.signalVersion || 0) === edgeSignalVersion
-            ? { ...item, data: { ...(item.data || {}), signalActive: false } } : item);
-          edgesRef.current = updated;
-          return updated;
+    const scheduleAdaptiveBufferIncrease = () => {
+      if (run.displayMode !== "realtime" || run.bufferTimer || run.delayIncrements >= REALTIME_MAX_BUFFER_INCREASES) return;
+      run.bufferTimer = setTimeout(() => {
+        const timer = run.bufferTimer;
+        if (timer) signalTimersRef.current.delete(timer);
+        run.bufferTimer = undefined;
+        const unresolved = Array.from(run.steps.values()).some((step) => !step.requestStart && !step.terminal);
+        if (!unresolved || run.requestFinished || run.delayIncrements >= REALTIME_MAX_BUFFER_INCREASES) return;
+        run.delayIncrements += 1;
+        run.renderDelayMs += 1000;
+        scheduleAdaptiveBufferIncrease();
+        run.steps.forEach(scheduleRealtimeNode);
+        run.steps.forEach((step) => {
+          if (step.visualStarted && !step.terminal) {
+            setNodeStatus(
+              step.nodeId,
+              "running",
+              step.label + " • đang chạy",
+              REALTIME_NODE_SIGNAL_TIMEOUT_MS,
+              REALTIME_NODE_MIN_LIGHT_MS,
+              REALTIME_NODE_SIGNAL_TIMEOUT_MS,
+              REALTIME_NODE_PULSE_MS,
+            );
+          }
         });
-        setNodeStatus(active.nodeId, "idle");
-        run.inTransit = false;
-        run.transitStep = null;
-        startStep(next);
-      }, edge ? travelMs : 0);
+        tryScheduleTransitions();
+      }, 1000);
+      signalTimersRef.current.add(run.bufferTimer);
+    };
+    function tryScheduleTransitions() {
+      Array.from(run.steps.values()).forEach((target) => {
+        if (!target.sourceNodeId) return;
+        const transitionKey = getKey(target);
+        if (run.transitions.has(transitionKey)) return;
+        const source = resolveSource(target);
+        if (target.nodeId === CHAT_NODE_ID) {
+          console.debug("[RealtimeGraph] chat transition candidate", {
+            source: source?.nodeId,
+            sourceVisualStarted: source?.visualStarted,
+            sourceTerminal: source?.terminal,
+            targetSource: target.sourceNodeId,
+            targetStartedAt: target.startedAt,
+          });
+        }
+        if (!source) return;
+        if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal)) return;
+        // A realtime target can start almost simultaneously with its source
+        // (for example, the API lifecycle and its nested Gateway service).
+        // Do not turn that near-zero start-time delta into an 80 ms particle:
+        // wait for the source's measured duration, then animate using that
+        // duration plus the measured gap before the target began.
+        if (run.displayMode === "realtime" && !source.terminal) return;
+        // In realtime, the source must be visibly lit before its particle can
+        // leave. This prevents a delayed buffer adjustment from making a
+        // particle appear mid-edge or arrive before its source node lights.
+        if (run.displayMode === "realtime" && !source.visualStarted) return;
+
+        const sourceId = source.nodeId;
+        const edge = edgesRef.current.find((candidate) => candidate.source === sourceId && candidate.target === target.nodeId);
+        if (!edge) {
+          console.warn("[RealtimeGraph] No displayed edge from " + sourceId + " to " + target.nodeId + "; skipping particle.");
+          run.transitions.add(transitionKey);
+          return;
+        }
+
+        const startSeparation = Math.max(0, target.startedAt - source.startedAt);
+        const processingAndGap = processingMs(source) + Math.max(
+          0,
+          target.transitionGapMs ?? (target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source))),
+        );
+        const measuredMs = Math.max(
+          MIN_MEASURED_TIMELINE_MS,
+          run.displayMode === "realtime"
+            ? processingAndGap
+            : startSeparation || processingAndGap,
+        );
+        const scale = run.displayMode === "slow" ? SLOW_PLAYBACK_TIME_SCALE : 1;
+        const travelMs = measuredMs * scale;
+        let particleStartAt: number;
+        if (run.displayMode === "slow") {
+          const replayBase = run.replayStartedAt || performance.now();
+          const timelineBase = run.firstStartedAt || source.startedAt;
+          particleStartAt = replayBase + Math.max(0, source.startedAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
+        } else {
+          const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
+          const deferredBuffer = Math.max(0, run.renderDelayMs - sourceBuffer);
+          particleStartAt = Math.max(
+            performance.now(),
+            (source.visualStartAt ?? performance.now()) + deferredBuffer,
+          );
+        }
+        run.transitions.add(transitionKey);
+        const particle: RealtimeSignalParticle = {
+          id: runKey + ":" + transitionKey,
+          startedAt: particleStartAt,
+          durationMs: travelMs,
+          laneOffset: (run.particleSequence++ % 5 - 2) * 3,
+        };
+        if (particleStartAt + travelMs > performance.now()) {
+          scheduleAt(() => addParticle(edge.id, particle), particleStartAt);
+        }
+        if (run.displayMode === "realtime" && !target.visualStarted) {
+          target.visualStartAt = particleStartAt + travelMs;
+          target.visualTimer = scheduleAt(() => showNode(target), target.visualStartAt);
+        }
+      });
     }
 
     if (incoming) {
-      const existing = [run.active, run.transitStep, ...run.queue, ...run.deferredServices]
-        .find((step) => step && (incoming.activityId
-          ? step.activityId === incoming.activityId
-          : !step.activityId && step.nodeId === incoming.nodeId)) as RealtimeProgressStep | undefined;
-      if (run.displayMode === "slow" && options.started && !incoming.requestStart) {
-        const requestStartStep = [run.active, ...run.queue].find((step) => step?.requestStart && step.durationMs === undefined);
-        if (requestStartStep) {
-          requestStartStep.durationMs = Math.max(0, incoming.startedAt - requestStartStep.startedAt);
+      const arrivedPerf = performance.now();
+      incoming.arrivedAt ??= Date.now();
+      incoming.arrivedPerf ??= arrivedPerf;
+      const key = getKey(incoming);
+      const existing = run.steps.get(key);
+      const step = existing || incoming;
+      if (existing) {
+        step.sourceNodeId ||= incoming.sourceNodeId;
+        step.transitionGapMs = incoming.transitionGapMs ?? step.transitionGapMs;
+        if (incoming.terminal) {
+          step.terminal = true;
+          step.terminalStatus = incoming.terminalStatus;
+          step.terminalLabel = incoming.terminalLabel;
+          step.durationMs = incoming.durationMs;
+          step.completedAt = incoming.completedAt;
+          step.label = incoming.terminalLabel || incoming.label || step.label;
         }
-      }
-      if (options.deferredService && !run.apiObserved) {
-        if (existing) updateStep(existing); else run.deferredServices.push(incoming);
-      } else if (existing) {
-        updateStep(existing);
-        if (incoming.terminal && run.active === existing && run.displayMode === "realtime") {
-          setNodeStatus(existing.nodeId, incoming.terminalStatus, incoming.terminalLabel || existing.label, REALTIME_NODE_MIN_LIGHT_MS);
-        }
-      } else if (!options.started) {
-        run.queue.push(incoming);
       } else {
-        run.queue.push(incoming);
+        run.steps.set(key, step);
       }
-      if (incoming.nodeId === OPENCLAW_API_NODE_ID) {
-        run.apiObserved = true;
-        run.queue.push(...run.deferredServices.splice(0));
+
+      if (!Number.isFinite(run.firstStartedAt) || step.startedAt < (run.firstStartedAt || Infinity)) {
+        run.firstStartedAt = step.startedAt;
+        run.firstArrivedPerf = step.arrivedPerf || arrivedPerf;
       }
-      advance();
+      if (run.displayMode === "realtime" && options.started && !step.terminal) {
+        scheduleAdaptiveBufferIncrease();
+      }
+      if (!Number.isFinite(step.visualStartAt) && Number.isFinite(run.firstStartedAt) && Number.isFinite(run.firstArrivedPerf)) {
+        scheduleRealtimeNode(step);
+      }
+      if (run.displayMode === "slow" && options.started && !step.requestStart) {
+        const requestStartStep = Array.from(run.steps.values()).find((candidate) => candidate.requestStart && candidate.durationMs === undefined);
+        if (requestStartStep) requestStartStep.durationMs = Math.max(0, step.startedAt - requestStartStep.startedAt);
+      }
+      if (run.displayMode === "realtime" && step.terminal && step.visualStarted) {
+        setNodeStatus(
+          step.nodeId,
+          step.terminalStatus,
+          step.terminalLabel || step.label,
+          REALTIME_NODE_MIN_LIGHT_MS,
+          REALTIME_NODE_MIN_LIGHT_MS,
+        );
+      }
+      if (run.displayMode === "realtime" && step.terminal) {
+        const stillRunning = Array.from(run.steps.values()).some((candidate) => !candidate.requestStart && !candidate.terminal);
+        if (!stillRunning && run.bufferTimer) {
+          clearTimeout(run.bufferTimer);
+          signalTimersRef.current.delete(run.bufferTimer);
+          run.bufferTimer = undefined;
+        }
+      }
+      tryScheduleTransitions();
     }
+
     if (options.flushDeferred) {
       run.requestFinished = true;
-      run.queue.push(...run.deferredServices.splice(0));
-      advance();
-      schedule(() => {
-        if (progressRunsRef.current.get(runKey) === run) {
-          progressRunsRef.current.delete(runKey);
-        }
-      }, 120000);
+      if (run.displayMode === "slow" && !run.replayStartedAt) {
+        run.replayStartedAt = performance.now();
+        const replayBase = run.replayStartedAt;
+        const timelineBase = run.firstStartedAt || Math.min(...Array.from(run.steps.values()).map((step) => step.startedAt));
+        Array.from(run.steps.values()).forEach((step) => {
+          const startAt = replayBase + Math.max(0, step.startedAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
+          const finishAt = replayBase + Math.max(0, (step.completedAt ?? step.startedAt) - timelineBase) * SLOW_PLAYBACK_TIME_SCALE;
+          scheduleAt(() => {
+            setNodeStatus(
+              step.nodeId,
+              "running",
+              step.label + " • đang chạy",
+              REALTIME_NODE_MIN_LIGHT_MS,
+              REALTIME_NODE_MIN_LIGHT_MS,
+              0,
+              REALTIME_NODE_PULSE_MS,
+            );
+            step.visualStarted = true;
+            step.visualStartAt = startAt;
+          }, startAt);
+          if (step.terminal && Number.isFinite(step.completedAt) && !step.requestStart) {
+            scheduleAt(() => setNodeStatus(
+              step.nodeId,
+              step.terminalStatus,
+              step.terminalLabel || step.label,
+              REALTIME_NODE_MIN_LIGHT_MS,
+              REALTIME_NODE_MIN_LIGHT_MS,
+            ), finishAt);
+          }
+        });
+      }
+      tryScheduleTransitions();
+      const lastEventAt = Math.max(...Array.from(run.steps.values()).map((step) => step.completedAt ?? step.startedAt));
+      const timelineBase = run.firstStartedAt || lastEventAt;
+      const tail = run.displayMode === "slow" ? Math.max(0, lastEventAt - timelineBase) * SLOW_PLAYBACK_TIME_SCALE : 0;
+      const cleanupTimer = setTimeout(() => {
+        signalTimersRef.current.delete(cleanupTimer);
+        if (progressRunsRef.current.get(runKey) === run) progressRunsRef.current.delete(runKey);
+      }, Math.max(120000, tail + 15000));
+      signalTimersRef.current.add(cleanupTimer);
     }
   }, [setEdges, setNodeStatus]);
-
   const changeSignalDisplayMode = useCallback((mode: SignalDisplayMode) => {
     signalDisplayModeRef.current = mode;
     setSignalDisplayMode(mode);
@@ -999,11 +1215,12 @@ export const N8nDiagramRenderer = forwardRef<
             terminalStatus,
             ...(isTerminal ? { terminalLabel: label } : {}),
             ...(typeof payload.source_node_id === "string" ? { sourceNodeId: payload.source_node_id } : {}),
+            ...(isServiceStage ? { serviceSignal: true } : {}),
+            ...(targetNodeId === OPENCLAW_FORMAT_NODE_ID ? { formatSignal: true } : {}),
             ...(eventName === "request.started" ? { requestStart: true } : {}),
           };
           enqueueSignalProgress(requestGroupId!, step, {
             started: eventName === "request.started" || eventName === "stage.started",
-            deferredService: isServiceStage,
           });
         }
         if (eventName === "stage.failed" && !serviceNodeId && !isFormatStage && !isGraphNodeEvent && !isGatewayChatEvent) {
@@ -1162,7 +1379,7 @@ export const N8nDiagramRenderer = forwardRef<
         setEdges((current) => {
           const updated = current.map((edge) => ({
             ...edge,
-            data: { ...(edge.data || {}), signalActive: false },
+            data: { ...(edge.data || {}), particles: [] },
           }));
           edgesRef.current = updated;
           return updated;
@@ -1330,12 +1547,16 @@ export const N8nDiagramRenderer = forwardRef<
       signalTimers.forEach((t) => clearTimeout(t));
       signalTimers.clear();
       progressRuns.clear();
-      edgesRef.current = edgesRef.current.map((edge) => ({
-        ...edge,
-        data: { ...(edge.data || {}), signalActive: false },
-      }));
+      setEdges((current) => {
+        const updated = current.map((edge) => ({
+          ...edge,
+          data: { ...(edge.data || {}), particles: [] },
+        }));
+        edgesRef.current = updated;
+        return updated;
+      });
     };
-  }, [enableRealtime, sseUrl, reconnectNonce, processIncomingSSEEvent]);
+  }, [enableRealtime, sseUrl, reconnectNonce, processIncomingSSEEvent, setEdges]);
 
   return (
     <div className={`relative ${className} ${signalDisplayMode === "slow" ? "n8n-slow-view" : ""}`}>
@@ -1367,22 +1588,13 @@ export const N8nDiagramRenderer = forwardRef<
               animation: n8n-node-ping-flash 1s ease-out infinite;
             }
             .n8n-node--running {
-              animation: n8n-node-pulse 0.8s ease-in-out infinite !important;
+              animation: n8n-node-pulse var(--n8n-node-pulse-duration, 0.8s) ease-in-out infinite !important;
               box-shadow: 0 0 22px rgba(34, 211, 238, 0.85) !important;
               border-color: #22d3ee !important;
               z-index: 20 !important;
             }
             .n8n-slow-view .n8n-node--running {
-              animation: n8n-node-pulse ${SLOW_NODE_FLASH_MS}ms ease-in-out 1 both !important;
-            }
-            .n8n-slow-view .n8n-node-signal-ping {
-              animation-duration: ${SLOW_NODE_FLASH_MS}ms !important;
-              animation-iteration-count: 1 !important;
-            }
-            .n8n-slow-view .n8n-node--success,
-            .n8n-slow-view .n8n-node--slow,
-            .n8n-slow-view .n8n-node--error {
-              animation-duration: ${SLOW_NODE_FLASH_MS}ms !important;
+              animation: n8n-node-pulse var(--n8n-node-pulse-duration, 0.4s) ease-in-out 1 both !important;
             }
             .n8n-node--success {
               --signal-color: rgba(34, 197, 94, 0.9);
@@ -1434,7 +1646,7 @@ export const N8nDiagramRenderer = forwardRef<
             <button
               type="button"
               aria-pressed={signalDisplayMode === "realtime"}
-              title="Áp dụng cho lượt gọi mới; hiện tín hiệu ngay khi nhận được"
+              title="New requests use a 1-second buffer; it can grow by 1 second up to 10 times"
               onClick={() => changeSignalDisplayMode("realtime")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${signalDisplayMode === "realtime" ? "bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/50" : "text-slate-300 hover:bg-slate-800"}`}
             >
@@ -1444,7 +1656,7 @@ export const N8nDiagramRenderer = forwardRef<
             <button
               type="button"
               aria-pressed={signalDisplayMode === "slow"}
-              title="Áp dụng lượt gọi mới: nút nháy 500 ms; chấm đi theo duration_ms ×5, tối thiểu 500 ms"
+              title="New requests replay overlapping measured paths at 4x speed; node pulses last 1 second"
               onClick={() => changeSignalDisplayMode("slow")}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${signalDisplayMode === "slow" ? "bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/50" : "text-slate-300 hover:bg-slate-800"}`}
             >

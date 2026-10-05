@@ -33,6 +33,7 @@ export type FlowNodeData = {
   disabled?: boolean;
   liveStatus: LiveNodeStatus;
   signalVersion?: number;
+  signalPulseDurationMs?: number;
   subLabel?: string;
   description?: string;
   visualScope?: "architecture";
@@ -270,6 +271,7 @@ function N8nFlowNodeRenderer({ id, data }: NodeProps<Node<FlowNodeData>>) {
       <div
         key={data.signalVersion ?? 0}
         className={`w-20 h-20 rounded-2xl border-2 flex items-center justify-center shadow-lg relative transition-all duration-300 ${getBorderStatusClass()}`}
+        style={{ "--n8n-node-pulse-duration": `${Math.max(1, Number(data.signalPulseDurationMs) || 800)}ms` } as React.CSSProperties}
       >
         {targetHandleIds.map((handleId, index) => (
           <Handle
