@@ -76,25 +76,31 @@ paths:
       tags: [Workspace]
       summary: Lấy danh sách workspace
       description: |
-        Trả về danh sách workspace cùng liên kết và metadata phân trang.
-        Frontend chat có thể gọi không cần query; trang quản lý hỗ trợ lọc bằng `q`, `status` và `per_page`.
+        Trả danh sách workspace theo cấu trúc cây. Workspace cha `workspace-test` chứa trong
+        `children` các workspace con có `parent_workspace_code = "workspace-test"`.
+        Workspace cha có `is_selectable: false`; workspace con có `is_selectable: true`.
+        Pagination tính theo số nút cha, các nút con luôn đi cùng cha và không tách qua trang.
+        Thứ tự: `workspace-test` trước, sau đó `updated_at` mới nhất và `id` giảm dần.
       security: []
       parameters:
         - name: q
           in: query
           required: false
-          description: Từ khóa tìm kiếm workspace.
+          description: Tìm theo work_space_code, agent_code, workspace_name hoặc slug; tối đa 120 ký tự.
           schema:
             type: string
+            maxLength: 120
         - name: status
           in: query
           required: false
           description: Lọc theo trạng thái workspace.
           schema:
             type: string
+            enum: [active, archived]
         - name: page
           in: query
           required: false
+          description: Trang cần lấy.
           schema:
             type: integer
             minimum: 1
@@ -102,10 +108,11 @@ paths:
         - name: per_page
           in: query
           required: false
-          description: Số workspace trên một trang.
+          description: Số nút cha mỗi trang; các workspace con đi cùng nút cha.
           schema:
             type: integer
             minimum: 1
+            maximum: 100
             default: 20
       responses:
         '200':
@@ -120,7 +127,7 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [id, workspace_name, work_space_code, status]
+                      required: [id, workspace_name, agent_code, work_space_code, status, is_selectable, children]
                       properties:
                         id:
                           type: integer
@@ -131,10 +138,13 @@ paths:
                         workspace_name:
                           type: string
                           example: Workspace Test
+                        agent_code:
+                          type: string
+                          example: test
                         parent_workspace_code:
                           type: string
                           nullable: true
-                          example: null
+                          example: openclaw
                         slug:
                           type: string
                           example: workspace-test
@@ -150,23 +160,120 @@ paths:
                         updated_at:
                           type: string
                           format: date-time
+                        is_selectable:
+                          type: boolean
+                          description: false cho workspace cha quản lý; true cho workspace con có thể chọn khi chat.
+                          example: false
+                        children:
+                          type: array
+                          description: Workspace con có parent_workspace_code khớp mã workspace cha.
+                          items:
+                            type: object
+                            required: [id, workspace_name, agent_code, work_space_code, parent_workspace_code, status, is_selectable]
+                            properties:
+                              id:
+                                type: integer
+                                example: 7
+                              workspace_name:
+                                type: string
+                                example: Workspace Tech Support
+                              agent_code:
+                                type: string
+                                example: test
+                              work_space_code:
+                                type: string
+                                example: workspace_tech_support
+                              parent_workspace_code:
+                                type: string
+                                example: workspace-test
+                              slug:
+                                type: string
+                                example: workspace-tech-support
+                              description:
+                                type: string
+                                example: Giải thích ngắn gọn công nghệ dự án đang dùng.
+                              status:
+                                type: string
+                                example: active
+                              created_at:
+                                type: string
+                                format: date-time
+                                example: "2026-10-05T10:09:18.000000Z"
+                              updated_at:
+                                type: string
+                                format: date-time
+                                example: "2026-10-05T10:09:18.000000Z"
+                              is_selectable:
+                                type: boolean
+                                example: true
                   links:
                     type: object
-                    additionalProperties: true
+                    properties:
+                      first:
+                        type: string
+                        nullable: true
+                        example: http://laravel_mt.hust.media/api/workspaces/main/data?page=1
+                      last:
+                        type: string
+                        nullable: true
+                        example: http://laravel_mt.hust.media/api/workspaces/main/data?page=1
+                      prev:
+                        type: string
+                        nullable: true
+                        example: null
+                      next:
+                        type: string
+                        nullable: true
+                        example: null
                   meta:
                     type: object
-                    additionalProperties: true
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        nullable: true
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 20
+                      to:
+                        type: integer
+                        nullable: true
+                        example: 1
+                      total:
+                        type: integer
+                        description: Tổng số nút cấp cao nhất; không tính riêng các workspace con.
+                        example: 1
               example:
                 data:
                   - id: 5
                     work_space_code: workspace-test
                     workspace_name: Workspace Test
-                    parent_workspace_code: null
+                    agent_code: test
+                    parent_workspace_code: openclaw
                     slug: workspace-test
                     description: Workspace mẹ test
                     status: active
                     created_at: "2026-10-01T15:52:28.000000Z"
                     updated_at: "2026-10-01T15:52:28.000000Z"
+                    is_selectable: false
+                    children:
+                      - id: 7
+                        workspace_name: Workspace Tech Support
+                        agent_code: test
+                        work_space_code: workspace_tech_support
+                        parent_workspace_code: workspace-test
+                        slug: workspace-tech-support
+                        description: Giải thích ngắn gọn công nghệ dự án đang dùng.
+                        status: active
+                        created_at: "2026-10-05T10:09:18.000000Z"
+                        updated_at: "2026-10-05T10:09:18.000000Z"
+                        is_selectable: true
                 links:
                   first: https://laravel_mt.hust.media/api/workspaces/main/data?page=1
                   last: https://laravel_mt.hust.media/api/workspaces/main/data?page=1
