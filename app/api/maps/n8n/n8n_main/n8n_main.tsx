@@ -779,8 +779,8 @@ export const N8nDiagramRenderer = forwardRef<
         }
         if (!source) return;
         if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal || !target.terminal)) return;
-        // Both processing durations are needed to measure the midpoint-to-midpoint
-        // route. Realtime waits for the target completion signal before planning.
+        // Use both complete processing durations and discount half of their overlap.
+        // Realtime waits for the target completion signal before planning.
         if (run.displayMode === "realtime" && (!source.terminal || !target.terminal)) return;
         // In realtime, the source must be visibly lit before its particle can
         // leave. This prevents a delayed buffer adjustment from making a
@@ -871,6 +871,7 @@ export const N8nDiagramRenderer = forwardRef<
           targetProcessingSeconds: Number((targetProcessingMs / 1000).toFixed(3)),
           rawTravelSeconds: Number((rawTravelMs / 1000).toFixed(3)),
           particleTravelSeconds: Number((travelMs / 1000).toFixed(3)),
+          timingFormula: "source + gap + target - overlap/2",
           minimumApplied: rawTravelMs < 80,
           playbackScale: run.displayMode === "slow" ? 3 : 1,
         });

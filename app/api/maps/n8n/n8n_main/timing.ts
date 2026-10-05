@@ -6,11 +6,14 @@ export function getRawTransitionDurationMs(
   gapMs: number,
   overlapMs = 0,
 ) {
-  // Keep the idle gap whole; count the shared processing interval at half weight.
-  return Math.max(0, sourceProcessingMs) / 2
+  // Keep each node's distinct processing time whole; discount half of the overlap.
+  const sourceMs = Math.max(0, sourceProcessingMs);
+  const targetMs = Math.max(0, targetProcessingMs);
+  const sharedMs = Math.min(sourceMs, targetMs, Math.max(0, overlapMs));
+  return sourceMs
     + Math.max(0, gapMs)
-    + Math.max(0, targetProcessingMs) / 2
-    - Math.max(0, overlapMs) / 2;
+    + targetMs
+    - sharedMs / 2;
 }
 
 export function getTransitionDurationMs(
