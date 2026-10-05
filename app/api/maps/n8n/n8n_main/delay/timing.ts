@@ -40,11 +40,14 @@ export function getDelayedParticlePlan(
     nominalStartAt,
     Number.isFinite(sourceVisualStartedAt) ? sourceVisualStartedAt! : nominalStartAt,
   );
-  const durationMs = Math.max(
-    MIN_DELAYED_PARTICLE_TRAVEL_MS,
-    getDelayedTransitionDuration(sourceStartedAt, targetStartedAt, processingMs, gapMs)
-      * DELAY_PLAYBACK_TIME_SCALE,
+  const measuredDurationMs = getDelayedTransitionDuration(
+    sourceStartedAt,
+    targetStartedAt,
+    processingMs,
+    gapMs,
   );
+  const durationMs = Math.max(MIN_DELAYED_PARTICLE_TRAVEL_MS, measuredDurationMs)
+    * DELAY_PLAYBACK_TIME_SCALE;
   return {
     startedAt,
     durationMs,
