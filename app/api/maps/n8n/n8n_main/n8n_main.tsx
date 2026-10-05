@@ -877,7 +877,7 @@ export const N8nDiagramRenderer = forwardRef<
           targetProcessingSeconds: Number((targetProcessingMs / 1000).toFixed(3)),
           rawTravelSeconds: Number((rawTravelMs / 1000).toFixed(3)),
           particleTravelSeconds: Number((travelMs / 1000).toFixed(3)),
-          timingFormula: "source + gap + target - overlap/2",
+          timingFormula: "source + gap - overlap/2",
           minimumApplied: rawTravelMs < 80,
           playbackScale: run.displayMode === "slow" ? 3 : 1,
         });

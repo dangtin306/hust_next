@@ -6,14 +6,12 @@ export function getRawTransitionDurationMs(
   gapMs: number,
   overlapMs = 0,
 ) {
-  // Keep each node's distinct processing time whole; discount half of the overlap.
+  // b = c + a: source processing plus the non-overlapping wait until target.
+  // When both node intervals overlap, discount half of their shared time.
   const sourceMs = Math.max(0, sourceProcessingMs);
   const targetMs = Math.max(0, targetProcessingMs);
   const sharedMs = Math.min(sourceMs, targetMs, Math.max(0, overlapMs));
-  return sourceMs
-    + Math.max(0, gapMs)
-    + targetMs
-    - sharedMs / 2;
+  return Math.max(0, sourceMs + Math.max(0, gapMs) - sharedMs / 2);
 }
 
 export function getTransitionDurationMs(
