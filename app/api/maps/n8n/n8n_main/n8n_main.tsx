@@ -187,6 +187,7 @@ type RealtimeProgressStep = {
   arrivedPerf?: number;
   visualStartAt?: number;
   visualMidpointAt?: number;
+  visualArrivalAt?: number;
   visualBufferMs?: number;
   visualStarted?: boolean;
   visualTimer?: NodeJS.Timeout;
@@ -857,8 +858,13 @@ export const N8nDiagramRenderer = forwardRef<
             sourceMidpointAt,
             sourceBuffer,
             run.renderDelayMs,
+            source.visualArrivalAt,
           );
           target.visualMidpointAt = (target.visualStartAt ?? particleStartAt + travelMs) + targetProcessingMs / 2;
+          // Keep a single request's path causal: its outgoing particle waits
+          // until the incoming particle reaches this node. Sibling branches
+          // still share the same arrival time and can move concurrently.
+          target.visualArrivalAt = particleStartAt + travelMs;
         }
         console.info("[RealtimeGraph] Particle travel timing", {
           runId: runKey,

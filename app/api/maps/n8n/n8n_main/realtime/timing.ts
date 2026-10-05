@@ -16,7 +16,11 @@ export function getRealtimeParticleStartAt(
   sourceVisualStartAt: number,
   sourceBufferMs: number,
   currentBufferMs: number,
+  sourceArrivalAt?: number,
 ) {
   const deferredBufferMs = Math.max(0, currentBufferMs - sourceBufferMs);
-  return Math.max(now, sourceVisualStartAt + deferredBufferMs);
+  const sourceReadyAt = Number.isFinite(sourceArrivalAt)
+    ? sourceArrivalAt!
+    : Number.NEGATIVE_INFINITY;
+  return Math.max(now, sourceVisualStartAt + deferredBufferMs, sourceReadyAt);
 }
