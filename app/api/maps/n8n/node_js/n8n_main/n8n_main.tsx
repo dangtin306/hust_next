@@ -630,7 +630,7 @@ export const N8nDiagramRenderer = forwardRef<
       signalTimersRef.current.add(timer);
       return timer;
     };
-    const getKey = (step: RealtimeProgressStep) => step.requestStart
+    const getKey = (step: RealtimeProgressStep) => step.requestStart || step.nodeId === NODE_BACKEND_ARCHITECTURE_NODE_IDS.ingress
       ? "request-start"
       : step.activityId
         ? "signal:" + step.activityId
@@ -1164,6 +1164,11 @@ export const N8nDiagramRenderer = forwardRef<
       if (existing) {
         step.sourceNodeId ||= incoming.sourceNodeId;
         step.transitionGapMs = incoming.transitionGapMs ?? step.transitionGapMs;
+        if (!incoming.terminal) {
+          step.terminal = false;
+          step.startedAt = Math.min(step.startedAt, incoming.startedAt);
+          step.label = incoming.label || step.label;
+        }
         if (incoming.terminal) {
           step.terminal = true;
           step.terminalStatus = incoming.terminalStatus;
@@ -1467,7 +1472,7 @@ export const N8nDiagramRenderer = forwardRef<
               : Number.isFinite(payload.completed_at_ms) ? { completedAt: Number(payload.completed_at_ms) } : {}),
             ...(isTerminal ? { durationMs: duration } : {}),
             ...(Number.isFinite(payload.transition_gap_ms) ? { transitionGapMs: Number(payload.transition_gap_ms) } : {}),
-            terminal: isTerminal || eventName === "request.started",
+            terminal: isTerminal,
             terminalStatus,
             ...(isTerminal ? { terminalLabel: label } : {}),
             ...(typeof payload.source_node_id === "string" ? { sourceNodeId: payload.source_node_id } : {}),
