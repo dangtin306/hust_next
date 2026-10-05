@@ -13,7 +13,6 @@ import {
   type Edge,
   Handle,
   Position,
-  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -65,27 +64,34 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
 
   return (
     <div
-      className={`min-w-[210px] max-w-[270px] rounded-xl border p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${bgClass} ${
+      className={`w-[260px] rounded-xl border p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${bgClass} ${
         isSelected ? "ring-2 ring-purple-400 shadow-purple-500/30 shadow-2xl scale-[1.02]" : "hover:border-slate-400"
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-purple-400 !w-2.5 !h-2.5" />
+      {/* HANDLES ON ALL 4 SIDES TO PREVENT LINE TANGLING */}
+      <Handle type="target" position={Position.Top} id="target-top" className="!bg-purple-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-emerald-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Left} id="target-left" className="!bg-purple-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Left} id="source-left" className="!bg-purple-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Right} id="target-right" className="!bg-emerald-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} id="source-right" className="!bg-emerald-400 !w-2.5 !h-2.5" />
+
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           {data.category === "agent" ? (
-            <Shield className="h-4 w-4 text-purple-400" />
+            <Shield className="h-4 w-4 shrink-0 text-purple-400" />
           ) : data.category === "workspace" ? (
-            <FolderTree className="h-4 w-4 text-emerald-400" />
+            <FolderTree className="h-4 w-4 shrink-0 text-emerald-400" />
           ) : data.category === "session" ? (
-            <FileText className="h-4 w-4 text-cyan-400" />
+            <FileText className="h-4 w-4 shrink-0 text-cyan-400" />
           ) : (
-            <FileCode className="h-4 w-4 text-slate-400" />
+            <FileCode className="h-4 w-4 shrink-0 text-slate-400" />
           )}
-          <span className="font-semibold text-xs tracking-wide text-white truncate max-w-[150px]">
+          <span className="font-semibold text-xs tracking-wide text-white truncate max-w-[140px]">
             {data.label}
           </span>
         </div>
-        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${badgeColor}`}>
+        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${badgeColor}`}>
           {data.badge || data.math}
         </span>
       </div>
@@ -101,8 +107,6 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
           {data.path}
         </div>
       )}
-
-      <Handle type="source" position={Position.Bottom} className="!bg-emerald-400 !w-2.5 !h-2.5" />
     </div>
   );
 }
@@ -111,27 +115,34 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
   const isSelected = selected;
   return (
     <div
-      className={`min-w-[220px] max-w-[280px] rounded-xl border border-indigo-500/80 bg-indigo-950/40 p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${
+      className={`w-[270px] rounded-xl border border-indigo-500/80 bg-indigo-950/40 p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 ${
         isSelected ? "ring-2 ring-indigo-400 shadow-indigo-500/30 shadow-2xl scale-[1.02]" : "hover:border-indigo-400"
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      {/* HANDLES */}
+      <Handle type="target" position={Position.Top} id="target-top" className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Left} id="target-left" className="!bg-amber-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Left} id="source-left" className="!bg-amber-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Right} id="target-right" className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="source" position={Position.Right} id="source-right" className="!bg-indigo-400 !w-2.5 !h-2.5" />
+
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           {data.icon === "webhook" ? (
-            <Radio className="h-4 w-4 text-amber-400 animate-pulse" />
+            <Radio className="h-4 w-4 shrink-0 text-amber-400 animate-pulse" />
           ) : data.icon === "code" ? (
-            <Code2 className="h-4 w-4 text-sky-400" />
+            <Code2 className="h-4 w-4 shrink-0 text-sky-400" />
           ) : data.icon === "ai" ? (
-            <Cpu className="h-4 w-4 text-pink-400" />
+            <Cpu className="h-4 w-4 shrink-0 text-pink-400" />
           ) : (
-            <Workflow className="h-4 w-4 text-indigo-400" />
+            <Workflow className="h-4 w-4 shrink-0 text-indigo-400" />
           )}
           <span className="font-semibold text-xs tracking-wide text-white truncate max-w-[150px]">
             {data.label}
           </span>
         </div>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-indigo-500/20 text-indigo-300 border-indigo-500/40">
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 bg-indigo-500/20 text-indigo-300 border-indigo-500/40">
           {data.badge}
         </span>
       </div>
@@ -147,24 +158,22 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
           {data.subtext}
         </div>
       )}
-
-      <Handle type="source" position={Position.Bottom} className="!bg-indigo-400 !w-2.5 !h-2.5" />
     </div>
   );
 }
 
 function SectionLabelNode({ data }: { data: any }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/50 p-4 shadow-2xl backdrop-blur-xl">
-      <div className="flex items-center gap-2 text-sm font-bold tracking-wider uppercase text-white">
+    <div className="w-[340px] rounded-2xl border border-white/10 bg-black/60 p-3.5 shadow-2xl backdrop-blur-xl text-center">
+      <div className="flex items-center justify-center gap-2 text-xs font-bold tracking-wider uppercase text-white">
         {data.icon === "vault" ? (
-          <BookOpen className="h-4 w-4 text-purple-400" />
+          <BookOpen className="h-4 w-4 text-purple-400 shrink-0" />
         ) : (
-          <Zap className="h-4 w-4 text-amber-400" />
+          <Zap className="h-4 w-4 text-amber-400 shrink-0" />
         )}
-        {data.title}
+        <span>{data.title}</span>
       </div>
-      <p className="mt-1 text-xs text-slate-400 max-w-[320px]">{data.subtitle}</p>
+      <p className="mt-1 text-[11px] text-slate-400 leading-snug">{data.subtitle}</p>
     </div>
   );
 }
@@ -176,14 +185,14 @@ const nodeTypes = {
 };
 
 // ==========================================
-// FALLBACK DATA (NẾU CHƯA LOAD XONG API)
+// FALLBACK DATA (CÂN ĐỐI)
 // ==========================================
 
 const FALLBACK_NODES: Node[] = [
   {
     id: "header-tier1",
     type: "sectionLabelNode",
-    position: { x: 50, y: -100 },
+    position: { x: 340, y: -80 },
     data: {
       title: "TẦNG 1: Markdown Knowledge Vault",
       subtitle: "Không gian tri thức toán học c ∈ W ∈ A gắn với các file .md trong OpenClaw",
@@ -194,10 +203,10 @@ const FALLBACK_NODES: Node[] = [
   {
     id: "header-tier2",
     type: "sectionLabelNode",
-    position: { x: 950, y: -100 },
+    position: { x: 1040, y: -80 },
     data: {
       title: "TẦNG 2: n8n Execution Engine",
-      subtitle: "Pipeline thực thi động 5-6 node nạp động file .md qua Dynamic Path Resolution",
+      subtitle: "Pipeline thực thi động 5 node nạp động file .md qua Dynamic Path Resolution",
       icon: "pipeline",
     },
     selectable: false,
@@ -205,14 +214,14 @@ const FALLBACK_NODES: Node[] = [
   {
     id: "vault-agents-md",
     type: "vaultNode",
-    position: { x: 120, y: 30 },
+    position: { x: 380, y: 40 },
     data: {
       label: "AGENTS.md",
       category: "agent",
       badge: "Global f_A",
       math: "f_A(A)",
       description: "Định nghĩa vai trò toàn cục, triết lý vận hành & toán tử hợp Monoid.",
-      path: "/AGENTS.md",
+      path: "/workspace_maps_main/AGENTS.md",
     },
   },
 ];
@@ -385,7 +394,7 @@ export default function MapsMainCanvas() {
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.15 }}
         minZoom={0.2}
         maxZoom={1.8}
         className="pt-14"
