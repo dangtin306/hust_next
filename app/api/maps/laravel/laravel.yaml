@@ -6,9 +6,9 @@ info:
   description: |
     Contract downstream giữa Laravel và Node.js OpenClaw Gateway.
 
-    Tài liệu cũng có nhóm `Chat Bot` cho các API Laravel cũ tại
-    `https://laravel.hust.media`; đây là các route frontend gọi vào Laravel,
-    tách biệt với các route downstream Laravel gọi Node.js bên dưới.
+    Tài liệu cũng có nhóm `Chat Bot` cho các API Laravel cũ. Các route này
+    dùng cùng Server đang chọn trong Swagger với các API Laravel khác; chỉ
+    đường dẫn và cơ chế session là khác.
 
     Tài liệu này không mô tả frontend và không mô tả các API gọi trực tiếp
     OpenAI hoặc Gemini. Laravel gọi một endpoint chung của OpenClaw Gateway:
@@ -43,10 +43,6 @@ info:
 servers:
   - url: https://laravel_mt.hust.media
     description: Laravel MT API mặc định
-  - url: http://127.0.0.1:8818
-    description: Gateway OpenClaw Node.js local
-  - url: https://nginx.hust.media/go/ai/test
-    description: Gateway OpenClaw Node.js test
 
 tags:
   - name: Chat Bot
@@ -336,9 +332,6 @@ paths:
                 success: false
 
   /api/chat/bot/rooms:
-    servers:
-      - url: https://laravel.hust.media
-        description: Laravel Chat Bot cũ
     get:
       operationId: getLaravelChatBotRooms
       tags: [Chat Bot]
@@ -489,9 +482,6 @@ paths:
           $ref: '#/components/responses/ChatBotError'
 
   /api/chat/bot/rooms/list:
-    servers:
-      - url: https://laravel.hust.media
-        description: Laravel Chat Bot cũ
     post:
       operationId: listLaravelChatBotRooms
       tags: [Chat Bot]
@@ -561,9 +551,6 @@ paths:
           $ref: '#/components/responses/ChatBotError'
 
   /api/chat/bot/rooms/{roomId}/messages/list:
-    servers:
-      - url: https://laravel.hust.media
-        description: Laravel Chat Bot cũ
     parameters:
       - name: roomId
         in: path
@@ -671,9 +658,6 @@ paths:
           $ref: '#/components/responses/ChatBotError'
 
   /api/chat/bot/rooms/{roomId}/messages:
-    servers:
-      - url: https://laravel.hust.media
-        description: Laravel Chat Bot cũ
     parameters:
       - name: roomId
         in: path
@@ -823,9 +807,6 @@ paths:
           $ref: '#/components/responses/ChatBotError'
 
   /api/chat/bot/rooms/{roomId}:
-    servers:
-      - url: https://laravel.hust.media
-        description: Laravel Chat Bot cũ
     parameters:
       - name: roomId
         in: path
