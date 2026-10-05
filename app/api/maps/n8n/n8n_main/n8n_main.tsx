@@ -1390,7 +1390,7 @@ export const N8nDiagramRenderer = forwardRef<
 
     // Refit when a new graph snapshot arrives.
     const fitFrame = requestAnimationFrame(() => {
-      reactFlowInstanceRef.current?.fitView({ padding: 0.2, duration: 250 });
+      reactFlowInstanceRef.current?.fitView({ padding: 0.15, duration: 250 });
     });
     return () => cancelAnimationFrame(fitFrame);
   }, [graph, setNodes, setEdges]);
@@ -1548,7 +1548,7 @@ export const N8nDiagramRenderer = forwardRef<
       <ReactFlow
         onInit={(instance) => {
           reactFlowInstanceRef.current = instance;
-          instance.fitView({ padding: 0.2 });
+          instance.fitView({ padding: 0.15 });
         }}
         nodes={nodes}
         edges={edges}
@@ -1563,7 +1563,7 @@ export const N8nDiagramRenderer = forwardRef<
           animated: false,
         }}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.15 }}
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable
