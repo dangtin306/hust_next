@@ -41,7 +41,10 @@ declare namespace __next_route_internal_types__ {
     | `/api/maps/git_test`
     | `/api/maps/gitea_test`
     | `/api/maps/laravel`
+    | `/api/maps/maps_main`
     | `/api/maps/n8n`
+    | `/api/maps/n8n/maps_main`
+    | `/api/maps/n8n/node_js`
     | `/api/maps/openclaw`
     | `/api/maps/workspace`
     | `/api/node-activity/events`
@@ -66,6 +69,9 @@ declare namespace __next_route_internal_types__ {
     | `/next/api/mt/home`
     | `/next/api/mt/laravel`
     | `/next/api/mt/n8n`
+    | `/next/api/mt/n8n/laravel`
+    | `/next/api/mt/n8n/maps_main`
+    | `/next/api/mt/n8n/node_js`
     | `/next/api/mt/openclaw`
     | `/next/api/mt/workspace`
     | `/next/chat_bot/api_1`

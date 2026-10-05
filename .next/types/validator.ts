@@ -110,6 +110,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/maps/maps_main/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/maps/maps_main">> = Specific
+  const handler = {} as typeof import("../../app/api/maps/maps_main/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/maps/n8n/maps_main/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/maps/n8n/maps_main">> = Specific
+  const handler = {} as typeof import("../../app/api/maps/n8n/maps_main/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/maps/n8n/node_js/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/maps/n8n/node_js">> = Specific
+  const handler = {} as typeof import("../../app/api/maps/n8n/node_js/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/maps/n8n/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/maps/n8n">> = Specific

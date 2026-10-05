@@ -233,6 +233,21 @@
         "regex": "^/next/api/mt/n8n(?:/)?$"
       },
       {
+        "source": "/next/api/mt/n8n/node_js",
+        "destination": "/next/api/maps/n8n/node_js",
+        "regex": "^/next/api/mt/n8n/node_js(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/n8n/maps_main",
+        "destination": "/next/api/maps/maps_main",
+        "regex": "^/next/api/mt/n8n/maps_main(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/n8n/laravel",
+        "destination": "/next/shop/ai/workflow/laravel",
+        "regex": "^/next/api/mt/n8n/laravel(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/workspace",
         "destination": "/next/api/maps/workspace",
         "regex": "^/next/api/mt/workspace(?:/)?$"
@@ -418,10 +433,28 @@
       "namedRegex": "^/api/maps/laravel(?:/)?$"
     },
     {
+      "page": "/api/maps/maps_main",
+      "regex": "^/api/maps/maps_main(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/maps/maps_main(?:/)?$"
+    },
+    {
       "page": "/api/maps/n8n",
       "regex": "^/api/maps/n8n(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/maps/n8n(?:/)?$"
+    },
+    {
+      "page": "/api/maps/n8n/maps_main",
+      "regex": "^/api/maps/n8n/maps_main(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/maps/n8n/maps_main(?:/)?$"
+    },
+    {
+      "page": "/api/maps/n8n/node_js",
+      "regex": "^/api/maps/n8n/node_js(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/maps/n8n/node_js(?:/)?$"
     },
     {
       "page": "/api/maps/openclaw",
