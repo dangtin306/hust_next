@@ -12,6 +12,8 @@ export type RealtimeSignalParticle = {
   startedAt: number;
   durationMs: number;
   laneOffset: number;
+  holdAtArrivalMs?: number;
+  waitingForNodeKey?: string;
 };
 
 export type RealtimeSignalEdgeData = {

@@ -48,6 +48,7 @@ import {
   REALTIME_BUFFER_INCREMENT_MS,
   REALTIME_INITIAL_BUFFER_MS,
   REALTIME_MAX_BUFFER_INCREASES,
+  REALTIME_MAX_BUFFER_MS,
   getRealtimeDisplayTime,
   getRealtimeParticleStartAt,
 } from "./realtime/timing";
@@ -186,9 +187,7 @@ type RealtimeProgressStep = {
   arrivedAt?: number;
   arrivedPerf?: number;
   visualStartAt?: number;
-  visualMidpointAt?: number;
   visualArrivalAt?: number;
-  visualBufferMs?: number;
   visualStarted?: boolean;
   visualTimer?: NodeJS.Timeout;
   terminalVisualShown?: boolean;
@@ -204,9 +203,11 @@ type RealtimeProgressRun = {
   delayIncrements: number;
   transitions: Set<string>;
   delayedNodeStartAt: Map<string, number>;
+  waitingParticles: Map<string, { edgeId: string; particleId: string; arrivalAt: number; cleanupTimer?: NodeJS.Timeout }>;
   replayStartedAt?: number;
   bufferTimer?: NodeJS.Timeout;
   particleSequence: number;
+  timingWaitLogs: Set<string>;
   requestFinished?: boolean;
 };
 
@@ -602,7 +603,9 @@ export const N8nDiagramRenderer = forwardRef<
       delayIncrements: 0,
       transitions: new Set<string>(),
       delayedNodeStartAt: new Map<string, number>(),
+      waitingParticles: new Map<string, { edgeId: string; particleId: string; arrivalAt: number; cleanupTimer?: NodeJS.Timeout }>(),
       particleSequence: 0,
+      timingWaitLogs: new Set<string>(),
     };
     progressRunsRef.current.set(runKey, run);
 
@@ -659,10 +662,25 @@ export const N8nDiagramRenderer = forwardRef<
         return rightEnded - leftEnded || Math.abs(left.startedAt - target.startedAt) - Math.abs(right.startedAt - target.startedAt);
       })[0];
     };
-    const showNode = (step: RealtimeProgressStep) => {
+    const showNode = (
+      step: RealtimeProgressStep,
+      cause: "request-start" | "particle-arrival" | "root-signal",
+    ) => {
       step.visualStarted = true;
       step.visualTimer = undefined;
-      step.visualBufferMs = run.renderDelayMs;
+      step.visualStartAt ??= performance.now();
+      step.visualArrivalAt ??= step.visualStartAt;
+      console.info("[RealtimeGraph] Node lit", {
+        runId: runKey,
+        cause,
+        nodeId: step.nodeId,
+        label: step.label,
+        visualStartedAt: Number(step.visualStartAt.toFixed(3)),
+        eventStartedAt: step.startedAt,
+        eventCompletedAt: step.completedAt,
+        terminal: step.terminal,
+        holdMs: step.terminal ? NODE_SIGNAL_LIGHT_MS : REALTIME_NODE_RUNNING_HOLD_MS,
+      });
       if (step.terminal) {
         if (!step.terminalVisualShown) {
           setNodeStatus(
@@ -695,6 +713,9 @@ export const N8nDiagramRenderer = forwardRef<
         !Number.isFinite(run.firstStartedAt) ||
         !Number.isFinite(run.firstArrivedPerf)
       ) return;
+      const hasIncomingEdge = edgesRef.current.some((edge) => edge.target === step.nodeId);
+      // Downstream nodes are lit only by showNode() when their particle arrives.
+      if (!step.requestStart && hasIncomingEdge) return;
       if (step.visualTimer) {
         clearTimeout(step.visualTimer);
         signalTimersRef.current.delete(step.visualTimer);
@@ -706,7 +727,40 @@ export const N8nDiagramRenderer = forwardRef<
         run.renderDelayMs,
       );
       step.visualStartAt = Math.max(performance.now(), plannedAt);
-      step.visualTimer = scheduleAt(() => showNode(step), step.visualStartAt);
+      const cause = step.requestStart ? "request-start" : "root-signal";
+      step.visualTimer = scheduleAt(() => showNode(step, cause), step.visualStartAt);
+    };
+    const removeParticle = (edgeId: string, particleId: string) => {
+      setEdges((current) => {
+        const updated = current.map((edge) => {
+          if (edge.id !== edgeId) return edge;
+          const data = (edge.data || {}) as RealtimeSignalEdgeData;
+          return {
+            ...edge,
+            data: { ...data, particles: (data.particles || []).filter((item) => item.id !== particleId) },
+          };
+        });
+        edgesRef.current = updated;
+        return updated;
+      });
+    };
+    const releaseWaitingParticle = (stepKey: string) => {
+      const waiting = run.waitingParticles.get(stepKey);
+      if (!waiting) return;
+      if (waiting.cleanupTimer) {
+        clearTimeout(waiting.cleanupTimer);
+        signalTimersRef.current.delete(waiting.cleanupTimer);
+      }
+      run.waitingParticles.delete(stepKey);
+      removeParticle(waiting.edgeId, waiting.particleId);
+      console.info("[RealtimeGraph] Waiting particle released", {
+        runId: runKey,
+        nodeKey: stepKey,
+        edgeId: waiting.edgeId,
+        particleId: waiting.particleId,
+        heldAtNodeMs: Number(Math.max(0, performance.now() - waiting.arrivalAt).toFixed(3)),
+        reason: "next-edge-timing-ready",
+      });
     };
     const addParticle = (edgeId: string, particle: RealtimeSignalParticle) => {
       setEdges((current) => {
@@ -730,20 +784,41 @@ export const N8nDiagramRenderer = forwardRef<
         edgesRef.current = updated;
         return updated;
       });
-      scheduleAt(() => {
-        setEdges((current) => {
-          const updated = current.map((edge) => {
-            if (edge.id !== edgeId) return edge;
-            const data = (edge.data || {}) as RealtimeSignalEdgeData;
-            return {
-              ...edge,
-              data: { ...data, particles: (data.particles || []).filter((item) => item.id !== particle.id) },
-            };
-          });
-          edgesRef.current = updated;
-          return updated;
+      if (particle.waitingForNodeKey) {
+        const arrivalAt = particle.startedAt + particle.durationMs;
+        run.waitingParticles.set(particle.waitingForNodeKey, { edgeId, particleId: particle.id, arrivalAt });
+        console.info("[RealtimeGraph] Particle will wait at node", {
+          runId: runKey,
+          nodeKey: particle.waitingForNodeKey,
+          edgeId,
+          particleId: particle.id,
+          arrivalAt: Number(arrivalAt.toFixed(3)),
+          maxHoldMs: particle.holdAtArrivalMs || 0,
+          releaseWhen: "next-edge timing is available",
         });
-      }, particle.startedAt + particle.durationMs);
+      }
+      const cleanupTimer = scheduleAt(() => {
+        removeParticle(edgeId, particle.id);
+        if (particle.waitingForNodeKey) {
+          const waiting = run.waitingParticles.get(particle.waitingForNodeKey);
+          if (waiting?.particleId === particle.id) {
+            run.waitingParticles.delete(particle.waitingForNodeKey);
+            console.warn("[RealtimeGraph] Particle wait reached limit", {
+              runId: runKey,
+              nodeKey: particle.waitingForNodeKey,
+              edgeId,
+              particleId: particle.id,
+              heldAtNodeMs: Number(Math.max(0, performance.now() - waiting.arrivalAt).toFixed(3)),
+              maxHoldMs: particle.holdAtArrivalMs || 0,
+              reason: "next-edge timing did not arrive before the wait limit",
+            });
+          }
+        }
+      }, particle.startedAt + particle.durationMs + (particle.holdAtArrivalMs || 0));
+      if (particle.waitingForNodeKey) {
+        const waiting = run.waitingParticles.get(particle.waitingForNodeKey);
+        if (waiting?.particleId === particle.id) waiting.cleanupTimer = cleanupTimer;
+      }
     };
 
     const scheduleAdaptiveBufferIncrease = () => {
@@ -755,7 +830,25 @@ export const N8nDiagramRenderer = forwardRef<
         const unresolved = Array.from(run.steps.values()).some((step) => !step.requestStart && !step.terminal);
         if (!unresolved || run.requestFinished || run.delayIncrements >= REALTIME_MAX_BUFFER_INCREASES) return;
         run.delayIncrements += 1;
-        run.renderDelayMs += REALTIME_BUFFER_INCREMENT_MS;
+        run.renderDelayMs = Math.min(
+          REALTIME_MAX_BUFFER_MS,
+          run.renderDelayMs + REALTIME_BUFFER_INCREMENT_MS,
+        );
+        console.info("[RealtimeGraph] Waiting for node timing", {
+          runId: runKey,
+          waitMs: run.renderDelayMs,
+          maxWaitMs: REALTIME_MAX_BUFFER_MS,
+          incrementMs: REALTIME_BUFFER_INCREMENT_MS,
+          increments: run.delayIncrements,
+          maxWaitReached: run.renderDelayMs >= REALTIME_MAX_BUFFER_MS,
+          unresolvedNodes: Array.from(run.steps.values())
+            .filter((step) => !step.requestStart && !step.terminal)
+            .map((step) => ({
+              nodeId: step.nodeId,
+              label: step.label,
+              waitedMs: Math.max(0, performance.now() - (step.arrivedPerf || performance.now())),
+            })),
+        });
         scheduleAdaptiveBufferIncrease();
         run.steps.forEach(scheduleRealtimeNode);
         tryScheduleTransitions();
@@ -765,7 +858,7 @@ export const N8nDiagramRenderer = forwardRef<
     function tryScheduleTransitions() {
       const targets = Array.from(run.steps.values()).sort((left, right) => left.startedAt - right.startedAt);
       targets.forEach((target) => {
-        if (!target.sourceNodeId) return;
+        if (target.requestStart) return;
         const transitionKey = getKey(target);
         if (run.transitions.has(transitionKey)) return;
         const source = resolveSource(target);
@@ -778,7 +871,20 @@ export const N8nDiagramRenderer = forwardRef<
             targetStartedAt: target.startedAt,
           });
         }
-        if (!source) return;
+        if (!source) {
+          const waitKey = transitionKey + ":source-not-seen";
+          if (!run.timingWaitLogs.has(waitKey)) {
+            run.timingWaitLogs.add(waitKey);
+            console.info("[RealtimeGraph] Waiting for source timing", {
+              runId: runKey,
+              targetNodeId: target.nodeId,
+              requestedSourceNodeId: target.sourceNodeId,
+              targetStartedAt: target.startedAt,
+              reason: "no matching upstream step received yet",
+            });
+          }
+          return;
+        }
         if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal || !target.terminal)) return;
         const sourceProcessingMs = processingMs(source);
         const targetProcessingMs = processingMs(target);
@@ -791,11 +897,47 @@ export const N8nDiagramRenderer = forwardRef<
         if (
           run.displayMode === "realtime" &&
           (!source.terminal || (!target.terminal && target.startedAt < sourceEndAt))
-        ) return;
+        ) {
+          const reason = !source.terminal ? "source-duration-pending" : "overlap-duration-pending";
+          const waitKey = transitionKey + ":" + reason;
+          if (!run.timingWaitLogs.has(waitKey)) {
+            run.timingWaitLogs.add(waitKey);
+            console.info("[RealtimeGraph] Waiting for edge timing", {
+              runId: runKey,
+              fromNodeId: source.nodeId,
+              toNodeId: target.nodeId,
+              reason,
+              sourceStartedAt: source.startedAt,
+              sourceCompletedAt: source.completedAt,
+              targetStartedAt: target.startedAt,
+              targetCompletedAt: target.completedAt,
+              particleHeldAtSource: run.waitingParticles.has(getKey(source)),
+              maxParticleHoldMs: REALTIME_MAX_BUFFER_MS,
+              maxRunningLightMs: REALTIME_NODE_RUNNING_HOLD_MS,
+              waitMs: REALTIME_BUFFER_INCREMENT_MS,
+              maxWaitMs: REALTIME_MAX_BUFFER_MS,
+              waitedForTargetEventMs: Number(Math.max(0, performance.now() - (target.arrivedPerf || performance.now())).toFixed(3)),
+            });
+          }
+          return;
+        }
         // In realtime, the source must be visibly lit before its particle can
         // leave. This prevents a delayed buffer adjustment from making a
         // particle appear mid-edge or arrive before its source node lights.
-        if (run.displayMode === "realtime" && !source.visualStarted) return;
+        if (run.displayMode === "realtime" && !source.visualStarted) {
+          const waitKey = transitionKey + ":source-not-lit";
+          if (!run.timingWaitLogs.has(waitKey)) {
+            run.timingWaitLogs.add(waitKey);
+            console.info("[RealtimeGraph] Waiting for source node arrival", {
+              runId: runKey,
+              fromNodeId: source.nodeId,
+              toNodeId: target.nodeId,
+              sourceArrivalAt: source.visualArrivalAt,
+              reason: "upstream particle has not reached the source node",
+            });
+          }
+          return;
+        }
 
         const sourceId = source.nodeId;
         const edge = edgesRef.current.find((candidate) => candidate.source === sourceId && candidate.target === target.nodeId);
@@ -817,7 +959,11 @@ export const N8nDiagramRenderer = forwardRef<
           0,
           target.startedAt - sourceEndAt,
         );
-        const transitionGapMs = Math.max(0, target.transitionGapMs ?? observedGapMs);
+        // Prefer the actual monotonic spans of the selected source and target.
+        // transition_gap_ms is retained for diagnostics because some backend
+        // events calculate it against a different source during overlapping
+        // service dispatches (for example, API -> Chat starts before API ends).
+        const transitionGapMs = observedGapMs;
         const targetEndAt = target.completedAt ?? target.startedAt + targetProcessingMs;
         const overlapMs = Math.max(
           0,
@@ -842,15 +988,14 @@ export const N8nDiagramRenderer = forwardRef<
             targetProcessingMs,
             transitionGapMs,
             overlapMs,
-            source.visualMidpointAt ?? run.delayedNodeStartAt.get(getKey(source)),
+            source.visualArrivalAt ?? run.delayedNodeStartAt.get(getKey(source)),
           );
           particleStartAt = plan.startedAt;
           travelMs = plan.durationMs;
-          target.visualMidpointAt = plan.targetVisualMidpointAt;
-          run.delayedNodeStartAt.set(transitionKey, plan.targetVisualMidpointAt);
+          target.visualArrivalAt = plan.targetVisualArrivalAt;
+          run.delayedNodeStartAt.set(transitionKey, plan.targetVisualArrivalAt);
         } else {
-          const sourceMidpointAt = source.visualMidpointAt
-            ?? (source.visualStartAt ?? performance.now()) + processingMs(source) / 2;
+          const sourceVisualStartAt = source.visualStartAt ?? performance.now();
           const measuredMs = getTransitionDurationMs(
             sourceProcessingMs,
             targetProcessingMs,
@@ -858,41 +1003,98 @@ export const N8nDiagramRenderer = forwardRef<
             overlapMs,
           );
           travelMs = measuredMs;
-          const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
+          // The bounded realtime buffer is for collecting timing data. Once
+          // timing is known, do not add that buffer again to particle travel.
+          const sourceBuffer = run.renderDelayMs;
           particleStartAt = getRealtimeParticleStartAt(
             performance.now(),
-            sourceMidpointAt,
+            sourceVisualStartAt,
             sourceBuffer,
             run.renderDelayMs,
             source.visualArrivalAt,
           );
-          target.visualMidpointAt = (target.visualStartAt ?? particleStartAt + travelMs) + targetProcessingMs / 2;
+          const targetArrivalAt = particleStartAt + travelMs;
+          target.visualStartAt = targetArrivalAt;
+          target.visualArrivalAt = targetArrivalAt;
+          if (target.visualTimer) {
+            clearTimeout(target.visualTimer);
+            signalTimersRef.current.delete(target.visualTimer);
+          }
+          target.visualTimer = scheduleAt(
+            () => showNode(target, "particle-arrival"),
+            targetArrivalAt,
+          );
           // Keep a single request's path causal: its outgoing particle waits
           // until the incoming particle reaches this node. Sibling branches
           // still share the same arrival time and can move concurrently.
-          target.visualArrivalAt = particleStartAt + travelMs;
         }
+        const timingNow = performance.now();
+        const particleArrivalAt = particleStartAt + travelMs;
         console.info("[RealtimeGraph] Particle travel timing", {
           runId: runKey,
           mode: run.displayMode,
           from: { id: source.nodeId, label: source.label },
           to: { id: target.nodeId, label: target.label },
           sourceProcessingSeconds: Number((sourceProcessingMs / 1000).toFixed(3)),
+          sourceProcessingMs: Number(sourceProcessingMs.toFixed(3)),
           gapSeconds: Number((transitionGapMs / 1000).toFixed(3)),
+          gapMs: Number(transitionGapMs.toFixed(3)),
+          reportedBackendGapSeconds: Number.isFinite(target.transitionGapMs)
+            ? Number(((target.transitionGapMs || 0) / 1000).toFixed(3))
+            : null,
+          reportedBackendGapMs: Number.isFinite(target.transitionGapMs)
+            ? Number((target.transitionGapMs || 0).toFixed(3))
+            : null,
+          backendGapDifferenceMs: Number.isFinite(target.transitionGapMs)
+            ? Number((transitionGapMs - (target.transitionGapMs || 0)).toFixed(3))
+            : null,
+          gapMeasuredFrom: "selected source completed_at -> target started_at",
           overlapSeconds: Number((overlapMs / 1000).toFixed(3)),
+          overlapMs: Number(overlapMs.toFixed(3)),
+          overlapDiscountMs: Number((Math.min(sourceProcessingMs, targetProcessingMs, overlapMs) / 2).toFixed(3)),
           targetProcessingSeconds: Number((targetProcessingMs / 1000).toFixed(3)),
+          targetProcessingMs: Number(targetProcessingMs.toFixed(3)),
+          sourceStartedAt: source.startedAt,
+          sourceCompletedAt: sourceEndAt,
+          targetStartedAt: target.startedAt,
+          targetCompletedAt: targetEndAt,
           rawTravelSeconds: Number((rawTravelMs / 1000).toFixed(3)),
+          rawTravelMs: Number(rawTravelMs.toFixed(3)),
           particleTravelSeconds: Number((travelMs / 1000).toFixed(3)),
+          particleTravelMs: Number(travelMs.toFixed(3)),
           timingFormula: "source + gap - overlap/2",
           minimumApplied: rawTravelMs < 80,
           playbackScale: run.displayMode === "slow" ? 3 : 1,
+          sourceVisualStartAt: Number((source.visualStartAt ?? 0).toFixed(3)),
+          sourceVisualArrivalAt: Number((source.visualArrivalAt ?? 0).toFixed(3)),
+          particleScheduledAt: Number(particleStartAt.toFixed(3)),
+          particleStartsInMs: Number(Math.max(0, particleStartAt - timingNow).toFixed(3)),
+          particleArrivalAt: Number(particleArrivalAt.toFixed(3)),
+          nodeLightsAtParticleArrival: run.displayMode === "realtime",
+          nodeLightsInMs: Number(Math.max(0, particleArrivalAt - timingNow).toFixed(3)),
+          sourceTerminal: source.terminal,
+          targetTerminal: target.terminal,
+          targetDotHoldAtNodeMs: run.displayMode === "realtime" && edgesRef.current.some((candidate) => candidate.source === target.nodeId)
+            ? REALTIME_MAX_BUFFER_MS
+            : 0,
         });
         run.transitions.add(transitionKey);
+        const sourceStepKey = getKey(source);
+        if (run.displayMode === "realtime" && run.waitingParticles.has(sourceStepKey)) {
+          scheduleAt(() => releaseWaitingParticle(sourceStepKey), particleStartAt);
+        }
+        const canContinueFromTarget = edgesRef.current.some((candidate) => candidate.source === target.nodeId);
         const particle: RealtimeSignalParticle = {
           id: runKey + ":" + transitionKey,
           startedAt: particleStartAt,
           durationMs: travelMs,
           laneOffset: (run.particleSequence++ % 5 - 2) * 3,
+          ...(run.displayMode === "realtime" && canContinueFromTarget
+            ? {
+                holdAtArrivalMs: REALTIME_MAX_BUFFER_MS,
+                waitingForNodeKey: getKey(target),
+              }
+            : {}),
         };
         if (particleStartAt + travelMs > performance.now()) {
           scheduleAt(() => addParticle(edge.id, particle), particleStartAt);
@@ -917,7 +1119,18 @@ export const N8nDiagramRenderer = forwardRef<
           step.durationMs = incoming.durationMs;
           step.completedAt = incoming.completedAt;
           step.label = incoming.terminalLabel || incoming.label || step.label;
-          if (run.displayMode === "realtime" && step.visualStarted) {
+          if (run.displayMode === "realtime" && step.visualStarted && !step.terminalVisualShown) {
+            console.info("[RealtimeGraph] Node terminal", {
+              runId: runKey,
+              nodeId: step.nodeId,
+              label: step.terminalLabel || step.label,
+              startedAt: step.startedAt,
+              completedAt: step.completedAt,
+              measuredProcessingMs: step.durationMs,
+              visualArrivalAt: step.visualArrivalAt,
+              status: step.terminalStatus,
+              terminalHoldMs: NODE_SIGNAL_LIGHT_MS,
+            });
             setNodeStatus(
               step.nodeId,
               step.terminalStatus,

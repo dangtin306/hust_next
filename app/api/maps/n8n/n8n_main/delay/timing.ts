@@ -32,16 +32,16 @@ export function getDelayedParticlePlan(
   targetProcessingMs: number,
   gapMs: number,
   overlapMs: number,
-  sourceVisualMidpointAt?: number,
+  sourceVisualArrivalAt?: number,
 ) {
   const nominalStartAt = getDelayedTimelineTime(
     playbackStartedAt,
     timelineStartedAt,
-    sourceStartedAt + Math.max(0, sourceProcessingMs) / 2,
+    sourceStartedAt,
   );
   const startedAt = Math.max(
     nominalStartAt,
-    Number.isFinite(sourceVisualMidpointAt) ? sourceVisualMidpointAt! : nominalStartAt,
+    Number.isFinite(sourceVisualArrivalAt) ? sourceVisualArrivalAt! : nominalStartAt,
   );
   const measuredDurationMs = getDelayedTransitionDuration(
     sourceProcessingMs,
@@ -54,6 +54,6 @@ export function getDelayedParticlePlan(
   return {
     startedAt,
     durationMs,
-    targetVisualMidpointAt: startedAt + durationMs,
+    targetVisualArrivalAt: startedAt + durationMs,
   };
 }
