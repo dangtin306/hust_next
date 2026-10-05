@@ -108,64 +108,70 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     return nameA.localeCompare(nameB);
   });
 
-  // 2. Tính toán lưới tọa độ tự động cho Tầng 1
+  // 2. Tính toán lưới tọa độ tự động chuẩn xác tuyệt đối cho Tầng 1
   const nWs = Math.max(workspaceNodes.length, 1);
   const startX = 60;
-  const colSpacingX = 290;
-  const totalVaultWidth = (nWs - 1) * colSpacingX;
-  const vaultCenterX = startX + totalVaultWidth / 2;
+  const colSpacingX = 310; // Card width 260 + gap 50 = 310
+  const cardWidth = 260;
 
-  // Tầng 2 (Pipeline Engine) luôn đặt bên phải Tầng 1 với khoảng cách an toàn
-  const tier2X = Math.max(startX + nWs * colSpacingX + 120, 1280);
+  // Tổng chiều rộng của toàn bộ dải workspace (từ mép trái cột 0 đến mép phải cột cuối)
+  const totalVaultSpan = (nWs - 1) * colSpacingX + cardWidth;
+  // Tâm đối xứng hình học chính xác = startX + totalVaultSpan / 2
+  // Với 4 cột: 60 + ((3 * 310 + 260) / 2) = 60 + 595 = 655
+  const vaultCenterX = startX + totalVaultSpan / 2;
+
+  // Tầng 2 (Pipeline Engine) luôn đặt bên phải Tầng 1 với khoảng cách an toàn 160px
+  const tier2X = Math.max(startX + totalVaultSpan + 160, 1400);
 
   const positionedNodes: Node[] = [];
 
-  // A. Header Tầng 1 (Căn giữa toàn bộ các cột workspace)
+  // A. Header Tầng 1 (Căn giữa toàn bộ cụm Knowledge Vault)
   if (headerTier1) {
     positionedNodes.push({
       ...headerTier1,
-      position: { x: Math.round(vaultCenterX - 170), y: -80 },
+      position: { x: Math.round(vaultCenterX - 180), y: -60 },
     });
   }
 
-  // B. Agent Node chính (AGENTS.md - Trung tâm hàng 1)
+  // B. Agent Node chính (AGENTS.md - Đặt tại chính tâm đối xứng hàng 1)
+  const agentsX = Math.round(vaultCenterX - cardWidth / 2); // 655 - 130 = 525
   if (agentNode) {
     positionedNodes.push({
       ...agentNode,
-      position: { x: Math.round(vaultCenterX - 130), y: 40 },
+      position: { x: agentsX, y: 60 },
     });
   }
 
-  // C. SOUL.md (Căn bên trái AGENTS.md)
+  // C. SOUL.md (Căn bên trái AGENTS.md với khoảng cách 50px)
   if (soulNode) {
-    const soulX = Math.round(Math.max(vaultCenterX - 420, startX - 20));
+    const soulX = agentsX - cardWidth - 50; // 525 - 260 - 50 = 215
     positionedNodes.push({
       ...soulNode,
-      position: { x: soulX, y: 40 },
+      position: { x: soulX, y: 60 },
     });
   }
 
-  // D. IDENTITY.md (Căn bên phải AGENTS.md)
+  // D. IDENTITY.md (Căn bên phải AGENTS.md với khoảng cách 50px)
   if (identityNode) {
-    const identityX = Math.round(Math.min(vaultCenterX + 160, startX + totalVaultWidth));
+    const identityX = agentsX + cardWidth + 50; // 525 + 260 + 50 = 835
     positionedNodes.push({
       ...identityNode,
-      position: { x: identityX, y: 40 },
+      position: { x: identityX, y: 60 },
     });
   }
 
-  // E. Workspaces (Hàng 2: Y = 210, chia đều các cột)
+  // E. Workspaces (Hàng 2: Y = 220, các cột tại startX + idx * colSpacingX)
   const wsIndexMap = new Map<string, number>();
   workspaceNodes.forEach((ws, idx) => {
-    const posX = startX + idx * colSpacingX;
+    const posX = startX + idx * colSpacingX; // 60, 370, 680, 990
     wsIndexMap.set(ws.id, idx);
     positionedNodes.push({
       ...ws,
-      position: { x: posX, y: 210 },
+      position: { x: posX, y: 220 },
     });
   });
 
-  // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace)
+  // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace, Y bắt đầu từ 380, CỰC KỲ AN TOÀN KHÔNG BAO GIỜ BỊ ĐÈ)
   const wsChildCountMap = new Map<number, number>();
   sessionAndFileNodes.forEach((child) => {
     const parentEdge = rawEdges.find((e) => e.target === child.id);
@@ -186,7 +192,9 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     wsChildCountMap.set(colIdx, currentCount + 1);
 
     const childX = startX + colIdx * colSpacingX;
-    const childY = 380 + (currentCount - 1) * 140;
+    // Node đầu tiên (currentCount = 0): Y = 380 (cách card workspace 220+100=320 một khoảng 60px an toàn)
+    // Node tiếp theo (currentCount = 1): Y = 380 + 1 * 130 = 510
+    const childY = 380 + currentCount * 130;
 
     positionedNodes.push({
       ...child,
@@ -198,11 +206,11 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
   if (headerTier2) {
     positionedNodes.push({
       ...headerTier2,
-      position: { x: tier2X - 35, y: -80 },
+      position: { x: tier2X - 45, y: -60 },
     });
   }
 
-  // H. Pipeline Nodes Tầng 2 (Thẳng hàng X = tier2X)
+  // H. Pipeline Nodes Tầng 2 (Thẳng hàng X = tier2X, Y = 60, 190, 320, 450, 580)
   const pipelineOrder = [
     "pipe-webhook",
     "pipe-resolver",
@@ -221,14 +229,11 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
   pipelineNodes.forEach((p, idx) => {
     positionedNodes.push({
       ...p,
-      position: { x: tier2X, y: 40 + idx * 120 },
+      position: { x: tier2X, y: 60 + idx * 130 },
     });
   });
 
-  // 3. Chuẩn hóa Edges & Handles với đường cong mượt mà (smoothstep)
-  const rightmostWs = workspaceNodes[workspaceNodes.length - 1];
-  const rightmostWsId = rightmostWs ? rightmostWs.id : null;
-
+  // 3. Chuẩn hóa Edges: mượt mà, định tuyến chính xác giữa các handle
   const updatedEdges: Edge[] = rawEdges.map((edge) => {
     const isBridge = edge.id.includes("bridge") || (edge.source.startsWith("pipe-") && edge.target.startsWith("vault-"));
 
@@ -339,13 +344,13 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
         isSelected ? "ring-2 ring-purple-400 shadow-purple-500/30 shadow-2xl scale-[1.02]" : "hover:border-slate-400"
       }`}
     >
-      {/* 4-WAY SEPARATED HANDLES */}
-      <Handle type="target" position={Position.Top} id="target-top" className="!bg-purple-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-emerald-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!bg-purple-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!bg-purple-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!bg-emerald-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!bg-emerald-400 !w-2.5 !h-2.5" />
+      {/* Ẩn các chấm kết nối thô kệch, chỉ giữ neo kết nối vô hình để dây nối bắt điểm chuẩn xác và viền thẻ sạch bóng */}
+      <Handle type="target" position={Position.Top} id="target-top" className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -373,6 +378,26 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
         </p>
       )}
 
+      {/* Hiển thị danh sách các tệp .md mà workspace đang chứa */}
+      {data.category === "workspace" && data.files && Array.isArray(data.files) && data.files.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-white/10">
+          <div className="text-[10px] font-semibold text-emerald-400 mb-1 flex items-center gap-1">
+            <FileCode className="h-3 w-3" />
+            <span>Tài liệu .md ({data.files.length}):</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {data.files.map((fileName: string) => (
+              <span
+                key={fileName}
+                className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 border border-emerald-500/30"
+              >
+                📄 {fileName}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {data.path && (
         <div className="mt-2 text-[10px] font-mono text-slate-400 truncate bg-black/40 px-2 py-1 rounded border border-white/5">
           {data.path}
@@ -390,12 +415,12 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
         isSelected ? "ring-2 ring-indigo-400 shadow-indigo-500/30 shadow-2xl scale-[1.02]" : "hover:border-indigo-400"
       }`}
     >
-      <Handle type="target" position={Position.Top} id="target-top" className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!bg-amber-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!bg-amber-400 !w-2.5 !h-2.5" />
-      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!bg-indigo-400 !w-2.5 !h-2.5" />
-      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!bg-indigo-400 !w-2.5 !h-2.5" />
+      <Handle type="target" position={Position.Top} id="target-top" className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="target" position={Position.Left} id="target-left" style={{ top: "35%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Left} id="source-left" style={{ top: "65%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="target" position={Position.Right} id="target-right" style={{ top: "35%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
+      <Handle type="source" position={Position.Right} id="source-right" style={{ top: "65%" }} className="!opacity-0 !w-2 !h-2 !border-0 pointer-events-none" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 overflow-hidden">
@@ -434,7 +459,7 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
 
 function SectionLabelNode({ data }: { data: any }) {
   return (
-    <div className="w-[340px] rounded-2xl border border-white/10 bg-black/60 p-3.5 shadow-2xl backdrop-blur-xl text-center">
+    <div className="w-[360px] rounded-2xl border border-white/10 bg-black/60 p-3.5 shadow-2xl backdrop-blur-xl text-center">
       <div className="flex items-center justify-center gap-2 text-xs font-bold tracking-wider uppercase text-white">
         {data.icon === "vault" ? (
           <BookOpen className="h-4 w-4 text-purple-400 shrink-0" />
@@ -461,10 +486,10 @@ const INITIAL_FALLBACK_NODES: Node[] = [
   {
     id: "header-tier1",
     type: "sectionLabelNode",
-    position: { x: 335, y: -80 },
+    position: { x: 475, y: -60 },
     data: {
       title: "TẦNG 1: Markdown Knowledge Vault",
-      subtitle: "Không gian tri thức toán học K(c) gồm các domain workspaces trong OpenClaw",
+      subtitle: "Không gian tri thức toán học K(c) gồm 4 domain workspaces trong OpenClaw",
       icon: "vault",
     },
     selectable: false,
@@ -472,7 +497,7 @@ const INITIAL_FALLBACK_NODES: Node[] = [
   {
     id: "header-tier2",
     type: "sectionLabelNode",
-    position: { x: 1290, y: -80 },
+    position: { x: 1355, y: -60 },
     data: {
       title: "TẦNG 2: n8n Execution Engine",
       subtitle: "Pipeline thực thi động 5 node nạp động file .md qua Dynamic Path Resolution",
@@ -483,7 +508,7 @@ const INITIAL_FALLBACK_NODES: Node[] = [
   {
     id: "vault-agents-md",
     type: "vaultNode",
-    position: { x: 495, y: 40 },
+    position: { x: 525, y: 60 },
     data: {
       label: "AGENTS.md",
       category: "agent",
