@@ -207,8 +207,7 @@ type RealtimeProgressRun = {
 };
 
 const REALTIME_NODE_PULSE_MS = 1000;
-const REALTIME_NODE_SIGNAL_TIMEOUT_MS = 2000;
-const REALTIME_NODE_MIN_LIGHT_MS = 1000;
+const NODE_SIGNAL_LIGHT_MS = 1000;
 type SignalDisplayMode = "realtime" | "slow";
 
 const N8N_EDGE_TYPES = { realtimeSignal: RealtimeSignalEdge };
@@ -504,7 +503,7 @@ export const N8nDiagramRenderer = forwardRef<
       const targets = Array.isArray(target) ? target : [target];
       const visibleDurationMs =
         status === "running"
-          ? Math.max(minimumRunningMs, Math.min(timeoutMs, 24 * 60 * 60 * 1000))
+          ? NODE_SIGNAL_LIGHT_MS
           : status === "idle" ? 0 : terminalHoldMs;
 
       targets.forEach((targetKey) => {
@@ -532,7 +531,7 @@ export const N8nDiagramRenderer = forwardRef<
                 ...n.data,
                 liveStatus: status,
                 signalVersion:
-                  status === "idle" || signalDisplayModeRef.current === "slow"
+                  status === "idle"
                     ? Number(n.data.signalVersion || 0)
                     : Number(n.data.signalVersion || 0) + 1,
                 signalPulseDurationMs: status === "running" && Number.isFinite(pulseDurationMs)
@@ -659,17 +658,17 @@ export const N8nDiagramRenderer = forwardRef<
           step.nodeId,
           step.terminalStatus,
           step.terminalLabel || step.label,
-          REALTIME_NODE_MIN_LIGHT_MS,
-          REALTIME_NODE_MIN_LIGHT_MS,
+          NODE_SIGNAL_LIGHT_MS,
+          NODE_SIGNAL_LIGHT_MS,
         );
       } else {
         setNodeStatus(
           step.nodeId,
           "running",
           step.label + " • đang chạy",
-          REALTIME_NODE_SIGNAL_TIMEOUT_MS,
-          REALTIME_NODE_MIN_LIGHT_MS,
-          REALTIME_NODE_SIGNAL_TIMEOUT_MS,
+          NODE_SIGNAL_LIGHT_MS,
+          NODE_SIGNAL_LIGHT_MS,
+          0,
           REALTIME_NODE_PULSE_MS,
         );
       }
@@ -746,19 +745,6 @@ export const N8nDiagramRenderer = forwardRef<
         run.renderDelayMs += REALTIME_BUFFER_INCREMENT_MS;
         scheduleAdaptiveBufferIncrease();
         run.steps.forEach(scheduleRealtimeNode);
-        run.steps.forEach((step) => {
-          if (step.visualStarted && !step.terminal) {
-            setNodeStatus(
-              step.nodeId,
-              "running",
-              step.label + " • đang chạy",
-              REALTIME_NODE_SIGNAL_TIMEOUT_MS,
-              REALTIME_NODE_MIN_LIGHT_MS,
-              REALTIME_NODE_SIGNAL_TIMEOUT_MS,
-              REALTIME_NODE_PULSE_MS,
-            );
-          }
-        });
         tryScheduleTransitions();
       }, 1000);
       signalTimersRef.current.add(run.bufferTimer);
@@ -878,8 +864,8 @@ export const N8nDiagramRenderer = forwardRef<
           step.nodeId,
           step.terminalStatus,
           step.terminalLabel || step.label,
-          REALTIME_NODE_MIN_LIGHT_MS,
-          REALTIME_NODE_MIN_LIGHT_MS,
+          NODE_SIGNAL_LIGHT_MS,
+          NODE_SIGNAL_LIGHT_MS,
         );
       }
       if (run.displayMode === "realtime" && step.terminal) {
@@ -903,16 +889,12 @@ export const N8nDiagramRenderer = forwardRef<
           const startAt = getDelayedTimelineTime(replayBase, timelineBase, step.startedAt);
           const finishAt = getDelayedTimelineTime(replayBase, timelineBase, step.completedAt ?? step.startedAt);
           scheduleAt(() => {
-            const displayedRunDuration = Math.max(
-              REALTIME_NODE_MIN_LIGHT_MS,
-              finishAt - startAt,
-            );
             setNodeStatus(
               step.nodeId,
               "running",
               step.label + " • đang chạy",
-              displayedRunDuration,
-              REALTIME_NODE_MIN_LIGHT_MS,
+              NODE_SIGNAL_LIGHT_MS,
+              NODE_SIGNAL_LIGHT_MS,
               0,
               REALTIME_NODE_PULSE_MS,
             );
@@ -924,8 +906,8 @@ export const N8nDiagramRenderer = forwardRef<
               step.nodeId,
               step.terminalStatus,
               step.terminalLabel || step.label,
-              REALTIME_NODE_MIN_LIGHT_MS,
-              REALTIME_NODE_MIN_LIGHT_MS,
+              NODE_SIGNAL_LIGHT_MS,
+              NODE_SIGNAL_LIGHT_MS,
             ), finishAt);
           }
         });
