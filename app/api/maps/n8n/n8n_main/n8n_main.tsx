@@ -210,6 +210,7 @@ type RealtimeProgressRun = {
 };
 
 const REALTIME_NODE_PULSE_MS = 1000;
+const REALTIME_NODE_RUNNING_HOLD_MS = 5000;
 const NODE_SIGNAL_LIGHT_MS = 1000;
 type SignalDisplayMode = "realtime" | "slow";
 
@@ -502,14 +503,15 @@ export const N8nDiagramRenderer = forwardRef<
       terminalHoldMs = 1000,
       minimumRunningMs = 2000,
       pulseDurationMs?: number,
+      runningHoldMs = NODE_SIGNAL_LIGHT_MS,
     ) => {
-      // Keep the legacy timing arguments for existing callers; node light is intentionally fixed.
+      // Preserve existing callers while allowing the realtime timeline a bounded wait light.
       void timeoutMs;
       void minimumRunningMs;
       const targets = Array.isArray(target) ? target : [target];
       const visibleDurationMs =
         status === "running"
-          ? NODE_SIGNAL_LIGHT_MS
+          ? Math.min(REALTIME_NODE_RUNNING_HOLD_MS, Math.max(0, runningHoldMs))
           : status === "idle" ? 0 : terminalHoldMs;
 
       targets.forEach((targetKey) => {
@@ -680,6 +682,7 @@ export const N8nDiagramRenderer = forwardRef<
           NODE_SIGNAL_LIGHT_MS,
           0,
           REALTIME_NODE_PULSE_MS,
+          REALTIME_NODE_RUNNING_HOLD_MS,
         );
       }
       if (run.displayMode === "realtime") tryScheduleTransitions();

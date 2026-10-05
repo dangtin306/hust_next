@@ -701,7 +701,7 @@ export default function N8nWorkflowMain() {
           <Activity className="h-3.5 w-3.5 text-cyan-400" />
           Quy tắc sáng/tắt của node
         </div>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex items-start gap-2 rounded-lg border border-cyan-900/70 bg-cyan-950/30 p-2.5">
             <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             <div>
@@ -721,6 +721,13 @@ export default function N8nWorkflowMain() {
             <div>
               <p className="text-[11px] font-bold text-amber-300">MẤT TÍN HIỆU</p>
               <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">Không có tín hiệu mới/tắt thì tự tắt sau 2 giây.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 rounded-lg border border-sky-900/70 bg-sky-950/25 p-2.5">
+            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+            <div>
+              <p className="text-[11px] font-bold text-sky-300">CHỜ TÍN HIỆU · THỜI GIAN THỰC</p>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-slate-300">Node đang chạy chờ chấm/tín hiệu tiếp theo giữ sáng tối đa 5 giây.</p>
             </div>
           </div>
         </div>
