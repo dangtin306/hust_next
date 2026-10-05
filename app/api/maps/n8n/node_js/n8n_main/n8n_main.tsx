@@ -190,7 +190,7 @@ type RealtimeProgressStep = {
   visualArrivalAt?: number;
   visualStarted?: boolean;
   visualTimer?: NodeJS.Timeout;
-  terminalVisualShown?: boolean;
+  terminalVisualUntilPerf?: number;
   requestStart?: boolean;
 };
 
@@ -208,6 +208,8 @@ type RealtimeProgressRun = {
   bufferTimer?: NodeJS.Timeout;
   particleSequence: number;
   timingWaitLogs: Set<string>;
+  edgeRetryTimers: Map<string, NodeJS.Timeout>;
+  edgeRetryAttempts: Map<string, number>;
   requestFinished?: boolean;
 };
 
@@ -557,11 +559,16 @@ export const N8nDiagramRenderer = forwardRef<
 
       if (status !== "idle" && visibleDurationMs > 0) {
         const resetTimer = setTimeout(() => {
+          const activeTargets = targets.filter(
+            (targetKey) => nodeTimersRef.current.get(targetKey) === resetTimer,
+          );
+          if (activeTargets.length === 0) return;
+
           setNodes((current) =>
             current.map((n) => {
               if (n.type !== "n8nNode" && n.type !== "architectureNode") return n;
               const nodeName = (n.data as FlowNodeData)?.name || "";
-              const isMatch = targets.some(
+              const isMatch = activeTargets.some(
                 (t) =>
                   n.id === t ||
                   nodeName === t ||
@@ -581,7 +588,11 @@ export const N8nDiagramRenderer = forwardRef<
               return n;
             })
           );
-          targets.forEach((t) => nodeTimersRef.current.delete(t));
+          activeTargets.forEach((targetKey) => {
+            if (nodeTimersRef.current.get(targetKey) === resetTimer) {
+              nodeTimersRef.current.delete(targetKey);
+            }
+          });
         }, visibleDurationMs);
 
         targets.forEach((t) => nodeTimersRef.current.set(t, resetTimer));
@@ -606,6 +617,8 @@ export const N8nDiagramRenderer = forwardRef<
       waitingParticles: new Map<string, { edgeId: string; particleId: string; arrivalAt: number; cleanupTimer?: NodeJS.Timeout }>(),
       particleSequence: 0,
       timingWaitLogs: new Set<string>(),
+      edgeRetryTimers: new Map<string, NodeJS.Timeout>(),
+      edgeRetryAttempts: new Map<string, number>(),
     };
     progressRunsRef.current.set(runKey, run);
 
@@ -670,11 +683,22 @@ export const N8nDiagramRenderer = forwardRef<
       step.visualTimer = undefined;
       step.visualStartAt ??= performance.now();
       step.visualArrivalAt ??= step.visualStartAt;
+      const nodeExistsInGraph = graphNodeNamesRef.current.has(step.nodeId);
+      if (!nodeExistsInGraph) {
+        console.warn("[RealtimeGraph] Signal arrived for a node missing from the current graph snapshot.", {
+          runId: runKey,
+          nodeId: step.nodeId,
+          label: step.label,
+          cause,
+        });
+      }
       console.info("[RealtimeGraph] Node lit", {
         runId: runKey,
         cause,
         nodeId: step.nodeId,
         label: step.label,
+        nodeExistsInGraph,
+        visualStatus: step.terminal ? step.terminalStatus : "running",
         visualStartedAt: Number(step.visualStartAt.toFixed(3)),
         eventStartedAt: step.startedAt,
         eventCompletedAt: step.completedAt,
@@ -682,7 +706,8 @@ export const N8nDiagramRenderer = forwardRef<
         holdMs: step.terminal ? NODE_SIGNAL_LIGHT_MS : REALTIME_NODE_RUNNING_HOLD_MS,
       });
       if (step.terminal) {
-        if (!step.terminalVisualShown) {
+        const now = performance.now();
+        if (now >= (step.terminalVisualUntilPerf || 0)) {
           setNodeStatus(
             step.nodeId,
             step.terminalStatus,
@@ -690,7 +715,7 @@ export const N8nDiagramRenderer = forwardRef<
             NODE_SIGNAL_LIGHT_MS,
             NODE_SIGNAL_LIGHT_MS,
           );
-          step.terminalVisualShown = true;
+          step.terminalVisualUntilPerf = now + NODE_SIGNAL_LIGHT_MS;
         }
       } else {
         setNodeStatus(
@@ -942,17 +967,44 @@ export const N8nDiagramRenderer = forwardRef<
         const sourceId = source.nodeId;
         const edge = edgesRef.current.find((candidate) => candidate.source === sourceId && candidate.target === target.nodeId);
         if (!edge) {
-          console.warn("[RealtimeGraph] No displayed edge from " + sourceId + " to " + target.nodeId + "; skipping particle.");
-          if (run.displayMode === "slow") {
-            const replayBase = run.replayStartedAt || performance.now();
-            const timelineBase = run.firstStartedAt || source.startedAt;
-            run.delayedNodeStartAt.set(
-              getKey(target),
-              getDelayedTimelineTime(replayBase, timelineBase, target.startedAt),
-            );
+          const attempts = run.edgeRetryAttempts.get(transitionKey) || 0;
+          const maxEdgeRetries = Math.ceil(REALTIME_MAX_BUFFER_MS / REALTIME_BUFFER_INCREMENT_MS);
+          if (attempts >= maxEdgeRetries) {
+            console.error("[RealtimeGraph] Display edge did not become available; target remains pending.", {
+              runId: runKey,
+              fromNodeId: sourceId,
+              toNodeId: target.nodeId,
+              attempts,
+              maxAttempts: maxEdgeRetries,
+              maxWaitMs: REALTIME_MAX_BUFFER_MS,
+            });
+            return;
           }
-          run.transitions.add(transitionKey);
+
+          if (!run.edgeRetryTimers.has(transitionKey)) {
+            console.warn("[RealtimeGraph] Waiting for displayed edge before lighting target.", {
+              runId: runKey,
+              fromNodeId: sourceId,
+              toNodeId: target.nodeId,
+              retryInMs: REALTIME_BUFFER_INCREMENT_MS,
+              attempt: attempts + 1,
+            });
+            const retryTimer = setTimeout(() => {
+              signalTimersRef.current.delete(retryTimer);
+              run.edgeRetryTimers.delete(transitionKey);
+              run.edgeRetryAttempts.set(transitionKey, attempts + 1);
+              tryScheduleTransitions();
+            }, REALTIME_BUFFER_INCREMENT_MS);
+            run.edgeRetryTimers.set(transitionKey, retryTimer);
+            signalTimersRef.current.add(retryTimer);
+          }
           return;
+        }
+        const pendingEdgeRetry = run.edgeRetryTimers.get(transitionKey);
+        if (pendingEdgeRetry) {
+          clearTimeout(pendingEdgeRetry);
+          signalTimersRef.current.delete(pendingEdgeRetry);
+          run.edgeRetryTimers.delete(transitionKey);
         }
 
         const observedGapMs = Math.max(
@@ -1119,7 +1171,12 @@ export const N8nDiagramRenderer = forwardRef<
           step.durationMs = incoming.durationMs;
           step.completedAt = incoming.completedAt;
           step.label = incoming.terminalLabel || incoming.label || step.label;
-          if (run.displayMode === "realtime" && step.visualStarted && !step.terminalVisualShown) {
+          const terminalNow = performance.now();
+          if (
+            run.displayMode === "realtime" &&
+            step.visualStarted &&
+            terminalNow >= (step.terminalVisualUntilPerf || 0)
+          ) {
             console.info("[RealtimeGraph] Node terminal", {
               runId: runKey,
               nodeId: step.nodeId,
@@ -1138,7 +1195,7 @@ export const N8nDiagramRenderer = forwardRef<
               NODE_SIGNAL_LIGHT_MS,
               NODE_SIGNAL_LIGHT_MS,
             );
-            step.terminalVisualShown = true;
+            step.terminalVisualUntilPerf = terminalNow + NODE_SIGNAL_LIGHT_MS;
           }
         }
       } else {

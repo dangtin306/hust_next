@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import N8nWorkflowMain from "../main";
+import N8nWorkflowMain from "./main";
 
 export const metadata: Metadata = {
   title: "Node.js Realtime Diagram | Hust Media",
