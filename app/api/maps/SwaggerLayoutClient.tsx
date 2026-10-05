@@ -32,7 +32,7 @@ export default function SwaggerLayoutClient({
   const isHome = pathname.endsWith("/api/mt/home");
   const isLaravel = pathname.endsWith("/api/mt/laravel");
   const isOpenClaw = pathname.endsWith("/api/mt/openclaw");
-  const isN8n = pathname.endsWith("/api/mt/n8n") || pathname.endsWith("/api/maps/n8n");
+  const isN8n = pathname.includes("/api/mt/n8n") || pathname.includes("/api/maps/n8n");
   const isGitAuto = pathname.endsWith("/api/mt/git_auto");
   const isGitTest = pathname.endsWith("/api/mt/git_test");
   const isGiteaTest = pathname.endsWith("/api/mt/gitea_test");

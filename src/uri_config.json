@@ -184,6 +184,10 @@
         "source": "/api/mt/n8n",
         "destination": "/api/maps/n8n"
       },
+      "n8nNodeJs": {
+        "source": "/api/mt/n8n/node_js",
+        "destination": "/api/maps/n8n/node_js"
+      },
       "workspace": {
         "source": "/api/mt/workspace",
         "destination": "/api/maps/workspace"
