@@ -780,9 +780,18 @@ export const N8nDiagramRenderer = forwardRef<
         }
         if (!source) return;
         if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal || !target.terminal)) return;
-        // Use both complete processing durations and discount half of their overlap.
-        // Realtime waits for the target completion signal before planning.
-        if (run.displayMode === "realtime" && (!source.terminal || !target.terminal)) return;
+        const sourceProcessingMs = processingMs(source);
+        const targetProcessingMs = processingMs(target);
+        const sourceEndAt = source.completedAt ?? source.startedAt + sourceProcessingMs;
+        // An edge with no overlap is fully measurable once the source finishes
+        // and the target has started. Do not wait for the target's completion:
+        // that would replay the incoming edge only after the target finished.
+        // For overlapping nodes, wait for both terminal signals to measure the
+        // shared interval accurately before scheduling the particle.
+        if (
+          run.displayMode === "realtime" &&
+          (!source.terminal || (!target.terminal && target.startedAt < sourceEndAt))
+        ) return;
         // In realtime, the source must be visibly lit before its particle can
         // leave. This prevents a delayed buffer adjustment from making a
         // particle appear mid-edge or arrive before its source node lights.
@@ -806,12 +815,9 @@ export const N8nDiagramRenderer = forwardRef<
 
         const observedGapMs = Math.max(
           0,
-          target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source)),
+          target.startedAt - sourceEndAt,
         );
         const transitionGapMs = Math.max(0, target.transitionGapMs ?? observedGapMs);
-        const sourceProcessingMs = processingMs(source);
-        const targetProcessingMs = processingMs(target);
-        const sourceEndAt = source.completedAt ?? source.startedAt + sourceProcessingMs;
         const targetEndAt = target.completedAt ?? target.startedAt + targetProcessingMs;
         const overlapMs = Math.max(
           0,
