@@ -797,10 +797,11 @@ export const N8nDiagramRenderer = forwardRef<
           return;
         }
 
-        const observedGapMs = target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source));
-        const transitionGapMs = observedGapMs < 0
-          ? observedGapMs
-          : target.transitionGapMs ?? observedGapMs;
+        const observedGapMs = Math.max(
+          0,
+          target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source)),
+        );
+        const transitionGapMs = Math.max(0, target.transitionGapMs ?? observedGapMs);
         const sourceProcessingMs = processingMs(source);
         const targetProcessingMs = processingMs(target);
         const rawTravelMs = getRawTransitionDurationMs(
