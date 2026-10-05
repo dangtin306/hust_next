@@ -56,7 +56,7 @@ import {
   getDelayedTimelineDuration,
   getDelayedTimelineTime,
 } from "./delay/timing";
-import { getTransitionDurationMs } from "./timing";
+import { getRawTransitionDurationMs, getTransitionDurationMs } from "./timing";
 
 // ==========================================
 // 1. DATA CONTRACTS
@@ -801,6 +801,13 @@ export const N8nDiagramRenderer = forwardRef<
         const transitionGapMs = observedGapMs < 0
           ? observedGapMs
           : target.transitionGapMs ?? observedGapMs;
+        const sourceProcessingMs = processingMs(source);
+        const targetProcessingMs = processingMs(target);
+        const rawTravelMs = getRawTransitionDurationMs(
+          sourceProcessingMs,
+          targetProcessingMs,
+          transitionGapMs,
+        );
         let travelMs: number;
         let particleStartAt: number;
         if (run.displayMode === "slow") {
@@ -810,8 +817,8 @@ export const N8nDiagramRenderer = forwardRef<
             replayBase,
             timelineBase,
             source.startedAt,
-            processingMs(source),
-            processingMs(target),
+            sourceProcessingMs,
+            targetProcessingMs,
             transitionGapMs,
             source.visualMidpointAt ?? run.delayedNodeStartAt.get(getKey(source)),
           );
@@ -823,8 +830,8 @@ export const N8nDiagramRenderer = forwardRef<
           const sourceMidpointAt = source.visualMidpointAt
             ?? (source.visualStartAt ?? performance.now()) + processingMs(source) / 2;
           const measuredMs = getTransitionDurationMs(
-            processingMs(source),
-            processingMs(target),
+            sourceProcessingMs,
+            targetProcessingMs,
             transitionGapMs,
           );
           travelMs = measuredMs;
@@ -837,6 +844,19 @@ export const N8nDiagramRenderer = forwardRef<
           );
           target.visualMidpointAt = particleStartAt + travelMs;
         }
+        console.info("[RealtimeGraph] Particle travel timing", {
+          runId: runKey,
+          mode: run.displayMode,
+          from: { id: source.nodeId, label: source.label },
+          to: { id: target.nodeId, label: target.label },
+          sourceProcessingSeconds: Number((sourceProcessingMs / 1000).toFixed(3)),
+          gapSeconds: Number((transitionGapMs / 1000).toFixed(3)),
+          targetProcessingSeconds: Number((targetProcessingMs / 1000).toFixed(3)),
+          rawTravelSeconds: Number((rawTravelMs / 1000).toFixed(3)),
+          particleTravelSeconds: Number((travelMs / 1000).toFixed(3)),
+          minimumApplied: rawTravelMs < 80,
+          playbackScale: run.displayMode === "slow" ? 3 : 1,
+        });
         run.transitions.add(transitionKey);
         const particle: RealtimeSignalParticle = {
           id: runKey + ":" + transitionKey,
