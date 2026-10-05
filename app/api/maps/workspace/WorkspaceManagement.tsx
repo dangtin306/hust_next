@@ -73,6 +73,19 @@ export type WorkspaceSessionRecord = {
   } | null;
 };
 
+export type UserWorkspaceRecord = {
+  id: number;
+  workspace_name: string | null;
+  agent_code: string;
+  work_space_code: string;
+  parent_workspace_code?: string | null;
+  slug: string;
+  description?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type PaginationMeta = {
   current_page: number;
   last_page: number;
@@ -121,7 +134,7 @@ const INITIAL_META: PaginationMeta = {
 
 export default function WorkspaceManagement() {
   // Navigation tab: 'workspaces' (work_space_main) | 'sessions' (work_space_session)
-  const [activeTab, setActiveTab] = useState<"workspaces" | "sessions">("workspaces");
+  const [activeTab, setActiveTab] = useState<"workspaces" | "sessions" | "user-workspaces">("workspaces");
 
   // View Mode: 'card' (Grid cards) | 'table' (Tabular rows)
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
@@ -139,6 +152,14 @@ export default function WorkspaceManagement() {
   const [sessionMeta, setSessionMeta] = useState<PaginationMeta | null>(null);
   const [sessionLoading, setSessionLoading] = useState<boolean>(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+
+  // --- User's active workspaces ---
+  const [userWorkspaces, setUserWorkspaces] = useState<UserWorkspaceRecord[]>([]);
+  const [userWorkspacesUserId, setUserWorkspacesUserId] = useState("502");
+  const [userWorkspacesLoading, setUserWorkspacesLoading] = useState(false);
+  const [userWorkspacesError, setUserWorkspacesError] = useState<string | null>(null);
+  const [routingSyncing, setRoutingSyncing] = useState(false);
+  const [routingSyncError, setRoutingSyncError] = useState<string | null>(null);
 
   // Session Filters
   const [sessionUserFilter, setSessionUserFilter] = useState<string>("");
@@ -285,6 +306,59 @@ export default function WorkspaceManagement() {
       setSessionLoading(false);
     }
   }, [sessionUserFilter, sessionAgentFilter, sessionWsFilter, sessionStatusFilter]);
+
+  const fetchUserWorkspaces = async () => {
+    const normalizedUserId = userWorkspacesUserId.trim();
+    if (!/^\d+$/.test(normalizedUserId) || Number(normalizedUserId) < 1) {
+      setUserWorkspacesError("Nhập user_id là số nguyên dương.");
+      return;
+    }
+
+    setUserWorkspacesLoading(true);
+    setUserWorkspacesError(null);
+    try {
+      const query = new URLSearchParams({ user_id: normalizedUserId });
+      const res = await fetch(`/next/api/workspaces-proxy/workspaces/user/data?${query.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.message || `Lỗi phản hồi API User Workspaces (HTTP ${res.status})`);
+      }
+      setUserWorkspaces(Array.isArray(json.data) ? json.data : []);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setUserWorkspacesError(msg);
+      setUserWorkspaces([]);
+    } finally {
+      setUserWorkspacesLoading(false);
+    }
+  };
+
+  const syncWorkspaceRouting = async () => {
+    setRoutingSyncing(true);
+    setRoutingSyncError(null);
+    try {
+      const res = await fetch("/next/api/workspaces-proxy/workspaces/routing/update", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) {
+        throw new Error(json.message || `Đồng bộ routing thất bại (HTTP ${res.status})`);
+      }
+      showToast("Đã đồng bộ routing workspace từ OpenClaw");
+      await fetchWorkspaces();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setRoutingSyncError(msg);
+    } finally {
+      setRoutingSyncing(false);
+    }
+  };
 
   // --- 3. Fetch Sessions of a Specific Workspace ---
   const fetchSpecificWorkspaceSessions = async (workspace: WorkspaceRecord) => {
@@ -580,12 +654,29 @@ export default function WorkspaceManagement() {
 
             <button
               type="button"
-              onClick={activeTab === "workspaces" ? fetchWorkspaces : fetchSessions}
+              onClick={
+                activeTab === "workspaces"
+                  ? fetchWorkspaces
+                  : activeTab === "sessions"
+                    ? fetchSessions
+                    : fetchUserWorkspaces
+              }
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer"
               title="Tải lại dữ liệu mới nhất từ máy chủ"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${wsLoading || sessionLoading ? "animate-spin text-purple-600" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${wsLoading || sessionLoading || userWorkspacesLoading ? "animate-spin text-purple-600" : ""}`} />
               <span>Làm mới</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={syncWorkspaceRouting}
+              disabled={routingSyncing}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-xs transition hover:bg-indigo-100 disabled:cursor-wait disabled:opacity-60 active:scale-95"
+              title="Đồng bộ workspace con từ OpenClaw vào Laravel"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${routingSyncing ? "animate-spin" : ""}`} />
+              <span>{routingSyncing ? "Đang đồng bộ…" : "Đồng bộ routing"}</span>
             </button>
 
             {activeTab === "workspaces" && (
@@ -692,6 +783,29 @@ export default function WorkspaceManagement() {
                 {sessions.length}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("user-workspaces");
+                void fetchUserWorkspaces();
+              }}
+              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+                activeTab === "user-workspaces"
+                  ? "border-blue-600 text-blue-700 bg-blue-50/40 rounded-t-xl"
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              <User className="h-4 w-4" />
+              <span>Workspace theo User</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  activeTab === "user-workspaces" ? "bg-blue-200/80 text-blue-800" : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {userWorkspaces.length}
+              </span>
+            </button>
           </div>
 
           {/* View Mode Toggle (Card Grid vs Table) */}
@@ -730,6 +844,13 @@ export default function WorkspaceManagement() {
           )}
         </div>
       </div>
+
+      {routingSyncError && (
+        <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/90 p-3.5 text-xs text-rose-800 shadow-xs">
+          <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+          <span><strong>Lỗi đồng bộ routing: </strong>{routingSyncError}</span>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: WORKSPACES (work_space_main)                                       */}
@@ -1229,6 +1350,94 @@ export default function WorkspaceManagement() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: WORKSPACES ACTIVE FOR A USER                                         */}
+      {/* ========================================================================= */}
+      {activeTab === "user-workspaces" && (
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-xs backdrop-blur-md">
+            <div className="mb-3">
+              <h2 className="text-sm font-bold text-slate-800">Workspace đang hoạt động của user</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Dữ liệu lấy từ <code className="rounded bg-slate-100 px-1 py-0.5 font-mono">GET /api/workspaces/user/data</code> và chỉ gồm workspace có session active.
+              </p>
+            </div>
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void fetchUserWorkspaces();
+              }}
+            >
+              <label className="block w-full max-w-xs text-[11px] font-bold text-slate-600">
+                User ID
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={userWorkspacesUserId}
+                  onChange={(event) => setUserWorkspacesUserId(event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+                  placeholder="502"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={userWorkspacesLoading}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+              >
+                <Search className="h-3.5 w-3.5" />
+                {userWorkspacesLoading ? "Đang tra cứu…" : "Tra cứu workspace"}
+              </button>
+            </form>
+          </div>
+
+          {userWorkspacesError && (
+            <div className="flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50/90 p-3.5 text-xs text-rose-800 shadow-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{userWorkspacesError}</span>
+            </div>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {userWorkspacesLoading ? (
+              <div className="col-span-full flex items-center justify-center gap-2 rounded-2xl border border-white/70 bg-white/90 p-10 text-sm font-semibold text-slate-500">
+                <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+                Đang tải workspace của User #{userWorkspacesUserId}…
+              </div>
+            ) : userWorkspaces.length === 0 ? (
+              <div className="col-span-full rounded-2xl border border-white/70 bg-white/90 p-10 text-center shadow-xs">
+                <User className="mx-auto h-8 w-8 text-slate-300" />
+                <p className="mt-2 text-sm font-bold text-slate-700">Không có workspace active cho user này</p>
+                <p className="mt-1 text-xs text-slate-500">API trả về workspace gắn với session đang hoạt động.</p>
+              </div>
+            ) : (
+              userWorkspaces.map((workspace) => (
+                <article key={`${workspace.id}-${workspace.agent_code}`} className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-xs">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-bold text-slate-800">
+                        {workspace.workspace_name || workspace.work_space_code}
+                      </h3>
+                      <p className="mt-1 break-all font-mono text-[11px] text-blue-700">{workspace.work_space_code}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      {workspace.status}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs text-slate-600">
+                    <p>Workspace ID: <strong className="text-slate-800">#{workspace.id}</strong></p>
+                    <p>Agent: <code className="rounded bg-purple-50 px-1.5 py-0.5 font-mono font-semibold text-purple-700">{workspace.agent_code}</code></p>
+                    {workspace.parent_workspace_code && <p>Mã cha: <code className="font-mono text-indigo-700">{workspace.parent_workspace_code}</code></p>}
+                    {workspace.description && <p className="pt-1 text-slate-500">{workspace.description}</p>}
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </section>
       )}
 
       {/* ========================================================================= */}
