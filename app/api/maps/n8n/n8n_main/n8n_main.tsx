@@ -52,7 +52,6 @@ import {
   getRealtimeParticleStartAt,
 } from "./realtime/timing";
 import {
-  DELAY_PLAYBACK_TIME_SCALE,
   getDelayedParticlePlan,
   getDelayedTimelineDuration,
   getDelayedTimelineTime,
@@ -885,15 +884,8 @@ export const N8nDiagramRenderer = forwardRef<
         const requestStartStep = Array.from(run.steps.values()).find((candidate) => candidate.requestStart && candidate.durationMs === undefined);
         if (requestStartStep) requestStartStep.durationMs = Math.max(0, step.startedAt - requestStartStep.startedAt);
       }
-      if (run.displayMode === "realtime" && step.terminal && step.visualStarted) {
-        setNodeStatus(
-          step.nodeId,
-          step.terminalStatus,
-          step.terminalLabel || step.label,
-          NODE_SIGNAL_LIGHT_MS,
-          NODE_SIGNAL_LIGHT_MS,
-        );
-      }
+      // stage.started already produced this lifecycle's one-second node flash.
+      // The terminal event closes timing, but must not light the same node again.
       if (run.displayMode === "realtime" && step.terminal) {
         const stillRunning = Array.from(run.steps.values()).some((candidate) => !candidate.requestStart && !candidate.terminal);
         if (!stillRunning && run.bufferTimer) {
@@ -915,8 +907,6 @@ export const N8nDiagramRenderer = forwardRef<
         Array.from(run.steps.values()).forEach((step) => {
           const startAt = run.delayedNodeStartAt.get(getKey(step))
             ?? getDelayedTimelineTime(replayBase, timelineBase, step.startedAt);
-          const finishAt = startAt + Math.max(0, (step.completedAt ?? step.startedAt) - step.startedAt)
-            * DELAY_PLAYBACK_TIME_SCALE;
           scheduleAt(() => {
             setNodeStatus(
               step.nodeId,
@@ -930,15 +920,6 @@ export const N8nDiagramRenderer = forwardRef<
             step.visualStarted = true;
             step.visualStartAt = startAt;
           }, startAt);
-          if (step.terminal && Number.isFinite(step.completedAt) && !step.requestStart) {
-            scheduleAt(() => setNodeStatus(
-              step.nodeId,
-              step.terminalStatus,
-              step.terminalLabel || step.label,
-              NODE_SIGNAL_LIGHT_MS,
-              NODE_SIGNAL_LIGHT_MS,
-            ), finishAt);
-          }
         });
       }
       tryScheduleTransitions();
