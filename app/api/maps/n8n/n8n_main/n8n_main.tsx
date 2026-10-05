@@ -190,6 +190,7 @@ type RealtimeProgressStep = {
   visualBufferMs?: number;
   visualStarted?: boolean;
   visualTimer?: NodeJS.Timeout;
+  terminalVisualShown?: boolean;
   requestStart?: boolean;
 };
 
@@ -660,13 +661,16 @@ export const N8nDiagramRenderer = forwardRef<
       step.visualTimer = undefined;
       step.visualBufferMs = run.renderDelayMs;
       if (step.terminal) {
-        setNodeStatus(
-          step.nodeId,
-          step.terminalStatus,
-          step.terminalLabel || step.label,
-          NODE_SIGNAL_LIGHT_MS,
-          NODE_SIGNAL_LIGHT_MS,
-        );
+        if (!step.terminalVisualShown) {
+          setNodeStatus(
+            step.nodeId,
+            step.terminalStatus,
+            step.terminalLabel || step.label,
+            NODE_SIGNAL_LIGHT_MS,
+            NODE_SIGNAL_LIGHT_MS,
+          );
+          step.terminalVisualShown = true;
+        }
       } else {
         setNodeStatus(
           step.nodeId,
@@ -684,7 +688,6 @@ export const N8nDiagramRenderer = forwardRef<
       if (
         run.displayMode !== "realtime" ||
         step.visualStarted ||
-        Boolean(step.sourceNodeId) ||
         !Number.isFinite(run.firstStartedAt) ||
         !Number.isFinite(run.firstArrivedPerf)
       ) return;
@@ -852,7 +855,7 @@ export const N8nDiagramRenderer = forwardRef<
             sourceBuffer,
             run.renderDelayMs,
           );
-          target.visualMidpointAt = particleStartAt + travelMs;
+          target.visualMidpointAt = (target.visualStartAt ?? particleStartAt + travelMs) + targetProcessingMs / 2;
         }
         console.info("[RealtimeGraph] Particle travel timing", {
           runId: runKey,
@@ -878,10 +881,6 @@ export const N8nDiagramRenderer = forwardRef<
         if (particleStartAt + travelMs > performance.now()) {
           scheduleAt(() => addParticle(edge.id, particle), particleStartAt);
         }
-        if (run.displayMode === "realtime" && !target.visualStarted) {
-          target.visualStartAt = target.visualMidpointAt;
-          target.visualTimer = scheduleAt(() => showNode(target), target.visualStartAt);
-        }
       });
     }
 
@@ -902,6 +901,16 @@ export const N8nDiagramRenderer = forwardRef<
           step.durationMs = incoming.durationMs;
           step.completedAt = incoming.completedAt;
           step.label = incoming.terminalLabel || incoming.label || step.label;
+          if (run.displayMode === "realtime" && step.visualStarted) {
+            setNodeStatus(
+              step.nodeId,
+              step.terminalStatus,
+              step.terminalLabel || step.label,
+              NODE_SIGNAL_LIGHT_MS,
+              NODE_SIGNAL_LIGHT_MS,
+            );
+            step.terminalVisualShown = true;
+          }
         }
       } else {
         run.steps.set(key, step);
