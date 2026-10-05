@@ -186,6 +186,7 @@ type RealtimeProgressStep = {
   arrivedAt?: number;
   arrivedPerf?: number;
   visualStartAt?: number;
+  visualMidpointAt?: number;
   visualBufferMs?: number;
   visualStarted?: boolean;
   visualTimer?: NodeJS.Timeout;
@@ -771,13 +772,10 @@ export const N8nDiagramRenderer = forwardRef<
           });
         }
         if (!source) return;
-        if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal)) return;
-        // A realtime target can start almost simultaneously with its source
-        // (for example, the API lifecycle and its nested Gateway service).
-        // Do not turn that near-zero start-time delta into an 80 ms particle:
-        // wait for the source's measured duration, then animate using that
-        // duration plus the measured gap before the target began.
-        if (run.displayMode === "realtime" && !source.terminal) return;
+        if (run.displayMode === "slow" && (!run.requestFinished || !source.terminal || !target.terminal)) return;
+        // Both processing durations are needed to measure the midpoint-to-midpoint
+        // route. Realtime waits for the target completion signal before planning.
+        if (run.displayMode === "realtime" && (!source.terminal || !target.terminal)) return;
         // In realtime, the source must be visibly lit before its particle can
         // leave. This prevents a delayed buffer adjustment from making a
         // particle appear mid-edge or arrive before its source node lights.
@@ -799,10 +797,10 @@ export const N8nDiagramRenderer = forwardRef<
           return;
         }
 
-        const transitionGapMs = Math.max(
-          0,
-          target.transitionGapMs ?? (target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source))),
-        );
+        const observedGapMs = target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source));
+        const transitionGapMs = observedGapMs < 0
+          ? observedGapMs
+          : target.transitionGapMs ?? observedGapMs;
         let travelMs: number;
         let particleStartAt: number;
         if (run.displayMode === "slow") {
@@ -812,24 +810,32 @@ export const N8nDiagramRenderer = forwardRef<
             replayBase,
             timelineBase,
             source.startedAt,
-            target.startedAt,
             processingMs(source),
+            processingMs(target),
             transitionGapMs,
-            run.delayedNodeStartAt.get(getKey(source)),
+            source.visualMidpointAt ?? run.delayedNodeStartAt.get(getKey(source)),
           );
           particleStartAt = plan.startedAt;
           travelMs = plan.durationMs;
-          run.delayedNodeStartAt.set(transitionKey, plan.targetVisualStartedAt);
+          target.visualMidpointAt = plan.targetVisualMidpointAt;
+          run.delayedNodeStartAt.set(transitionKey, plan.targetVisualMidpointAt);
         } else {
-          const measuredMs = getTransitionDurationMs(processingMs(source), transitionGapMs);
+          const sourceMidpointAt = source.visualMidpointAt
+            ?? (source.visualStartAt ?? performance.now()) + processingMs(source) / 2;
+          const measuredMs = getTransitionDurationMs(
+            processingMs(source),
+            processingMs(target),
+            transitionGapMs,
+          );
           travelMs = measuredMs;
           const sourceBuffer = source.visualBufferMs ?? REALTIME_INITIAL_BUFFER_MS;
           particleStartAt = getRealtimeParticleStartAt(
             performance.now(),
-            source.visualStartAt ?? performance.now(),
+            sourceMidpointAt,
             sourceBuffer,
             run.renderDelayMs,
           );
+          target.visualMidpointAt = particleStartAt + travelMs;
         }
         run.transitions.add(transitionKey);
         const particle: RealtimeSignalParticle = {
@@ -842,7 +848,7 @@ export const N8nDiagramRenderer = forwardRef<
           scheduleAt(() => addParticle(edge.id, particle), particleStartAt);
         }
         if (run.displayMode === "realtime" && !target.visualStarted) {
-          target.visualStartAt = particleStartAt + travelMs;
+          target.visualStartAt = target.visualMidpointAt;
           target.visualTimer = scheduleAt(() => showNode(target), target.visualStartAt);
         }
       });
