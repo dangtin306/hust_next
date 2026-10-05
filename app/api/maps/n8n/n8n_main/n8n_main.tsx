@@ -54,6 +54,7 @@ import {
 import {
   DELAY_PLAYBACK_TIME_SCALE,
   getDelayedTimelineDuration,
+  getDelayedTransitionDuration,
   getDelayedTimelineTime,
 } from "./delay/timing";
 import { getTransitionDurationMs } from "./timing";
@@ -500,6 +501,9 @@ export const N8nDiagramRenderer = forwardRef<
       minimumRunningMs = 2000,
       pulseDurationMs?: number,
     ) => {
+      // Keep the legacy timing arguments for existing callers; node light is intentionally fixed.
+      void timeoutMs;
+      void minimumRunningMs;
       const targets = Array.isArray(target) ? target : [target];
       const visibleDurationMs =
         status === "running"
@@ -789,7 +793,14 @@ export const N8nDiagramRenderer = forwardRef<
           0,
           target.transitionGapMs ?? (target.startedAt - (source.completedAt ?? source.startedAt + processingMs(source))),
         );
-        const measuredMs = getTransitionDurationMs(processingMs(source), transitionGapMs);
+        const measuredMs = run.displayMode === "slow"
+          ? getDelayedTransitionDuration(
+              source.startedAt,
+              target.startedAt,
+              processingMs(source),
+              transitionGapMs,
+            )
+          : getTransitionDurationMs(processingMs(source), transitionGapMs);
         const scale = run.displayMode === "slow" ? DELAY_PLAYBACK_TIME_SCALE : 1;
         const travelMs = measuredMs * scale;
         let particleStartAt: number;

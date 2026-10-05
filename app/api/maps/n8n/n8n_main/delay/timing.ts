@@ -11,3 +11,16 @@ export function getDelayedTimelineTime(
 export function getDelayedTimelineDuration(durationMs: number) {
   return Math.max(0, durationMs) * DELAY_PLAYBACK_TIME_SCALE;
 }
+
+export function getDelayedTransitionDuration(
+  sourceStartedAt: number,
+  targetStartedAt: number,
+  processingMs: number,
+  gapMs: number,
+) {
+  const observedStartSeparation = targetStartedAt - sourceStartedAt;
+  if (Number.isFinite(observedStartSeparation) && observedStartSeparation > 0) {
+    return observedStartSeparation;
+  }
+  return Math.max(1, Math.max(0, processingMs) + Math.max(0, gapMs));
+}
