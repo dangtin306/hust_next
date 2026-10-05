@@ -160,18 +160,18 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     });
   }
 
-  // E. Workspaces (Hàng 2: Y = 220, các cột tại startX + idx * colSpacingX)
+  // E. Workspaces (Hàng 2: Y = 230, các cột tại startX + idx * colSpacingX)
   const wsIndexMap = new Map<string, number>();
   workspaceNodes.forEach((ws, idx) => {
     const posX = startX + idx * colSpacingX; // 60, 370, 680, 990
     wsIndexMap.set(ws.id, idx);
     positionedNodes.push({
       ...ws,
-      position: { x: posX, y: 220 },
+      position: { x: posX, y: 230 },
     });
   });
 
-  // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace, Y bắt đầu từ 380, CỰC KỲ AN TOÀN KHÔNG BAO GIỜ BỊ ĐÈ)
+  // F. Session Chats & Files (Hàng 3: Xếp thẳng hàng dọc dưới từng workspace, Y = 470 hoàn toàn tách biệt khỏi đáy thẻ Workspace!)
   const wsChildCountMap = new Map<number, number>();
   sessionAndFileNodes.forEach((child) => {
     const parentEdge = rawEdges.find((e) => e.target === child.id);
@@ -192,9 +192,9 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     wsChildCountMap.set(colIdx, currentCount + 1);
 
     const childX = startX + colIdx * colSpacingX;
-    // Node đầu tiên (currentCount = 0): Y = 380 (cách card workspace 220+100=320 một khoảng 60px an toàn)
-    // Node tiếp theo (currentCount = 1): Y = 380 + 1 * 130 = 510
-    const childY = 380 + currentCount * 130;
+    // Node đầu tiên (currentCount = 0): Y = 470 (cách đáy workspace 230+185=415 một khoảng 55px hoàn toàn thông thoáng)
+    // Node tiếp theo (currentCount = 1): Y = 470 + 1 * 140 = 610
+    const childY = 470 + currentCount * 140;
 
     positionedNodes.push({
       ...child,
