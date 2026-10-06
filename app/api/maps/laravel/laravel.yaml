@@ -53,6 +53,8 @@ tags:
       Các mã lỗi phổ biến: 401, 403, 404, 409, 422, 429, 500 và 503.
   - name: Workspace
     description: Lấy danh sách và quản lý dữ liệu Workspace trên Laravel.
+  - name: Demo
+    description: Các API Demo thử nghiệm và dữ liệu mẫu trên Laravel.
   - name: Chat
     description: Payload chat thường gửi qua OpenClaw
   - name: Smart Writing
@@ -437,6 +439,93 @@ paths:
                 $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
               example:
                 success: false
+
+  /api/demo/hello:
+    get:
+      operationId: getDemoHello
+      tags: [Demo]
+      summary: API kiểm tra kết nối Demo (Hello World)
+      description: |
+        Endpoint thử nghiệm trả về thông điệp chào mừng và trạng thái hoạt động của hệ thống demo trên Laravel.
+      security: []
+      responses:
+        '200':
+          description: Phản hồi thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Hello from Laravel Demo API"
+                  timestamp:
+                    type: string
+                    example: "2026-10-06T04:50:00Z"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+  /api/demo/echo:
+    post:
+      operationId: postDemoEcho
+      tags: [Demo]
+      summary: Gửi dữ liệu thử nghiệm và nhận phản hồi (Echo)
+      description: |
+        Endpoint nhận payload JSON tùy ý để kiểm tra quá trình gửi/nhận dữ liệu với Laravel.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  example: "Thử nghiệm Demo API"
+                content:
+                  type: string
+                  example: "Nội dung kiểm tra kết nối dữ liệu mẫu"
+                options:
+                  type: object
+                  example:
+                    debug: true
+                    env: "staging"
+      responses:
+        '200':
+          description: Xử lý thành công và phản hồi lại dữ liệu echo.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  received_data:
+                    type: object
+                  processed_at:
+                    type: string
+                    example: "2026-10-06T04:50:01Z"
+        '422':
+          description: Dữ liệu gửi lên không hợp lệ.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Trường title là bắt buộc."
 
   /api/chat/bot/rooms:
     get:
