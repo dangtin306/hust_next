@@ -257,8 +257,7 @@ function FileList({
 }
 
 function DiffViewContent({ content }: { content: string }) {
-  const lines = content.split("
-");
+  const lines = content.split(String.fromCharCode(10));
   return (
     <div className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950 p-2.5 font-mono text-[11px] leading-5 text-slate-300 shadow-inner [scrollbar-width:thin]">
       {lines.map((line, idx) => {
@@ -692,10 +691,10 @@ function GitAutoConfigDemo({
           <Button onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing}>
             <RefreshCw size={13} className={reloading ? "animate-spin" : ""} />
             {reloading ? "Reloading…" : refreshing ? "Refreshing…" : "Reload config"}
-          </button>
+          </Button>
           <Button variant="primary" onClick={() => void save()} disabled={saving || reloading || refreshing}>
             {saving ? "Saving…" : refreshing ? "Refreshing…" : "Save & Connect"}
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -1379,9 +1378,12 @@ export default function GitControl() {
                 />
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Sẽ tạo: <span className="font-mono text-slate-600">{commitType}: [{giteaUsername || "—"}] - {commitMessage.trim() || "..."}</span>
-            </p>
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+              <span>Sẽ tạo:</span>
+              <span className="rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-slate-700 font-medium">
+                {commitType}: [{giteaUsername || "—"}] - {commitMessage.trim() || "..."}
+              </span>
+            </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-500">
                 {(status?.staged || 0) > 0 ? `${status?.staged} staged files` : "Bấm Stage All trước khi Commit"}

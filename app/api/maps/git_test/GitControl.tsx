@@ -142,7 +142,7 @@ function GitTestConfigPanel({
   };
 
   return (
-    <section className="rounded-xl border border-indigo-100/90 bg-white p-3 shadow-2xs sm:p-4 transition-all duration-200">
+    <section className="rounded-xl border border-slate-200/80 bg-white/95 p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_1px_2px_rgba(15,23,42,0.02)] backdrop-blur-xs transition-all duration-200 hover:border-slate-300/80 sm:p-4">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-600">
@@ -155,7 +155,7 @@ function GitTestConfigPanel({
             Cấu hình repository dành riêng cho Git Test.
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-2xs">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-2xs">
           <ShieldAlert size={13} /> {saving ? "Đang lưu…" : "Đã kết nối config"}
         </span>
       </div>
@@ -217,13 +217,13 @@ function GitTestConfigPanel({
       <div className="mt-3 flex flex-col justify-between gap-2 border-t border-slate-100 pt-2 sm:flex-row sm:items-center">
         <p className="text-[11px] text-slate-400">{message || "Config được lưu cho các thao tác Git Test bên dưới."}</p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
+          <Button onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing}>
             <RefreshCw size={13} className={reloading ? "animate-spin" : ""} />
             {reloading ? "Reloading…" : refreshing ? "Refreshing…" : "Reload config"}
-          </button>
-          <button type="button" onClick={() => void save()} disabled={saving || reloading || refreshing} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs transition-all duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
+          </Button>
+          <Button variant="primary" onClick={() => void save()} disabled={saving || reloading || refreshing}>
             {saving ? "Saving…" : refreshing ? "Refreshing…" : "Save & Connect"}
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -241,26 +241,39 @@ const apiError = (error: GitApiError) =>
   `${error.code ? `${error.code}: ` : ""}${error.status === 419 ? "CSRF/session validation failed." : error.message}`;
 const statusColor = (status?: string) =>
   status === "Clean"
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-amber-50 text-amber-700";
+    ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/20"
+    : "border border-amber-500/40 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/20";
 
 function Button({
   children,
   onClick,
   disabled = false,
   title,
+  variant = "default",
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
+  variant?: "default" | "primary" | "dark" | "success" | "warning";
 }) {
+  const variantClasses =
+    variant === "primary"
+      ? "border-transparent bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-xs hover:from-indigo-500 hover:to-indigo-600 hover:shadow-indigo-500/20 active:scale-[0.98]"
+      : variant === "dark"
+        ? "border-white/15 bg-white/10 text-white hover:bg-white/20 hover:border-white/25 active:scale-[0.98] backdrop-blur-md"
+        : variant === "success"
+          ? "border-transparent bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20 active:scale-[0.98]"
+          : variant === "warning"
+            ? "border-amber-300/80 bg-gradient-to-b from-amber-50 to-amber-100/60 text-amber-900 shadow-2xs hover:border-amber-400 hover:from-amber-100 hover:to-amber-200/60 hover:text-amber-950 active:scale-[0.98]"
+            : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 text-slate-700 shadow-2xs hover:border-indigo-300 hover:from-white hover:to-indigo-50/40 hover:text-indigo-700 active:scale-[0.98]";
+
   return (
     <button
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/90 hover:text-slate-900 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 disabled:hover:border-slate-200 disabled:hover:bg-white cursor-pointer"
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-700 cursor-pointer ${variantClasses}`}
     >
       {children}
     </button>
@@ -321,15 +334,17 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`min-w-0 self-start rounded-xl border border-slate-200/90 bg-white shadow-2xs transition-all duration-200 hover:shadow-xs ${className}`}>
-      <div className="flex min-w-0 items-center justify-between border-b border-slate-100 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-800">
-          {icon}
-          {title}
+    <section className={`min-w-0 self-start rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_1px_2px_rgba(15,23,42,0.02)] backdrop-blur-xs transition-all duration-200 hover:border-indigo-200/70 hover:shadow-sm ${className}`}>
+      <div className="flex min-w-0 items-center justify-between border-b border-slate-100/90 bg-gradient-to-r from-slate-50/70 via-white to-transparent px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-50/90 text-indigo-600 ring-1 ring-indigo-500/10">
+            {icon}
+          </span>
+          <span className="truncate">{title}</span>
         </div>
         {action}
       </div>
-      <div className="min-w-0 overflow-visible p-3">{children}</div>
+      <div className="min-w-0 overflow-visible p-3.5">{children}</div>
     </section>
   );
 }
@@ -366,10 +381,18 @@ function FileList({
         <button
           key={`${file.path}-${file.status}`}
           onClick={() => onSelect(file)}
-          className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-indigo-50/70 cursor-pointer"
+          className="group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-150 hover:bg-indigo-50/60 cursor-pointer"
         >
           <span
-            className={`w-20 shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase ${file.status.toLowerCase().startsWith("d") ? "bg-red-50 text-red-600" : file.status.toLowerCase().startsWith("u") ? "bg-violet-50 text-violet-600" : file.status.toLowerCase().startsWith("a") ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}
+            className={`w-16 shrink-0 text-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase shadow-2xs border ${
+              file.status.toLowerCase().startsWith("d")
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : file.status.toLowerCase().startsWith("u")
+                  ? "border-violet-200 bg-violet-50 text-violet-700"
+                  : file.status.toLowerCase().startsWith("a")
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
           >
             {file.status}
           </span>
@@ -381,7 +404,7 @@ function FileList({
               {file.path}
             </span>
           </span>
-          <span className="text-[10px] text-slate-400 transition-colors group-hover:text-indigo-500">View Diff</span>
+          <span className="text-[10px] text-slate-400 transition-colors group-hover:text-indigo-600">View Diff</span>
           <ChevronRight size={14} className="text-slate-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-indigo-500" />
         </button>
       ))}
@@ -390,6 +413,41 @@ function FileList({
     <p className="py-4 text-center text-xs text-slate-400">
       No files in this group.
     </p>
+  );
+}
+
+function DiffViewContent({ content }: { content: string }) {
+  const lines = content.split(String.fromCharCode(10));
+  return (
+    <div className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950 p-2.5 font-mono text-[11px] leading-5 text-slate-300 shadow-inner [scrollbar-width:thin]">
+      {lines.map((line, idx) => {
+        let style = "text-slate-300";
+        let bg = "";
+        if (line.startsWith("diff --git") || line.startsWith("index ")) {
+          style = "text-slate-400 font-semibold";
+        } else if (line.startsWith("---")) {
+          style = "text-rose-400 font-semibold";
+          bg = "bg-rose-950/30";
+        } else if (line.startsWith("+++")) {
+          style = "text-emerald-400 font-semibold";
+          bg = "bg-emerald-950/30";
+        } else if (line.startsWith("@@")) {
+          style = "text-cyan-300 font-semibold";
+          bg = "bg-cyan-950/40";
+        } else if (line.startsWith("+")) {
+          style = "text-emerald-300";
+          bg = "bg-emerald-950/40";
+        } else if (line.startsWith("-")) {
+          style = "text-rose-300";
+          bg = "bg-rose-950/40";
+        }
+        return (
+          <div key={idx} className={`whitespace-pre px-2 py-0.5 rounded-xs select-text ${style} ${bg}`}>
+            {line || " "}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1176,8 +1234,10 @@ export default function GitControl() {
         onUsernameChange={setGiteaUsername}
         refreshing={refreshing}
       />
-      <header className="relative overflow-hidden rounded-xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-5 py-5 text-white shadow-md">
-        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+      <header className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 text-white shadow-lg sm:p-5">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <FolderGit2 size={15} className="text-indigo-400" />
@@ -1211,12 +1271,13 @@ export default function GitControl() {
               </span>
             </Tooltip>
             <Tooltip description="Cập nhật lại trạng thái mới nhất của Git trên giao diện.">
-              <Button onClick={() => load(true, true)} disabled={refreshing}>
+              <Button variant="dark" onClick={() => load(true, true)} disabled={refreshing}>
                 <RefreshCw size={14} />
                 {refreshing ? "Refreshing…" : "Refresh"}
               </Button>
             </Tooltip>
             <Button
+              variant="dark"
               onClick={resetWorkflow}
               disabled={mergeLoading || refreshing || Boolean(writeBusy)}
             >
@@ -1229,6 +1290,7 @@ export default function GitControl() {
               tooltipClassName="bottom-full left-auto right-0 top-auto mb-2"
             >
               <Button
+                variant="dark"
                 disabled={!can("can_fetch") || Boolean(writeBusy)}
                 onClick={() =>
                   void run(
@@ -1250,6 +1312,7 @@ export default function GitControl() {
               tooltipClassName="bottom-full left-auto right-0 top-auto mb-2"
             >
               <Button
+                variant="primary"
                 disabled={Boolean(writeBusy) || Boolean(loading.update_code)}
                 onClick={() =>
                   void run(
@@ -1280,7 +1343,7 @@ export default function GitControl() {
           <SyncMetric
             label="↑ Ahead"
             value={workflow?.sync.ahead ?? status?.ahead ?? 0}
-            className="text-blue-300"
+            className="rounded-md border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 text-blue-300 font-medium"
             description="Số commit đã có trên máy nhưng chưa được đẩy lên Gitea."
           />
           <SyncMetric
@@ -1322,52 +1385,52 @@ export default function GitControl() {
           icon={<Server size={16} className="text-indigo-500" />}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Project Git hiện đang được quản lý và đồng bộ với Gitea.">
-                <p className="text-[11px] text-slate-400">Repository</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Repository</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.authenticated_user.username || "—"} /{" "}
                 {workflow?.repository || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Tên project Git đang được quản lý và đồng bộ với Gitea.">
-                <p className="text-[11px] text-slate-400">Project</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Project</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.repository?.split("/").pop() || "media_tech_ai"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Cho biết folder Git trên máy hiện có sẵn và sử dụng được hay không.">
-                <p className="text-[11px] text-slate-400">Local repository</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Local repository</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold text-emerald-700">
+              <p className="mt-1 text-xs font-semibold text-emerald-700">
                 {info?.source_available ? "Available" : "Unavailable"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Kiểu tổ chức source code của project. Monorepo nghĩa là nhiều phần của project nằm chung trong một repository.">
-                <p className="text-[11px] text-slate-400">Repository type</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Repository type</p>
               </Tooltip>
-              <p className="mt-1 truncate text-xs font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {info?.repository_type || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Tài khoản Gitea hiện đang được sử dụng.">
-                <p className="text-[11px] text-slate-400">Authenticated user</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Authenticated user</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.authenticated_user.username || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Quyền hiện tại của tài khoản đối với repository, ví dụ đọc, ghi, tạo PR hoặc merge.">
-                <p className="text-[11px] text-slate-400">Permission</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Permission</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 text-xs font-semibold text-slate-800">
                 {workflow?.permission_known ? "Known" : "Unknown"}
               </p>
             </div>
@@ -1415,6 +1478,7 @@ export default function GitControl() {
               </Tooltip>
               <Tooltip description="Đồng bộ đầy đủ code mới nhất từ Gitea về branch hiện tại.">
                 <Button
+                  variant="primary"
                   disabled={Boolean(writeBusy) || Boolean(loading.update_code)}
                   onClick={() => {
                     setUpdateNotice("Full/Sync in progress…");
@@ -1440,6 +1504,7 @@ export default function GitControl() {
               </Tooltip>
               <Tooltip description="Sao lưu và lưu dữ liệu SQL từ https://laravel_mt.hust.media/api/chat/bot/sql_save">
                 <Button
+                  variant="warning"
                   disabled={Boolean(loading.sql_save)}
                   onClick={() => {
                     setUpdateNotice("SQL save in progress…");
@@ -1501,9 +1566,12 @@ export default function GitControl() {
                 />
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Sẽ tạo: <span className="font-mono text-slate-600">{commitType}: [{giteaUsername || "—"}] - {commitMessage.trim() || "..."}</span>
-            </p>
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+              <span>Sẽ tạo:</span>
+              <span className="rounded-md border border-slate-200/90 bg-slate-50 px-2 py-0.5 font-mono text-slate-700 font-medium">
+                {commitType}: [{giteaUsername || "—"}] - {commitMessage.trim() || "..."}
+              </span>
+            </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-500">
                 {(status?.staged || 0) > 0 ? `${status?.staged} staged files` : "Bấm Stage All trước khi Commit"}
@@ -1517,6 +1585,7 @@ export default function GitControl() {
                   {uncommitLoading ? "Undoing…" : "Undo Commit"}
                 </Button>
                 <Button
+                  variant="primary"
                   disabled={
                     !commitAllowed ||
                     !commitMessage.trim() ||
@@ -1574,6 +1643,7 @@ export default function GitControl() {
             </div>
             <div className="mt-1 flex flex-wrap gap-2">
               <Button
+                variant="primary"
                 disabled={!pushAllowed || Boolean(writeBusy)}
                 onClick={() => void write("push", "code")}
               >
@@ -1622,6 +1692,7 @@ export default function GitControl() {
             <div className="mt-3 flex flex-wrap gap-2">
               {(!cyclePullRequest?.exists || cyclePullRequest.state?.toLowerCase() === "closed") && (
                 <Button
+                  variant="primary"
                   disabled={!can("can_create_pr") || Boolean(writeBusy) || pullRequestLoading}
                   onClick={() => void createPullRequest()}
                 >
@@ -1676,6 +1747,7 @@ export default function GitControl() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
+                  variant="success"
                   onClick={() => void mergeCurrentPullRequest()}
                   disabled={
                     !workflow?.pull_request?.index ||
@@ -1686,6 +1758,7 @@ export default function GitControl() {
                   Merge to main
                 </Button>
                 <Button
+                  variant="warning"
                   onClick={() => void forceMergeCurrentPullRequest()}
                   disabled={
                     !workflow?.pull_request?.index ||
@@ -1772,9 +1845,7 @@ export default function GitControl() {
             {loading.diff && !diff ? (
               <div className="h-40 animate-pulse rounded bg-slate-100" />
             ) : diff?.diff ? (
-              <pre className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-slate-800/80 bg-slate-950 p-3 font-mono text-[11px] leading-5 text-slate-300 shadow-inner">
-                {diff.diff}
-              </pre>
+              <DiffViewContent content={diff.diff} />
             ) : (
               <div className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-400">
                 No changes to display
