@@ -103,20 +103,20 @@ export function FormattedMessageContent({
           return (
             <div
               key={index}
-              className="my-2.5 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 text-slate-100 shadow-md"
+              className="my-2.5 overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1117] text-slate-100 shadow-md"
             >
-              <div className="flex items-center justify-between border-b border-slate-800 bg-slate-800/80 px-3 py-1.5 text-xs text-slate-400">
-                <span className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#161b22] px-3.5 py-1.5 text-xs text-slate-400">
+                <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-wide text-purple-300">
                   <Terminal className="h-3.5 w-3.5 text-purple-400" />
                   {language}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleCopyCode(codeContent, index)}
-                  className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-slate-300 transition-all duration-150 hover:bg-slate-700 hover:text-white active:scale-95 cursor-pointer"
+                  className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-slate-300 transition-all duration-150 hover:bg-slate-800 hover:text-white active:scale-95 cursor-pointer"
                 >
                   {copiedIndex === index ? (
-                    <span className="flex items-center gap-1 text-emerald-400">
+                    <span className="flex items-center gap-1 text-emerald-400 font-semibold">
                       <Check className="h-3 w-3" /> Đã chép
                     </span>
                   ) : (
@@ -126,7 +126,7 @@ export function FormattedMessageContent({
                   )}
                 </button>
               </div>
-              <pre className="overflow-x-auto p-3 text-xs font-mono leading-relaxed text-slate-200">
+              <pre className="overflow-x-auto p-3.5 text-xs font-mono leading-relaxed text-slate-200 [scrollbar-width:thin]">
                 <code>{codeContent}</code>
               </pre>
             </div>
@@ -134,11 +134,11 @@ export function FormattedMessageContent({
         }
 
         return (
-          <div key={index} className="whitespace-pre-wrap break-words">
+          <div key={index} className="whitespace-pre-wrap break-words leading-relaxed">
             {part.split("\n").map((line, lIdx) => {
               const boldParts = line.split(/(\*\*.*?\*\*)/g);
               return (
-                <span key={lIdx} className="block min-h-[1.2em]">
+                <span key={lIdx} className="block min-h-[1.25em]">
                   {boldParts.map((sub, sIdx) => {
                     if (sub.startsWith("**") && sub.endsWith("**")) {
                       return (
@@ -151,7 +151,7 @@ export function FormattedMessageContent({
                       return (
                         <code
                           key={sIdx}
-                          className="mx-0.5 rounded bg-purple-100/80 px-1.5 py-0.5 font-mono text-[13px] text-purple-800"
+                          className="mx-0.5 rounded-md border border-purple-200/70 bg-purple-50/80 px-1.5 py-0.5 font-mono text-[12.5px] font-medium text-purple-700 shadow-2xs"
                         >
                           {sub.slice(1, -1)}
                         </code>
@@ -685,13 +685,13 @@ export function MediaUiUx(props: MediaUiUxProps) {
           className={`flex flex-1 min-h-0 flex-col overflow-hidden ${
             isDrawer
               ? "rounded-t-3xl sm:rounded-3xl border border-purple-200/90 shadow-[0_-10px_40px_rgba(0,0,0,0.2)]"
-              : "rounded-2xl sm:rounded-3xl border border-white/70 shadow-sm sm:shadow-[0_20px_60px_-15px_rgba(168,85,247,0.18)]"
+              : "rounded-2xl sm:rounded-3xl border border-slate-200/70 shadow-sm sm:shadow-[0_20px_60px_-15px_rgba(147,51,234,0.14),0_4px_16px_rgba(0,0,0,0.03)]"
           } bg-white/95 backdrop-blur-xl transition-all`}
         >
           {/* Top Header */}
-          <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-purple-100/90 bg-white/90 px-3 py-2 sm:px-5 sm:py-3.5 backdrop-blur-md">
+          <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/95 px-3 py-2 sm:px-5 sm:py-3.5 backdrop-blur-md shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-500 text-white shadow-md shadow-purple-500/25">
+              <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-500 text-white shadow-md shadow-purple-600/25 ring-2 ring-purple-100">
                 <Bot className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -700,10 +700,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h2 className="truncate text-sm font-bold text-slate-800 sm:text-lg">
+                  <h2 className="truncate text-sm font-bold text-slate-900 tracking-tight sm:text-lg">
                     {title}
                   </h2>
-                  <span className="hidden xs:inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-700 shrink-0">
+                  <span className="hidden xs:inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-700 shrink-0 shadow-2xs">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     {agentBadge || (agent ? `Agent: ${agent}` : "Live AI")}
                   </span>
@@ -713,7 +713,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-1.5">
                   {/* User ID Tag */}
-                  <div className="inline-flex items-center gap-1 rounded-md border border-purple-200/90 bg-purple-50/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs transition-colors hover:border-purple-300">
+                  <div className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs transition-colors hover:border-purple-300">
                     <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
                     <span>ID:</span>
                     <span className="font-mono font-bold text-purple-900">
@@ -736,12 +736,12 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <div
                     title={`Session Key: ${effectiveSessionKey}\nClick để sao chép`}
                     onClick={() => handleCopy("session_key", effectiveSessionKey)}
-                    className="hidden md:inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-200/90 bg-slate-50/90 px-2 py-0.5 text-[11px] font-mono text-slate-600 transition-all hover:border-purple-300 hover:bg-purple-50/70 hover:text-purple-700 active:scale-[0.98]"
+                    className="hidden md:inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-200/90 bg-slate-50/90 px-2 py-0.5 text-[11px] font-mono text-slate-600 shadow-2xs transition-all hover:border-purple-300 hover:bg-purple-50/70 hover:text-purple-700 active:scale-[0.98]"
                   >
                     <Hash className="h-3 w-3 text-slate-400" />
                     <span className="max-w-[130px] truncate sm:max-w-[190px]">{effectiveSessionKey}</span>
                     {copiedId === "session_key" ? (
-                      <Check className="h-2.5 w-2.5 text-emerald-500" />
+                      <Check className="h-2.5 w-2.5 text-emerald-500 font-semibold" />
                     ) : (
                       <Copy className="h-2.5 w-2.5 text-slate-400" />
                     )}
@@ -753,7 +753,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     target="_blank"
                     rel="noreferrer"
                     title={`Mở phiên OpenClaw của User #${userId}`}
-                    className="hidden sm:inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-all hover:border-indigo-300 hover:bg-indigo-100/90 shadow-2xs active:scale-[0.98]"
+                    className="hidden sm:inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 py-0.5 text-[11px] font-medium text-indigo-700 shadow-2xs transition-all hover:border-indigo-300 hover:bg-indigo-100/90 active:scale-[0.98]"
                   >
                     <span>OpenClaw ({userId ? `#${userId}` : "UI"})</span>
                     <ExternalLink className="h-2.5 w-2.5" />
@@ -764,7 +764,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     type="button"
                     onClick={() => setIsServiceMenuExpanded(true)}
                     title="Mở bảng điều khiển Menu Dịch vụ AI"
-                    className="inline-flex items-center gap-1 rounded-md border border-purple-200/90 bg-purple-50/90 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 transition-all shadow-2xs hover:border-purple-300 hover:bg-purple-100 active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50/90 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs transition-all hover:border-purple-300 hover:bg-purple-100 active:scale-95 cursor-pointer"
                     aria-expanded={isServiceMenuExpanded}
                   >
                     <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
@@ -776,7 +776,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
             <div className="flex items-center gap-2">
               {!hideModel && (
-                <div className="hidden items-center gap-1.5 rounded-xl border border-purple-100 bg-purple-50/80 px-3 py-1.5 text-xs font-medium text-purple-700 sm:flex">
+                <div className="hidden items-center gap-1.5 rounded-xl border border-purple-200/70 bg-purple-50/80 px-3 py-1.5 text-xs font-medium text-purple-700 shadow-2xs sm:flex">
                   <Sparkles className="h-3.5 w-3.5 text-pink-500" />
                   <span>{activeModel}</span>
                 </div>
@@ -788,7 +788,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 title="Gửi /reset lên OpenClaw và tạo cuộc trò chuyện mới"
                 aria-label="Reset hoàn toàn cuộc trò chuyện"
                 disabled={isRestoringChat || isSelectingWorkspace || isTyping}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 transition-all hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-wait disabled:opacity-50 cursor-pointer"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-2xs transition-all hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-wait disabled:opacity-50 cursor-pointer"
               >
                 <RotateCcw className={`h-4 w-4 ${isRestoringChat ? "animate-spin" : ""}`} />
               </button>
@@ -799,7 +799,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   onClick={onClose}
                   title="Đóng cửa sổ chat"
                   aria-label="Đóng cửa sổ chat"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 active:scale-95 cursor-pointer"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-2xs transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 active:scale-95 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -807,11 +807,11 @@ export function MediaUiUx(props: MediaUiUxProps) {
             </div>
           </header>
 
-          <div className="shrink-0 border-b border-purple-100/80 bg-white/90 px-3 py-2 sm:px-6">
+          <div className="shrink-0 border-b border-slate-200/60 bg-slate-50/60 px-3 py-2 sm:px-6">
             <div className="flex min-w-0 items-center justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="hidden shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:inline-flex">
-                  <Layers className="h-3 w-3" />
+                <span className="hidden shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:inline-flex">
+                  <Layers className="h-3 w-3 text-slate-400" />
                   Không gian
                 </span>
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -825,15 +825,15 @@ export function MediaUiUx(props: MediaUiUxProps) {
                       title={workspace.description || workspace.workspace_name}
                       className={`shrink-0 max-w-[230px] truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 disabled:cursor-wait disabled:opacity-60 active:scale-95 cursor-pointer ${
                         selectedWorkspaceCode === workspace.work_space_code
-                          ? "border-purple-300/90 bg-purple-100/90 text-purple-800 shadow-2xs font-semibold ring-1 ring-purple-300/50"
-                          : "border-slate-200/90 bg-white text-slate-600 hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-700"
+                          ? "border-purple-300 bg-purple-100/90 text-purple-800 shadow-2xs font-semibold ring-1 ring-purple-400/40"
+                          : "border-slate-200/90 bg-white text-slate-600 shadow-2xs hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-700"
                       }`}
                     >
                       {workspace.workspace_name}
                     </button>
                   ))}
                   {isLoadingWorkspaces && (
-                    <span className="shrink-0 animate-pulse px-2 text-[10px] text-slate-400">
+                    <span className="shrink-0 animate-pulse px-2 text-[10px] text-slate-400 font-medium">
                       Đang tải danh sách…
                     </span>
                   )}
@@ -850,7 +850,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   onClick={() => void handleUpdateWorkspaces()}
                   disabled={isUpdatingWorkspaces || isLoadingWorkspaces || isSelectingWorkspace || isTyping}
                   title="Đồng bộ routing và tải lại danh sách workspace"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-purple-200/90 bg-purple-50/80 px-2.5 py-1 text-[11px] font-medium text-purple-700 transition-all shadow-2xs hover:border-purple-300 hover:bg-purple-100 active:scale-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-purple-200/90 bg-white px-2.5 py-1 text-[11px] font-medium text-purple-700 shadow-2xs transition-all hover:border-purple-300 hover:bg-purple-50 active:scale-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
                 >
                   <RotateCcw className={`h-3 w-3 ${isUpdatingWorkspaces ? "animate-spin" : ""}`} />
                   {isUpdatingWorkspaces ? "Đang cập nhật…" : "Cập nhật"}
@@ -862,7 +862,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
           {/* Message History Area (100% clean, no clutter) */}
           <div
             ref={messagesContainerRef}
-            className="min-h-0 flex-1 overflow-y-auto px-3 pt-2 pb-1.5 sm:px-6 sm:pt-3 sm:pb-2 [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200/80 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300"
+            className="min-h-0 flex-1 overflow-y-auto bg-slate-50/40 px-3 pt-2 pb-1.5 sm:px-6 sm:pt-3 sm:pb-2 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300/60 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400/80"
             aria-busy={isRestoringChat || isSelectingWorkspace}
           >
             <div className="flow-root space-y-3 sm:space-y-4">
@@ -890,7 +890,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     {/* Bot Avatar on Left */}
                     {isBot && (
                       <div
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs transition-transform duration-200 group-hover:scale-105 ${
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs ring-2 ring-white/80 transition-transform duration-200 group-hover:scale-105 ${
                           msg.isError
                             ? "bg-rose-500 shadow-rose-500/20"
                             : "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/25"
@@ -915,8 +915,8 @@ export function MediaUiUx(props: MediaUiUxProps) {
                           isBot
                             ? msg.isError
                               ? "rounded-tl-xs border border-rose-200/90 bg-rose-50/95 text-rose-900 shadow-2xs"
-                              : "rounded-tl-xs border border-slate-200/80 bg-white/95 text-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-xs hover:border-slate-300/80"
-                            : "rounded-tr-xs bg-gradient-to-r from-purple-600 via-purple-600 to-indigo-600 text-white shadow-[0_3px_12px_rgba(147,51,234,0.22)]"
+                              : "rounded-tl-xs border border-slate-200/80 bg-white text-slate-800 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.02)] hover:border-slate-300/80"
+                            : "rounded-tr-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_2px_10px_rgba(147,51,234,0.22)] font-normal"
                         }`}
                       >
                         {!isBot && msg.serviceDescription && (
@@ -996,7 +996,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
                         {isBot && !msg.isError && msg.usage && (
                           <div
-                            className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-full border border-purple-200/70 bg-purple-50/70 px-2 py-0.5 text-[10px] leading-none text-slate-600 shadow-2xs transition-colors hover:bg-purple-50 hover:border-purple-200"
+                            className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-full border border-purple-200/80 bg-white px-2 py-0.5 text-[10px] leading-none text-slate-600 shadow-2xs transition-colors hover:border-purple-300"
                             aria-label="Mức sử dụng token của phản hồi"
                             title={[
                               msg.usage.inputTokens !== undefined
@@ -1034,7 +1034,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
                     {/* User Avatar on Right */}
                     {!isBot && (
-                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white shadow-2xs transition-transform duration-200 group-hover:scale-105">
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-800 to-slate-950 text-white shadow-2xs ring-2 ring-white/80 transition-transform duration-200 group-hover:scale-105">
                         <User className="h-4 w-4" />
                       </div>
                     )}
@@ -1045,10 +1045,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
               {/* Typing Indicator */}
               {isTyping && (
                 <div className="flex items-start gap-2.5 justify-start">
-                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-xs shadow-purple-500/20">
+                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-xs shadow-purple-500/20 ring-2 ring-white/80">
                     <Bot className="h-4 w-4" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-xs border border-purple-100/90 bg-white/95 px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+                  <div className="rounded-2xl rounded-tl-xs border border-purple-100 bg-white px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-purple-500 [animation-delay:-0.3s]" />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-pink-500 [animation-delay:-0.15s]" />
@@ -1063,7 +1063,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
           </div>
 
           {/* Input Bar & Footer Controls */}
-          <footer className="shrink-0 border-t border-purple-100/90 bg-white/80 px-2 pt-2 pb-2 backdrop-blur-md sm:px-4 sm:pt-2.5 sm:pb-3">
+          <footer className="shrink-0 border-t border-slate-200/70 bg-white/95 px-2 pt-2 pb-2 backdrop-blur-md sm:px-4 sm:pt-2.5 sm:pb-3 shadow-[0_-1px_4px_rgba(0,0,0,0.02)]">
             {isChatLocked && (
               <div className="mb-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/95 px-3.5 py-2 text-xs text-amber-900 shadow-xs">
                 <div className="flex items-center gap-2">
@@ -1094,7 +1094,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
               </div>
             )}
 
-            <div className="relative flex items-end gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xs transition-all duration-200 focus-within:border-purple-400 focus-within:ring-4 focus-within:ring-purple-500/10 hover:border-slate-300">
+            <div className="relative flex items-end gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-[0_2px_12px_rgba(0,0,0,0.04)] ring-1 ring-slate-100 transition-all duration-200 focus-within:border-purple-400 focus-within:ring-4 focus-within:ring-purple-500/10 focus-within:shadow-[0_4px_20px_rgba(147,51,234,0.08)] hover:border-slate-300">
               <input
                 ref={imageInputRef}
                 type="file"
@@ -1118,7 +1118,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <button
                     type="button"
                     onClick={() => setIsServiceMenuExpanded(true)}
-                    className="group inline-flex items-center gap-1 rounded-lg border border-purple-200/90 bg-purple-50/90 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-all duration-150 hover:border-purple-300 hover:bg-purple-100 active:scale-95 shadow-2xs cursor-pointer"
+                    className="group inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50/80 px-2.5 py-0.5 text-[11px] font-medium text-purple-800 transition-all duration-150 hover:border-purple-300 hover:from-purple-100 hover:to-indigo-100 active:scale-95 shadow-2xs cursor-pointer"
                     title="Bấm để mở danh sách dịch vụ AI"
                   >
                     <span>{currentSuggestion?.icon || "💬"}</span>
@@ -1181,7 +1181,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     disabled={!canSend}
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                       canSend
-                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 hover:shadow-md hover:shadow-purple-500/30 active:scale-95 cursor-pointer"
+                        ? "bg-gradient-to-tr from-purple-600 via-indigo-600 to-purple-600 text-white shadow-md shadow-purple-600/30 hover:from-purple-700 hover:to-indigo-700 hover:shadow-lg hover:shadow-purple-600/35 active:scale-95 cursor-pointer"
                         : "bg-slate-100 text-slate-300 cursor-not-allowed"
                     }`}
                     title={isChatLocked ? "Khung chat đang bị khóa" : canSend ? "Gửi tin nhắn" : "Nhập nội dung để gửi"}

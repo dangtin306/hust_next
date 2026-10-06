@@ -81,8 +81,8 @@ const apiError = (error: GitApiError) =>
   `${error.code ? `${error.code}: ` : ""}${error.status === 419 ? "CSRF/session validation failed." : error.message}`;
 const statusColor = (status?: string) =>
   status === "Clean"
-    ? "bg-emerald-50 text-emerald-700"
-    : "bg-amber-50 text-amber-700";
+    ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/20"
+    : "border border-amber-500/40 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/20";
 
 function Button({
   children,
@@ -253,6 +253,42 @@ function FileList({
     <p className="py-4 text-center text-xs text-slate-400">
       No files in this group.
     </p>
+  );
+}
+
+function DiffViewContent({ content }: { content: string }) {
+  const lines = content.split("
+");
+  return (
+    <div className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-800/80 bg-slate-950 p-2.5 font-mono text-[11px] leading-5 text-slate-300 shadow-inner [scrollbar-width:thin]">
+      {lines.map((line, idx) => {
+        let style = "text-slate-300";
+        let bg = "";
+        if (line.startsWith("diff --git") || line.startsWith("index ")) {
+          style = "text-slate-400 font-semibold";
+        } else if (line.startsWith("---")) {
+          style = "text-rose-400 font-semibold";
+          bg = "bg-rose-950/30";
+        } else if (line.startsWith("+++")) {
+          style = "text-emerald-400 font-semibold";
+          bg = "bg-emerald-950/30";
+        } else if (line.startsWith("@@")) {
+          style = "text-cyan-300 font-semibold";
+          bg = "bg-cyan-950/40";
+        } else if (line.startsWith("+")) {
+          style = "text-emerald-300";
+          bg = "bg-emerald-950/40";
+        } else if (line.startsWith("-")) {
+          style = "text-rose-300";
+          bg = "bg-rose-950/40";
+        }
+        return (
+          <div key={idx} className={`whitespace-pre px-2 py-0.5 rounded-xs select-text ${style} ${bg}`}>
+            {line || " "}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -576,7 +612,7 @@ function GitAutoConfigDemo({
   };
 
   return (
-    <section className="rounded-xl border border-indigo-100/90 bg-white p-3 shadow-2xs sm:p-4 transition-all duration-200">
+    <section className="rounded-xl border border-slate-200/80 bg-white/95 p-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_1px_2px_rgba(15,23,42,0.02)] backdrop-blur-xs transition-all duration-200 hover:border-slate-300/80 sm:p-4">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-600">
@@ -589,7 +625,7 @@ function GitAutoConfigDemo({
             Cấu hình mẫu dùng để test repository Gitea hiện tại trước.
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-2xs">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-2xs">
           <ShieldAlert size={13} /> {saving ? "Đang lưu…" : "Đã kết nối config"}
         </span>
       </div>
@@ -653,11 +689,11 @@ function GitAutoConfigDemo({
           {message || "Config được lưu cho các thao tác Git Auto bên dưới."}
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
+          <Button onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing}>
             <RefreshCw size={13} className={reloading ? "animate-spin" : ""} />
             {reloading ? "Reloading…" : refreshing ? "Refreshing…" : "Reload config"}
           </button>
-          <button type="button" onClick={() => void save()} disabled={saving || reloading || refreshing} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs transition-all duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
+          <Button variant="primary" onClick={() => void save()} disabled={saving || reloading || refreshing}>
             {saving ? "Saving…" : refreshing ? "Refreshing…" : "Save & Connect"}
           </button>
         </div>
@@ -1042,8 +1078,10 @@ export default function GitControl() {
     <div className="min-h-screen w-full min-w-0 space-y-3 overflow-x-hidden bg-slate-50 p-0 text-slate-900">
       <GitAutoConfigDemo onSaved={() => load(true)} onNotify={notify} onUsernameChange={setGiteaUsername} refreshing={refreshing} />
       <main className="min-w-0 space-y-3">
-      <header className="relative overflow-hidden rounded-xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-5 py-5 text-white shadow-md">
-        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+      <header className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 text-white shadow-lg sm:p-5">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <FolderGit2 size={15} className="text-indigo-400" />
@@ -1077,12 +1115,13 @@ export default function GitControl() {
               </span>
             </Tooltip>
             <Tooltip description="Cập nhật lại trạng thái mới nhất của Git trên giao diện.">
-              <Button onClick={() => load(true, true)} disabled={refreshing}>
+              <Button variant="dark" onClick={() => load(true, true)} disabled={refreshing}>
                 <RefreshCw size={14} />
                 {refreshing ? "Refreshing…" : "Refresh"}
               </Button>
             </Tooltip>
             <Button
+              variant="dark"
               onClick={resetWorkflow}
               disabled={refreshing || Boolean(writeBusy)}
             >
@@ -1095,6 +1134,7 @@ export default function GitControl() {
               tooltipClassName="bottom-full left-auto right-0 top-auto mb-2"
             >
               <Button
+                variant="dark"
                 disabled={!can("can_fetch") || Boolean(writeBusy)}
                 onClick={() =>
                   void run(
@@ -1116,6 +1156,7 @@ export default function GitControl() {
               tooltipClassName="bottom-full left-auto right-0 top-auto mb-2"
             >
               <Button
+                variant="primary"
                 disabled={Boolean(writeBusy) || Boolean(loading.update_code)}
                 onClick={() =>
                   void run(
@@ -1146,7 +1187,7 @@ export default function GitControl() {
           <SyncMetric
             label="↑ Ahead"
             value={workflow?.sync.ahead ?? status?.ahead ?? 0}
-            className="text-blue-300"
+            className="rounded-md border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 text-blue-300 font-medium"
             description="Số commit đã có trên máy nhưng chưa được đẩy lên Gitea."
           />
           <SyncMetric
@@ -1185,52 +1226,52 @@ export default function GitControl() {
           icon={<Server size={16} className="text-indigo-500" />}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Project Git hiện đang được quản lý và đồng bộ với Gitea.">
-                <p className="text-[11px] text-slate-400">Repository</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Repository</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.authenticated_user.username || "—"} /{" "}
                 {workflow?.repository || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Tên project Git đang được quản lý và đồng bộ với Gitea.">
-                <p className="text-[11px] text-slate-400">Project</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Project</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.repository?.split("/").pop() || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Cho biết folder Git trên máy hiện có sẵn và sử dụng được hay không.">
-                <p className="text-[11px] text-slate-400">Local repository</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Local repository</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold text-emerald-700">
+              <p className="mt-1 text-xs font-semibold text-emerald-700">
                 {info?.source_available ? "Available" : "Unavailable"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Kiểu tổ chức source code của project. Monorepo nghĩa là nhiều phần của project nằm chung trong một repository.">
-                <p className="text-[11px] text-slate-400">Repository type</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Repository type</p>
               </Tooltip>
-              <p className="mt-1 truncate text-xs font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {info?.repository_type || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Tài khoản Gitea hiện đang được sử dụng.">
-                <p className="text-[11px] text-slate-400">Authenticated user</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Authenticated user</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 truncate text-xs font-semibold text-slate-800">
                 {workflow?.authenticated_user.username || "—"}
               </p>
             </div>
-            <div>
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5 transition-all hover:border-slate-200 hover:bg-slate-50">
               <Tooltip description="Quyền hiện tại của tài khoản đối với repository, ví dụ đọc, ghi, tạo PR hoặc merge.">
-                <p className="text-[11px] text-slate-400">Permission</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Permission</p>
               </Tooltip>
-              <p className="mt-1 text-sm font-semibold">
+              <p className="mt-1 text-xs font-semibold text-slate-800">
                 {workflow?.permission_known ? "Known" : "Unknown"}
               </p>
             </div>
@@ -1278,6 +1319,7 @@ export default function GitControl() {
               </Tooltip>
               <Tooltip description="Đồng bộ đầy đủ code mới nhất từ Gitea về branch hiện tại.">
                 <Button
+                  variant="primary"
                   disabled={Boolean(writeBusy) || Boolean(loading.update_code)}
                   onClick={() => {
                     setUpdateNotice("Full/Sync in progress…");
@@ -1353,6 +1395,7 @@ export default function GitControl() {
                   {uncommitLoading ? "Undoing…" : "Undo Commit"}
                 </Button>
                 <Button
+                  variant="primary"
                   disabled={
                     !commitAllowed ||
                     !commitMessage.trim() ||
@@ -1410,6 +1453,7 @@ export default function GitControl() {
             </div>
             <div className="mt-1 flex flex-wrap gap-2">
               <Button
+                variant="primary"
                 disabled={!pushAllowed || Boolean(writeBusy)}
                 onClick={() => void write("push", "code")}
               >
@@ -1458,6 +1502,7 @@ export default function GitControl() {
             <div className="mt-3 flex flex-wrap gap-2">
               {(!workflow?.pull_request?.exists || workflow.pull_request.state?.toLowerCase() === "closed") && (
                 <Button
+                  variant="primary"
                   disabled={!can("can_create_pr") || Boolean(writeBusy) || pullRequestLoading}
                   onClick={() => void createPullRequest()}
                 >
@@ -1541,9 +1586,7 @@ export default function GitControl() {
             {loading.diff && !diff ? (
               <div className="h-40 animate-pulse rounded bg-slate-100" />
             ) : diff?.diff ? (
-              <pre className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-slate-800/80 bg-slate-950 p-3 font-mono text-[11px] leading-5 text-slate-300 shadow-inner">
-                {diff.diff}
-              </pre>
+              <DiffViewContent content={diff.diff} />
             ) : (
               <div className="rounded-lg bg-slate-50 p-8 text-center text-sm text-slate-400">
                 No changes to display
