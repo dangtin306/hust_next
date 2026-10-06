@@ -1,4 +1,4 @@
-// File: C:\hustmedia5\hust_next\app\api\resources\services-info\route.ts
+// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/api/resources/services-info/route.ts
 import * as entry from '../../../../../../app/api/resources/services-info/route.js'
 import type { NextRequest } from 'next/server.js'
 

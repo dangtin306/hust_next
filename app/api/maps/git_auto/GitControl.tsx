@@ -100,7 +100,7 @@ function Button({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/90 hover:text-slate-900 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 disabled:hover:border-slate-200 disabled:hover:bg-white cursor-pointer"
     >
       {children}
     </button>
@@ -121,7 +121,7 @@ function SyncMetric({
   return (
     <span className={`group relative inline-flex cursor-help ${className}`}>
       {label}{value === undefined ? "" : ` ${value}`}
-      <span className="pointer-events-none invisible absolute left-0 top-full z-50 mt-2 w-64 rounded-lg bg-slate-900 px-3 py-2 text-left text-xs font-normal leading-5 text-white opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100">
+      <span className="pointer-events-none invisible absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-700/80 bg-slate-900/95 px-3 py-2 text-left text-xs font-normal leading-5 text-slate-100 opacity-0 shadow-xl backdrop-blur-md transition-all duration-150 group-hover:visible group-hover:opacity-100">
         {description}
       </span>
     </span>
@@ -141,7 +141,7 @@ function Tooltip({
   return (
     <span className={`group relative inline-flex cursor-help ${className}`}>
       {children}
-      <span className={`pointer-events-none invisible absolute left-0 top-full z-50 mt-2 w-64 rounded-lg bg-slate-900 px-3 py-2 text-left text-xs font-normal leading-5 text-white opacity-0 shadow-lg transition group-hover:visible group-hover:opacity-100 ${tooltipClassName}`}>
+      <span className={`pointer-events-none invisible absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-700/80 bg-slate-900/95 px-3 py-2 text-left text-xs font-normal leading-5 text-slate-100 opacity-0 shadow-xl backdrop-blur-md transition-all duration-150 group-hover:visible group-hover:opacity-100 ${tooltipClassName}`}>
         {description}
       </span>
     </span>
@@ -161,7 +161,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`min-w-0 self-start rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>
+    <section className={`min-w-0 self-start rounded-xl border border-slate-200/90 bg-white shadow-2xs transition-all duration-200 hover:shadow-xs ${className}`}>
       <div className="flex min-w-0 items-center justify-between border-b border-slate-100 px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-800">
           {icon}
@@ -201,12 +201,12 @@ function FileList({
   onSelect: (file: ChangedFile) => void;
 }) {
   return files.length ? (
-    <div className="divide-y divide-slate-100 rounded-lg border border-slate-100">
+    <div className="divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-100">
       {files.map((file) => (
         <button
           key={`${file.path}-${file.status}`}
           onClick={() => onSelect(file)}
-          className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-indigo-50"
+          className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-indigo-50/70 cursor-pointer"
         >
           <span
             className={`w-20 shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase ${file.status.toLowerCase().startsWith("d") ? "bg-red-50 text-red-600" : file.status.toLowerCase().startsWith("u") ? "bg-violet-50 text-violet-600" : file.status.toLowerCase().startsWith("a") ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}
@@ -214,15 +214,15 @@ function FileList({
             {file.status}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-xs font-semibold text-slate-700">
+            <span className="block truncate text-xs font-semibold text-slate-700 transition-colors group-hover:text-indigo-900">
               {file.path.split("/").pop()}
             </span>
             <span className="block truncate text-[11px] text-slate-400">
               {file.path}
             </span>
           </span>
-          <span className="text-[10px] text-slate-400">View Diff</span>
-          <ChevronRight size={14} className="text-slate-300" />
+          <span className="text-[10px] text-slate-400 transition-colors group-hover:text-indigo-500">View Diff</span>
+          <ChevronRight size={14} className="text-slate-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-indigo-500" />
         </button>
       ))}
     </div>
@@ -343,7 +343,7 @@ function Workflow({
         {steps.map((step, index) => (
           <div
             key={step}
-            className={`rounded-lg border p-3 ${states[index] === "Done" || states[index] === "Merged" ? "border-emerald-200 bg-emerald-50" : states[index] === "Ready" || states[index] === "Running" ? "border-indigo-300 bg-indigo-50" : "border-slate-100 bg-slate-50"}`}
+            className={`rounded-lg border p-3 transition-all duration-200 ${states[index] === "Done" || states[index] === "Merged" ? "border-emerald-200/90 bg-emerald-50/70 shadow-2xs" : states[index] === "Ready" || states[index] === "Running" ? "border-indigo-300/90 bg-indigo-50/70 shadow-2xs ring-1 ring-indigo-500/10" : "border-slate-200/70 bg-slate-50/70"}`}
           >
             <p className="text-[10px] font-bold text-slate-400">0{index + 1}</p>
             <Tooltip description={stepDescriptions[step]}>
@@ -431,13 +431,13 @@ function HistoryPanel({
           <button
             key={isCommit ? event.sha : `${event.type}-${event.date || index}`}
             onClick={() => onSelect(event)}
-            className="flex w-full select-text items-center gap-1 border-b border-slate-100 px-2 py-3 text-left hover:bg-slate-50"
+            className="group flex w-full select-text items-center gap-1 border-b border-slate-100 px-2 py-2.5 text-left transition-colors duration-150 hover:bg-slate-50/80 cursor-pointer"
           >
             <span className={`rounded-full px-2 py-1 text-[10px] font-bold tracking-wide ${eventColor} ${isCommit ? "bg-indigo-50" : event.type === "pull" ? "bg-sky-50" : event.type === "push" ? "bg-emerald-50" : event.type === "pull_request" ? "bg-indigo-50" : event.type === "merge" ? "bg-violet-50" : event.type === "vscode_sync" ? "bg-cyan-50" : event.type === "update_code" ? "bg-sky-50" : "bg-slate-50"}`}>
               {eventLabel}
             </span>
             {isCommit && <span className="font-mono text-xs font-semibold text-indigo-600">{shortSha}</span>}
-            <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700 transition-colors group-hover:text-indigo-900">
               {eventDescription}
             </span>
             <span className="hidden text-[11px] text-slate-400 sm:block">
@@ -446,7 +446,7 @@ function HistoryPanel({
             <span className="text-[11px] text-slate-400">
               {formatDate(isCommit ? event.created_at || event.date : event.date)}
             </span>
-            <ChevronRight size={14} className="text-slate-300" />
+            <ChevronRight size={14} className="text-slate-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-indigo-500" />
           </button>
           );
         })
@@ -553,7 +553,7 @@ function GitAutoConfigDemo({
   };
 
   return (
-    <section className="rounded-xl border border-indigo-100 bg-white p-3 shadow-sm sm:p-4">
+    <section className="rounded-xl border border-indigo-100/90 bg-white p-3 shadow-2xs sm:p-4 transition-all duration-200">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-600">
@@ -566,7 +566,7 @@ function GitAutoConfigDemo({
             Cấu hình mẫu dùng để test repository Gitea hiện tại trước.
           </p>
         </div>
-        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 shadow-2xs">
           <ShieldAlert size={13} /> {saving ? "Đang lưu…" : "Đã kết nối config"}
         </span>
       </div>
@@ -574,7 +574,7 @@ function GitAutoConfigDemo({
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <label className="block text-xs font-semibold text-slate-600">
           Provider
-          <select value={config.provider} onChange={(event) => update("provider", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400">
+          <select value={config.provider} onChange={(event) => update("provider", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15">
             <option value="gitea">Gitea</option>
             <option value="github">GitHub</option>
             <option value="gitlab">GitLab</option>
@@ -583,33 +583,33 @@ function GitAutoConfigDemo({
         </label>
         <label className="block text-xs font-semibold text-slate-600 sm:col-span-2">
           Remote URL
-          <input value={config.remote_url} onChange={(event) => update("remote_url", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.remote_url} onChange={(event) => update("remote_url", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600 sm:col-span-2">
           Repository
-          <input value={config.repository} onChange={(event) => update("repository", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.repository} onChange={(event) => update("repository", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600">
           Component
-          <input value={config.component} onChange={(event) => update("component", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.component} onChange={(event) => update("component", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600">
           Local path
-          <input value={config.local_path} onChange={(event) => update("local_path", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.local_path} onChange={(event) => update("local_path", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600">
           Base branch
-          <input value={config.base_branch} onChange={(event) => update("base_branch", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.base_branch} onChange={(event) => update("base_branch", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600">
           Working branch
-          <input value={config.working_branch} onChange={(event) => update("working_branch", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
+          <input value={config.working_branch} onChange={(event) => update("working_branch", event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
         </label>
         <label className="block text-xs font-semibold text-slate-600">
           Access token
           <span className="relative mt-1 block">
-            <input type={showToken ? "text" : "password"} value={config.access_token || ""} onChange={(event) => update("access_token", event.target.value)} placeholder="Giữ token hiện tại nếu để trống" className="w-full rounded-lg border border-slate-200 py-1.5 pl-3 pr-9 text-xs font-normal text-slate-800 outline-none focus:border-indigo-400" />
-            <button type="button" onClick={() => setShowToken((visible) => !visible)} aria-label={showToken ? "Ẩn access token" : "Hiện access token"} title={showToken ? "Ẩn access token" : "Hiện access token"} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700">
+            <input type={showToken ? "text" : "password"} value={config.access_token || ""} onChange={(event) => update("access_token", event.target.value)} placeholder="Giữ token hiện tại nếu để trống" className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-9 text-xs font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15" />
+            <button type="button" onClick={() => setShowToken((visible) => !visible)} aria-label={showToken ? "Ẩn access token" : "Hiện access token"} title={showToken ? "Ẩn access token" : "Hiện access token"} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700 cursor-pointer">
               {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </span>
@@ -630,11 +630,11 @@ function GitAutoConfigDemo({
           {message || "Config được lưu cho các thao tác Git Auto bên dưới."}
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={() => void reloadConfig()} disabled={reloading || saving || refreshing} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
             <RefreshCw size={13} className={reloading ? "animate-spin" : ""} />
             {reloading ? "Reloading…" : refreshing ? "Refreshing…" : "Reload config"}
           </button>
-          <button type="button" onClick={() => void save()} disabled={saving || reloading || refreshing} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={() => void save()} disabled={saving || reloading || refreshing} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs transition-all duration-150 hover:bg-indigo-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer">
             {saving ? "Saving…" : refreshing ? "Refreshing…" : "Save & Connect"}
           </button>
         </div>
@@ -1019,7 +1019,7 @@ export default function GitControl() {
     <div className="min-h-screen w-full min-w-0 space-y-3 overflow-x-hidden bg-slate-50 p-0 text-slate-900">
       <GitAutoConfigDemo onSaved={() => load(true)} onNotify={notify} onUsernameChange={setGiteaUsername} refreshing={refreshing} />
       <main className="min-w-0 space-y-3">
-      <header className="rounded-xl bg-slate-950 px-5 py-5 text-white shadow-lg">
+      <header className="relative overflow-hidden rounded-xl border border-slate-800/80 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-5 py-5 text-white shadow-md">
         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -1295,7 +1295,7 @@ export default function GitControl() {
                 <select
                   value={commitType}
                   onChange={(event) => setCommitType(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
                 >
                   {COMMIT_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
@@ -1310,7 +1310,7 @@ export default function GitControl() {
                   value={commitMessage}
                   onChange={(event) => setCommitMessage(event.target.value)}
                   placeholder="Mô tả ngắn gọn thay đổi..."
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal text-slate-800 outline-none focus:border-indigo-400"
+                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-800 shadow-2xs outline-none transition-all duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
                 />
               </label>
             </div>
@@ -1518,7 +1518,7 @@ export default function GitControl() {
             {loading.diff && !diff ? (
               <div className="h-40 animate-pulse rounded bg-slate-100" />
             ) : diff?.diff ? (
-              <pre className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 p-3 font-mono text-[11px] leading-5 text-slate-300">
+              <pre className="w-full min-w-0 max-w-full max-h-[420px] overflow-x-auto overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-slate-800/80 bg-slate-950 p-3 font-mono text-[11px] leading-5 text-slate-300 shadow-inner">
                 {diff.diff}
               </pre>
             ) : (
@@ -1650,7 +1650,7 @@ export default function GitControl() {
       </div>
       {toast && (
         <div
-          className="fixed bottom-5 right-5 z-50 flex cursor-pointer items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-xs font-semibold text-white shadow-xl"
+          className="fixed bottom-5 right-5 z-50 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/95 px-4 py-3 text-xs font-semibold text-white shadow-xl backdrop-blur-md transition-all duration-200 active:scale-95"
           onMouseEnter={() => {
             if (toastTimer.current !== undefined) {
               window.clearTimeout(toastTimer.current);

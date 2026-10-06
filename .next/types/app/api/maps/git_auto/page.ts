@@ -1,4 +1,4 @@
-// File: C:\hustmedia5\hust_next\app\api\maps\git_auto\page.tsx
+// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/api/maps/git_auto/page.tsx
 import * as entry from '../../../../../../app/api/maps/git_auto/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

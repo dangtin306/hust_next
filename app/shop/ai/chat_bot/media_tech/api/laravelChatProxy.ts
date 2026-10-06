@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 
 const LARAVEL_CHAT_BASE =
-  process.env.LARAVEL_API_BASE_URL || "https://laravel.hust.media/api/chat";
+  process.env.LARAVEL_API_BASE_URL || "https://laravel_mt.hust.media/api/chat";
 
 const HASH_TO_PLAIN = new Map<string, string>([
   [

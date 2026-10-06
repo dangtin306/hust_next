@@ -1,4 +1,4 @@
-// File: C:\hustmedia5\hust_next\app\api\gitea\[...path]\route.ts
+// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/api/gitea/[...path]/route.ts
 import * as entry from '../../../../../../app/api/gitea/[...path]/route.js'
 import type { NextRequest } from 'next/server.js'
 

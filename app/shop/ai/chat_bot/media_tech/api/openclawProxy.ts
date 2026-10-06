@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const DEFAULT_UPSTREAM =
   process.env.OPENCLAW_API_BASE_URL || "https://node_js.hust.media/openclaw";
 const LARAVEL_CHAT_BASE =
-  process.env.LARAVEL_API_BASE_URL || "https://laravel.hust.media/api/chat/bot";
+  process.env.LARAVEL_API_BASE_URL || "https://laravel_mt.hust.media/api/chat/bot";
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
@@ -20,7 +20,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     joinedPath.startsWith("chat/bot") ||
     joinedPath.startsWith("chat_bot") ||
     Boolean(request.headers.get("x-chat-bot-session")) ||
-    request.headers.get("x-openclaw-target")?.includes("laravel.hust.media");
+    request.headers.get("x-openclaw-target")?.includes("laravel_mt.hust.media");
 
   let upstreamBase =
     request.headers.get("x-openclaw-target") ||

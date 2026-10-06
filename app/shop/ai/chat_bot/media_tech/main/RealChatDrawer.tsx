@@ -37,15 +37,6 @@ export default function RealChatDrawer({ isOpen, onClose }: RealChatDrawerProps)
 
       {/* Responsive, framed modal: full-width on mobile and centered on desktop */}
       <div className="relative z-10 flex h-[calc(100dvh-1rem)] max-h-[920px] w-full max-w-6xl overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-slate-100 via-white to-purple-50 shadow-2xl shadow-slate-950/30 animate-in zoom-in-95 duration-300 ease-out sm:h-[min(88dvh,860px)] sm:rounded-3xl">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Đóng cửa sổ Real chat"
-          title="Đóng Real chat"
-          className="absolute right-3 top-3 z-30 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white/95 text-slate-600 shadow-md transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
-        >
-          <X className="h-4 w-4" />
-        </button>
         <div className="h-full min-h-0 w-full overflow-hidden">
           <MediaTechChatClient isDrawer onClose={onClose} />
         </div>

@@ -1,4 +1,4 @@
-// File: C:\hustmedia5\hust_next\app\community\clear_silde_bar\page.tsx
+// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/community/clear_silde_bar/page.tsx
 import * as entry from '../../../../../app/community/clear_silde_bar/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

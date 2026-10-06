@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.GITEA_API_BASE_URL || "https://nginx.hust.media
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const isChat = path[0] === "chat" || path[0] === "chat_bot";
-  const baseTarget = isChat ? "https://laravel.hust.media/api" : API_BASE_URL;
+  const baseTarget = isChat ? "https://laravel_mt.hust.media/api" : API_BASE_URL;
   const upstreamUrl = `${baseTarget.replace(/\/$/, "")}/${path.join("/")}${request.nextUrl.search}`;
 
   try {

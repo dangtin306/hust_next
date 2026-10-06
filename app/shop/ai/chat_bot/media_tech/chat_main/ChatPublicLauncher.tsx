@@ -73,15 +73,6 @@ export default function ChatPublicLauncher() {
             aria-label="Chat Public AI"
             className="relative flex h-[calc(100dvh-1rem)] max-h-[920px] w-full max-w-6xl overflow-hidden rounded-2xl border border-white/70 bg-gradient-to-br from-slate-100 via-white to-purple-50 shadow-2xl sm:h-[min(90dvh,860px)] sm:rounded-3xl"
           >
-            <button
-              type="button"
-              onClick={() => setIsChatOpen(false)}
-              aria-label="Đóng khung chat"
-              title="Đóng khung chat"
-              className="absolute right-2 top-2 z-40 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/90 bg-white/95 text-slate-600 shadow-md transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 sm:right-3 sm:top-3"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
             <div className="h-full min-h-0 w-full overflow-hidden">
               <MediaTechChatClient
                 isDrawer

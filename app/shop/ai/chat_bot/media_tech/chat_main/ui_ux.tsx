@@ -113,7 +113,7 @@ export function FormattedMessageContent({
                 <button
                   type="button"
                   onClick={() => handleCopyCode(codeContent, index)}
-                  className="flex items-center gap-1 rounded px-2 py-0.5 text-[11px] text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                  className="flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-slate-300 transition-all duration-150 hover:bg-slate-700 hover:text-white active:scale-95 cursor-pointer"
                 >
                   {copiedIndex === index ? (
                     <span className="flex items-center gap-1 text-emerald-400">
@@ -233,7 +233,7 @@ export function ServiceMenuModal({
             type="button"
             onClick={onClose}
             aria-label="Đóng"
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-slate-700"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-white hover:text-slate-700 active:scale-95 cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -254,10 +254,10 @@ export function ServiceMenuModal({
                     onClose();
                   }}
                   disabled={isChatLocked}
-                  className={`group relative flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
+                  className={`group relative flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                     isSelected
-                      ? "border-purple-500 bg-gradient-to-br from-purple-50/90 to-pink-50/70 shadow-sm ring-2 ring-purple-500/20"
-                      : "border-slate-200/90 bg-white hover:border-purple-300 hover:bg-purple-50/30 hover:shadow-md"
+                      ? "border-purple-500 bg-gradient-to-br from-purple-50/90 to-pink-50/70 shadow-2xs ring-2 ring-purple-500/20"
+                      : "border-slate-200/90 bg-white hover:border-purple-300 hover:bg-purple-50/30 hover:shadow-xs"
                   }`}
                 >
                   <span className="text-2xl">{item.icon}</span>
@@ -298,7 +298,7 @@ export function ServiceMenuModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 font-semibold text-slate-700 shadow-2xs transition hover:bg-slate-50"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 active:scale-95 cursor-pointer"
           >
             Đóng
           </button>
@@ -713,7 +713,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-1.5">
                   {/* User ID Tag */}
-                  <div className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs">
+                  <div className="inline-flex items-center gap-1 rounded-md border border-purple-200/90 bg-purple-50/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs transition-colors hover:border-purple-300">
                     <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
                     <span>ID:</span>
                     <span className="font-mono font-bold text-purple-900">
@@ -726,7 +726,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                         setIsUserIdPromptOpen?.(true);
                       }}
                       title="Đổi User ID"
-                      className="ml-0.5 rounded p-0.5 text-purple-500 hover:bg-purple-200/60 hover:text-purple-800"
+                      className="ml-0.5 rounded p-0.5 text-purple-500 transition-colors hover:bg-purple-200/60 hover:text-purple-800 active:scale-95"
                     >
                       <Edit2 className="h-2.5 w-2.5" />
                     </button>
@@ -736,7 +736,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <div
                     title={`Session Key: ${effectiveSessionKey}\nClick để sao chép`}
                     onClick={() => handleCopy("session_key", effectiveSessionKey)}
-                    className="hidden md:inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-200/90 bg-slate-50/90 px-2 py-0.5 text-[11px] font-mono text-slate-600 hover:border-purple-300 hover:bg-purple-50/40"
+                    className="hidden md:inline-flex cursor-pointer items-center gap-1 rounded-md border border-slate-200/90 bg-slate-50/90 px-2 py-0.5 text-[11px] font-mono text-slate-600 transition-all hover:border-purple-300 hover:bg-purple-50/70 hover:text-purple-700 active:scale-[0.98]"
                   >
                     <Hash className="h-3 w-3 text-slate-400" />
                     <span className="max-w-[130px] truncate sm:max-w-[190px]">{effectiveSessionKey}</span>
@@ -753,7 +753,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     target="_blank"
                     rel="noreferrer"
                     title={`Mở phiên OpenClaw của User #${userId}`}
-                    className="hidden sm:inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/70 px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100 shadow-2xs"
+                    className="hidden sm:inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50/80 px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-all hover:border-indigo-300 hover:bg-indigo-100/90 shadow-2xs active:scale-[0.98]"
                   >
                     <span>OpenClaw ({userId ? `#${userId}` : "UI"})</span>
                     <ExternalLink className="h-2.5 w-2.5" />
@@ -764,7 +764,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     type="button"
                     onClick={() => setIsServiceMenuExpanded(true)}
                     title="Mở bảng điều khiển Menu Dịch vụ AI"
-                    className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50/80 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 transition-colors shadow-2xs hover:bg-purple-100 active:scale-95"
+                    className="inline-flex items-center gap-1 rounded-md border border-purple-200/90 bg-purple-50/90 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 transition-all shadow-2xs hover:border-purple-300 hover:bg-purple-100 active:scale-95 cursor-pointer"
                     aria-expanded={isServiceMenuExpanded}
                   >
                     <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-purple-600" />
@@ -788,11 +788,22 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 title="Gửi /reset lên OpenClaw và tạo cuộc trò chuyện mới"
                 aria-label="Reset hoàn toàn cuộc trò chuyện"
                 disabled={isRestoringChat || isSelectingWorkspace || isTyping}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 transition-all hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-wait disabled:opacity-50"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 transition-all hover:border-purple-300 hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-wait disabled:opacity-50 cursor-pointer"
               >
                 <RotateCcw className={`h-4 w-4 ${isRestoringChat ? "animate-spin" : ""}`} />
               </button>
 
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  title="Đóng cửa sổ chat"
+                  aria-label="Đóng cửa sổ chat"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 text-slate-600 transition-all hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 active:scale-95 cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </header>
 
@@ -812,10 +823,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
                       disabled={isSelectingWorkspace || isUpdatingWorkspaces || isRestoringChat || isTyping}
                       aria-pressed={selectedWorkspaceCode === workspace.work_space_code}
                       title={workspace.description || workspace.workspace_name}
-                      className={`shrink-0 max-w-[230px] truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                      className={`shrink-0 max-w-[230px] truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 disabled:cursor-wait disabled:opacity-60 active:scale-95 cursor-pointer ${
                         selectedWorkspaceCode === workspace.work_space_code
-                          ? "border-purple-300 bg-purple-50 text-purple-700 shadow-xs"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:text-purple-700"
+                          ? "border-purple-300/90 bg-purple-100/90 text-purple-800 shadow-2xs font-semibold ring-1 ring-purple-300/50"
+                          : "border-slate-200/90 bg-white text-slate-600 hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-700"
                       }`}
                     >
                       {workspace.workspace_name}
@@ -839,7 +850,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   onClick={() => void handleUpdateWorkspaces()}
                   disabled={isUpdatingWorkspaces || isLoadingWorkspaces || isSelectingWorkspace || isTyping}
                   title="Đồng bộ routing và tải lại danh sách workspace"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-1 text-[11px] font-medium text-purple-700 transition-colors hover:border-purple-300 hover:bg-purple-100 disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-purple-200/90 bg-purple-50/80 px-2.5 py-1 text-[11px] font-medium text-purple-700 transition-all shadow-2xs hover:border-purple-300 hover:bg-purple-100 active:scale-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
                 >
                   <RotateCcw className={`h-3 w-3 ${isUpdatingWorkspaces ? "animate-spin" : ""}`} />
                   {isUpdatingWorkspaces ? "Đang cập nhật…" : "Cập nhật"}
@@ -879,10 +890,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     {/* Bot Avatar on Left */}
                     {isBot && (
                       <div
-                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-xs ${
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-2xs transition-transform duration-200 group-hover:scale-105 ${
                           msg.isError
                             ? "bg-rose-500 shadow-rose-500/20"
-                            : "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/20"
+                            : "bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/25"
                         }`}
                       >
                         {msg.isError ? (
@@ -900,12 +911,12 @@ export function MediaUiUx(props: MediaUiUxProps) {
                       }`}
                     >
                       <div
-                        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed sm:text-[15px] ${
+                        className={`rounded-2xl px-4 py-3 text-sm leading-relaxed sm:text-[15px] transition-shadow ${
                           isBot
                             ? msg.isError
-                              ? "rounded-tl-xs border border-rose-200 bg-rose-50/95 text-rose-900 shadow-xs"
-                              : "rounded-tl-xs border border-slate-200/70 bg-white text-slate-800 shadow-xs"
-                            : "rounded-tr-xs bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs"
+                              ? "rounded-tl-xs border border-rose-200/90 bg-rose-50/95 text-rose-900 shadow-2xs"
+                              : "rounded-tl-xs border border-slate-200/80 bg-white/95 text-slate-800 shadow-[0_2px_8px_rgba(0,0,0,0.04)] backdrop-blur-xs hover:border-slate-300/80"
+                            : "rounded-tr-xs bg-gradient-to-r from-purple-600 via-purple-600 to-indigo-600 text-white shadow-[0_3px_12px_rgba(147,51,234,0.22)]"
                         }`}
                       >
                         {!isBot && msg.serviceDescription && (
@@ -922,7 +933,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                           <img
                             src={msg.imageUrl}
                             alt={isBot ? "Ảnh được tạo bởi Media Tech AI" : "Ảnh được đính kèm để phân tích"}
-                            className="mb-2 max-h-[480px] max-w-full rounded-xl border border-purple-100 object-contain"
+                            className="mb-2 max-h-[480px] max-w-full rounded-xl border border-purple-100 object-contain shadow-xs"
                           />
                         )}
                         {isBot ? (
@@ -937,7 +948,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                                   type="button"
                                   onClick={handleRetryHistory}
                                   disabled={isRetryingHistory}
-                                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm shadow-purple-500/20 transition hover:from-purple-700 hover:to-indigo-700 active:scale-95 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs shadow-purple-500/20 transition-all hover:from-purple-700 hover:to-indigo-700 active:scale-95 disabled:opacity-50 cursor-pointer"
                                 >
                                   <RotateCcw className={`h-3.5 w-3.5 ${isRetryingHistory ? "animate-spin" : ""}`} />
                                   <span>{isRetryingHistory ? "Đang tải lại..." : "Tải lại"}</span>
@@ -946,7 +957,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                                   type="button"
                                   onClick={handleCreateNewRoomFromError}
                                   disabled={isRetryingHistory}
-                                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95 disabled:opacity-50 cursor-pointer"
                                 >
                                   <Plus className="h-3.5 w-3.5 text-emerald-600" />
                                   <span>Tạo mới</span>
@@ -965,16 +976,16 @@ export function MediaUiUx(props: MediaUiUxProps) {
                           isBot ? "flex-row" : "flex-row-reverse"
                         }`}
                       >
-                        <span>{msg.time}</span>
+                        <span className="font-medium text-slate-400">{msg.time}</span>
                         {isBot && !msg.isError && (
                           <button
                             type="button"
                             onClick={() => handleCopy(msg.id, msg.text)}
-                            className="opacity-0 transition-opacity hover:text-purple-600 group-hover:opacity-100"
+                            className="rounded-md px-1 py-0.5 opacity-0 transition-all hover:bg-purple-50 hover:text-purple-600 group-hover:opacity-100 active:scale-90 cursor-pointer"
                             title="Sao chép nội dung"
                           >
                             {copiedId === msg.id ? (
-                              <span className="flex items-center gap-1 text-emerald-600">
+                              <span className="flex items-center gap-1 text-emerald-600 font-medium">
                                 <Check className="h-3 w-3" /> Đã chép
                               </span>
                             ) : (
@@ -985,7 +996,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
                         {isBot && !msg.isError && msg.usage && (
                           <div
-                            className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-full border border-purple-100 bg-purple-50/80 px-2 py-0.5 text-[10px] leading-none text-slate-600 shadow-[0_1px_2px_rgba(88,28,135,0.05)]"
+                            className="inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-full border border-purple-200/70 bg-purple-50/70 px-2 py-0.5 text-[10px] leading-none text-slate-600 shadow-2xs transition-colors hover:bg-purple-50 hover:border-purple-200"
                             aria-label="Mức sử dụng token của phản hồi"
                             title={[
                               msg.usage.inputTokens !== undefined
@@ -1002,16 +1013,16 @@ export function MediaUiUx(props: MediaUiUxProps) {
                           >
                             <Sparkles className="h-2.5 w-2.5 shrink-0 text-purple-600" aria-hidden="true" />
                             {msg.usage.inputTokens !== undefined && (
-                              <span className="font-medium text-slate-700">↑{formatCompactTokenCount(msg.usage.inputTokens)}</span>
+                              <span className="font-semibold text-slate-700">↑{formatCompactTokenCount(msg.usage.inputTokens)}</span>
                             )}
                             {msg.usage.outputTokens !== undefined && (
-                              <span className="font-medium text-slate-700">↓{formatCompactTokenCount(msg.usage.outputTokens)}</span>
+                              <span className="font-semibold text-slate-700">↓{formatCompactTokenCount(msg.usage.outputTokens)}</span>
                             )}
-                            <span className="font-medium text-slate-700">
+                            <span className="font-semibold text-slate-700">
                               R{formatCompactTokenCount(msg.usage.cacheReadTokens ?? 0)}
                             </span>
                             {msg.usage.contextPercentage !== undefined && (
-                              <span className="font-medium text-slate-600">ctx {compactTokenNumberFormat.format(msg.usage.contextPercentage)}%</span>
+                              <span className="font-semibold text-slate-600">ctx {compactTokenNumberFormat.format(msg.usage.contextPercentage)}%</span>
                             )}
                             {msg.usage.model && !hideModel && (
                               <span className="truncate font-medium text-slate-500">{msg.usage.model}</span>
@@ -1023,7 +1034,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
                     {/* User Avatar on Right */}
                     {!isBot && (
-                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white shadow-sm">
+                      <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-slate-700 to-slate-900 text-white shadow-2xs transition-transform duration-200 group-hover:scale-105">
                         <User className="h-4 w-4" />
                       </div>
                     )}
@@ -1034,10 +1045,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
               {/* Typing Indicator */}
               {isTyping && (
                 <div className="flex items-start gap-2.5 justify-start">
-                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-sm shadow-purple-500/20">
+                  <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white shadow-xs shadow-purple-500/20">
                     <Bot className="h-4 w-4" />
                   </div>
-                  <div className="rounded-2xl rounded-tl-xs border border-purple-100/90 bg-white/95 px-4 py-3 shadow-sm">
+                  <div className="rounded-2xl rounded-tl-xs border border-purple-100/90 bg-white/95 px-4 py-3 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-purple-500 [animation-delay:-0.3s]" />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-pink-500 [animation-delay:-0.15s]" />
@@ -1066,7 +1077,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     type="button"
                     onClick={handleRetryHistory}
                     disabled={isRetryingHistory}
-                    className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-purple-700 active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     <RotateCcw className={`h-3 w-3 ${isRetryingHistory ? "animate-spin" : ""}`} />
                     <span>{isRetryingHistory ? "Đang tải..." : "Tải lại"}</span>
@@ -1075,7 +1086,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     type="button"
                     onClick={handleCreateNewRoomFromError}
                     disabled={isRetryingHistory}
-                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95 disabled:opacity-50"
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95 disabled:opacity-50 cursor-pointer"
                   >
                     Tạo mới
                   </button>
@@ -1083,7 +1094,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
               </div>
             )}
 
-            <div className="relative flex items-end gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xs transition-all focus-within:border-purple-400 focus-within:ring-4 focus-within:ring-purple-500/10 hover:border-slate-300">
+            <div className="relative flex items-end gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xs transition-all duration-200 focus-within:border-purple-400 focus-within:ring-4 focus-within:ring-purple-500/10 hover:border-slate-300">
               <input
                 ref={imageInputRef}
                 type="file"
@@ -1095,7 +1106,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 type="button"
                 onClick={() => imageInputRef.current?.click()}
                 disabled={isRestoringChat || isSelectingWorkspace || isChatLocked || isRetryingHistory}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-purple-50 hover:text-purple-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                 title="Đính kèm ảnh cho dịch vụ OCR"
               >
                 <Paperclip className="h-4 w-4" />
@@ -1107,14 +1118,14 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <button
                     type="button"
                     onClick={() => setIsServiceMenuExpanded(true)}
-                    className="group inline-flex items-center gap-1 rounded-lg border border-purple-200/80 bg-purple-50/80 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition hover:border-purple-300 hover:bg-purple-100 active:scale-95"
+                    className="group inline-flex items-center gap-1 rounded-lg border border-purple-200/90 bg-purple-50/90 px-2 py-0.5 text-[11px] font-medium text-purple-800 transition-all duration-150 hover:border-purple-300 hover:bg-purple-100 active:scale-95 shadow-2xs cursor-pointer"
                     title="Bấm để mở danh sách dịch vụ AI"
                   >
                     <span>{currentSuggestion?.icon || "💬"}</span>
                     <span className="font-semibold">
                       {currentSuggestion?.title || selectedService || "Chatbot thuần"}
                     </span>
-                    <span className="text-[10px] text-purple-500 font-normal">
+                    <span className="text-[10px] text-purple-500 font-normal transition-transform group-hover:translate-x-0.5">
                       · Đổi dịch vụ ▾
                     </span>
                   </button>
@@ -1168,9 +1179,9 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     type="button"
                     onClick={() => onSendSubmit()}
                     disabled={!canSend}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-200 ${
                       canSend
-                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 active:scale-95 cursor-pointer"
+                        ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 hover:shadow-md hover:shadow-purple-500/30 active:scale-95 cursor-pointer"
                         : "bg-slate-100 text-slate-300 cursor-not-allowed"
                     }`}
                     title={isChatLocked ? "Khung chat đang bị khóa" : canSend ? "Gửi tin nhắn" : "Nhập nội dung để gửi"}
@@ -1182,12 +1193,12 @@ export function MediaUiUx(props: MediaUiUxProps) {
             </div>
 
             {attachedImage && (
-              <div className="mt-2 flex items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs text-purple-800">
-                <span className="truncate">Ảnh OCR: {attachedImage.name}</span>
+              <div className="mt-2 flex items-center justify-between rounded-xl border border-purple-200 bg-purple-50/90 px-3 py-2 text-xs text-purple-800 shadow-2xs">
+                <span className="truncate font-medium">Ảnh OCR: {attachedImage.name}</span>
                 <button
                   type="button"
                   onClick={() => setAttachedImage(null)}
-                  className="ml-3 rounded p-1 hover:bg-purple-100"
+                  className="ml-3 rounded-lg p-1 hover:bg-purple-200/60 transition-colors"
                   aria-label="Bỏ ảnh đính kèm"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -1208,7 +1219,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <span
                     onClick={() => handleCopy("conv_id", conversationId)}
                     title="Click để sao chép conversation_id"
-                    className="cursor-pointer font-mono text-slate-400 hover:text-purple-600 flex items-center gap-1"
+                    className="cursor-pointer font-mono text-slate-400 hover:text-purple-600 flex items-center gap-1 transition-colors"
                   >
                     • Conv: {conversationId.slice(0, 8)}...
                     {copiedId === "conv_id" ? <Check className="h-2 w-2 text-emerald-500" /> : <Copy className="h-2 w-2" />}
@@ -1225,7 +1236,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   target="_blank"
                   rel="noreferrer"
                   title={`Mở phiên OpenClaw của User #${userId}`}
-                  className="hidden sm:inline-flex items-center gap-1 font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+                  className="hidden sm:inline-flex items-center gap-1 font-medium text-indigo-600 hover:text-indigo-800 hover:underline transition-colors active:scale-95"
                 >
                   <span>Mở OpenClaw UI</span>
                   <ExternalLink className="h-3 w-3" />

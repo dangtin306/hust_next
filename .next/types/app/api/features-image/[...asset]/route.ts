@@ -1,4 +1,4 @@
-// File: C:\hustmedia5\hust_next\app\api\features-image\[...asset]\route.ts
+// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/api/features-image/[...asset]/route.ts
 import * as entry from '../../../../../../app/api/features-image/[...asset]/route.js'
 import type { NextRequest } from 'next/server.js'
 
