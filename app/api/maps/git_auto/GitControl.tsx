@@ -89,18 +89,31 @@ function Button({
   onClick,
   disabled = false,
   title,
+  variant = "default",
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   disabled?: boolean;
   title?: string;
+  variant?: "default" | "primary" | "dark" | "success" | "warning";
 }) {
+  const variantClasses =
+    variant === "primary"
+      ? "border-transparent bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-xs hover:from-indigo-500 hover:to-indigo-600 hover:shadow-indigo-500/20 active:scale-[0.98]"
+      : variant === "dark"
+        ? "border-white/15 bg-white/10 text-white hover:bg-white/20 hover:border-white/25 active:scale-[0.98] backdrop-blur-md"
+        : variant === "success"
+          ? "border-transparent bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/20 active:scale-[0.98]"
+          : variant === "warning"
+            ? "border-amber-300/80 bg-gradient-to-b from-amber-50 to-amber-100/60 text-amber-900 shadow-2xs hover:border-amber-400 hover:from-amber-100 hover:to-amber-200/60 hover:text-amber-950 active:scale-[0.98]"
+            : "border-slate-200/90 bg-gradient-to-b from-white to-slate-50/80 text-slate-700 shadow-2xs hover:border-indigo-300 hover:from-white hover:to-indigo-50/40 hover:text-indigo-700 active:scale-[0.98]";
+
   return (
     <button
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/90 hover:text-slate-900 active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 disabled:hover:border-slate-200 disabled:hover:bg-white cursor-pointer"
+      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-all duration-150 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 disabled:hover:border-slate-200 disabled:hover:bg-white disabled:hover:text-slate-700 cursor-pointer ${variantClasses}`}
     >
       {children}
     </button>
@@ -161,15 +174,17 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`min-w-0 self-start rounded-xl border border-slate-200/90 bg-white shadow-2xs transition-all duration-200 hover:shadow-xs ${className}`}>
-      <div className="flex min-w-0 items-center justify-between border-b border-slate-100 px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-800">
-          {icon}
-          {title}
+    <section className={`min-w-0 self-start rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_1px_2px_rgba(15,23,42,0.02)] backdrop-blur-xs transition-all duration-200 hover:border-indigo-200/70 hover:shadow-sm ${className}`}>
+      <div className="flex min-w-0 items-center justify-between border-b border-slate-100/90 bg-gradient-to-r from-slate-50/70 via-white to-transparent px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-50/90 text-indigo-600 ring-1 ring-indigo-500/10">
+            {icon}
+          </span>
+          <span className="truncate">{title}</span>
         </div>
         {action}
       </div>
-      <div className="min-w-0 overflow-visible p-3">{children}</div>
+      <div className="min-w-0 overflow-visible p-3.5">{children}</div>
     </section>
   );
 }
@@ -206,10 +221,18 @@ function FileList({
         <button
           key={`${file.path}-${file.status}`}
           onClick={() => onSelect(file)}
-          className="group flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150 hover:bg-indigo-50/70 cursor-pointer"
+          className="group flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-150 hover:bg-indigo-50/60 cursor-pointer"
         >
           <span
-            className={`w-20 shrink-0 whitespace-nowrap rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase ${file.status.toLowerCase().startsWith("d") ? "bg-red-50 text-red-600" : file.status.toLowerCase().startsWith("u") ? "bg-violet-50 text-violet-600" : file.status.toLowerCase().startsWith("a") ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}
+            className={`w-16 shrink-0 text-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase shadow-2xs border ${
+              file.status.toLowerCase().startsWith("d")
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : file.status.toLowerCase().startsWith("u")
+                  ? "border-violet-200 bg-violet-50 text-violet-700"
+                  : file.status.toLowerCase().startsWith("a")
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
           >
             {file.status}
           </span>
@@ -221,7 +244,7 @@ function FileList({
               {file.path}
             </span>
           </span>
-          <span className="text-[10px] text-slate-400 transition-colors group-hover:text-indigo-500">View Diff</span>
+          <span className="text-[10px] text-slate-400 transition-colors group-hover:text-indigo-600">View Diff</span>
           <ChevronRight size={14} className="text-slate-300 transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-indigo-500" />
         </button>
       ))}
