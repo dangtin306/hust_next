@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import SwaggerClient from "@/app/api/maps/SwaggerClient";
+import SwaggerClient from "@/app/api/media_tech/SwaggerClient";
 import ChatBotApiClient from "./ChatBotApiClient";
 import { openClawSwaggerSpec } from "./openclaw_spec";
 import {

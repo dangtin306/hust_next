@@ -28,6 +28,11 @@
     "beforeFiles": [],
     "afterFiles": [
       {
+        "source": "/next/api/maps/:path*",
+        "destination": "/next/api/media_tech/:path*",
+        "regex": "^/next/api/maps(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
         "source": "/next/services/development",
         "destination": "/next/community/services/development",
         "regex": "^/next/services/development(?:/)?$"
@@ -203,87 +208,114 @@
         "regex": "^/next/chat_bot/main(?:/)?$"
       },
       {
+        "source": "/next/api/chat/:path*",
+        "destination": "/next/api/media_tech/chat/:path*",
+        "regex": "^/next/api/chat(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/gitea/:path*",
+        "destination": "/next/api/media_tech/gitea/:path*",
+        "regex": "^/next/api/gitea(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/openclaw/:path*",
+        "destination": "/next/api/media_tech/openclaw/gateway/:path*",
+        "regex": "^/next/api/openclaw(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/workspaces-proxy/:path*",
+        "destination": "/next/api/media_tech/workspaces-proxy/:path*",
+        "regex": "^/next/api/workspaces-proxy(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/node-activity/:path*",
+        "destination": "/next/api/media_tech/node-activity/:path*",
+        "regex": "^/next/api/node-activity(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/sidebar-menu",
+        "destination": "/next/api/media_tech/sidebar-menu",
+        "regex": "^/next/api/sidebar-menu(?:/)?$"
+      },
+      {
+        "source": "/next/api/sidebar-menu/clear",
+        "destination": "/next/api/media_tech/sidebar-menu/clear",
+        "regex": "^/next/api/sidebar-menu/clear(?:/)?$"
+      },
+      {
         "source": "/next/api/mt",
-        "destination": "/next/api/maps",
+        "destination": "/next/api/media_tech",
         "regex": "^/next/api/mt(?:/)?$"
       },
       {
         "source": "/next/api/mt/chat_test",
-        "destination": "/next/api/maps/chat_test",
+        "destination": "/next/api/media_tech/chat_test",
         "regex": "^/next/api/mt/chat_test(?:/)?$"
       },
       {
         "source": "/next/api/mt/chat_public",
-        "destination": "/next/api/maps/chat_public",
+        "destination": "/next/api/media_tech/chat_public",
         "regex": "^/next/api/mt/chat_public(?:/)?$"
       },
       {
         "source": "/next/api/mt/openclaw",
-        "destination": "/next/api/maps/openclaw",
+        "destination": "/next/api/media_tech/openclaw",
         "regex": "^/next/api/mt/openclaw(?:/)?$"
       },
       {
         "source": "/next/api/mt/laravel",
-        "destination": "/next/api/maps/laravel",
+        "destination": "/next/api/media_tech/laravel",
         "regex": "^/next/api/mt/laravel(?:/)?$"
       },
       {
         "source": "/next/api/mt/n8n",
-        "destination": "/next/api/maps/n8n",
+        "destination": "/next/api/media_tech/n8n",
         "regex": "^/next/api/mt/n8n(?:/)?$"
       },
       {
         "source": "/next/api/mt/n8n/node_js",
-        "destination": "/next/api/maps/n8n/node_js",
+        "destination": "/next/api/media_tech/n8n/node_js",
         "regex": "^/next/api/mt/n8n/node_js(?:/)?$"
       },
       {
         "source": "/next/api/mt/n8n/maps_main",
-        "destination": "/next/api/maps/maps_main",
+        "destination": "/next/api/media_tech/maps_main",
         "regex": "^/next/api/mt/n8n/maps_main(?:/)?$"
       },
       {
         "source": "/next/api/mt/n8n/laravel",
-        "destination": "/next/shop/ai/workflow/laravel",
+        "destination": "/next/api/media_tech/n8n/laravel",
         "regex": "^/next/api/mt/n8n/laravel(?:/)?$"
       },
       {
         "source": "/next/api/mt/workspace",
-        "destination": "/next/api/maps/workspace",
+        "destination": "/next/api/media_tech/workspace",
         "regex": "^/next/api/mt/workspace(?:/)?$"
       },
       {
         "source": "/next/api/mt/home",
-        "destination": "/next/api/maps/dashboard",
+        "destination": "/next/api/media_tech/dashboard",
         "regex": "^/next/api/mt/home(?:/)?$"
       },
       {
         "source": "/next/api/mt/git_auto",
-        "destination": "/next/api/maps/git_auto",
+        "destination": "/next/api/media_tech/git_auto",
         "regex": "^/next/api/mt/git_auto(?:/)?$"
       },
       {
         "source": "/next/api/mt/git_test",
-        "destination": "/next/api/maps/git_test",
+        "destination": "/next/api/media_tech/git_test",
         "regex": "^/next/api/mt/git_test(?:/)?$"
       },
       {
         "source": "/next/api/mt/gitea_test",
-        "destination": "/next/api/maps/gitea_test",
+        "destination": "/next/api/media_tech/gitea_test",
         "regex": "^/next/api/mt/gitea_test(?:/)?$"
       }
     ],
     "fallback": []
   },
   "dynamicRoutes": [
-    {
-      "page": "/api/chat/[...path]",
-      "regex": "^/api/chat/(.+?)(?:/)?$",
-      "routeKeys": {
-        "nxtPpath": "nxtPpath"
-      },
-      "namedRegex": "^/api/chat/(?<nxtPpath>.+?)(?:/)?$"
-    },
     {
       "page": "/api/features-image/[...asset]",
       "regex": "^/api/features\\-image/(.+?)(?:/)?$",
@@ -293,28 +325,36 @@
       "namedRegex": "^/api/features\\-image/(?<nxtPasset>.+?)(?:/)?$"
     },
     {
-      "page": "/api/gitea/[...path]",
-      "regex": "^/api/gitea/(.+?)(?:/)?$",
+      "page": "/api/media_tech/chat/[...path]",
+      "regex": "^/api/media_tech/chat/(.+?)(?:/)?$",
       "routeKeys": {
         "nxtPpath": "nxtPpath"
       },
-      "namedRegex": "^/api/gitea/(?<nxtPpath>.+?)(?:/)?$"
+      "namedRegex": "^/api/media_tech/chat/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
-      "page": "/api/openclaw/[...path]",
-      "regex": "^/api/openclaw/(.+?)(?:/)?$",
+      "page": "/api/media_tech/gitea/[...path]",
+      "regex": "^/api/media_tech/gitea/(.+?)(?:/)?$",
       "routeKeys": {
         "nxtPpath": "nxtPpath"
       },
-      "namedRegex": "^/api/openclaw/(?<nxtPpath>.+?)(?:/)?$"
+      "namedRegex": "^/api/media_tech/gitea/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
-      "page": "/api/workspaces-proxy/[...path]",
-      "regex": "^/api/workspaces\\-proxy/(.+?)(?:/)?$",
+      "page": "/api/media_tech/openclaw/gateway/[...path]",
+      "regex": "^/api/media_tech/openclaw/gateway/(.+?)(?:/)?$",
       "routeKeys": {
         "nxtPpath": "nxtPpath"
       },
-      "namedRegex": "^/api/workspaces\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
+      "namedRegex": "^/api/media_tech/openclaw/gateway/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/workspaces-proxy/[...path]",
+      "regex": "^/api/media_tech/workspaces\\-proxy/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/media_tech/workspaces\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
       "page": "/community/docs/[slug]",
@@ -385,118 +425,124 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
-      "page": "/api/maps",
-      "regex": "^/api/maps(?:/)?$",
+      "page": "/api/media_tech",
+      "regex": "^/api/media_tech(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps(?:/)?$"
+      "namedRegex": "^/api/media_tech(?:/)?$"
     },
     {
-      "page": "/api/maps/chat_public",
-      "regex": "^/api/maps/chat_public(?:/)?$",
+      "page": "/api/media_tech/chat_public",
+      "regex": "^/api/media_tech/chat_public(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/chat_public(?:/)?$"
+      "namedRegex": "^/api/media_tech/chat_public(?:/)?$"
     },
     {
-      "page": "/api/maps/chat_test",
-      "regex": "^/api/maps/chat_test(?:/)?$",
+      "page": "/api/media_tech/chat_test",
+      "regex": "^/api/media_tech/chat_test(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/chat_test(?:/)?$"
+      "namedRegex": "^/api/media_tech/chat_test(?:/)?$"
     },
     {
-      "page": "/api/maps/dashboard",
-      "regex": "^/api/maps/dashboard(?:/)?$",
+      "page": "/api/media_tech/dashboard",
+      "regex": "^/api/media_tech/dashboard(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/dashboard(?:/)?$"
+      "namedRegex": "^/api/media_tech/dashboard(?:/)?$"
     },
     {
-      "page": "/api/maps/git_auto",
-      "regex": "^/api/maps/git_auto(?:/)?$",
+      "page": "/api/media_tech/git_auto",
+      "regex": "^/api/media_tech/git_auto(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/git_auto(?:/)?$"
+      "namedRegex": "^/api/media_tech/git_auto(?:/)?$"
     },
     {
-      "page": "/api/maps/git_test",
-      "regex": "^/api/maps/git_test(?:/)?$",
+      "page": "/api/media_tech/git_test",
+      "regex": "^/api/media_tech/git_test(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/git_test(?:/)?$"
+      "namedRegex": "^/api/media_tech/git_test(?:/)?$"
     },
     {
-      "page": "/api/maps/gitea_test",
-      "regex": "^/api/maps/gitea_test(?:/)?$",
+      "page": "/api/media_tech/gitea_test",
+      "regex": "^/api/media_tech/gitea_test(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/gitea_test(?:/)?$"
+      "namedRegex": "^/api/media_tech/gitea_test(?:/)?$"
     },
     {
-      "page": "/api/maps/laravel",
-      "regex": "^/api/maps/laravel(?:/)?$",
+      "page": "/api/media_tech/laravel",
+      "regex": "^/api/media_tech/laravel(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/laravel(?:/)?$"
+      "namedRegex": "^/api/media_tech/laravel(?:/)?$"
     },
     {
-      "page": "/api/maps/maps_main",
-      "regex": "^/api/maps/maps_main(?:/)?$",
+      "page": "/api/media_tech/maps_main",
+      "regex": "^/api/media_tech/maps_main(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/maps_main(?:/)?$"
+      "namedRegex": "^/api/media_tech/maps_main(?:/)?$"
     },
     {
-      "page": "/api/maps/n8n",
-      "regex": "^/api/maps/n8n(?:/)?$",
+      "page": "/api/media_tech/n8n",
+      "regex": "^/api/media_tech/n8n(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/n8n(?:/)?$"
+      "namedRegex": "^/api/media_tech/n8n(?:/)?$"
     },
     {
-      "page": "/api/maps/n8n/maps_main",
-      "regex": "^/api/maps/n8n/maps_main(?:/)?$",
+      "page": "/api/media_tech/n8n/laravel",
+      "regex": "^/api/media_tech/n8n/laravel(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/n8n/maps_main(?:/)?$"
+      "namedRegex": "^/api/media_tech/n8n/laravel(?:/)?$"
     },
     {
-      "page": "/api/maps/n8n/node_js",
-      "regex": "^/api/maps/n8n/node_js(?:/)?$",
+      "page": "/api/media_tech/n8n/maps_main",
+      "regex": "^/api/media_tech/n8n/maps_main(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/n8n/node_js(?:/)?$"
+      "namedRegex": "^/api/media_tech/n8n/maps_main(?:/)?$"
     },
     {
-      "page": "/api/maps/openclaw",
-      "regex": "^/api/maps/openclaw(?:/)?$",
+      "page": "/api/media_tech/n8n/node_js",
+      "regex": "^/api/media_tech/n8n/node_js(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/openclaw(?:/)?$"
+      "namedRegex": "^/api/media_tech/n8n/node_js(?:/)?$"
     },
     {
-      "page": "/api/maps/workspace",
-      "regex": "^/api/maps/workspace(?:/)?$",
+      "page": "/api/media_tech/node-activity/events",
+      "regex": "^/api/media_tech/node\\-activity/events(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/maps/workspace(?:/)?$"
+      "namedRegex": "^/api/media_tech/node\\-activity/events(?:/)?$"
     },
     {
-      "page": "/api/node-activity/events",
-      "regex": "^/api/node\\-activity/events(?:/)?$",
+      "page": "/api/media_tech/node-activity/health",
+      "regex": "^/api/media_tech/node\\-activity/health(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/node\\-activity/events(?:/)?$"
+      "namedRegex": "^/api/media_tech/node\\-activity/health(?:/)?$"
     },
     {
-      "page": "/api/node-activity/health",
-      "regex": "^/api/node\\-activity/health(?:/)?$",
+      "page": "/api/media_tech/openclaw",
+      "regex": "^/api/media_tech/openclaw(?:/)?$",
       "routeKeys": {},
-      "namedRegex": "^/api/node\\-activity/health(?:/)?$"
+      "namedRegex": "^/api/media_tech/openclaw(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/sidebar-menu",
+      "regex": "^/api/media_tech/sidebar\\-menu(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/sidebar\\-menu(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/sidebar-menu/clear",
+      "regex": "^/api/media_tech/sidebar\\-menu/clear(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/sidebar\\-menu/clear(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/workspace",
+      "regex": "^/api/media_tech/workspace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/workspace(?:/)?$"
     },
     {
       "page": "/api/resources/services-info",
       "regex": "^/api/resources/services\\-info(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/resources/services\\-info(?:/)?$"
-    },
-    {
-      "page": "/api/sidebar-menu",
-      "regex": "^/api/sidebar\\-menu(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/api/sidebar\\-menu(?:/)?$"
-    },
-    {
-      "page": "/api/sidebar-menu/clear",
-      "regex": "^/api/sidebar\\-menu/clear(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/api/sidebar\\-menu/clear(?:/)?$"
     },
     {
       "page": "/api/test1234",

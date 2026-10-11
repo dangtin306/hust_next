@@ -20,7 +20,7 @@ export default async function RealChatPage({
       process.cwd(),
       "app",
       "api",
-      "maps",
+      "media_tech",
       "openclaw",
       "openclaw.yaml",
     );

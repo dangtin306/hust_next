@@ -12,9 +12,10 @@ export type InitialChatLoadProgress = (progress: number, status: string) => void
 /** Initial Laravel room lookup; the actual HTTP implementation stays in api/. */
 export function fetchInitialChatRooms(
   onProgress: InitialChatLoadProgress,
+  customBaseUrl?: string,
 ): Promise<FetchRoomsResult> {
   onProgress(30, "Đang tìm phòng chat trên Laravel…");
-  return apiFetchLaravelRooms(1, 30);
+  return apiFetchLaravelRooms(1, 30, customBaseUrl);
 }
 
 /** Initial room-history lookup; the actual HTTP implementation stays in api/. */
@@ -22,9 +23,10 @@ export function fetchInitialChatMessages(
   roomId: number | string,
   onProgress: InitialChatLoadProgress,
   progress = 60,
+  customBaseUrl?: string,
 ): ReturnType<typeof apiFetchRoomMessages> {
   onProgress(progress, "Đã tìm thấy phòng — đang tải lịch sử tin nhắn…");
-  return apiFetchRoomMessages(roomId, 50);
+  return apiFetchRoomMessages(roomId, 50, undefined, customBaseUrl);
 }
 
 export function InitialChatLoader({

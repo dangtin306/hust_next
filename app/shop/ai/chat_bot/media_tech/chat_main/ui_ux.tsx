@@ -21,6 +21,8 @@ import {
   Plus,
   Layers,
   ChevronRight,
+  Sliders,
+  Server,
 } from "lucide-react";
 import {
   SUGGESTIONS,
@@ -503,6 +505,251 @@ export function UserIdConfigModal({
   );
 }
 
+/**
+ * Modal Popup tinh chỉnh URL domain API cho Node.js OpenClaw và Laravel Backend.
+ */
+export function ApiConfigModal({
+  isOpen,
+  onClose,
+  activeNodeUrl,
+  activeLaravelUrl,
+  defaultNodeUrl,
+  defaultLaravelUrl,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  activeNodeUrl: string;
+  activeLaravelUrl: string;
+  defaultNodeUrl: string;
+  defaultLaravelUrl: string;
+  onSave: (nodeUrl: string, laravelUrl: string) => void;
+}) {
+  const [nodeInput, setNodeInput] = useState(activeNodeUrl || defaultNodeUrl);
+  const [laravelInput, setLaravelInput] = useState(activeLaravelUrl || defaultLaravelUrl);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setNodeInput(activeNodeUrl || defaultNodeUrl);
+      setLaravelInput(activeLaravelUrl || defaultLaravelUrl);
+      setError(null);
+    }
+  }, [isOpen, activeNodeUrl, activeLaravelUrl, defaultNodeUrl, defaultLaravelUrl]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const cleanNode = nodeInput.trim();
+    const cleanLaravel = laravelInput.trim();
+    if (!cleanNode) {
+      setError("Vui lòng nhập domain API Node.js OpenClaw.");
+      return;
+    }
+    if (!cleanLaravel) {
+      setError("Vui lòng nhập domain API Laravel Backend.");
+      return;
+    }
+    onSave(cleanNode, cleanLaravel);
+    onClose();
+  };
+
+  const handleResetToDefault = () => {
+    setNodeInput(defaultNodeUrl);
+    setLaravelInput(defaultLaravelUrl);
+    setError(null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className="absolute inset-0 cursor-pointer"
+        onClick={onClose}
+        aria-label="Đóng modal"
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="api-config-modal-title"
+        className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-purple-200/90 bg-white shadow-2xl shadow-purple-950/25 animate-in zoom-in-95 duration-200"
+      >
+        {/* Header gradient */}
+        <div className="flex items-center justify-between border-b border-purple-100 bg-gradient-to-r from-purple-50 via-pink-50 to-indigo-50 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/25">
+              <Sliders className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 id="api-config-modal-title" className="text-base font-bold text-slate-800 sm:text-lg">
+                Tùy chỉnh API Domain
+              </h3>
+              <p className="text-xs text-slate-500">
+                Điều chỉnh domain kết nối cho Node.js OpenClaw và Laravel Backend
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white hover:text-slate-700 cursor-pointer"
+            aria-label="Đóng"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Node.js OpenClaw API */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Server className="h-3.5 w-3.5 text-purple-600" />
+                <span>Node.js OpenClaw API URL</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] rounded-full bg-purple-50 border border-purple-200 px-2 py-0.5 font-medium text-purple-700">
+                Chat & Workspaces
+              </span>
+            </div>
+            <input
+              type="text"
+              value={nodeInput}
+              onChange={(e) => {
+                setNodeInput(e.target.value);
+                if (error) setError(null);
+              }}
+              placeholder={defaultNodeUrl}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm font-mono font-medium text-slate-900 focus:border-purple-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-200 transition"
+            />
+            {/* Presets */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-slate-400 font-medium">Gợi ý:</span>
+              <button
+                type="button"
+                onClick={() => setNodeInput(defaultNodeUrl)}
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-mono transition cursor-pointer ${
+                  nodeInput === defaultNodeUrl
+                    ? "border-purple-300 bg-purple-50 text-purple-700 font-semibold"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Mặc định
+              </button>
+              <button
+                type="button"
+                onClick={() => setNodeInput("http://localhost:3000")}
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-mono transition cursor-pointer ${
+                  nodeInput === "http://localhost:3000"
+                    ? "border-purple-300 bg-purple-50 text-purple-700 font-semibold"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Localhost (3000)
+              </button>
+            </div>
+          </div>
+
+          {/* Laravel Backend API */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Server className="h-3.5 w-3.5 text-indigo-600" />
+                <span>Laravel Backend API URL</span>
+                <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 font-medium text-indigo-700">
+                Lịch sử & Quản lý Routing
+              </span>
+            </div>
+            <input
+              type="text"
+              value={laravelInput}
+              onChange={(e) => {
+                setLaravelInput(e.target.value);
+                if (error) setError(null);
+              }}
+              placeholder={defaultLaravelUrl}
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-xs sm:text-sm font-mono font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 transition"
+            />
+            {/* Presets */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-slate-400 font-medium">Gợi ý:</span>
+              <button
+                type="button"
+                onClick={() => setLaravelInput(defaultLaravelUrl)}
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-mono transition cursor-pointer ${
+                  laravelInput === defaultLaravelUrl
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Mặc định
+              </button>
+              <button
+                type="button"
+                onClick={() => setLaravelInput("http://localhost:8000")}
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-mono transition cursor-pointer ${
+                  laravelInput === "http://localhost:8000"
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                Localhost (8000)
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-xs text-rose-500 flex items-center gap-1 font-medium">
+              <span>⚠️</span> {error}
+            </p>
+          )}
+
+          {/* Action buttons */}
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={handleResetToDefault}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition cursor-pointer"
+            >
+              Mặc định ban đầu
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2 text-xs font-bold text-white shadow-md shadow-purple-500/25 hover:from-purple-700 hover:to-indigo-700 transition cursor-pointer"
+              >
+                Lưu cấu hình
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export type MediaUiUxProps = {
   // Config & callbacks
   onClose?: () => void;
@@ -514,6 +761,13 @@ export type MediaUiUxProps = {
   agentBadge?: string;
   hideModel?: boolean;
   showWorkspaceUpdateButton?: boolean;
+  activeNodeUrl?: string;
+  activeLaravelUrl?: string;
+  defaultNodeUrl?: string;
+  defaultLaravelUrl?: string;
+  isApiConfigModalOpen?: boolean;
+  setIsApiConfigModalOpen?: (open: boolean) => void;
+  handleSaveApiConfig?: (nodeUrl: string, laravelUrl: string) => void;
 
   // Process states
   messages: Message[];
@@ -639,12 +893,24 @@ export function MediaUiUx(props: MediaUiUxProps) {
     handleInputResize,
     handleCompositionStart,
     handleCompositionEnd,
+    activeNodeUrl = "https://node_md.hust.media/openclaw",
+    activeLaravelUrl = "https://laravel_mt.hust.media",
+    defaultNodeUrl = "https://node_md.hust.media/openclaw",
+    defaultLaravelUrl = "https://laravel_mt.hust.media",
+    isApiConfigModalOpen = false,
+    setIsApiConfigModalOpen,
+    handleSaveApiConfig,
   } = props;
 
+  const [isMounted, setIsMounted] = useState(false);
   const [isWorkspacePromptDismissed, setIsWorkspacePromptDismissed] = useState(false);
   const currentSuggestion = SUGGESTIONS.find((item) => item.apiService === selectedService);
   // The chat API loader provides only selectable child workspaces; parent nodes stay in management.
   const workspaceChoices = workspaces;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isWorkspaceSelectionRequired) setIsWorkspacePromptDismissed(false);
@@ -708,9 +974,23 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     {agentBadge || (agent ? `Agent: ${agent}` : "Live AI")}
                   </span>
                 </div>
-                <p className="hidden sm:block text-xs text-slate-500">
-                  {subtitle}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="hidden sm:block text-xs text-slate-500">
+                    {subtitle}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsApiConfigModalOpen?.(true)}
+                    title="Tinh chỉnh URL domain API (Node.js & Laravel)"
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200/90 bg-white/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-slate-600 shadow-2xs transition-all hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 active:scale-95 cursor-pointer"
+                  >
+                    <Sliders className="h-2.5 w-2.5 text-purple-600 sm:h-3 sm:w-3" />
+                    <span>Tùy chỉnh API</span>
+                    {isMounted && (activeNodeUrl !== defaultNodeUrl || activeLaravelUrl !== defaultLaravelUrl) && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-pulse" title="Đang dùng domain API tùy chỉnh" />
+                    )}
+                  </button>
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-1.5">
                   {/* User ID Tag */}
                   <div className="inline-flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50/90 px-1.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-purple-700 shadow-2xs transition-colors hover:border-purple-300">
@@ -1269,6 +1549,19 @@ export function MediaUiUx(props: MediaUiUxProps) {
           isFirstTime={Boolean(isFirstTimeUser)}
           currentUserId={userId}
           onSave={handleSaveUserId}
+        />
+      )}
+
+      {/* API Config Modal (Chỉ hiện khi ấn nút Tùy chỉnh API ở header) */}
+      {handleSaveApiConfig && (
+        <ApiConfigModal
+          isOpen={Boolean(isApiConfigModalOpen)}
+          onClose={() => setIsApiConfigModalOpen?.(false)}
+          activeNodeUrl={activeNodeUrl}
+          activeLaravelUrl={activeLaravelUrl}
+          defaultNodeUrl={defaultNodeUrl}
+          defaultLaravelUrl={defaultLaravelUrl}
+          onSave={handleSaveApiConfig}
         />
       )}
 

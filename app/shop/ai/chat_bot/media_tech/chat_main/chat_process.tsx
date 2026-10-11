@@ -347,6 +347,7 @@ export type MediaTechChatClientProps = {
   className?: string;
   isDrawer?: boolean;
   targetUrl?: string; // e.g. "https://node_md.hust.media/openclaw"
+  laravelUrl?: string; // e.g. "https://laravel_mt.hust.media"
   agent?: string; // e.g. "test"
   sessionKey?: string; // e.g. "agent:test:main"
   storageKey?: string;
@@ -370,6 +371,7 @@ function getDefaultWorkspaceCode(workspaceList: WorkspaceOption[]): string {
 export function useMediaChatProcess({
   isDrawer = false,
   targetUrl,
+  laravelUrl: propLaravelUrl,
   agent,
   sessionKey: propSessionKey,
   storageKey: propStorageKey,
@@ -380,6 +382,33 @@ export function useMediaChatProcess({
   showWelcomeMessage = true,
   serviceDescriptions = {},
 }: MediaTechChatClientProps = {}) {
+  const defaultNodeUrl = targetUrl || "https://node_md.hust.media/openclaw";
+  const defaultLaravelUrl = propLaravelUrl || "https://laravel_mt.hust.media";
+
+  const [activeNodeUrl, setActiveNodeUrl] = useState<string>(defaultNodeUrl);
+  const [activeLaravelUrl, setActiveLaravelUrl] = useState<string>(defaultLaravelUrl);
+  const activeNodeUrlRef = useRef<string>(defaultNodeUrl);
+  activeNodeUrlRef.current = activeNodeUrl;
+  const activeLaravelUrlRef = useRef<string>(defaultLaravelUrl);
+  activeLaravelUrlRef.current = activeLaravelUrl;
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && propStorageKey) {
+      const savedNode = window.sessionStorage?.getItem(`custom_api_node_${propStorageKey}`);
+      if (savedNode) {
+        setActiveNodeUrl(savedNode);
+        activeNodeUrlRef.current = savedNode;
+      }
+      const savedLaravel = window.sessionStorage?.getItem(`custom_api_laravel_${propStorageKey}`);
+      if (savedLaravel) {
+        setActiveLaravelUrl(savedLaravel);
+        activeLaravelUrlRef.current = savedLaravel;
+      }
+    }
+  }, [propStorageKey]);
+
+  const [isApiConfigModalOpen, setIsApiConfigModalOpen] = useState(false);
+
   const initialMessages = showWelcomeMessage ? INITIAL_MESSAGES : EMPTY_MESSAGES;
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -471,6 +500,7 @@ export function useMediaChatProcess({
       model,
       userId: roomUserId,
       agent: targetAgent,
+      customBaseUrl: activeLaravelUrl,
     }).catch((error) => {
       roomSyncPromisesRef.current.delete(upstreamConversationId);
       if (error?.code === "CONVERSATION_ALREADY_LINKED") {
@@ -543,6 +573,7 @@ export function useMediaChatProcess({
         },
         httpStatus,
         errorMessage,
+        customBaseUrl: activeLaravelUrl,
       });
     } catch (error) {
       console.warn("Không lưu được lượt chat vào Laravel; phản hồi Node.js vẫn được giữ:", error);
@@ -578,7 +609,7 @@ export function useMediaChatProcess({
       const { conversationId: convKey, userId: returnedUserId } = await apiCreateConversation({
         sessionKey: conversationSessionKey,
         userId: activeUid,
-        targetUrl,
+        targetUrl: activeNodeUrlRef.current || activeNodeUrl,
       });
 
       const workspaceUserId = returnedUserId ?? activeUid;
@@ -587,7 +618,7 @@ export function useMediaChatProcess({
           await apiCreateWorkspaceSession({
             userId: workspaceUserId,
             sessionKey: conversationSessionKey,
-            targetUrl,
+            targetUrl: activeNodeUrlRef.current || activeNodeUrl,
           });
         } catch (workspaceSessionError) {
           console.warn("Không khởi tạo được workspace session:", workspaceSessionError);
@@ -649,7 +680,7 @@ export function useMediaChatProcess({
           setIsLoadingWorkspaces(true);
           try {
             updateProgress(progressRange.start, "Đang tải danh sách workspace từ Laravel…");
-            const workspaceList = await apiFetchWorkspaces();
+            const workspaceList = await apiFetchWorkspaces(activeLaravelUrlRef.current || activeLaravelUrl);
             if (cancelled) return;
             updateProgress(progressRange.listDone, "Đã tải danh sách; đang kiểm tra workspace active của user…");
             let userWorkspaces: WorkspaceOption[] = [];
@@ -659,7 +690,10 @@ export function useMediaChatProcess({
               userWorkspaceLookupAttempted = true;
               try {
                 updateProgress(progressRange.userStart, "Đang kiểm tra workspace user đã chọn trên OpenClaw…");
-                userWorkspaces = await apiFetchUserWorkspaces(workspaceUserId, targetUrl);
+                userWorkspaces = await apiFetchUserWorkspaces(
+                  workspaceUserId,
+                  activeNodeUrlRef.current || activeNodeUrl,
+                );
                 userWorkspaceLookupSucceeded = true;
               } catch (userWorkspaceError) {
                 console.warn("Không lấy được workspace đang active của user:", userWorkspaceError);
@@ -711,6 +745,7 @@ export function useMediaChatProcess({
               targetRoomId,
               updateProgress,
               historyProgress,
+              activeLaravelUrlRef.current || activeLaravelUrl,
             );
           } catch (historyErr: any) {
             console.error("Lỗi khi tải lịch sử tin nhắn (POST /messages/list):", historyErr);
@@ -785,6 +820,18 @@ export function useMediaChatProcess({
           savedConv = window.localStorage.getItem(activeStorageKey);
           savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
           savedSessionToken = getLaravelChatSession();
+          if (propStorageKey) {
+            const savedNode = window.sessionStorage?.getItem(`custom_api_node_${propStorageKey}`);
+            if (savedNode) {
+              activeNodeUrlRef.current = savedNode;
+              setActiveNodeUrl(savedNode);
+            }
+            const savedLaravel = window.sessionStorage?.getItem(`custom_api_laravel_${propStorageKey}`);
+            if (savedLaravel) {
+              activeLaravelUrlRef.current = savedLaravel;
+              setActiveLaravelUrl(savedLaravel);
+            }
+          }
         } catch {}
 
         // Chat Test keeps its existing fixed-user flow. Public creates its
@@ -824,7 +871,7 @@ export function useMediaChatProcess({
                 promise: apiCreateConversation({
                   sessionKey: baseSession,
                   userId: null,
-                  targetUrl,
+                  targetUrl: activeNodeUrlRef.current || activeNodeUrl,
                 }),
               };
             }
@@ -839,7 +886,7 @@ export function useMediaChatProcess({
               await apiCreateWorkspaceSession({
                 userId: created.userId,
                 sessionKey: baseSession,
-                targetUrl,
+                targetUrl: activeNodeUrlRef.current || activeNodeUrl,
               });
               updateProgress(40, "Đã khởi tạo session; đang chuẩn bị tải workspace…");
             } catch (workspaceSessionError) {
@@ -899,7 +946,7 @@ export function useMediaChatProcess({
 
         try {
           const { ok, status: roomsStatus, rooms: roomItems } =
-            await fetchInitialChatRooms(updateProgress);
+            await fetchInitialChatRooms(updateProgress, activeLaravelUrlRef.current || activeLaravelUrl);
 
           if (ok) {
             const activeRoom =
@@ -1077,7 +1124,7 @@ export function useMediaChatProcess({
           sessionKey: activeSessionKey,
           model: activeModel,
           conversationId,
-          targetUrl,
+          targetUrl: activeNodeUrl,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Lỗi không xác định.";
@@ -1152,6 +1199,41 @@ export function useMediaChatProcess({
     }, 300);
   };
 
+  const handleSaveApiConfig = (newNodeUrl: string, newLaravelUrl: string) => {
+    const cleanNode = newNodeUrl.trim() || defaultNodeUrl;
+    const cleanLaravel = newLaravelUrl.trim() || defaultLaravelUrl;
+    activeNodeUrlRef.current = cleanNode;
+    activeLaravelUrlRef.current = cleanLaravel;
+    setActiveNodeUrl(cleanNode);
+    setActiveLaravelUrl(cleanLaravel);
+    initialPublicConversationRef.current = null;
+    roomSyncPromisesRef.current.clear();
+    setIsApiConfigModalOpen(false);
+    if (typeof window !== "undefined" && propStorageKey) {
+      if (cleanNode === defaultNodeUrl) {
+        window.sessionStorage?.removeItem(`custom_api_node_${propStorageKey}`);
+      } else {
+        window.sessionStorage?.setItem(`custom_api_node_${propStorageKey}`, cleanNode);
+      }
+      if (cleanLaravel === defaultLaravelUrl) {
+        window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
+      } else {
+        window.sessionStorage?.setItem(`custom_api_laravel_${propStorageKey}`, cleanLaravel);
+      }
+    }
+    void (async () => {
+      try {
+        setIsLoadingWorkspaces(true);
+        const list = await apiFetchWorkspaces(cleanLaravel);
+        setWorkspaces(list);
+      } catch (e) {
+        console.warn("Không tải lại được workspace với URL Laravel mới:", e);
+      } finally {
+        setIsLoadingWorkspaces(false);
+      }
+    })();
+  };
+
   const handleSelectWorkspace = async (workspace: WorkspaceOption) => {
     if (workspaceSwitchLockRef.current || isRestoringChat || isUpdatingWorkspaces || isTyping) return;
 
@@ -1186,7 +1268,7 @@ export function useMediaChatProcess({
       const result = await apiSelectWorkspace({
         userId: numericUserId,
         workSpaceCode: workspace.work_space_code,
-        targetUrl,
+        targetUrl: activeNodeUrl,
       });
       setSelectedWorkspaceCode(workspace.work_space_code);
       setIsWorkspaceSelectionRequired(false);
@@ -1239,14 +1321,14 @@ export function useMediaChatProcess({
     setIsUpdatingWorkspaces(true);
     setIsLoadingWorkspaces(true);
     try {
-      await apiUpdateWorkspaceRouting();
-      const refreshedWorkspaces = await apiFetchWorkspaces();
+      await apiUpdateWorkspaceRouting(activeLaravelUrl);
+      const refreshedWorkspaces = await apiFetchWorkspaces(activeLaravelUrl);
       let userWorkspaces: WorkspaceOption[] = [];
       let userWorkspaceLookupAttempted = false;
       let userWorkspaceLookupSucceeded = false;
       userWorkspaceLookupAttempted = userId !== null && userId !== undefined && userId !== "";
       try {
-        userWorkspaces = await apiFetchUserWorkspaces(userId, targetUrl);
+        userWorkspaces = await apiFetchUserWorkspaces(userId, activeNodeUrl);
         userWorkspaceLookupSucceeded = true;
       } catch (userWorkspaceError) {
         console.warn("Không lấy được workspace đang active của user:", userWorkspaceError);
@@ -1352,8 +1434,8 @@ export function useMediaChatProcess({
       if (selectedServiceId) {
         reqHeaders["x-openclaw-service-id"] = selectedServiceId;
       }
-      if (targetUrl) {
-        reqHeaders["x-openclaw-target"] = targetUrl;
+      if (activeNodeUrl) {
+        reqHeaders["x-openclaw-target"] = activeNodeUrl;
       }
 
       const isImageGeneration = activeService === "media_text_to_image";
@@ -1725,6 +1807,13 @@ export function useMediaChatProcess({
     handleImageSelection,
     handleKeyDown,
     handleInputResize,
+    activeNodeUrl,
+    activeLaravelUrl,
+    defaultNodeUrl,
+    defaultLaravelUrl,
+    isApiConfigModalOpen,
+    setIsApiConfigModalOpen,
+    handleSaveApiConfig,
     handleCompositionStart,
     handleCompositionEnd,
   };

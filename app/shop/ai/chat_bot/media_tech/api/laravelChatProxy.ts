@@ -29,8 +29,18 @@ async function proxy(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
+  const customTarget = request.headers.get("x-laravel-target");
+  let upstreamBase = LARAVEL_CHAT_BASE.replace(/\/$/, "");
+  if (customTarget) {
+    const clean = customTarget.replace(/\/$/, "");
+    upstreamBase = clean.endsWith("/api/chat")
+      ? clean
+      : clean.endsWith("/api")
+      ? `${clean}/chat`
+      : `${clean}/api/chat`;
+  }
   const search = request.nextUrl.search;
-  const upstreamUrl = `${LARAVEL_CHAT_BASE.replace(/\/$/, "")}/${path.join("/")}${search}`;
+  const upstreamUrl = `${upstreamBase}/${path.join("/")}${search}`;
 
   try {
     const requestHeaders: Record<string, string> = {

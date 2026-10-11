@@ -10,9 +10,9 @@
         }
       ]
     },
-    "/api/node-activity/events": {},
-    "/api/node-activity/health": {},
-    "/api/openclaw/[...path]": {},
-    "/api/workspaces-proxy/[...path]": {}
+    "/api/media_tech/node-activity/events": {},
+    "/api/media_tech/node-activity/health": {},
+    "/api/media_tech/openclaw/gateway/[...path]": {},
+    "/api/media_tech/workspaces-proxy/[...path]": {}
   }
 }

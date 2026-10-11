@@ -32,10 +32,14 @@ export type WorkspaceOption = {
 let workspacesRequestInFlight: Promise<WorkspaceOption[]> | null = null;
 
 /** Load the available workspaces for the chat-mode selector. */
-export function apiFetchWorkspaces(): Promise<WorkspaceOption[]> {
-  if (workspacesRequestInFlight) return workspacesRequestInFlight;
+export function apiFetchWorkspaces(customBaseUrl?: string): Promise<WorkspaceOption[]> {
+  let endpoint = WORKSPACES_MAIN_DATA_ENDPOINT;
+  if (customBaseUrl) {
+    const clean = customBaseUrl.replace(/\/+$/, "");
+    endpoint = `${clean}/api/workspaces/main/data`;
+  }
 
-  const request = fetch(WORKSPACES_MAIN_DATA_ENDPOINT, {
+  const request = fetch(endpoint, {
     method: "GET",
     cache: "no-store",
     headers: { Accept: "application/json" },
@@ -128,10 +132,14 @@ export async function apiFetchUserWorkspaces(
 }
 
 /** Ask Laravel to sync workspace routing from OpenClaw before refreshing the list. */
-export async function apiUpdateWorkspaceRouting(): Promise<void> {
+export async function apiUpdateWorkspaceRouting(customBaseUrl?: string): Promise<void> {
+  const reqHeaders: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) {
+    reqHeaders["x-laravel-target"] = customBaseUrl;
+  }
   const response = await fetch(LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT, {
     method: "GET",
-    headers: { Accept: "application/json" },
+    headers: reqHeaders,
     cache: "no-store",
   });
   const body = await response.json().catch(() => null);
@@ -224,6 +232,7 @@ export type EnsureLaravelRoomParams = {
   model: string;
   userId?: number | string | null;
   agent?: string;
+  customBaseUrl?: string;
 };
 
 export type PersistChatTurnParams = {
@@ -242,6 +251,7 @@ export type PersistChatTurnParams = {
   };
   httpStatus: number;
   errorMessage: string | null;
+  customBaseUrl?: string;
 };
 
 export type CreateConversationParams = {
@@ -269,6 +279,7 @@ export async function apiEnsureLaravelRoom({
   model,
   userId,
   agent,
+  customBaseUrl,
 }: EnsureLaravelRoomParams): Promise<string> {
   const normalizedUserId =
     userId === null || userId === undefined || userId === ""
@@ -277,13 +288,18 @@ export async function apiEnsureLaravelRoom({
       ? Number(userId)
       : userId;
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) {
+    headers["x-laravel-target"] = customBaseUrl;
+  }
+
   const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
     method: "POST",
     credentials: "omit",
     cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify(
       withLaravelChatSession({
         upstream_conversation_id: upstreamConversationId,
@@ -340,6 +356,7 @@ export async function apiPersistChatMessage({
   usage,
   httpStatus,
   errorMessage,
+  customBaseUrl,
 }: PersistChatTurnParams): Promise<void> {
   const normalizedUserId =
     userId === null || userId === undefined || userId === ""
@@ -347,11 +364,19 @@ export async function apiPersistChatMessage({
       : Number.isInteger(Number(userId))
       ? Number(userId)
       : userId;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) {
+    headers["x-laravel-target"] = customBaseUrl;
+  }
   const response = await fetch(
     `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(roomId)}/messages`,
     {
       method: "POST",
-      ...laravelJsonOptions,
+      credentials: "include",
+      cache: "no-store",
+      headers,
       body: JSON.stringify(withLaravelChatSession({
         ...(normalizedUserId !== undefined ? { user_id: normalizedUserId } : {}),
         user_message: userMessage,
@@ -508,10 +533,18 @@ export async function apiSelectWorkspace({
 /**
  * Fetches rooms list from Laravel chat backend.
  */
-export async function apiFetchLaravelRooms(page = 1, perPage = 30): Promise<FetchRoomsResult> {
+export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl?: string): Promise<FetchRoomsResult> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) {
+    headers["x-laravel-target"] = customBaseUrl;
+  }
   const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/list`, {
     method: "POST",
-    ...laravelJsonOptions,
+    credentials: "include",
+    cache: "no-store",
+    headers,
     body: JSON.stringify(withLaravelChatSession({ page, per_page: perPage })),
   });
 
@@ -538,12 +571,21 @@ export async function apiFetchRoomMessages(
   roomId: number | string,
   perPage = 50,
   beforeId?: number,
+  customBaseUrl?: string,
 ): Promise<any[]> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) {
+    headers["x-laravel-target"] = customBaseUrl;
+  }
   const response = await fetch(
     `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(String(roomId))}/messages/list`,
     {
       method: "POST",
-      ...laravelJsonOptions,
+      credentials: "include",
+      cache: "no-store",
+      headers,
       body: JSON.stringify(withLaravelChatSession({
         per_page: perPage,
         ...(beforeId !== undefined ? { before_id: beforeId } : {}),

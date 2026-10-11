@@ -33,25 +33,26 @@ declare namespace __next_route_internal_types__ {
 
   type StaticRoutes = 
     | `/`
-    | `/api/maps`
-    | `/api/maps/chat_public`
-    | `/api/maps/chat_test`
-    | `/api/maps/dashboard`
-    | `/api/maps/git_auto`
-    | `/api/maps/git_test`
-    | `/api/maps/gitea_test`
-    | `/api/maps/laravel`
-    | `/api/maps/maps_main`
-    | `/api/maps/n8n`
-    | `/api/maps/n8n/maps_main`
-    | `/api/maps/n8n/node_js`
-    | `/api/maps/openclaw`
-    | `/api/maps/workspace`
-    | `/api/node-activity/events`
-    | `/api/node-activity/health`
+    | `/api/media_tech`
+    | `/api/media_tech/chat_public`
+    | `/api/media_tech/chat_test`
+    | `/api/media_tech/dashboard`
+    | `/api/media_tech/git_auto`
+    | `/api/media_tech/git_test`
+    | `/api/media_tech/gitea_test`
+    | `/api/media_tech/laravel`
+    | `/api/media_tech/maps_main`
+    | `/api/media_tech/n8n`
+    | `/api/media_tech/n8n/laravel`
+    | `/api/media_tech/n8n/maps_main`
+    | `/api/media_tech/n8n/node_js`
+    | `/api/media_tech/node-activity/events`
+    | `/api/media_tech/node-activity/health`
+    | `/api/media_tech/openclaw`
+    | `/api/media_tech/sidebar-menu`
+    | `/api/media_tech/sidebar-menu/clear`
+    | `/api/media_tech/workspace`
     | `/api/resources/services-info`
-    | `/api/sidebar-menu`
-    | `/api/sidebar-menu/clear`
     | `/api/test1234`
     | `/community/clear_silde_bar`
     | `/community/features`
@@ -74,6 +75,8 @@ declare namespace __next_route_internal_types__ {
     | `/next/api/mt/n8n/node_js`
     | `/next/api/mt/openclaw`
     | `/next/api/mt/workspace`
+    | `/next/api/sidebar-menu`
+    | `/next/api/sidebar-menu/clear`
     | `/next/chat_bot/api_1`
     | `/next/chat_bot/main`
     | `/next/chat_bot/test_1`
@@ -115,14 +118,20 @@ declare namespace __next_route_internal_types__ {
     | `/tabs_nav/navConfig.json`
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
-    | `/api/chat/${CatchAllSlug<T>}`
     | `/api/features-image/${CatchAllSlug<T>}`
-    | `/api/gitea/${CatchAllSlug<T>}`
-    | `/api/openclaw/${CatchAllSlug<T>}`
-    | `/api/workspaces-proxy/${CatchAllSlug<T>}`
+    | `/api/media_tech/chat/${CatchAllSlug<T>}`
+    | `/api/media_tech/gitea/${CatchAllSlug<T>}`
+    | `/api/media_tech/openclaw/gateway/${CatchAllSlug<T>}`
+    | `/api/media_tech/workspaces-proxy/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
     | `/next/accounts/product/play/${SafeSlug<T>}`
+    | `/next/api/chat/${OptionalCatchAllSlug<T>}`
+    | `/next/api/gitea/${OptionalCatchAllSlug<T>}`
+    | `/next/api/maps/${OptionalCatchAllSlug<T>}`
+    | `/next/api/node-activity/${OptionalCatchAllSlug<T>}`
+    | `/next/api/openclaw/${OptionalCatchAllSlug<T>}`
+    | `/next/api/workspaces-proxy/${OptionalCatchAllSlug<T>}`
     | `/next/check/${OptionalCatchAllSlug<T>}`
     | `/next/check/${SafeSlug<T>}`
     | `/next/docs/${OptionalCatchAllSlug<T>}`

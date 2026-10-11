@@ -24,6 +24,10 @@ const flattenRoutes = (tree: RouteTree): RewriteRule[] =>
   );
 
 const rewriteRules = flattenRoutes(uriConfig.routes);
+const legacyMapsRewrite: RewriteRule = {
+  source: "/api/maps/:path*",
+  destination: "/api/media_tech/:path*",
+};
 
 const nextConfig: NextConfig = {
   basePath: uriConfig.basePath,
@@ -54,7 +58,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return {
       beforeFiles: rewriteRules.filter((r) => r.destination.startsWith("http")),
-      afterFiles: rewriteRules.filter((r) => !r.destination.startsWith("http")),
+      afterFiles: [
+        legacyMapsRewrite,
+        ...rewriteRules.filter((r) => !r.destination.startsWith("http")),
+      ],
       fallback: [],
     };
   },
