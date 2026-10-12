@@ -28,6 +28,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { io, type Socket } from "socket.io-client";
 
 import {
   ArrowLeftRight,
@@ -588,14 +589,6 @@ function getTraceStageEdges(trace: N8nTracePayload): N8nStageEdge[] {
   return ids.slice(1).map((target, index) => ({ source: ids[index], target }));
 }
 
-// The backend supplies node pairs, so only existing graph edges may be animated.
-function matchTraceEdges(trace: N8nTracePayload, graphEdges: Edge[]): Array<string | null> {
-  return getTraceStageEdges(trace).map(({ source, target }) => {
-    const edge = graphEdges.find((candidate) => candidate.source === source && candidate.target === target);
-    return edge?.id ?? null;
-  });
-}
-
 function matchingPrefixLength<T>(path: T[], visited: T[]): number {
   let index = 0;
   while (index < path.length && path[index] === visited[index]) index += 1;
@@ -889,6 +882,7 @@ export interface SSEStagePayload {
 
 export interface N8nDiagramRendererProps {
   graph?: N8nNormalizedGraph | { graph?: N8nNormalizedGraph; workflow?: unknown } | null;
+  socketUrl?: string;
   sseUrl?: string;
   enableRealtime?: boolean;
   onTraceReceived?: (trace: N8nTracePayload) => void;
@@ -910,7 +904,8 @@ export const N8nDiagramRenderer = forwardRef<
 >(function N8nDiagramRenderer(
   {
     graph,
-    sseUrl = "https://node_md.hust.media/openclaw/workflow/events",
+    socketUrl = "https://node_md.hust.media",
+    sseUrl = "",
     enableRealtime = true,
     onTraceReceived,
     onGraphReceived,
@@ -925,9 +920,11 @@ export const N8nDiagramRenderer = forwardRef<
   const [edgeVisuals, setEdgeVisuals] = useState<EdgeRunVisual[]>([]);
   const [traceMotionEnabled, setTraceMotionEnabled] = useState(true);
   const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
+  const graphNodesRef = useRef<Node[]>([]);
   const graphEdgesRef = useRef<Edge[]>([]);
   const runsRef = useRef<Map<string, TraceRun>>(new Map());
   const anonymousRunCounterRef = useRef(0);
+  const socketRef = useRef<Socket | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -1054,7 +1051,7 @@ export const N8nDiagramRenderer = forwardRef<
 
   const animateTrace = useCallback((trace: N8nTracePayload) => {
     const nameToId = new Map<string, string>();
-    nodes.forEach((n) => {
+    graphNodesRef.current.forEach((n) => {
       const data = n.data as FlowNodeData;
       if (data?.name) {
         nameToId.set(data.name, n.id);
@@ -1183,6 +1180,11 @@ export const N8nDiagramRenderer = forwardRef<
     });
   }, [activateEdge, activateNode, publishEdgeVisuals, publishNodeStatuses, scheduleRunTimer, stopRunTimers]);
 
+  const animateTraceRef = useRef(animateTrace);
+  useEffect(() => {
+    animateTraceRef.current = animateTrace;
+  }, [animateTrace]);
+
   // Expose các phương thức điều khiển cho parent
   // Ánh xạ stage name / node name tới nodeId
   const resolveTargetNodeId = useCallback((payload: SSEStagePayload): string | null => {
@@ -1307,6 +1309,7 @@ export const N8nDiagramRenderer = forwardRef<
     // React Flow keeps its own nodes/edges state; a new graph invalidates every active path.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEdgeVisuals([]);
+    graphNodesRef.current = allNodes;
     graphEdgesRef.current = flowEdges;
     setNodes(allNodes);
     setEdges(flowEdges);
@@ -1324,6 +1327,71 @@ export const N8nDiagramRenderer = forwardRef<
   })), [edges, edgeVisuals, traceMotionEnabled]);
 
   // Kết nối Realtime qua SSE EventSource: https://node_md.hust.media/openclaw/workflow/events
+  useEffect(() => {
+    if (!enableRealtime || !socketUrl) return;
+    onSSEStatusChangeRef.current?.("connecting");
+
+    const socket = io(socketUrl, {
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+    });
+    socketRef.current = socket;
+
+    const onConnect = () => onSSEStatusChangeRef.current?.("connected");
+    const onDisconnect = (reason: string) => onSSEStatusChangeRef.current?.(
+      reason === "io client disconnect" ? "disconnected" : "reconnecting",
+    );
+    const onConnectError = (error: Error) => {
+      console.warn("[laravel-workflow-socket] connect_error:", error.message);
+      onSSEStatusChangeRef.current?.("reconnecting");
+    };
+    const onReconnectAttempt = () => onSSEStatusChangeRef.current?.("reconnecting");
+    const onReconnect = () => onSSEStatusChangeRef.current?.("connected");
+    const onReconnectFailed = () => onSSEStatusChangeRef.current?.("disconnected");
+    const onTrace = (input: N8nTracePayload) => {
+      if (!input) return;
+      const trace = normalizeSocketTrace(input);
+      onTraceReceivedRef.current?.(trace);
+      animateTraceRef.current(trace);
+      onSSEEventReceivedRef.current?.("n8n:trace", trace);
+    };
+    const onGraph = (payload: N8nGraphSocketPayload) => {
+      if (!payload?.graph) return;
+      onGraphReceivedRef.current?.(payload);
+      onSSEEventReceivedRef.current?.("n8n:graph", payload);
+    };
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("connect_error", onConnectError);
+    socket.io.on("reconnect_attempt", onReconnectAttempt);
+    socket.io.on("reconnect", onReconnect);
+    socket.io.on("reconnect_failed", onReconnectFailed);
+    socket.on("n8n:trace", onTrace);
+    socket.on("n8n:graph", onGraph);
+    socket.on("workflow_graph", onGraph);
+
+    return () => {
+      socket.off("n8n:graph", onGraph);
+      socket.off("workflow_graph", onGraph);
+      socket.off("n8n:trace", onTrace);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("connect_error", onConnectError);
+      socket.io.off("reconnect_attempt", onReconnectAttempt);
+      socket.io.off("reconnect", onReconnect);
+      socket.io.off("reconnect_failed", onReconnectFailed);
+      socket.disconnect();
+      socketRef.current = null;
+      onSSEStatusChangeRef.current?.("disconnected");
+    };
+  }, [enableRealtime, socketUrl]);
+
   useEffect(() => {
     if (!enableRealtime || !sseUrl) return;
 

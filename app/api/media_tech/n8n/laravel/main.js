@@ -12,7 +12,6 @@ import {
   HelpCircle,
   Info,
   Link2,
-  Lock,
   PanelTop,
   Radio,
   RefreshCw,
@@ -28,15 +27,13 @@ import {
 
 import {
   DEFAULT_WORKFLOW_ID,
-  MOCK_GRAPH_DATA,
-  SAMPLE_TRACES,
   SAMPLE_REALTIME_LARAVEL_PIPELINE,
   fetchWorkflowGraph,
   fetchWorkflowHealth,
   HEALTH_API_URL,
   LARAVEL_TRACE_URL,
   API_BASE_URL,
-  SSE_EVENTS_URL,
+  SOCKET_SERVER_URL,
 } from "./process";
 
 import N8nDiagramRenderer from "./n8n_render";
@@ -48,7 +45,7 @@ export default function N8nWorkflowMain() {
   const [errorInfo, setErrorInfo] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Realtime Live State (SSE)
+  // Realtime Live State (Socket.IO)
   const [sseStatus, setSseStatus] = useState("connecting");
   const [latestTrace, setLatestTrace] = useState(null);
 
@@ -95,20 +92,18 @@ export default function N8nWorkflowMain() {
 
   // Initial fetch & health monitoring
   useEffect(() => {
-    loadWorkflow(DEFAULT_WORKFLOW_ID);
-    checkHealth();
+    const initialLoad = window.setTimeout(() => {
+      void loadWorkflow(DEFAULT_WORKFLOW_ID);
+      void checkHealth();
+    }, 0);
     const timer = setInterval(checkHealth, 30000);
-    return () => clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      clearInterval(timer);
+    };
   }, [loadWorkflow, checkHealth]);
 
-  // Load Mock graph fallback
-  const handleLoadMock = () => {
-    setGraphData(MOCK_GRAPH_DATA);
-    setIsDemoMode(true);
-    setErrorInfo(null);
-  };
-
-  // Xử lý sự kiện workflow.graph.updated từ SSE
+  // Xử lý graph cập nhật qua Socket.IO
   const handleGraphReceived = useCallback((payload) => {
     const graph = payload?.graph;
     if (!graph) return;
@@ -165,26 +160,7 @@ export default function N8nWorkflowMain() {
   }, []);
 
   // Simulate trace locally for instant visual verification
-  const handleSimulateTrace = (sampleIndex = 0) => {
-    const sample = SAMPLE_TRACES[sampleIndex] || SAMPLE_TRACES[0];
-    const traceWithNow = {
-      ...sample,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (!graphData) {
-      setGraphData(MOCK_GRAPH_DATA);
-      setIsDemoMode(true);
-    }
-
-    setLatestTrace(traceWithNow);
-
-    if (rendererRef.current) {
-      rendererRef.current.triggerTraceAnimation(traceWithNow);
-    }
-  };
-
-  // Simulate receiving stage events via SSE (stage.started, stage.completed, stage.failed)
+  // Mô phỏng stage event cục bộ cho kiểm tra giao diện.
   const handleSimulateStageEvent = (eventName = "stage.started") => {
     const sampleNode = graphData?.nodes?.[0]?.name || "chat bot tuong tac tv";
     if (rendererRef.current) {
@@ -214,7 +190,7 @@ export default function N8nWorkflowMain() {
       phase: "start",
       request_id: startPayload.request_id,
       trace: {
-        uri: "openclaw/workflow/laravel-trace",
+        uri: "openclaw/workflow/laravel/trace",
         method: "POST",
         stage_node_ids: startPayload.stage_node_ids,
       },
@@ -239,7 +215,7 @@ export default function N8nWorkflowMain() {
         phase: "complete",
         request_id: completePayload.request_id,
         trace: {
-          uri: "openclaw/workflow/laravel-trace",
+          uri: "openclaw/workflow/laravel/trace",
           method: "POST",
           stage_node_ids: completePayload.stage_node_ids,
         },
@@ -342,7 +318,7 @@ export default function N8nWorkflowMain() {
 
         {/* Stats & Actions */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Realtime Live Connection Status Pill (SSE) */}
+          {/* Realtime Live Connection Status Pill (Socket.IO) */}
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
               sseStatus === "connected"
@@ -360,7 +336,7 @@ export default function N8nWorkflowMain() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
-                <span className="font-semibold text-emerald-300">Live: Connected (SSE)</span>
+                <span className="font-semibold text-emerald-300">Live: Connected (Socket.IO)</span>
               </>
             ) : sseStatus === "reconnecting" ? (
               <>
@@ -376,7 +352,7 @@ export default function N8nWorkflowMain() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
                 </span>
-                <span className="font-semibold text-sky-300">Live: Connecting (SSE)</span>
+                <span className="font-semibold text-sky-300">Live: Connecting (Socket.IO)</span>
               </>
             ) : (
               <>
@@ -412,22 +388,22 @@ export default function N8nWorkflowMain() {
           {/* Laravel Trace Auth Badge */}
           <button
             onClick={() => checkHealth()}
-            title="Click để kiểm tra lại cấu hình auth trace"
+            title="Kiểm tra trạng thái Laravel trace receiver"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all ${
-              healthData?.laravelTraceAuthConfigured
+              healthData?.laravelTraceReceiverConfigured
                 ? "bg-emerald-950/70 border-emerald-700 text-emerald-300 shadow-sm shadow-emerald-500/10 hover:bg-emerald-900/60"
                 : "bg-amber-950/70 border-amber-600/80 text-amber-200 shadow-sm shadow-amber-500/10 hover:bg-amber-900/60"
             }`}
           >
-            {healthData?.laravelTraceAuthConfigured ? (
+            {healthData?.laravelTraceReceiverConfigured ? (
               <>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Trace Auth: <strong className="text-emerald-300">Configured</strong></span>
+                <span>Laravel Trace: <strong className="text-emerald-300">Receiver ready</strong></span>
               </>
             ) : (
               <>
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
-                <span>Trace Auth: <strong className="text-amber-300">Chưa cấu hình (503)</strong></span>
+                <span>Laravel Trace: <strong className="text-amber-300">Receiver unavailable</strong></span>
               </>
             )}
           </button>
@@ -465,8 +441,8 @@ export default function N8nWorkflowMain() {
         </div>
       </header>
 
-      {/* Warning Banner: laravel_trace_auth_configured: false */}
-      {healthData && !healthData.laravelTraceAuthConfigured && !dismissWarning && (
+      {/* Warning Banner: trace receiver unavailable */}
+      {healthData && !healthData.laravelTraceReceiverConfigured && !dismissWarning && (
         <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 backdrop-blur-md shadow-lg flex flex-col md:flex-row md:items-start justify-between gap-3 text-xs text-amber-200">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0 mt-0.5">
@@ -475,17 +451,17 @@ export default function N8nWorkflowMain() {
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-bold text-amber-300 text-sm">
-                  Cảnh báo Xác thực Laravel Trace: Chưa cấu hình (503 Service Unavailable)
+                  Laravel trace receiver chưa phản hồi
                 </span>
                 <span className="px-2 py-0.5 rounded font-mono font-bold bg-amber-900/70 text-amber-200 border border-amber-700 text-[11px]">
-                  laravel_trace_auth_configured: false
+                  laravel_trace_receiver_configured: false
                 </span>
               </div>
               <p className="text-slate-300 leading-relaxed text-xs">
-                Node backend hiện đang phản hồi các API bình thường, nhưng báo <code className="text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded">laravel_trace_auth_configured: false</code>. Các callback trace gửi từ Laravel sang <code className="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">POST /openclaw/workflow/laravel-trace</code> sẽ bị từ chối với mã lỗi <strong className="text-rose-400">HTTP 503</strong>.
+                Node backend chưa báo sẵn sàng cho trace; kiểm tra kết nối tới Node backend và route realtime Laravel mới.
               </p>
               <p className="text-slate-400 text-[11px]">
-                👉 Cần cấu hình cùng một mã <code className="text-amber-300 bg-amber-950 px-1 py-0.5 rounded">LARAVEL_TRACE_CALLBACK_TOKEN</code> ở cả Laravel (.env) và Node backend để tín hiệu trace của Laravel có thể phát vào luồng realtime SSE.
+                Sơ đồ nhận trace từ Laravel qua Socket.IO event <code className="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded">n8n:trace</code>.
               </p>
             </div>
           </div>
@@ -524,7 +500,7 @@ export default function N8nWorkflowMain() {
         >
           <div className="flex items-center gap-2">
             <Link2 className="w-4 h-4 text-amber-400" />
-            <span className="font-semibold text-white">Thông số Kết nối Hệ thống (Endpoints & SSE Specs)</span>
+            <span className="font-semibold text-white">Thông số kết nối hệ thống (REST API & Socket.IO)</span>
             <span className="text-slate-500 text-[11px] font-mono">OpenClaw Realtime Pipeline</span>
           </div>
           <div className="flex items-center gap-2 text-slate-400">
@@ -549,31 +525,31 @@ export default function N8nWorkflowMain() {
               </p>
             </div>
 
-            {/* 2. Realtime SSE */}
+            {/* 2. Realtime Socket.IO */}
             <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-400">2. Realtime — SSE Events</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">SSE</span>
+                <span className="font-bold text-emerald-400">2. Realtime — Socket.IO</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Socket.IO</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                {SSE_EVENTS_URL}
+                {SOCKET_SERVER_URL}
               </p>
               <p className="text-[11px] text-slate-400">
-                Sự kiện: <code className="text-slate-300">stage.started</code>, <code className="text-slate-300">stage.completed</code>, <code className="text-slate-300">stage.failed</code>, <code className="text-slate-300">connected</code>.
+                Sự kiện: <code className="text-slate-300">n8n:trace</code>, <code className="text-slate-300">n8n:graph</code>, <code className="text-slate-300">connect</code>.
               </p>
             </div>
 
             {/* 3. Health Check */}
             <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-indigo-400">3. Trạng thái & Auth</span>
+                <span className="font-bold text-indigo-400">3. Trạng thái receiver</span>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">GET</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
                 {HEALTH_API_URL}
               </p>
               <p className="text-[11px] text-slate-400">
-                Kiểm tra: <code className="text-slate-300">laravel_trace_auth_configured</code>. Nếu false, callback trả về 503.
+                Kiểm tra: <code className="text-slate-300">laravel_trace_receiver_configured</code>.
               </p>
             </div>
 
@@ -587,7 +563,7 @@ export default function N8nWorkflowMain() {
                 {LARAVEL_TRACE_URL}
               </p>
               <p className="text-[11px] text-slate-400">
-                Header: <code className="text-slate-300">Authorization: Bearer &lt;TOKEN&gt;</code>. Gửi <code className="text-slate-300">stage_node_ids</code>, <code className="text-slate-300">stage_edges</code>.
+                Laravel backend gọi endpoint nội bộ; payload gồm <code className="text-slate-300">stage_node_ids</code>, <code className="text-slate-300">stage_edges</code>.
               </p>
             </div>
           </div>
@@ -669,21 +645,21 @@ export default function N8nWorkflowMain() {
           <button
             onClick={() => handleSimulateStageEvent("stage.started")}
             className="px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-700/60 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Mô phỏng SSE event: stage.started"
+            title="Mô phỏng stage.started cục bộ"
           >
             <Zap className="w-3 h-3 text-cyan-400" /> Test stage.started
           </button>
           <button
             onClick={() => handleSimulateStageEvent("stage.completed")}
             className="px-2.5 py-1 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-700/60 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Mô phỏng SSE event: stage.completed"
+            title="Mô phỏng stage.completed cục bộ"
           >
             <CheckCircle2 className="w-3 h-3" /> Test stage.completed
           </button>
           <button
             onClick={() => handleSimulateStageEvent("stage.failed")}
             className="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-700/60 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Mô phỏng SSE event: stage.failed"
+            title="Mô phỏng stage.failed cục bộ"
           >
             <AlertTriangle className="w-3 h-3" /> Test stage.failed
           </button>
@@ -744,13 +720,6 @@ export default function N8nWorkflowMain() {
                 <RefreshCw className="w-4 h-4" />
                 Thử lại
               </button>
-              <button
-                onClick={handleLoadMock}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                Xem dữ liệu mẫu (Mock Demo)
-              </button>
             </div>
           </div>
         ) : !graphData ? (
@@ -761,10 +730,10 @@ export default function N8nWorkflowMain() {
             </div>
             <p className="text-slate-300 font-medium">Không tìm thấy node nào trong workflow</p>
             <button
-              onClick={handleLoadMock}
+              onClick={() => loadWorkflow(DEFAULT_WORKFLOW_ID)}
               className="text-xs text-amber-400 hover:underline cursor-pointer"
             >
-              Xem thử workflow mẫu
+              Tải lại graph Laravel từ Node backend
             </button>
           </div>
         ) : (

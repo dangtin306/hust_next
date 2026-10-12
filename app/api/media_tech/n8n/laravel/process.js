@@ -1,8 +1,8 @@
-export const DEFAULT_WORKFLOW_ID = "0KwASApTaZfyktBi";
-export const API_BASE_URL = "https://node_md.hust.media/openclaw/workflow/graph";
-export const SSE_EVENTS_URL = "https://node_md.hust.media/openclaw/workflow/events";
-export const HEALTH_API_URL = "https://node_md.hust.media/openclaw/workflow/health";
-export const LARAVEL_TRACE_URL = "https://node_md.hust.media/openclaw/workflow/laravel-trace";
+export const DEFAULT_WORKFLOW_ID = "UpmkgXAE2dj58nV0";
+export const API_BASE_URL = "https://node_md.hust.media/openclaw/workflow/laravel/graph";
+export const SOCKET_SERVER_URL = "https://node_md.hust.media";
+export const HEALTH_API_URL = "https://node_md.hust.media/openclaw/workflow/laravel/health";
+export const LARAVEL_TRACE_URL = "https://node_md.hust.media/openclaw/workflow/laravel/trace";
 
 
 // Mock graph fallback matching the exact 16 flowNodes, 4 stickyNotes, 16 edges
@@ -457,16 +457,17 @@ export const SAMPLE_TRACES = [
     status_code: 200,
     duration_ms: 38.6,
     stage_node_ids: [
-      "hust-laravel-webhook-receiver",
-      "hust-laravel-trace-parser",
-      "hust-laravel-module-router",
-      "hust-laravel-node-gitea",
-      "hust-laravel-check-status-error",
-      "hust-laravel-check-latency",
-      "hust-laravel-node-healthy",
+      "laravel-chat-api-ingress",
+      "laravel-chat-session-middleware",
+      "laravel-chat-rate-limit",
+      "hust-laravel-node-core",
+      "laravel-chat-endpoint-router",
+      "laravel-chat-list-rooms",
+      "laravel-chat-legacy-database",
+      "laravel-chat-json-response",
     ],
     trace: {
-      uri: "laravel/gitea/health",
+      uri: "api/chat/bot/rooms/list",
       method: "GET",
     },
     timestamp: new Date().toISOString(),
@@ -479,16 +480,18 @@ export const SAMPLE_TRACES = [
     status_code: 200,
     duration_ms: 1240.2,
     stage_node_ids: [
-      "hust-laravel-webhook-receiver",
-      "hust-laravel-trace-parser",
-      "hust-laravel-module-router",
-      "hust-laravel-node-gitea",
-      "hust-laravel-check-status-error",
-      "hust-laravel-check-latency",
-      "hust-laravel-node-alert-slow",
+      "laravel-chat-api-ingress",
+      "laravel-chat-session-middleware",
+      "laravel-chat-rate-limit",
+      "hust-laravel-node-core",
+      "laravel-chat-endpoint-router",
+      "laravel-chat-save-turn",
+      "laravel-chat-save-turn-service",
+      "laravel-chat-legacy-database",
+      "laravel-chat-json-response",
     ],
     trace: {
-      uri: "laravel/reports/daily_aggregate",
+      uri: "api/chat/bot/rooms/1/messages",
       method: "POST",
     },
     timestamp: new Date().toISOString(),
@@ -501,15 +504,18 @@ export const SAMPLE_TRACES = [
     status_code: 500,
     duration_ms: 85.1,
     stage_node_ids: [
-      "hust-laravel-webhook-receiver",
-      "hust-laravel-trace-parser",
-      "hust-laravel-module-router",
-      "hust-laravel-node-gitea",
-      "hust-laravel-check-status-error",
-      "hust-laravel-node-alert-error",
+      "laravel-chat-api-ingress",
+      "laravel-chat-session-middleware",
+      "laravel-chat-rate-limit",
+      "hust-laravel-node-core",
+      "laravel-chat-endpoint-router",
+      "laravel-chat-create-room",
+      "laravel-chat-create-room-service",
+      "laravel-chat-openclaw-create-conversation",
+      "laravel-chat-error-json-response",
     ],
     trace: {
-      uri: "laravel/auth/oauth/token",
+      uri: "api/chat/bot/rooms",
       method: "POST",
     },
     timestamp: new Date().toISOString(),
@@ -517,7 +523,7 @@ export const SAMPLE_TRACES = [
 ];
 
 /**
- * Fetch workflow graph from https://node_md.hust.media/openclaw/workflow/graph
+ * Fetch the dedicated media_tech_laravel graph from the new Node backend.
  */
 export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
   try {
@@ -609,7 +615,7 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
 
 /**
  * Kiểm tra trạng thái health và cấu hình xác thực Laravel trace của Node backend
- * Endpoint: GET https://node_md.hust.media/openclaw/workflow/health
+ * Endpoint: GET https://node_md.hust.media/openclaw/workflow/laravel/health
  */
 export const fetchWorkflowHealth = async () => {
   try {
@@ -626,96 +632,52 @@ export const fetchWorkflowHealth = async () => {
       success: response.ok,
       httpStatus: response.status,
       data,
-      laravelTraceAuthConfigured: Boolean(data?.laravel_trace_auth_configured),
+      laravelTraceReceiverConfigured: Boolean(data?.laravel_trace_receiver_configured),
     };
   } catch (err) {
     return {
       success: false,
       httpStatus: 0,
       error: err instanceof Error ? err.message : "Không thể kết nối máy chủ health.",
-      laravelTraceAuthConfigured: false,
+      laravelTraceReceiverConfigured: false,
     };
   }
 };
 
 /**
- * Gửi Laravel trace sang Node backend qua POST {NODE_BACKEND_URL}/openclaw/workflow/laravel-trace
- * Yêu cầu Authorization: Bearer <LARAVEL_TRACE_CALLBACK_TOKEN>
- */
-export const sendLaravelTrace = async (payload, token = "") => {
-  try {
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(LARAVEL_TRACE_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    const isJson = (response.headers.get("content-type") || "").includes("application/json");
-    const data = isJson ? await response.json() : { raw: await response.text() };
-
-    return {
-      success: response.ok,
-      httpStatus: response.status,
-      data,
-    };
-  } catch (err) {
-    return {
-      success: false,
-      httpStatus: 0,
-      error: err instanceof Error ? err.message : "Không thể gửi trace tới Node backend.",
-    };
-  }
-};
-
-/**
- * Pipeline trace mẫu khớp với các node thực tế của workflow 0KwASApTaZfyktBi
+ * Pipeline trace mẫu khớp với các node của media_tech_laravel.
  */
 export const SAMPLE_REALTIME_LARAVEL_PIPELINE = [
   {
     event: "stage.started",
     request_id: "laravel-req-demo-1",
-    stage: "openclaw.service",
+    stage: "laravel.chat_bot",
     phase: "start",
     stage_node_ids: [
-      "chat bot tuong tac tv",
-      "Route chat command (/oc /level /v3 /v4)",
-      "Is OpenClaw?",
-      "Phân loại Workspace ",
-      "Workspace main",
-      "OpenClaw Chat API",
-      "Format OpenClaw response",
-      "OpenClaw format succeeded?",
-      "Report OpenClaw format success",
-      "Return OpenClaw response",
+      "laravel-chat-api-ingress",
+      "laravel-chat-session-middleware",
+      "laravel-chat-rate-limit",
     ],
     timestamp: new Date().toISOString(),
   },
   {
     event: "stage.completed",
     request_id: "laravel-req-demo-1",
-    stage: "openclaw.service",
+    stage: "laravel.chat_bot",
     phase: "complete",
     duration_ms: 450,
     outcome: "success",
     stage_node_ids: [
-      "chat bot tuong tac tv",
-      "Route chat command (/oc /level /v3 /v4)",
-      "Is OpenClaw?",
-      "Phân loại Workspace ",
-      "Workspace main",
-      "OpenClaw Chat API",
-      "Format OpenClaw response",
-      "OpenClaw format succeeded?",
-      "Report OpenClaw format success",
-      "Return OpenClaw response",
+      "laravel-chat-api-ingress",
+      "laravel-chat-session-middleware",
+      "laravel-chat-rate-limit",
+      "hust-laravel-node-core",
+      "laravel-chat-endpoint-router",
+      "laravel-chat-create-room",
+      "laravel-chat-create-room-service",
+      "laravel-chat-openclaw-create-conversation",
+      "laravel-chat-legacy-database",
+      "laravel-chat-json-response",
     ],
     timestamp: new Date().toISOString(),
   },
