@@ -368,6 +368,53 @@ function getDefaultWorkspaceCode(workspaceList: WorkspaceOption[]): string {
   return workspaceList[0]?.work_space_code ?? "";
 }
 
+const CHAT_TEST_STORAGE_KEY = "hust_chat_conv_id_real";
+const CHAT_TEST_NODE_URL_COOKIE = "chat_bot_test_node_url";
+const CHAT_TEST_LARAVEL_URL_COOKIE = "chat_bot_test_laravel_url";
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const entry = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(encodedName));
+  if (!entry) return null;
+  try {
+    return decodeURIComponent(entry.slice(encodedName.length));
+  } catch {
+    return entry.slice(encodedName.length);
+  }
+}
+
+function writeCookie(name: string, value: string): void {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+}
+
+function getSavedApiUrl(
+  storageKey: string | undefined,
+  cookieName: string,
+  legacyStorageName: string,
+  defaultUrl: string,
+): string {
+  if (typeof window === "undefined") return defaultUrl;
+
+  if (storageKey === CHAT_TEST_STORAGE_KEY) {
+    const cookieValue = readCookie(cookieName)?.trim();
+    if (cookieValue) return cookieValue;
+
+    // Migrate any previously saved sessionStorage value into a durable cookie.
+    const legacyValue = window.sessionStorage?.getItem(legacyStorageName)?.trim();
+    const value = legacyValue || defaultUrl;
+    writeCookie(cookieName, value);
+    return value;
+  }
+
+  return window.sessionStorage?.getItem(legacyStorageName)?.trim() || defaultUrl;
+}
+
 export function useMediaChatProcess({
   isDrawer = false,
   targetUrl,
@@ -394,18 +441,24 @@ export function useMediaChatProcess({
 
   useEffect(() => {
     if (typeof window !== "undefined" && propStorageKey) {
-      const savedNode = window.sessionStorage?.getItem(`custom_api_node_${propStorageKey}`);
-      if (savedNode) {
-        setActiveNodeUrl(savedNode);
-        activeNodeUrlRef.current = savedNode;
-      }
-      const savedLaravel = window.sessionStorage?.getItem(`custom_api_laravel_${propStorageKey}`);
-      if (savedLaravel) {
-        setActiveLaravelUrl(savedLaravel);
-        activeLaravelUrlRef.current = savedLaravel;
-      }
+      const savedNode = getSavedApiUrl(
+        propStorageKey,
+        CHAT_TEST_NODE_URL_COOKIE,
+        `custom_api_node_${propStorageKey}`,
+        defaultNodeUrl,
+      );
+      const savedLaravel = getSavedApiUrl(
+        propStorageKey,
+        CHAT_TEST_LARAVEL_URL_COOKIE,
+        `custom_api_laravel_${propStorageKey}`,
+        defaultLaravelUrl,
+      );
+      setActiveNodeUrl(savedNode);
+      activeNodeUrlRef.current = savedNode;
+      setActiveLaravelUrl(savedLaravel);
+      activeLaravelUrlRef.current = savedLaravel;
     }
-  }, [propStorageKey]);
+  }, [defaultLaravelUrl, defaultNodeUrl, propStorageKey]);
 
   const [isApiConfigModalOpen, setIsApiConfigModalOpen] = useState(false);
 
@@ -821,16 +874,22 @@ export function useMediaChatProcess({
           savedUid = window.localStorage.getItem(`${activeStorageKey}_user_id`);
           savedSessionToken = getLaravelChatSession();
           if (propStorageKey) {
-            const savedNode = window.sessionStorage?.getItem(`custom_api_node_${propStorageKey}`);
-            if (savedNode) {
-              activeNodeUrlRef.current = savedNode;
-              setActiveNodeUrl(savedNode);
-            }
-            const savedLaravel = window.sessionStorage?.getItem(`custom_api_laravel_${propStorageKey}`);
-            if (savedLaravel) {
-              activeLaravelUrlRef.current = savedLaravel;
-              setActiveLaravelUrl(savedLaravel);
-            }
+            const savedNode = getSavedApiUrl(
+              propStorageKey,
+              CHAT_TEST_NODE_URL_COOKIE,
+              `custom_api_node_${propStorageKey}`,
+              defaultNodeUrl,
+            );
+            const savedLaravel = getSavedApiUrl(
+              propStorageKey,
+              CHAT_TEST_LARAVEL_URL_COOKIE,
+              `custom_api_laravel_${propStorageKey}`,
+              defaultLaravelUrl,
+            );
+            activeNodeUrlRef.current = savedNode;
+            setActiveNodeUrl(savedNode);
+            activeLaravelUrlRef.current = savedLaravel;
+            setActiveLaravelUrl(savedLaravel);
           }
         } catch {}
 
@@ -1210,15 +1269,22 @@ export function useMediaChatProcess({
     roomSyncPromisesRef.current.clear();
     setIsApiConfigModalOpen(false);
     if (typeof window !== "undefined" && propStorageKey) {
-      if (cleanNode === defaultNodeUrl) {
+      if (propStorageKey === CHAT_TEST_STORAGE_KEY) {
+        writeCookie(CHAT_TEST_NODE_URL_COOKIE, cleanNode);
+        writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, cleanLaravel);
+        window.sessionStorage?.removeItem(`custom_api_node_${propStorageKey}`);
+        window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
+      } else if (cleanNode === defaultNodeUrl) {
         window.sessionStorage?.removeItem(`custom_api_node_${propStorageKey}`);
       } else {
         window.sessionStorage?.setItem(`custom_api_node_${propStorageKey}`, cleanNode);
       }
-      if (cleanLaravel === defaultLaravelUrl) {
-        window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
-      } else {
-        window.sessionStorage?.setItem(`custom_api_laravel_${propStorageKey}`, cleanLaravel);
+      if (propStorageKey !== CHAT_TEST_STORAGE_KEY) {
+        if (cleanLaravel === defaultLaravelUrl) {
+          window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
+        } else {
+          window.sessionStorage?.setItem(`custom_api_laravel_${propStorageKey}`, cleanLaravel);
+        }
       }
     }
     void (async () => {
