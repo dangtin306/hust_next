@@ -253,7 +253,21 @@ export class LaravelGitService {
   private config?: GitAutoConfig;
 
   setConfig(config: Partial<GitAutoConfig>) {
-    this.config = { ...this.config, ...config };
+    const current = this.config;
+    const accessToken = config.access_token ?? current?.access_token;
+    const username = config.username ?? current?.username;
+
+    this.config = {
+      provider: config.provider ?? current?.provider ?? "",
+      remote_url: config.remote_url ?? current?.remote_url ?? "",
+      repository: config.repository ?? current?.repository ?? "",
+      component: config.component ?? current?.component ?? "",
+      local_path: config.local_path ?? current?.local_path ?? "",
+      base_branch: config.base_branch ?? current?.base_branch ?? "",
+      working_branch: config.working_branch ?? current?.working_branch ?? "",
+      ...(accessToken !== undefined ? { access_token: accessToken } : {}),
+      ...(username !== undefined ? { username } : {}),
+    };
   }
 
   getConfig() {
