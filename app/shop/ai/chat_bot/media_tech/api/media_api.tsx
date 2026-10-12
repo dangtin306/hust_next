@@ -1,7 +1,5 @@
 "use client";
 
-import { normalizeLaravelApiBaseUrl } from "./baseUrls";
-
 // API Endpoints & Configuration
 export const LARAVEL_CHAT_API =
   process.env.NEXT_PUBLIC_CHAT_BOT_API_BASE || "/next/api/chat/bot";
@@ -15,7 +13,7 @@ export const LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT =
 export const OPENCLAW_CHAT_COMPLETIONS_ENDPOINT = "/next/api/openclaw/v1/chat/completions";
 export const OPENCLAW_RESPONSES_ENDPOINT = "/next/api/openclaw/v1/responses";
 export const OPENCLAW_IMAGE_GENERATIONS_ENDPOINT = "/next/api/openclaw/v1/images/generations";
-export const WORKSPACES_MAIN_DATA_ENDPOINT = "https://laravel_mt.hust.media/api/workspaces/main/data";
+export const WORKSPACES_MAIN_DATA_ENDPOINT = "/next/api/workspaces-proxy/workspaces/main/data";
 
 export type WorkspaceOption = {
   id: number | string;
@@ -35,15 +33,13 @@ let workspacesRequestInFlight: Promise<WorkspaceOption[]> | null = null;
 
 /** Load the available workspaces for the chat-mode selector. */
 export function apiFetchWorkspaces(customBaseUrl?: string): Promise<WorkspaceOption[]> {
-  let endpoint = WORKSPACES_MAIN_DATA_ENDPOINT;
-  if (customBaseUrl) {
-    endpoint = `${normalizeLaravelApiBaseUrl(customBaseUrl)}/workspaces/main/data`;
-  }
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
 
-  const request = fetch(endpoint, {
+  const request = fetch(WORKSPACES_MAIN_DATA_ENDPOINT, {
     method: "GET",
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers,
   }).then(async (response) => {
     if (!response.ok) throw new Error(`Workspace API trả về HTTP ${response.status}`);
     const body = await response.json();
