@@ -1124,7 +1124,7 @@ export default function GitControl() {
       operation === "pull"
         ? Boolean(pullPreflight?.allowed && (pullPreflight.blockers?.length || 0) === 0)
         : operation === "push"
-          ? pushAllowed
+          ? pushMode === "packages" || pushAllowed
           : commitAllowed;
     if (
       !allowed ||
@@ -1667,7 +1667,7 @@ export default function GitControl() {
                 {writeBusy === "push" ? "Pushing…" : "Push Code"}
               </Button>
               <Button
-                disabled={!pushAllowed || Boolean(writeBusy)}
+                disabled={Boolean(writeBusy)}
                 onClick={() => void write("push", "packages")}
               >
                 Push Packages
