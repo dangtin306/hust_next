@@ -46,6 +46,18 @@ const BASE_DOMAIN = "https://node_md.hust.media";
 const MAPS_MAIN_GRAPH_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/graph`;
 const MAPS_MAIN_FILE_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/file`;
 
+function toDisplayText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  if (value == null || typeof value === "boolean") return "";
+
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 // ==========================================
 // HÀM TỰ ĐỘNG CĂN CHỈNH ĐỒ THỊ THEO CHUẨN .MD (AUTO-LAYOUT ENGINE)
 // Tự sửa, tự căn giữa, cân đối tuyệt đối cho bất kỳ số lượng workspace nào
@@ -63,7 +75,7 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
   let headerTier1: Node | null = null;
   let headerTier2: Node | null = null;
 
-  rawNodes.forEach((node) => {
+  for (const node of rawNodes) {
     if (node.id === "header-tier1") {
       headerTier1 = node;
     } else if (node.id === "header-tier2") {
@@ -93,7 +105,7 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
     } else {
       workspaceNodes.push(node);
     }
-  });
+  }
 
   // Thứ tự ưu tiên sắp xếp workspace nếu có
   const preferredOrder = ["workspace_backend", "workspace_media", "workspace_tech", "workspace_openclaw"];
@@ -781,32 +793,32 @@ function MapsMainCanvasInner() {
             <div className="mt-3 space-y-3 overflow-y-auto max-h-[55vh] pr-1">
               <div>
                 <div className="text-[11px] font-medium text-slate-400">Tên Node</div>
-                <div className="text-sm font-semibold text-white">{selectedNode.data.label}</div>
+                <div className="text-sm font-semibold text-white">{toDisplayText(selectedNode.data.label)}</div>
               </div>
 
-              {selectedNode.data.math && (
+              {toDisplayText(selectedNode.data.math) && (
                 <div>
                   <div className="text-[11px] font-medium text-slate-400">Toán học ánh xạ</div>
                   <div className="inline-block mt-0.5 px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono text-xs border border-indigo-500/30">
-                    {selectedNode.data.math}
+                    {toDisplayText(selectedNode.data.math)}
                   </div>
                 </div>
               )}
 
-              {selectedNode.data.description && (
+              {toDisplayText(selectedNode.data.description) && (
                 <div>
                   <div className="text-[11px] font-medium text-slate-400">Mô tả</div>
                   <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
-                    {selectedNode.data.description}
+                    {toDisplayText(selectedNode.data.description)}
                   </p>
                 </div>
               )}
 
-              {selectedNode.data.path && (
+              {toDisplayText(selectedNode.data.path) && (
                 <div>
                   <div className="text-[11px] font-medium text-slate-400">Tệp tin .md liên kết</div>
                   <div className="mt-0.5 text-xs font-mono text-emerald-400 bg-black/50 px-2 py-1.5 rounded border border-emerald-500/20 break-all">
-                    {selectedNode.data.path}
+                    {toDisplayText(selectedNode.data.path)}
                   </div>
                 </div>
               )}

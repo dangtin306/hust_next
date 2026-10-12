@@ -30,7 +30,7 @@ import {
   formatCompactTokenCount,
   compactTokenNumberFormat,
   type Message,
-} from "../main/media_process";
+} from "../chat_main/chat_process";
 
 // Markdown-like text renderer with a friendly view for spelling corrections and code blocks.
 export function FormattedMessageContent({
