@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { normalizeLaravelApiBaseUrl } from "@/app/shop/ai/chat_bot/media_tech/api/baseUrls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,10 +13,9 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const { path } = await context.params;
   const joinedPath = path.join("/");
   const customTarget = request.headers.get("x-laravel-target");
-  let upstreamBase = LARAVEL_BASE.replace(/\/$/, "");
+  let upstreamBase = normalizeLaravelApiBaseUrl(LARAVEL_BASE);
   if (customTarget) {
-    const clean = customTarget.replace(/\/$/, "");
-    upstreamBase = clean.endsWith("/api") ? clean : `${clean}/api`;
+    upstreamBase = normalizeLaravelApiBaseUrl(customTarget);
   }
   const search = request.nextUrl.search;
   const upstreamUrl = `${upstreamBase}/${joinedPath}${search}`;

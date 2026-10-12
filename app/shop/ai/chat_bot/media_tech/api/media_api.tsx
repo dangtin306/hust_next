@@ -1,5 +1,7 @@
 "use client";
 
+import { normalizeLaravelApiBaseUrl } from "./baseUrls";
+
 // API Endpoints & Configuration
 export const LARAVEL_CHAT_API =
   process.env.NEXT_PUBLIC_CHAT_BOT_API_BASE || "/next/api/chat/bot";
@@ -35,8 +37,7 @@ let workspacesRequestInFlight: Promise<WorkspaceOption[]> | null = null;
 export function apiFetchWorkspaces(customBaseUrl?: string): Promise<WorkspaceOption[]> {
   let endpoint = WORKSPACES_MAIN_DATA_ENDPOINT;
   if (customBaseUrl) {
-    const clean = customBaseUrl.replace(/\/+$/, "");
-    endpoint = `${clean}/api/workspaces/main/data`;
+    endpoint = `${normalizeLaravelApiBaseUrl(customBaseUrl)}/workspaces/main/data`;
   }
 
   const request = fetch(endpoint, {
@@ -597,7 +598,12 @@ export async function apiFetchRoomMessages(
   extractAndRememberSession(body);
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    const detail =
+      body?.error?.message ||
+      body?.message ||
+      body?.error ||
+      `HTTP ${response.status}`;
+    throw new Error(`HTTP ${response.status}: ${String(detail)}`);
   }
 
   return Array.isArray(body?.data)

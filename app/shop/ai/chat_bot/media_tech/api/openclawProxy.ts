@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
+import { normalizeOpenClawBaseUrl } from "./baseUrls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +26,9 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   let upstreamBase =
     request.headers.get("x-openclaw-target") ||
     (isChatBot ? LARAVEL_CHAT_BASE : DEFAULT_UPSTREAM);
-  upstreamBase = upstreamBase.replace(/\/+$/, "");
+  upstreamBase = isChatBot
+    ? upstreamBase.replace(/\/+$/, "")
+    : normalizeOpenClawBaseUrl(upstreamBase);
 
   if (isChatBot) {
     if (joinedPath.startsWith("chat/bot/")) {
@@ -40,9 +43,6 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   } else {
     // The API URL field may contain either the server origin or an /openclaw
     // base URL. Normalize both forms before appending the route path.
-    if (!/\/openclaw$/i.test(upstreamBase)) {
-      upstreamBase = `${upstreamBase}/openclaw`;
-    }
     if (joinedPath.startsWith("openclaw/")) {
       joinedPath = joinedPath.replace(/^openclaw\//, "");
     }

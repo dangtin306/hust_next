@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import { normalizeLaravelChatBaseUrl } from "./baseUrls";
 
 const LARAVEL_CHAT_BASE =
   process.env.LARAVEL_API_BASE_URL || "https://laravel_mt.hust.media/api/chat";
@@ -30,14 +31,9 @@ async function proxy(
 ) {
   const { path } = await context.params;
   const customTarget = request.headers.get("x-laravel-target");
-  let upstreamBase = LARAVEL_CHAT_BASE.replace(/\/$/, "");
+  let upstreamBase = normalizeLaravelChatBaseUrl(LARAVEL_CHAT_BASE);
   if (customTarget) {
-    const clean = customTarget.replace(/\/$/, "");
-    upstreamBase = clean.endsWith("/api/chat")
-      ? clean
-      : clean.endsWith("/api")
-      ? `${clean}/chat`
-      : `${clean}/api/chat`;
+    upstreamBase = normalizeLaravelChatBaseUrl(customTarget);
   }
   const search = request.nextUrl.search;
   const upstreamUrl = `${upstreamBase}/${path.join("/")}${search}`;
