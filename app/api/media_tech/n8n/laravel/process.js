@@ -1,6 +1,9 @@
 export const DEFAULT_WORKFLOW_ID = "0KwASApTaZfyktBi";
 export const API_BASE_URL = "https://node_md.hust.media/openclaw/workflow/graph";
 export const SSE_EVENTS_URL = "https://node_md.hust.media/openclaw/workflow/events";
+export const HEALTH_API_URL = "https://node_md.hust.media/openclaw/workflow/health";
+export const LARAVEL_TRACE_URL = "https://node_md.hust.media/openclaw/workflow/laravel-trace";
+
 
 // Mock graph fallback matching the exact 16 flowNodes, 4 stickyNotes, 16 edges
 export const MOCK_GRAPH_DATA = {
@@ -535,8 +538,28 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
     const graph = body.nodes || body.connections ? body : body.api_results?.graph || body.graph;
 
     if (graph && (graph.nodes || graph.flowNodes)) {
-      const nodes = graph.nodes || graph.flowNodes || [];
-      const stickyNotes = graph.stickyNotes || [];
+      const isSticky = (n) => Boolean(
+        n?.isStickyNote ||
+        n?.type === "stickyNote" ||
+        n?.type === "n8n-nodes-base.stickyNote" ||
+        (typeof n?.type === "string" && n.type.toLowerCase().includes("stickynote"))
+      );
+
+      const allRawNodes = graph.nodes || graph.flowNodes || [];
+      const flowNodes = allRawNodes.filter((n) => !isSticky(n));
+
+      // Gộp và deduplicate stickyNotes từ cả stickyNotes và các node stickyNote trong nodes
+      const stickyMap = new Map();
+      (graph.stickyNotes || []).forEach((s, idx) => {
+        const id = s.id || `sticky-${idx}`;
+        if (!stickyMap.has(id)) stickyMap.set(id, s);
+      });
+      allRawNodes.filter(isSticky).forEach((s, idx) => {
+        const id = s.id || `sticky-from-node-${idx}`;
+        if (!stickyMap.has(id)) stickyMap.set(id, s);
+      });
+      const stickyNotes = Array.from(stickyMap.values());
+
       const connections = graph.connections || {};
       const edges = graph.edges || [];
       const resolvedWorkflowId = graph.workflow_id || graph.id || workflowId;
@@ -549,17 +572,17 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
           id: resolvedWorkflowId,
           workflowId: resolvedWorkflowId,
           name: resolvedName,
-          nodes,
-          flowNodes: nodes,
+          nodes: flowNodes,
+          flowNodes: flowNodes,
           stickyNotes,
           connections,
           edges,
           version: graph.version,
           updated_at: graph.updated_at,
           meta: graph.meta || {
-            nodeCount: nodes.length,
+            nodeCount: flowNodes.length,
             stickyNoteCount: stickyNotes.length,
-            totalNodeCount: nodes.length + stickyNotes.length,
+            totalNodeCount: flowNodes.length + stickyNotes.length,
             connectionCount: Object.keys(connections).length,
             edgeCount: edges.length,
           },
@@ -583,4 +606,118 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
     };
   }
 };
+
+/**
+ * Kiểm tra trạng thái health và cấu hình xác thực Laravel trace của Node backend
+ * Endpoint: GET https://node_md.hust.media/openclaw/workflow/health
+ */
+export const fetchWorkflowHealth = async () => {
+  try {
+    const response = await fetch(HEALTH_API_URL, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+
+    const isJson = (response.headers.get("content-type") || "").includes("application/json");
+    const data = isJson ? await response.json() : { raw: await response.text() };
+
+    return {
+      success: response.ok,
+      httpStatus: response.status,
+      data,
+      laravelTraceAuthConfigured: Boolean(data?.laravel_trace_auth_configured),
+    };
+  } catch (err) {
+    return {
+      success: false,
+      httpStatus: 0,
+      error: err instanceof Error ? err.message : "Không thể kết nối máy chủ health.",
+      laravelTraceAuthConfigured: false,
+    };
+  }
+};
+
+/**
+ * Gửi Laravel trace sang Node backend qua POST {NODE_BACKEND_URL}/openclaw/workflow/laravel-trace
+ * Yêu cầu Authorization: Bearer <LARAVEL_TRACE_CALLBACK_TOKEN>
+ */
+export const sendLaravelTrace = async (payload, token = "") => {
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(LARAVEL_TRACE_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    const isJson = (response.headers.get("content-type") || "").includes("application/json");
+    const data = isJson ? await response.json() : { raw: await response.text() };
+
+    return {
+      success: response.ok,
+      httpStatus: response.status,
+      data,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      httpStatus: 0,
+      error: err instanceof Error ? err.message : "Không thể gửi trace tới Node backend.",
+    };
+  }
+};
+
+/**
+ * Pipeline trace mẫu khớp với các node thực tế của workflow 0KwASApTaZfyktBi
+ */
+export const SAMPLE_REALTIME_LARAVEL_PIPELINE = [
+  {
+    event: "stage.started",
+    request_id: "laravel-req-demo-1",
+    stage: "openclaw.service",
+    phase: "start",
+    stage_node_ids: [
+      "chat bot tuong tac tv",
+      "Route chat command (/oc /level /v3 /v4)",
+      "Is OpenClaw?",
+      "Phân loại Workspace ",
+      "Workspace main",
+      "OpenClaw Chat API",
+      "Format OpenClaw response",
+      "OpenClaw format succeeded?",
+      "Report OpenClaw format success",
+      "Return OpenClaw response",
+    ],
+    timestamp: new Date().toISOString(),
+  },
+  {
+    event: "stage.completed",
+    request_id: "laravel-req-demo-1",
+    stage: "openclaw.service",
+    phase: "complete",
+    duration_ms: 450,
+    outcome: "success",
+    stage_node_ids: [
+      "chat bot tuong tac tv",
+      "Route chat command (/oc /level /v3 /v4)",
+      "Is OpenClaw?",
+      "Phân loại Workspace ",
+      "Workspace main",
+      "OpenClaw Chat API",
+      "Format OpenClaw response",
+      "OpenClaw format succeeded?",
+      "Report OpenClaw format success",
+      "Return OpenClaw response",
+    ],
+    timestamp: new Date().toISOString(),
+  },
+];
 

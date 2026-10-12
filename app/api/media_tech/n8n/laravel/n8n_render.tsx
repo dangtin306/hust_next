@@ -678,34 +678,54 @@ export const convertNormalizedGraphToFlow = (
     Boolean(
       node.isStickyNote ||
       node.type === "stickyNote" ||
-      node.type === "n8n-nodes-base.stickyNote"
+      node.type === "n8n-nodes-base.stickyNote" ||
+      (typeof node.type === "string" && node.type.toLowerCase().includes("stickynote"))
     );
 
-  // 1. Tách flowNodes (loại bỏ sticky note nếu lọt vào mảng nodes)
-  const rawFlowNodes =
-    graph.flowNodes ??
-    (graph.nodes || []).filter((node) => !isStickyNote(node));
-
-  // 2. Tách và gộp stickyNotes từ cả mảng riêng lẫn graph.nodes như OpenClaw.
+  // 1. Tách và gộp stickyNotes từ cả mảng riêng lẫn graph.nodes
   type StickyCandidate = Partial<N8nStickyNote> & Pick<N8nFlowNode, "id" | "position">;
   const stickyNoteMap = new Map<string, StickyCandidate>();
   const candidates: StickyCandidate[] = [
     ...(graph.stickyNotes ?? []).map((note) => ({ ...note, isStickyNote: true as const })),
     ...(graph.nodes ?? []).filter(isStickyNote).map((note) => ({ ...note, isStickyNote: true as const })),
+    ...(graph.flowNodes ?? []).filter(isStickyNote).map((note) => ({ ...note, isStickyNote: true as const })),
   ];
   candidates.forEach((note, index) => {
     const id = note.id || `sticky-note-${index}`;
     if (!stickyNoteMap.has(id)) stickyNoteMap.set(id, { ...note, id });
   });
   const rawStickyNotes = [...stickyNoteMap.values()];
+  const stickyIdSet = new Set(stickyNoteMap.keys());
+
+  // 2. Tách flowNodes (luôn loại bỏ sticky note và loại bỏ duplicate IDs)
+  const allCandidateFlowNodes = [
+    ...(graph.flowNodes ?? graph.nodes ?? []),
+  ].filter((node) => !isStickyNote(node));
+
+  const flowNodeMap = new Map<string, N8nFlowNode>();
+  allCandidateFlowNodes.forEach((node, index) => {
+    const id = node.id || `node-${index}`;
+    // Nếu trùng ID với sticky note hoặc với node khác đã có, bỏ qua hoặc đổi key duy nhất
+    if (!stickyIdSet.has(id) && !flowNodeMap.has(id)) {
+      flowNodeMap.set(id, { ...node, id });
+    }
+  });
+  const rawFlowNodes = [...flowNodeMap.values()];
   const graphEdges = graph.edges ?? [];
 
-  // Chuẩn hóa edges từ graph.edges hoặc parse từ n8n connections object
+  // Chuẩn hóa edges từ graph.edges hoặc parse từ n8n connections object với edge ID duy nhất
   const flowEdges: Edge[] = [];
+  const seenEdgeIds = new Set<string>();
+
   if (Array.isArray(graphEdges) && graphEdges.length > 0) {
     graphEdges.forEach((edge, index) => {
+      let edgeId = edge.id || `e-${index}-${edge.source}-${edge.target}`;
+      if (seenEdgeIds.has(edgeId)) {
+        edgeId = `edge-${index}-${edgeId}`;
+      }
+      seenEdgeIds.add(edgeId);
       flowEdges.push({
-        id: edge.id || `e-${index}-${edge.source}-${edge.target}`,
+        id: edgeId,
         source: edge.source,
         target: edge.target,
         sourceHandle: edge.sourceHandle,
@@ -736,8 +756,13 @@ export const convertNormalizedGraphToFlow = (
             if (!targetName) return;
             const targetId = nameToId.get(targetName) || targetName;
             const targetIndex = conn.index || 0;
+            let edgeId = `e-${sourceId}-${outputIndex}-${targetId}-${targetIndex}`;
+            if (seenEdgeIds.has(edgeId)) {
+              edgeId = `${edgeId}-${flowEdges.length}`;
+            }
+            seenEdgeIds.add(edgeId);
             flowEdges.push({
-              id: `e-${sourceId}-${outputIndex}-${targetId}-${targetIndex}`,
+              id: edgeId,
               source: sourceId,
               target: targetId,
               sourceHandle: `${connType}-${outputIndex}`,
@@ -802,8 +827,28 @@ export const convertNormalizedGraphToFlow = (
     zIndex: -1,
   }));
 
+  // Đảm bảo không bao giờ có 2 node trùng id/key trong allNodes
+  const finalNodes: Node[] = [];
+  const registeredNodeIds = new Set<string>();
+
+  stickyNotes.forEach((sn) => {
+    if (!registeredNodeIds.has(sn.id)) {
+      registeredNodeIds.add(sn.id);
+      finalNodes.push(sn);
+    }
+  });
+
+  flowNodes.forEach((fn) => {
+    let uniqueId = fn.id;
+    if (registeredNodeIds.has(uniqueId)) {
+      uniqueId = `flow-${uniqueId}`;
+    }
+    registeredNodeIds.add(uniqueId);
+    finalNodes.push(uniqueId === fn.id ? fn : { ...fn, id: uniqueId });
+  });
+
   return {
-    allNodes: [...stickyNotes, ...flowNodes],
+    allNodes: finalNodes,
     flowEdges,
     flowNodeCount: flowNodes.length,
     stickyNoteCount: stickyNotes.length,
@@ -831,8 +876,11 @@ export interface SSEStagePayload {
   target_node_id?: string;
   trace_id?: string;
   request_id?: string;
+  phase?: "start" | "complete" | string;
   duration_ms?: number;
   outcome?: string;
+  stage_node_ids?: string[];
+  stage_edges?: N8nStageEdge[];
   timestamp?: string;
   cursor?: string;
   id?: string;
@@ -1005,11 +1053,35 @@ export const N8nDiagramRenderer = forwardRef<
   }, [publishEdgeVisuals]);
 
   const animateTrace = useCallback((trace: N8nTracePayload) => {
+    const nameToId = new Map<string, string>();
+    nodes.forEach((n) => {
+      const data = n.data as FlowNodeData;
+      if (data?.name) {
+        nameToId.set(data.name, n.id);
+        nameToId.set(data.name.toLowerCase(), n.id);
+      }
+      nameToId.set(n.id, n.id);
+      nameToId.set(n.id.toLowerCase(), n.id);
+    });
+    const resolveId = (key: string) => nameToId.get(key) || nameToId.get(key.toLowerCase()) || key;
+
     const stageEdges = getTraceStageEdges(trace);
-    const nodeIds = Array.isArray(trace.stage_node_ids) && trace.stage_node_ids.length > 0
+    const rawNodeIds = Array.isArray(trace.stage_node_ids) && trace.stage_node_ids.length > 0
       ? trace.stage_node_ids.filter((id): id is string => typeof id === "string")
       : stageEdges.flatMap((edge, index) => index === 0 ? [edge.source, edge.target] : [edge.target]);
-    const edgeSlots = matchTraceEdges(trace, graphEdgesRef.current);
+    const nodeIds = rawNodeIds.map(resolveId);
+
+    const edgeSlots = stageEdges.map(({ source, target }) => {
+      const sId = resolveId(source);
+      const tId = resolveId(target);
+      const edge = graphEdgesRef.current.find(
+        (candidate) =>
+          (candidate.source === sId && candidate.target === tId) ||
+          (candidate.source === source && candidate.target === target)
+      );
+      return edge?.id ?? null;
+    });
+
     const key = trace.request_id && (trace.phase === "start" || trace.phase === "complete")
       ? `request:${trace.request_id}`
       : `single:${++anonymousRunCounterRef.current}`;
@@ -1133,6 +1205,31 @@ export const N8nDiagramRenderer = forwardRef<
 
   // Kích hoạt trạng thái node từ sự kiện SSE stage
   const handleStageEvent = useCallback((eventName: string, payload: SSEStagePayload) => {
+    // 1. Nếu payload chứa chuỗi pipeline stage_node_ids hoặc stage_edges (từ Laravel trace hoặc backend)
+    const hasPipeline =
+      (Array.isArray(payload.stage_node_ids) && payload.stage_node_ids.length > 0) ||
+      (Array.isArray(payload.stage_edges) && payload.stage_edges.length > 0);
+
+    if (hasPipeline) {
+      const isStart = eventName === "stage.started" || payload.phase === "start";
+      const isFailed = eventName === "stage.failed" || payload.status === "error";
+      const duration = payload.duration_ms || 0;
+      const resultStatus: LiveNodeStatus = isFailed ? "error" : duration > 1500 ? "slow" : "success";
+
+      animateTrace({
+        event: eventName,
+        status: isStart ? "running" : resultStatus,
+        phase: isStart ? "start" : "complete",
+        request_id: payload.request_id || payload.trace_id,
+        duration_ms: duration,
+        stage_node_ids: payload.stage_node_ids,
+        stage_edges: payload.stage_edges,
+        timestamp: payload.timestamp || new Date().toISOString(),
+      });
+      return;
+    }
+
+    // 2. Nếu là sự kiện từng node đơn lẻ
     const targetNodeId = resolveTargetNodeId(payload);
     const key = payload.request_id || payload.trace_id
       ? `request:${payload.request_id || payload.trace_id}`
@@ -1157,11 +1254,11 @@ export const N8nDiagramRenderer = forwardRef<
       runsRef.current.set(key, prior);
     }
 
-    if (eventName === "stage.started") {
+    if (eventName === "stage.started" || payload.phase === "start") {
       if (targetNodeId) {
         activateNode(prior, targetNodeId, true);
       }
-    } else if (eventName === "stage.completed") {
+    } else if (eventName === "stage.completed" || payload.phase === "complete") {
       const duration = payload.duration_ms || 0;
       const result: LiveNodeStatus = duration > 1500 ? "slow" : "success";
       if (targetNodeId) {
@@ -1172,7 +1269,7 @@ export const N8nDiagramRenderer = forwardRef<
           publishNodeStatuses();
         });
       }
-    } else if (eventName === "stage.failed") {
+    } else if (eventName === "stage.failed" || payload.status === "error") {
       if (targetNodeId) {
         prior.nodeStates.set(targetNodeId, "error");
         publishNodeStatuses([targetNodeId]);
@@ -1182,7 +1279,7 @@ export const N8nDiagramRenderer = forwardRef<
         });
       }
     }
-  }, [activateNode, anonymousRunCounterRef, publishNodeStatuses, resolveTargetNodeId, scheduleRunTimer]);
+  }, [activateNode, animateTrace, anonymousRunCounterRef, publishNodeStatuses, resolveTargetNodeId, scheduleRunTimer]);
 
   // Expose các phương thức điều khiển cho parent
   useImperativeHandle(
@@ -1255,6 +1352,8 @@ export const N8nDiagramRenderer = forwardRef<
         "stage.started",
         "stage.completed",
         "stage.failed",
+        "laravel.trace",
+        "laravel:trace",
         "workflow.graph.updated",
         "request.started",
         "request.completed",
@@ -1280,7 +1379,7 @@ export const N8nDiagramRenderer = forwardRef<
               graph: graphPayload,
               timestamp: data.timestamp || new Date().toISOString(),
             });
-          } else if (name.startsWith("stage.")) {
+          } else if (name.startsWith("stage.") || name.startsWith("laravel")) {
             handleStageEvent(name, data);
           }
 
@@ -1293,7 +1392,7 @@ export const N8nDiagramRenderer = forwardRef<
         try {
           const data = JSON.parse(e.data);
           const type = data.type || "message";
-          if (type.startsWith("stage.")) {
+          if (type.startsWith("stage.") || type.startsWith("laravel")) {
             handleStageEvent(type, data);
           } else if (type === "workflow.graph.updated") {
             const graphPayload = (data.graph || data) as N8nNormalizedGraph;
