@@ -359,6 +359,8 @@ const STICKY_COLOR_MAP: Record<
 
 const getNodeCategory = (nodeType = "") => {
   const lower = String(nodeType).toLowerCase();
+  // The Laravel graph uses noOp nodes as visual steps, not disabled actions.
+  if (lower.endsWith(".noop")) return { icon: Boxes, bg: "bg-[#0ea5e9]" };
   // Webhook: Cam / Hồng san hô n8n
   if (lower.includes("webhook")) return { icon: Radio, bg: "bg-[#ff6d5a]" };
   // Schedule: Xanh lá
@@ -425,6 +427,7 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
 function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) {
   const meta = getNodeCategory(data.nodeType);
   const Icon = meta.icon;
+  const visuallyDisabled = Boolean(data.disabled) && !String(data.nodeType).toLowerCase().endsWith(".noop");
   const hasMermaidDiagram = Boolean(data.hasMermaidDiagram);
   const targetHandles = data.handles?.target ?? [];
   const sourceHandles = data.handles?.source ?? [];
@@ -448,7 +451,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
         key={data.signalVersion ?? 0}
         className={`relative w-20 h-20 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
           liveClass ||
-          (data.disabled
+          (visuallyDisabled
             ? "opacity-50 grayscale border-slate-700"
             : "border-slate-700/80 hover:border-slate-500")
         } ${selected ? "!border-amber-400 !ring-2 !ring-amber-400/40" : ""}`}
@@ -468,7 +471,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
         {/* Khung Icon màu theo phân loại n8n */}
         <div
           className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md transition-transform duration-300 ${
-            data.disabled
+            visuallyDisabled
               ? "bg-slate-800 text-slate-500"
               : liveStatus === "running"
               ? "bg-cyan-400 text-slate-950 scale-110"
@@ -530,7 +533,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
             <span className="text-slate-500 font-normal">v{data.typeVersion}</span>
           )}
         </div>
-        {data.disabled && (
+        {visuallyDisabled && (
           <span className="mt-0.5 text-xs font-bold uppercase tracking-wider text-rose-400">
             Disabled
           </span>
@@ -922,6 +925,7 @@ export const N8nDiagramRenderer = forwardRef<
   const [selectedSubdiagram, setSelectedSubdiagram] = useState<MermaidSubdiagram | null>(null);
   const graphNodesRef = useRef<Node[]>([]);
   const graphEdgesRef = useRef<Edge[]>([]);
+  const fitGraphViewRef = useRef<((options?: { padding?: number; duration?: number }) => Promise<boolean>) | null>(null);
   const runsRef = useRef<Map<string, TraceRun>>(new Map());
   const anonymousRunCounterRef = useRef(0);
   const socketRef = useRef<Socket | null>(null);
@@ -1313,6 +1317,10 @@ export const N8nDiagramRenderer = forwardRef<
     graphEdgesRef.current = flowEdges;
     setNodes(allNodes);
     setEdges(flowEdges);
+    const fitFrame = window.requestAnimationFrame(() => {
+      void fitGraphViewRef.current?.({ padding: 0.12, duration: 250 });
+    });
+    return () => window.cancelAnimationFrame(fitFrame);
   }, [graph, setNodes, setEdges, stopRunTimers]);
 
   useEffect(() => () => clearRuns(false), [clearRuns]);
@@ -1579,6 +1587,12 @@ export const N8nDiagramRenderer = forwardRef<
         }}
         fitView
         fitViewOptions={{ padding: 0.15 }}
+        onInit={(instance) => {
+          fitGraphViewRef.current = instance.fitView;
+          window.requestAnimationFrame(() => {
+            void instance.fitView({ padding: 0.12, duration: 250 });
+          });
+        }}
         nodesDraggable
         nodesConnectable={false}
         elementsSelectable

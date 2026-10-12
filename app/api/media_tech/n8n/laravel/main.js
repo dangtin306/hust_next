@@ -245,9 +245,11 @@ export default function N8nWorkflowMain() {
     graphData?.graph?.stickyNotes?.length ??
     4;
   const edgeCount =
+    graphData?.meta?.edgeCount ??
+    graphData?.graph?.meta?.edgeCount ??
     graphData?.edges?.length ??
     graphData?.graph?.edges?.length ??
-    16;
+    0;
   const workflowName =
     graphData?.name ||
     graphData?.workflow?.name ||
@@ -256,6 +258,10 @@ export default function N8nWorkflowMain() {
     graphData?.active ??
     graphData?.workflow?.active ??
     true;
+  const isReferenceGraph =
+    Array.isArray(graphData?.nodes) &&
+    graphData.nodes.length > 0 &&
+    graphData.nodes.every((node) => String(node.type || "").toLowerCase().endsWith(".noop"));
   const workflowId =
     graphData?.workflowId ||
     graphData?.workflow?.id ||
@@ -285,6 +291,10 @@ export default function N8nWorkflowMain() {
                   {isWorkflowActive ? (
                     <>
                       <CheckCircle2 className="w-3.5 h-3.5" /> Hoạt động (Active)
+                    </>
+                  ) : isReferenceGraph ? (
+                    <>
+                      <Info className="w-3.5 h-3.5" /> Sơ đồ tham chiếu
                     </>
                   ) : (
                     <>
