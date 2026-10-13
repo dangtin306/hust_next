@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { normalizeLaravelApiBaseUrl } from "@/app/shop/ai/chat_bot/media_tech/api/baseUrls";
+import { normalizeLaravelApiBaseUrl } from "@/app/api/media_tech/proxy/baseUrls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

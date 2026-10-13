@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import RealChatPage from "@/app/shop/ai/chat_bot/media_tech/main/RealChatPage";
+import ChatBotClient from "@/app/shop/ai/chat_bot/hust_media/main/ChatBotClient";
 
 export const metadata: Metadata = {
   title: "Media Tech AI Assistant | Chat Test",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function SwaggerChatTestPage() {
-  return <RealChatPage className="h-full max-h-full" />;
+  return <ChatBotClient />;
 }

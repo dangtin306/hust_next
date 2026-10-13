@@ -147,14 +147,6 @@
           "api1": {
             "source": "/chat_bot/api_1",
             "destination": "/shop/ai/chat_bot/hust_media/api"
-          },
-          "workflowMain": {
-            "source": "/workflow/chat_bot/main",
-            "destination": "/shop/ai/chat_bot/media_tech"
-          },
-          "main": {
-            "source": "/chat_bot/main",
-            "destination": "/shop/ai/chat_bot/media_tech"
           }
         }
       }
