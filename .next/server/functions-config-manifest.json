@@ -10,6 +10,8 @@
         }
       ]
     },
+    "/api/hust_media/media_tech/openclaw/gateway/[...path]": {},
+    "/api/hust/openclaw/[...path]": {},
     "/api/media_tech/node-activity/events": {},
     "/api/media_tech/node-activity/health": {},
     "/api/media_tech/openclaw/gateway/[...path]": {},

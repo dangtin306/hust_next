@@ -1,0 +1,101 @@
+"use client";
+
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
+import SwaggerClient, { OPENCLAW_SERVER_URL_STORAGE_KEY } from "../SwaggerClient";
+
+const secondResponseSpec = {
+  openapi: "3.0.3",
+  info: { title: "Second response", version: "1.0.0" },
+  servers: [
+    { url: "/next/api/hust/openclaw", description: "Hust Next.js OpenClaw API Proxy" },
+    { url: "https://node_js.hust.media/openclaw", description: "OpenClaw Production Gateway" },
+    { url: "http://localhost:2999/openclaw", description: "Node.js Gateway Local (cổng 2999)" },
+    { url: "http://localhost:8818/openclaw", description: "Backend Node.js local (cổng 8818)" },
+  ],
+  security: [{ BearerAuth: [] }],
+  tags: [{ name: "Responses" }],
+  paths: {
+    "/v1/responses": {
+      post: {
+        operationId: "createSecondResponse",
+        tags: ["Responses"],
+        summary: "Tin nhắn thứ hai",
+        description: "Gửi tin nhắn tiếp theo bằng previous_response_id.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object", additionalProperties: true },
+              example: {
+                model: "gpt-5.6-luna",
+                previous_response_id: "resp_abc123",
+                input: [{ role: "user", content: "Hãy viết tiếp phần kết luận." }],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Response hoàn tất theo định dạng Responses API",
+            content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          },
+          "400": { description: "Request không hợp lệ" },
+        },
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      BearerAuth: { type: "http", scheme: "bearer", description: "Nhập token API, ví dụ hust_media." },
+    },
+  },
+};
+
+export default function SecondResponseOperation() {
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const ensureSlot = () => {
+      const section = Array.from(document.querySelectorAll<HTMLElement>(".opblock-tag-section")).find(
+        (item) => (item.querySelector<HTMLElement>(".opblock-tag")?.textContent || "").trim().startsWith("Responses"),
+      );
+      if (!section) return;
+      const responseOperation = Array.from(section.querySelectorAll<HTMLElement>(".opblock")).find(
+        (item) =>
+          !item.closest("#second-response-operation-slot, #conversation-response-operation-slot") &&
+          item.textContent?.includes("/v1/responses"),
+      );
+      if (!responseOperation?.parentElement) return;
+      let slot = section.querySelector<HTMLElement>("#second-response-operation-slot");
+      if (!slot) {
+        slot = document.createElement("div");
+        slot.id = "second-response-operation-slot";
+      }
+      const parent = responseOperation.parentElement;
+      if (slot.parentElement !== parent || slot.previousElementSibling !== responseOperation) {
+        parent.insertBefore(slot, responseOperation.nextSibling);
+      }
+      setPortalNode(slot);
+    };
+
+    ensureSlot();
+    const observer = new MutationObserver(ensureSlot);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      setPortalNode(null);
+      document.getElementById("second-response-operation-slot")?.remove();
+    };
+  }, []);
+
+  if (!portalNode) return null;
+  return createPortal(
+    <SwaggerClient
+      spec={secondResponseSpec}
+      compact
+      serverStorageKey={OPENCLAW_SERVER_URL_STORAGE_KEY}
+    />,
+    portalNode,
+  );
+}

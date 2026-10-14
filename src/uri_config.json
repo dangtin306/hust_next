@@ -82,7 +82,7 @@
       },
       "n8n": {
         "source": "/hustadmin/n8n",
-        "destination": "/shop/ai/workflow/laravel"
+        "destination": "/api/hust_media/workflow/laravel"
       },
       "cronServer": {
         "source": "/hustadmin/cron_server",
@@ -118,40 +118,44 @@
         "history": {
           "source": "/shop/ai/:slug_2(speech_text|text_speech|image_text|translate_vi_en|text_workflow)",
           "destination": "/shop/ai?slug_2=:slug_2"
-        },
-        "chatBot": {
-          "workflowHome": {
-            "source": "/workflow/chat_bot/home",
-            "destination": "/shop/ai/workflow"
-          },
-          "workflowRoot": {
-            "source": "/workflow/chat_bot",
-            "destination": "/shop/ai/workflow"
-          },
-          "workflowLaravel": {
-            "source": "/workflow/chat_bot/laravel",
-            "destination": "/shop/ai/workflow/laravel"
-          },
-          "workflowTest1": {
-            "source": "/workflow/chat_bot/test_1",
-            "destination": "/shop/ai/chat_bot/hust_media"
-          },
-          "test1": {
-            "source": "/chat_bot/test_1",
-            "destination": "/shop/ai/chat_bot/hust_media"
-          },
-          "workflowApi1": {
-            "source": "/workflow/chat_bot/api_1",
-            "destination": "/shop/ai/chat_bot/hust_media/api"
-          },
-          "api1": {
-            "source": "/chat_bot/api_1",
-            "destination": "/shop/ai/chat_bot/hust_media/api"
-          }
         }
       }
     },
     "api": {
+      "hust": {
+        "home": {
+          "source": "/api/hust/home",
+          "destination": "/api/hust_media/media_tech/dashboard"
+        },
+        "laravel": {
+          "source": "/api/hust/laravel",
+          "destination": "/api/hust_media/media_tech/laravel"
+        },
+        "openclaw": {
+          "source": "/api/hust/openclaw",
+          "destination": "/api/hust_media/media_tech/openclaw"
+        },
+        "chatTest": {
+          "source": "/api/hust/chat_test",
+          "destination": "/api/hust_media/media_tech/chat_test"
+        },
+        "chatPublic": {
+          "source": "/api/hust/chat_public",
+          "destination": "/api/hust_media/media_tech/chat_public"
+        },
+        "apiTest": {
+          "source": "/api/hust/api_test",
+          "destination": "/api/hust_media/api"
+        },
+        "workflow": {
+          "source": "/api/hust/workflow",
+          "destination": "/api/hust_media/workflow"
+        },
+        "workflowLaravel": {
+          "source": "/api/hust/workflow/laravel",
+          "destination": "/api/hust_media/workflow/laravel"
+        }
+      },
       "chatProxy": {
         "source": "/api/chat/:path*",
         "destination": "/api/media_tech/chat/:path*"

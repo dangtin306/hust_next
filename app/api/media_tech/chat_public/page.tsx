@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ChatBotClient from "@/app/shop/ai/chat_bot/hust_media/main/ChatBotClient";
+import ChatPublicLauncher from "@/app/api/media_tech/chat_ui/chat_main/ChatPublicLauncher";
 
 export const metadata: Metadata = {
   title: "Chat Public | Media Tech AI",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChatPublicPage() {
-  return <ChatBotClient />;
+  return <ChatPublicLauncher />;
 }

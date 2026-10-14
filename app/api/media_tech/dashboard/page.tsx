@@ -116,7 +116,7 @@ const destinations = [
     title: "Ứng dụng AI Chat Bot",
     description:
       "Mở trợ lý AI Hust Media để sử dụng các chức năng hội thoại.",
-    href: "/workflow/chat_bot/test_1",
+    href: "/api/mt/chat_test",
     action: "Mở ứng dụng Chat Bot",
     Icon: Radio,
     tone: "purple",
@@ -156,7 +156,7 @@ export default function SwaggerHomePage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {destinations.map(({ label, title, description, href, action, Icon, tone }) => (
           <Link
-            key={href}
+            key={`${href}-${label}`}
             prefetch={false}
             href={href}
             className="group flex min-h-56 flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"

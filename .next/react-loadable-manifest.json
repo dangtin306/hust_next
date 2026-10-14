@@ -1,4 +1,20 @@
 {
+  "app/api/hust_media/media_tech/SwaggerClient.tsx -> swagger-ui-dist": {
+    "id": 64504,
+    "files": [
+      "static/chunks/5df4344a.20a5174b8509e0ea.js",
+      "static/chunks/10881307.895a42730963b74f.js",
+      "static/chunks/4504.565a9a426e7d293b.js"
+    ]
+  },
+  "app/api/hust_media/workflow/laravel/n8n_render.tsx -> mermaid": {
+    "id": 7877,
+    "files": [
+      "static/chunks/26d302b2.9f6383e42abdfe16.js",
+      "static/chunks/ea233666.c3dcc1e69d7c9c4a.js",
+      "static/chunks/4745.4fb0e20f28003b55.js"
+    ]
+  },
   "app/api/media_tech/SwaggerClient.tsx -> swagger-ui-dist": {
     "id": 64504,
     "files": [
@@ -8,14 +24,6 @@
     ]
   },
   "app/api/media_tech/n8n/laravel/n8n_render.tsx -> mermaid": {
-    "id": 7877,
-    "files": [
-      "static/chunks/26d302b2.9f6383e42abdfe16.js",
-      "static/chunks/ea233666.c3dcc1e69d7c9c4a.js",
-      "static/chunks/4745.4fb0e20f28003b55.js"
-    ]
-  },
-  "app/shop/ai/workflow/laravel/n8n_render.tsx -> mermaid": {
     "id": 7877,
     "files": [
       "static/chunks/26d302b2.9f6383e42abdfe16.js",

@@ -33,6 +33,15 @@ declare namespace __next_route_internal_types__ {
 
   type StaticRoutes = 
     | `/`
+    | `/api/hust_media`
+    | `/api/hust_media/api`
+    | `/api/hust_media/media_tech/chat_public`
+    | `/api/hust_media/media_tech/chat_test`
+    | `/api/hust_media/media_tech/dashboard`
+    | `/api/hust_media/media_tech/laravel`
+    | `/api/hust_media/media_tech/openclaw`
+    | `/api/hust_media/workflow`
+    | `/api/hust_media/workflow/laravel`
     | `/api/media_tech`
     | `/api/media_tech/chat_public`
     | `/api/media_tech/chat_test`
@@ -61,6 +70,14 @@ declare namespace __next_route_internal_types__ {
     | `/info/about_us`
     | `/info/seo_media`
     | `/info/terms_service`
+    | `/next/api/hust/api_test`
+    | `/next/api/hust/chat_public`
+    | `/next/api/hust/chat_test`
+    | `/next/api/hust/home`
+    | `/next/api/hust/laravel`
+    | `/next/api/hust/openclaw`
+    | `/next/api/hust/workflow`
+    | `/next/api/hust/workflow/laravel`
     | `/next/api/mt`
     | `/next/api/mt/chat_public`
     | `/next/api/mt/chat_test`
@@ -77,9 +94,6 @@ declare namespace __next_route_internal_types__ {
     | `/next/api/mt/workspace`
     | `/next/api/sidebar-menu`
     | `/next/api/sidebar-menu/clear`
-    | `/next/chat_bot/api_1`
-    | `/next/chat_bot/main`
-    | `/next/chat_bot/test_1`
     | `/next/clear_silde_bar`
     | `/next/community/history/home`
     | `/next/convert_national_market`
@@ -97,18 +111,8 @@ declare namespace __next_route_internal_types__ {
     | `/next/services/development`
     | `/next/shop/history/home`
     | `/next/support`
-    | `/next/workflow/chat_bot`
-    | `/next/workflow/chat_bot/api_1`
-    | `/next/workflow/chat_bot/home`
-    | `/next/workflow/chat_bot/laravel`
-    | `/next/workflow/chat_bot/main`
-    | `/next/workflow/chat_bot/test_1`
     | `/shop/ai`
-    | `/shop/ai/chat_bot/hust_media`
-    | `/shop/ai/chat_bot/hust_media/api`
     | `/shop/ai/chat_bot/media_tech`
-    | `/shop/ai/workflow`
-    | `/shop/ai/workflow/laravel`
     | `/shop/hustadmin/home`
     | `/shop/hustadmin/orders`
     | `/shop/hustadmin/port_cron/net_ports`
@@ -119,6 +123,9 @@ declare namespace __next_route_internal_types__ {
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
     | `/api/features-image/${CatchAllSlug<T>}`
+    | `/api/hust/openclaw/${CatchAllSlug<T>}`
+    | `/api/hust_media/media_tech/chat/${CatchAllSlug<T>}`
+    | `/api/hust_media/media_tech/openclaw/gateway/${CatchAllSlug<T>}`
     | `/api/media_tech/chat/${CatchAllSlug<T>}`
     | `/api/media_tech/gitea/${CatchAllSlug<T>}`
     | `/api/media_tech/openclaw/gateway/${CatchAllSlug<T>}`

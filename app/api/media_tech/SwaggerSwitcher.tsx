@@ -200,7 +200,7 @@ export default function SwaggerSwitcher({
       {/* Right side live status & shortcuts */}
       <div className="hidden xl:flex items-center gap-2 pl-2">
         <Link
-          href={"/workflow/chat_bot/test_1" as any}
+          href={"/api/mt/chat_test" as any}
           prefetch={false}
           className="flex items-center gap-1.5 rounded-xl border border-purple-200/90 bg-purple-50/80 px-2.5 py-1.5 text-xs font-semibold text-purple-700 transition-all hover:border-purple-300 hover:bg-purple-100 hover:shadow-xs sm:px-3 sm:py-2 active:scale-[0.98]"
           title="Mở giao diện Chat Bot chính"
