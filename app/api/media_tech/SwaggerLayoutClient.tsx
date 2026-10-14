@@ -59,7 +59,7 @@ export default function SwaggerLayoutClient({
       }`}
     >
       <SwaggerSwitcher
-        className={isHeyGen ? "hidden" : isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
+        className={isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
         active={
           isHome
             ? "home"
@@ -77,9 +77,11 @@ export default function SwaggerLayoutClient({
                     ? "gitea_test"
                   : isChatPublic
                     ? "chat_public"
-                  : isChatTest
-                    ? "chat_test"
-                    : "openclaw"
+                    : isHeyGen
+                      ? "heygen"
+                      : isChatTest
+                        ? "chat_test"
+                        : "openclaw"
         }
       />
 
