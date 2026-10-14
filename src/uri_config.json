@@ -198,6 +198,10 @@
         "source": "/api/mt/chat_public",
         "destination": "/api/media_tech/chat_public"
       },
+      "heygen": {
+        "source": "/api/mt/heygen",
+        "destination": "/api/media_tech/heygen"
+      },
       "openclaw": {
         "source": "/api/mt/openclaw",
         "destination": "/api/media_tech/openclaw"

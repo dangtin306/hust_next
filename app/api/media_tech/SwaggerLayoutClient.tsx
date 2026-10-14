@@ -38,6 +38,7 @@ export default function SwaggerLayoutClient({
   const isGiteaTest = pathname.includes("/gitea_test");
   const isWorkspace = pathname.includes("/workspace");
   const isChatPublic = pathname.includes("/chat_public");
+  const isHeyGen = pathname.includes("/heygen");
   const isChatTest =
     pathname.includes("/chat_test") ||
     pathname.includes("/chat_bot") ||
@@ -58,7 +59,7 @@ export default function SwaggerLayoutClient({
       }`}
     >
       <SwaggerSwitcher
-        className={isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
+        className={isHeyGen ? "hidden" : isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
         active={
           isHome
             ? "home"
@@ -82,7 +83,9 @@ export default function SwaggerLayoutClient({
         }
       />
 
-      {isChatTest ? (
+      {isHeyGen ? (
+        <div className="w-full min-w-0">{children}</div>
+      ) : isChatTest ? (
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>

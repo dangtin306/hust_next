@@ -13,6 +13,7 @@ import {
   BookOpen,
   ExternalLink,
   MessageSquare,
+  Video,
   Loader2,
 } from "lucide-react";
 
@@ -26,7 +27,8 @@ export type SwaggerTabKey =
   | "git_test"
   | "gitea_test"
   | "chat_test"
-  | "chat_public";
+  | "chat_public"
+  | "heygen";
 
 const TABS = [
   {
@@ -56,6 +58,13 @@ const TABS = [
     href: "/api/mt/chat_public",
     icon: MessageSquare,
     description: "Media Tech AI Public Chat",
+  },
+  {
+    key: "heygen" as const,
+    label: "HeyGen",
+    href: "/api/mt/heygen",
+    icon: Video,
+    description: "LiveAvatar API demo",
   },
   {
     key: "n8n" as const,
