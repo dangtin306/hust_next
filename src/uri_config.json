@@ -199,7 +199,7 @@
         "destination": "/api/media_tech/chat_public"
       },
       "heygen": {
-        "source": "/api/mt/heygen",
+        "source": "/api/mt/media/heygen",
         "destination": "/api/media_tech/heygen"
       },
       "openclaw": {

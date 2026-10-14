@@ -1,6 +1,6 @@
 # HeyGen LiveAvatar demo
 
-Open `/next/api/mt/heygen` while running the Next.js app. The page starts a
+Open `/next/api/mt/media/heygen` while running the Next.js app. The page starts a
 LiveAvatar LITE sandbox session and sends typed text to the avatar.
 
 Add these values to the local `.env.local` file in the Next.js project root:

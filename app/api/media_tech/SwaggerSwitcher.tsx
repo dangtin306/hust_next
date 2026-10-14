@@ -62,7 +62,7 @@ const TABS = [
   {
     key: "heygen" as const,
     label: "HeyGen",
-    href: "/api/mt/heygen",
+    href: "/api/mt/media/heygen",
     icon: Video,
     description: "LiveAvatar API demo",
   },
