@@ -197,6 +197,21 @@ export function rememberLaravelChatSession(token: string): void {
   }
 }
 
+export function clearLaravelChatSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("chat_bot_session");
+    window.localStorage.removeItem("cookie_hash");
+    const domainPart = window.location.hostname.endsWith("hust.media") ? "; domain=.hust.media" : "";
+    document.cookie = `chat_bot_session=; max-age=0; path=/${domainPart}`;
+    document.cookie = `cookie_hash=; max-age=0; path=/${domainPart}`;
+    document.cookie = "chat_bot_session=; max-age=0; path=/";
+    document.cookie = "cookie_hash=; max-age=0; path=/";
+  } catch (e) {
+    console.warn("Không thể xóa cookie/localStorage chat_bot_session:", e);
+  }
+}
+
 export function extractAndRememberSession(body: any): string | null {
   if (!body || typeof body !== "object") return null;
   const token =
@@ -531,9 +546,13 @@ export async function apiSelectWorkspace({
  * Fetches rooms list from Laravel chat backend.
  */
 export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl?: string): Promise<FetchRoomsResult> {
+  const sessionToken = getLaravelChatSession();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  if (sessionToken) {
+    headers["x-chat-bot-session"] = sessionToken;
+  }
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
@@ -549,6 +568,13 @@ export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl
   extractAndRememberSession(body);
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      (body?.error?.code === "CHAT_SESSION_INVALID" ||
+        String(body?.error?.message || body?.message || "").toLowerCase().includes("session"))
+    ) {
+      clearLaravelChatSession();
+    }
     return { ok: false, status: response.status, rooms: [] };
   }
 
@@ -570,9 +596,13 @@ export async function apiFetchRoomMessages(
   beforeId?: number,
   customBaseUrl?: string,
 ): Promise<any[]> {
+  const sessionToken = getLaravelChatSession();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  if (sessionToken) {
+    headers["x-chat-bot-session"] = sessionToken;
+  }
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
@@ -594,12 +624,22 @@ export async function apiFetchRoomMessages(
   extractAndRememberSession(body);
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      (body?.error?.code === "CHAT_SESSION_INVALID" ||
+        String(body?.error?.message || body?.message || "").toLowerCase().includes("session"))
+    ) {
+      clearLaravelChatSession();
+    }
     const detail =
       body?.error?.message ||
       body?.message ||
       body?.error ||
       `HTTP ${response.status}`;
-    throw new Error(`HTTP ${response.status}: ${String(detail)}`);
+    const err = new Error(`HTTP ${response.status}: ${String(detail)}`);
+    (err as any).status = response.status;
+    (err as any).code = body?.error?.code;
+    throw err;
   }
 
   return Array.isArray(body?.data)

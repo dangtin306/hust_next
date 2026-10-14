@@ -7,6 +7,7 @@ import {
   OPENCLAW_IMAGE_GENERATIONS_ENDPOINT,
   getLaravelChatSession,
   rememberLaravelChatSession,
+  clearLaravelChatSession,
   apiEnsureLaravelRoom,
   apiPersistChatMessage,
   apiCreateConversation,
@@ -801,6 +802,21 @@ export function useMediaChatProcess({
               activeLaravelUrlRef.current || activeLaravelUrl,
             );
           } catch (historyErr: any) {
+            const isSessionInvalid =
+              historyErr?.status === 401 ||
+              historyErr?.code === "CHAT_SESSION_INVALID" ||
+              String(historyErr?.message || "").includes("401") ||
+              String(historyErr?.message || "").toLowerCase().includes("session is invalid");
+
+            if (isSessionInvalid) {
+              console.warn("Phiên chat Laravel không hợp lệ hoặc đã hết hạn (401), đang tự động xóa session cũ và tạo lại phiên mới...");
+              clearLaravelChatSession();
+              try {
+                window.localStorage.removeItem(activeStorageKey);
+              } catch {}
+              return false;
+            }
+
             console.error("Lỗi khi tải lịch sử tin nhắn (POST /messages/list):", historyErr);
             if (cancelled) return true;
             const conversationIdValue = String(upstreamConvId);
@@ -1042,11 +1058,12 @@ export function useMediaChatProcess({
               if (restored) break;
             }
             updateProgress(
-              96,
-              roomId
-                ? "Phòng chat đã được đồng bộ, sắp sẵn sàng…"
-                : "Chat đã sẵn sàng; lịch sử Laravel chưa đồng bộ được…",
+              90,
+              "Đang khởi tạo lại cuộc trò chuyện mới do phiên trước đó đã hết hạn…",
             );
+            if (!cancelled) {
+              await createAndLinkConversation();
+            }
             break;
           }
 

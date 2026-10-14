@@ -67,20 +67,22 @@ async function proxy(
         request.headers.get("x-chat-bot-session") ||
         request.headers.get("x-cookie-hash");
 
-      if (cookieHeader.includes("chat_bot_session=")) {
+      if (customSession) {
+        const resolved = resolveSessionValue(customSession);
+        if (resolved) {
+          if (cookieHeader.includes("chat_bot_session=")) {
+            cookieHeader = cookieHeader.replace(/chat_bot_session=([^;]+)/gi, `chat_bot_session=${resolved}`);
+          } else {
+            cookieHeader = cookieHeader
+              ? `${cookieHeader}; chat_bot_session=${resolved}`
+              : `chat_bot_session=${resolved}`;
+          }
+        }
+      } else if (cookieHeader.includes("chat_bot_session=")) {
         cookieHeader = cookieHeader.replace(/chat_bot_session=([^;]+)/gi, (_match, raw) => {
           const resolved = resolveSessionValue(raw);
           return `chat_bot_session=${resolved}`;
         });
-      }
-
-      if (customSession) {
-        const resolved = resolveSessionValue(customSession);
-        if (resolved && !cookieHeader.includes("chat_bot_session=")) {
-          cookieHeader = cookieHeader
-            ? `${cookieHeader}; chat_bot_session=${resolved}`
-            : `chat_bot_session=${resolved}`;
-        }
       }
     }
 
@@ -147,6 +149,25 @@ async function proxy(
         );
       }
     } catch {}
+
+    if (upstream.status === 401) {
+      try {
+        const parsedErr = JSON.parse(responseBody);
+        if (
+          parsedErr?.error?.code === "CHAT_SESSION_INVALID" ||
+          String(parsedErr?.error?.message || parsedErr?.message || "").toLowerCase().includes("session")
+        ) {
+          response.headers.append(
+            "set-cookie",
+            "chat_bot_session=; Path=/; Max-Age=0; SameSite=Lax"
+          );
+          response.headers.append(
+            "set-cookie",
+            "cookie_hash=; Path=/; Max-Age=0; SameSite=Lax"
+          );
+        }
+      } catch {}
+    }
 
     return response;
   } catch (err: unknown) {

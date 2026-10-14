@@ -96,7 +96,7 @@ export default function SwaggerHomePage() {
           <Link
             key={`${href}-${label}`}
             prefetch={false}
-            href={href}
+            href={href as any}
             className="group flex min-h-56 flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <div className="flex items-center gap-2">
