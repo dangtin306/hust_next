@@ -71,7 +71,7 @@ const TABS = [
     label: "HeyGen",
     href: "/api/mt/media/heygen",
     icon: Video,
-    description: "LiveAvatar API demo",
+    description: "Tạo video MC ảo bằng HeyGen Avatar IV",
   },
   {
     key: "n8n" as const,

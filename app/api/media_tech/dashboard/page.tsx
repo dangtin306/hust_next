@@ -12,6 +12,7 @@ import {
   Server,
   Sparkles,
   Workflow,
+  Video,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -21,6 +22,16 @@ export const metadata: Metadata = {
 };
 
 const destinations = [
+  {
+    label: "HeyGen Video",
+    title: "Demo MC ảo",
+    description:
+      "Nhập lời thoại, chọn ảnh/avatar và giọng đọc để tạo video thử nghiệm qua HeyGen API.",
+    href: "/api/mt/media/heygen",
+    action: "Mở demo HeyGen",
+    Icon: Video,
+    tone: "rose",
+  },
   {
     label: "Laravel API",
     title: "Laravel Backend",

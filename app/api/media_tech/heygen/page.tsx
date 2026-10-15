@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import HeyGenDemo from "./HeyGenDemo";
 
 export const metadata: Metadata = {
-  title: "HeyGen LiveAvatar Demo | Hust Media",
-  description: "Thử nghiệm LiveAvatar của HeyGen qua API.",
+  title: "HeyGen Video Demo | Hust Media",
+  description: "Video MC ảo với HeyGen Avatar IV Photo API.",
 };
 
 export default function HeyGenPage() {
