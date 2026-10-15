@@ -46,6 +46,13 @@ const TABS = [
     description: "OpenClaw AI Gateway",
   },
   {
+    key: "workspace" as const,
+    label: "Workspace",
+    href: "/api/mt/workspace",
+    icon: Briefcase,
+    description: "AI Workspace Management",
+  },
+  {
     key: "chat_test" as const,
     label: "Chat Test",
     href: "/api/mt/chat_test",
@@ -72,13 +79,6 @@ const TABS = [
     href: "/api/mt/n8n",
     icon: Workflow,
     description: "n8n Automation Workflows",
-  },
-  {
-    key: "workspace" as const,
-    label: "Workspace",
-    href: "/api/mt/workspace",
-    icon: Briefcase,
-    description: "AI Workspace Management",
   },
   {
     key: "git_auto" as const,

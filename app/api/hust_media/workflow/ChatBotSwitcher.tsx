@@ -74,7 +74,7 @@ export default function ChatBotSwitcher({ active }: ChatBotSwitcherProps) {
 
           {/* Laravel n8n */}
           <Link
-            href={"/api/hust/workflow/laravel" as any}
+            href={"/api/hust/n8n/laravel" as any}
             onClick={clearHash}
             className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-all sm:px-3 sm:py-2 sm:text-sm active:scale-[0.98] ${
               currentActive === "laravel"

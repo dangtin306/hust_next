@@ -904,9 +904,11 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
   const [isMounted, setIsMounted] = useState(false);
   const [isWorkspacePromptDismissed, setIsWorkspacePromptDismissed] = useState(false);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const currentSuggestion = SUGGESTIONS.find((item) => item.apiService === selectedService);
   // The chat API loader provides only selectable child workspaces; parent nodes stay in management.
   const workspaceChoices = workspaces;
+  const activeWorkspace = workspaces.find((w) => w.work_space_code === selectedWorkspaceCode) || workspaces[0];
 
   useEffect(() => {
     setIsMounted(true);
@@ -1094,35 +1096,46 @@ export function MediaUiUx(props: MediaUiUxProps) {
                   <Layers className="h-3 w-3 text-slate-400" />
                   Không gian
                 </span>
-                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {workspaces.map((workspace) => (
-                    <button
-                      key={workspace.work_space_code}
-                      type="button"
-                      onClick={() => void handleSelectWorkspace(workspace)}
-                      disabled={isSelectingWorkspace || isUpdatingWorkspaces || isRestoringChat || isTyping}
-                      aria-pressed={selectedWorkspaceCode === workspace.work_space_code}
-                      title={workspace.description || workspace.workspace_name}
-                      className={`shrink-0 max-w-[230px] truncate rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all duration-150 disabled:cursor-wait disabled:opacity-60 active:scale-95 cursor-pointer ${
-                        selectedWorkspaceCode === workspace.work_space_code
-                          ? "border-purple-300 bg-purple-100/90 text-purple-800 shadow-2xs font-semibold ring-1 ring-purple-400/40"
-                          : "border-slate-200/90 bg-white text-slate-600 shadow-2xs hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-700"
-                      }`}
-                    >
-                      {workspace.workspace_name}
-                    </button>
-                  ))}
-                  {isLoadingWorkspaces && (
-                    <span className="shrink-0 animate-pulse px-2 text-[10px] text-slate-400 font-medium">
-                      Đang tải danh sách…
+                {/* Cụm nút Không gian: Nút đầu hiện không gian hiện tại, nút sau hiện nút edit */}
+                <div className="inline-flex min-w-0 items-center rounded-full border border-purple-200/90 bg-white p-0.5 shadow-2xs">
+                  {/* Nút đầu: Hiện không gian hiện tại */}
+                  <button
+                    type="button"
+                    onClick={() => setIsWorkspaceModalOpen(true)}
+                    disabled={isSelectingWorkspace || isUpdatingWorkspaces || isRestoringChat || isTyping}
+                    title={activeWorkspace?.description || activeWorkspace?.workspace_name || "Không gian hiện tại"}
+                    className="inline-flex min-w-0 max-w-[200px] sm:max-w-[280px] items-center gap-1.5 rounded-full bg-purple-100/90 px-2.5 py-1 text-[11px] font-semibold text-purple-800 transition hover:bg-purple-200/80 active:scale-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-purple-600" />
+                    <span className="truncate">
+                      {activeWorkspace?.workspace_name || (isLoadingWorkspaces ? "Đang tải…" : "Chưa chọn không gian")}
                     </span>
-                  )}
-                  {!isLoadingWorkspaces && workspaces.length === 0 && (
-                    <span className="shrink-0 px-2 text-[10px] text-slate-400">
-                      Không có workspace khả dụng
-                    </span>
-                  )}
+                  </button>
+
+                  {/* Nút sau: Nút edit để chọn hoặc đổi không gian */}
+                  <button
+                    type="button"
+                    onClick={() => setIsWorkspaceModalOpen(true)}
+                    disabled={isSelectingWorkspace || isUpdatingWorkspaces || isRestoringChat || isTyping}
+                    title="Chỉnh sửa hoặc đổi không gian làm việc"
+                    aria-label="Chỉnh sửa không gian làm việc"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-slate-600 transition hover:bg-purple-50 hover:text-purple-700 active:scale-95 disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+                  >
+                    <Edit2 className="h-3 w-3 text-purple-600" />
+                    <span className="text-[11px]">Sửa</span>
+                  </button>
                 </div>
+
+                {isLoadingWorkspaces && (
+                  <span className="shrink-0 animate-pulse px-1 text-[10px] text-slate-400 font-medium">
+                    Đang tải…
+                  </span>
+                )}
+                {!isLoadingWorkspaces && workspaces.length === 0 && (
+                  <span className="shrink-0 px-1 text-[10px] text-slate-400">
+                    Không có workspace khả dụng
+                  </span>
+                )}
               </div>
               {showWorkspaceUpdateButton && (
                 <button
@@ -1565,8 +1578,15 @@ export function MediaUiUx(props: MediaUiUxProps) {
         />
       )}
 
-      {isWorkspaceSelectionRequired && !isRestoringChat && !isWorkspacePromptDismissed && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5">
+      {((isWorkspaceSelectionRequired && !isRestoringChat && !isWorkspacePromptDismissed) || isWorkspaceModalOpen) && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isWorkspaceSelectionRequired) {
+              setIsWorkspaceModalOpen(false);
+            }
+          }}
+        >
           <section
             role="dialog"
             aria-modal="true"
@@ -1580,48 +1600,78 @@ export function MediaUiUx(props: MediaUiUxProps) {
                 </div>
                 <div>
                   <h2 id="required-workspace-title" className="text-base font-bold text-slate-900 sm:text-lg">
-                    Chọn workspace để tiếp tục
+                    {isWorkspaceSelectionRequired ? "Chọn workspace để tiếp tục" : "Không gian làm việc (Workspace)"}
                   </h2>
                   <p className="mt-0.5 text-xs leading-relaxed text-slate-600">
-                    Tài khoản này chưa có workspace đang hoạt động. Hãy chọn một workspace để bắt đầu chat.
+                    {isWorkspaceSelectionRequired
+                      ? "Tài khoản này chưa có workspace đang hoạt động. Hãy chọn một workspace để bắt đầu chat."
+                      : "Chọn hoặc chuyển đổi không gian làm việc để AI có ngữ cảnh phù hợp."}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsWorkspacePromptDismissed(true)}
+                onClick={() => {
+                  setIsWorkspaceModalOpen(false);
+                  setIsWorkspacePromptDismissed(true);
+                }}
                 aria-label="Đóng hộp chọn workspace"
-                title="Đóng hộp chọn; chat vẫn khóa đến khi chọn workspace"
-                className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-purple-200 bg-white/80 text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
+                title="Đóng hộp chọn"
+                className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-purple-200 bg-white/80 text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="max-h-[55vh] space-y-2 overflow-y-auto p-4 sm:p-5">
-              {workspaceChoices.length > 0 ? workspaceChoices.map((workspace) => (
-                <button
-                  key={workspace.work_space_code}
-                  type="button"
-                  onClick={() => void handleSelectWorkspace(workspace)}
-                  disabled={isSelectingWorkspace || isRestoringChat}
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-purple-300 hover:bg-purple-50/70 disabled:cursor-wait disabled:opacity-60"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-slate-800">
-                      {workspace.workspace_name}
-                    </span>
-                    {workspace.description && (
-                      <span className="mt-0.5 block line-clamp-2 text-xs text-slate-500">
-                        {workspace.description}
+              {workspaceChoices.length > 0 ? (
+                workspaceChoices.map((workspace) => {
+                  const isSelected = selectedWorkspaceCode === workspace.work_space_code;
+                  return (
+                    <button
+                      key={workspace.work_space_code}
+                      type="button"
+                      onClick={async () => {
+                        setIsWorkspaceModalOpen(false);
+                        await handleSelectWorkspace(workspace);
+                      }}
+                      disabled={isSelectingWorkspace || isRestoringChat}
+                      className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition disabled:cursor-wait disabled:opacity-60 cursor-pointer ${
+                        isSelected
+                          ? "border-purple-300 bg-purple-50/80 shadow-xs ring-1 ring-purple-400/30"
+                          : "border-slate-200 bg-white hover:border-purple-300 hover:bg-purple-50/70"
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span className={`block truncate text-sm font-semibold ${isSelected ? "text-purple-900" : "text-slate-800"}`}>
+                            {workspace.workspace_name}
+                          </span>
+                          {isSelected && (
+                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+                              Hiện tại
+                            </span>
+                          )}
+                        </span>
+                        {workspace.description && (
+                          <span className="mt-0.5 block line-clamp-2 text-xs text-slate-500">
+                            {workspace.description}
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-purple-600" />
-                </button>
-              )) : (
+                      {isSelected ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-purple-600" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 text-purple-600" />
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
                 <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
-                  Hiện chưa tải được workspace khả dụng. Chat sẽ tiếp tục bị khóa cho đến khi có workspace để chọn.
+                  {isLoadingWorkspaces
+                    ? "Đang tải danh sách workspace…"
+                    : "Hiện chưa tải được workspace khả dụng. Chat sẽ tiếp tục bị khóa cho đến khi có workspace để chọn."}
                 </p>
               )}
 

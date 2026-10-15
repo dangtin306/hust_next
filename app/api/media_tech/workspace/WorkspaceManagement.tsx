@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Briefcase,
   Layers,
@@ -29,6 +29,8 @@ import {
   ArrowRight,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Eye,
   LayoutGrid,
   List,
@@ -39,12 +41,17 @@ import {
 
 export type WorkspaceRecord = {
   id: number;
+  agent_code?: string;
   workspace_name: string | null;
   work_space_code: string;
   parent_workspace_code?: string | null;
   slug: string;
   description: string | null;
   status: "active" | "archived";
+  is_selectable?: boolean;
+  children?: WorkspaceRecord[];
+  hierarchy_depth?: number;
+  children_count?: number;
   sessions_count?: number;
   created_at: string;
   updated_at: string;
@@ -95,42 +102,346 @@ export type PaginationMeta = {
   to: number | null;
 };
 
-// Initial state modeled exactly after Laravel API response (https://laravel_mt.hust.media/api/workspaces/main/data)
-const INITIAL_WORKSPACES_DATA: WorkspaceRecord[] = [
-  {
-    id: 1,
-    workspace_name: "Hỗ trợ Media Tech Backend",
-    work_space_code: "workspace_backend_support",
-    parent_workspace_code: "workspace-test",
-    slug: "workspace-backend-support",
-    description: "Workspace hỗ trợ cài đặt, cấu hình và vận hành Media Tech Backend",
-    status: "active",
-    sessions_count: 0,
-    created_at: "2026-09-30T10:37:59.000000Z",
-    updated_at: "2026-09-30T15:49:02.000000Z",
-  },
-  {
-    id: 4,
-    workspace_name: "Hỗ trợ OpenClaw",
-    work_space_code: "workspace_openclaw_support",
-    parent_workspace_code: "workspace-test",
-    slug: "workspace-openclaw-support",
-    description: "Workspace hỗ trợ cấu hình và vận hành OpenClaw",
-    status: "active",
-    sessions_count: 0,
-    created_at: "2026-09-30T15:48:52.000000Z",
-    updated_at: "2026-09-30T15:48:52.000000Z",
-  },
-];
+function buildWorkspaceHierarchy(value: unknown): { tree: WorkspaceRecord[]; flat: WorkspaceRecord[] } {
+  if (!Array.isArray(value)) return { tree: [], flat: [] };
 
-const INITIAL_META: PaginationMeta = {
-  current_page: 1,
-  from: 1,
-  last_page: 1,
-  per_page: 20,
-  to: 3,
-  total: 3,
+  const hasNestedChildren = value.some(
+    (item) => item && typeof item === "object" && Array.isArray((item as any).children) && (item as any).children.length > 0
+  );
+
+  const flat: WorkspaceRecord[] = [];
+  const seenIds = new Set<number>();
+
+  if (hasNestedChildren) {
+    const processNode = (node: any, depth: number): WorkspaceRecord | null => {
+      if (!node || typeof node !== "object" || !Number.isInteger(node.id)) return null;
+      if (seenIds.has(node.id)) return null;
+      seenIds.add(node.id);
+
+      const rawChildren = Array.isArray(node.children) ? node.children : [];
+      const children: WorkspaceRecord[] = [];
+
+      for (const rawChild of rawChildren) {
+        const child = processNode(rawChild, depth + 1);
+        if (child) children.push(child);
+      }
+
+      const record: WorkspaceRecord = {
+        ...node,
+        hierarchy_depth: depth,
+        children_count: children.length,
+        children,
+      };
+
+      const flatItem = { ...record };
+      delete flatItem.children;
+      flat.push({ ...flatItem, children_count: children.length });
+
+      return record;
+    };
+
+    const tree: WorkspaceRecord[] = [];
+    for (const item of value) {
+      const root = processNode(item, 0);
+      if (root) tree.push(root);
+    }
+
+    return { tree, flat };
+  } else {
+    // API returned a flat list; group by parent_workspace_code if present
+    const mapByCode = new Map<string, WorkspaceRecord>();
+    const roots: WorkspaceRecord[] = [];
+    const allRecords: WorkspaceRecord[] = [];
+
+    for (const raw of value) {
+      if (!raw || typeof raw !== "object" || !Number.isInteger((raw as any).id)) continue;
+      const rec: WorkspaceRecord = {
+        ...(raw as any),
+        children: [],
+        children_count: 0,
+        hierarchy_depth: 0,
+      };
+      mapByCode.set(rec.work_space_code, rec);
+      allRecords.push(rec);
+    }
+
+    for (const rec of allRecords) {
+      if (rec.parent_workspace_code && mapByCode.has(rec.parent_workspace_code)) {
+        const parent = mapByCode.get(rec.parent_workspace_code)!;
+        parent.children = parent.children || [];
+        rec.hierarchy_depth = (parent.hierarchy_depth || 0) + 1;
+        parent.children.push(rec);
+        parent.children_count = parent.children.length;
+      } else {
+        roots.push(rec);
+      }
+    }
+
+    for (const rec of allRecords) {
+      const flatItem = { ...rec };
+      delete flatItem.children;
+      flat.push(flatItem);
+    }
+
+    return { tree: roots, flat };
+  }
+}
+
+function flattenWorkspaceHierarchy(value: unknown): WorkspaceRecord[] {
+  return buildWorkspaceHierarchy(value).flat;
+}
+
+function filterWorkspaceTree(
+  nodes: WorkspaceRecord[],
+  searchTerm: string,
+  statusFilter: "all" | "active" | "archived"
+): WorkspaceRecord[] {
+  const term = searchTerm.trim().toLowerCase();
+
+  const filterNode = (node: WorkspaceRecord): WorkspaceRecord | null => {
+    const matchSearchSelf =
+      !term ||
+      (node.workspace_name && node.workspace_name.toLowerCase().includes(term)) ||
+      node.work_space_code.toLowerCase().includes(term) ||
+      node.slug.toLowerCase().includes(term) ||
+      (node.description && node.description.toLowerCase().includes(term));
+
+    const matchStatusSelf = statusFilter === "all" || node.status === statusFilter;
+
+    const filteredChildren: WorkspaceRecord[] = [];
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const matchingChild = filterNode(child);
+        if (matchingChild) {
+          filteredChildren.push(matchingChild);
+        }
+      }
+    }
+
+    if ((matchSearchSelf && matchStatusSelf) || filteredChildren.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren,
+        children_count: filteredChildren.length,
+      };
+    }
+
+    return null;
+  };
+
+  const result: WorkspaceRecord[] = [];
+  for (const node of nodes) {
+    const filtered = filterNode(node);
+    if (filtered) result.push(filtered);
+  }
+  return result;
+}
+
+type WorkspaceCardItemProps = {
+  ws: WorkspaceRecord;
+  isChild?: boolean;
+  onToggleStatus: (ws: WorkspaceRecord) => void;
+  onOpenEdit: (ws: WorkspaceRecord) => void;
+  onDelete: (ws: WorkspaceRecord) => void;
+  onViewSessions: (ws: WorkspaceRecord) => void;
+  onCopy: (key: string, text: string, label?: string) => void;
+  copiedKey: string | null;
+  formatDate: (iso?: string | null) => string;
 };
+
+function WorkspaceCardItem({
+  ws,
+  isChild = false,
+  onToggleStatus,
+  onOpenEdit,
+  onDelete,
+  onViewSessions,
+  onCopy,
+  copiedKey,
+  formatDate,
+}: WorkspaceCardItemProps) {
+  const isActive = ws.status === "active";
+
+  return (
+    <div
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs backdrop-blur-xl transition-all hover:border-purple-200 hover:shadow-md ${
+        isChild || (ws.hierarchy_depth || 0) > 0 ? "border-l-4 border-l-indigo-400 bg-white" : ""
+      }`}
+    >
+      {/* Top Accent Line */}
+      <div
+        className={`absolute top-0 left-0 right-0 h-1.5 ${
+          isActive
+            ? "bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500"
+            : "bg-gradient-to-r from-slate-300 via-slate-400 to-amber-400"
+        }`}
+      />
+
+      <div className="space-y-3.5">
+        {/* Header: Icon, Name & Status Badge */}
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                isChild
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700"
+              } shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200 transition`}
+            >
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3
+                  className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate group-hover:text-purple-700 transition"
+                  title={ws.workspace_name || ws.work_space_code}
+                >
+                  {ws.workspace_name || ws.work_space_code}
+                </h3>
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                ID: #{ws.id}
+                {isChild || (ws.hierarchy_depth || 0) > 0 ? (
+                  <span className="ml-2 rounded-full bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
+                    Workspace con
+                  </span>
+                ) : ws.is_selectable === false ? (
+                  <span className="ml-2 rounded-full bg-violet-50 border border-violet-100 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
+                    Nhóm cha · {ws.children_count || ws.children?.length || 0} workspace con
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Status toggle pill */}
+          <button
+            type="button"
+            onClick={() => onToggleStatus(ws)}
+            title="Bấm để đổi trạng thái"
+            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
+            style={{
+              backgroundColor: isActive ? "#ecfdf5" : "#f1f5f9",
+              borderColor: isActive ? "#a7f3d0" : "#cbd5e1",
+              color: isActive ? "#065f46" : "#475569",
+            }}
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{
+                backgroundColor: isActive ? "#10b981" : "#94a3b8",
+              }}
+            />
+            <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
+          </button>
+        </div>
+
+        {/* Code & Slug & Parent Tags */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <div className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-lg">
+            <span>{ws.work_space_code}</span>
+            <button
+              type="button"
+              onClick={() => onCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
+              className="text-purple-400 hover:text-purple-700 transition ml-0.5 cursor-pointer"
+              title="Sao chép mã code"
+            >
+              {copiedKey === `code-${ws.id}` ? (
+                <Check className="h-3 w-3 text-emerald-600" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </button>
+          </div>
+
+          {ws.parent_workspace_code && (
+            <div
+              className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg"
+              title="Mã workspace cha"
+            >
+              <span className="text-indigo-400">parent:</span>
+              <span className="font-semibold">{ws.parent_workspace_code}</span>
+            </div>
+          )}
+
+          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[200px]">
+            <span className="truncate">slug: {ws.slug}</span>
+            <button
+              type="button"
+              onClick={() => onCopy(`slug-${ws.id}`, ws.slug, "slug")}
+              className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
+              title="Sao chép slug"
+            >
+              {copiedKey === `slug-${ws.id}` ? (
+                <Check className="h-2.5 w-2.5 text-emerald-600" />
+              ) : (
+                <Copy className="h-2.5 w-2.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div
+          className="text-xs text-slate-600 leading-relaxed min-h-[38px] line-clamp-2"
+          title={ws.description || ""}
+        >
+          {ws.description || (
+            <span className="text-slate-300 italic">Chưa có mô tả chi tiết cho workspace này.</span>
+          )}
+        </div>
+
+        {/* Sessions Counter Bar */}
+        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 p-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
+            <Radio className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+            <span>{ws.sessions_count ?? 0} sessions gắn liền</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onViewSessions(ws)}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200/80 rounded-lg px-2 py-1 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+          >
+            <Eye className="h-3 w-3" />
+            <span>Xem phiên</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Footer: Dates & Actions */}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <div
+          className="flex items-center gap-1 truncate mr-2"
+          title={`Cập nhật: ${formatDate(ws.updated_at)}`}
+        >
+          <Clock className="h-3 w-3 shrink-0" />
+          <span className="truncate">{formatDate(ws.updated_at)}</span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => onOpenEdit(ws)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
+            title="Chỉnh sửa Workspace"
+          >
+            <Edit2 className="h-3 w-3" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(ws)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+            title="Xóa Workspace"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function WorkspaceManagement() {
   // Navigation tab: 'workspaces' (work_space_main) | 'sessions' (work_space_session)
@@ -140,12 +451,27 @@ export default function WorkspaceManagement() {
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
 
   // --- Workspaces State (work_space_main) ---
-  const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>(INITIAL_WORKSPACES_DATA);
-  const [wsMeta, setWsMeta] = useState<PaginationMeta | null>(INITIAL_META);
-  const [wsLoading, setWsLoading] = useState<boolean>(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
+  const [workspacesTree, setWorkspacesTree] = useState<WorkspaceRecord[]>([]);
+  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<number>>(new Set());
+  const [wsMeta, setWsMeta] = useState<PaginationMeta | null>(null);
+  const [wsLoading, setWsLoading] = useState<boolean>(true);
   const [wsError, setWsError] = useState<string | null>(null);
   const [wsSearch, setWsSearch] = useState<string>("");
   const [wsStatusFilter, setWsStatusFilter] = useState<"all" | "active" | "archived">("all");
+  const [wsPage, setWsPage] = useState(1);
+
+  const toggleCollapseParent = useCallback((id: number) => {
+    setCollapsedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   // --- Sessions State (work_space_session) ---
   const [sessions, setSessions] = useState<WorkspaceSessionRecord[]>([]);
@@ -226,19 +552,18 @@ export default function WorkspaceManagement() {
     }
   };
 
-  // --- 1. Fetch Workspaces from Laravel API (workspaces/main/data) ---
+  // Fetch a page of the Workspace tree; search and status filters run over parents and children locally.
   const fetchWorkspaces = useCallback(async () => {
     setWsLoading(true);
     setWsError(null);
     try {
       const queryParams = new URLSearchParams();
-      if (wsSearch.trim()) queryParams.set("q", wsSearch.trim());
-      if (wsStatusFilter !== "all") queryParams.set("status", wsStatusFilter);
       queryParams.set("per_page", "50");
+      queryParams.set("page", String(wsPage));
 
-      let json;
+      let json: { data?: unknown; meta?: PaginationMeta };
       try {
-        const res = await fetch(`/next/api/workspaces-proxy/workspaces/main/data?${queryParams.toString()}`, {
+        const res = await fetch(`/next/api/workspaces/main/data?${queryParams.toString()}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
@@ -263,15 +588,21 @@ export default function WorkspaceManagement() {
       }
 
       setRawJsonData(json);
-      setWorkspaces(json.data || []);
-      setWsMeta(json.meta || null);
+      const { tree: nextTree, flat: nextFlat } = buildWorkspaceHierarchy(json.data);
+      setWorkspacesTree(nextTree);
+      setWorkspaces(nextFlat);
+      const nextMeta = json.meta || null;
+      setWsMeta(nextMeta);
+      if (nextMeta?.last_page && wsPage > nextMeta.last_page) {
+        setWsPage(nextMeta.last_page);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setWsError(msg);
     } finally {
       setWsLoading(false);
     }
-  }, [wsSearch, wsStatusFilter]);
+  }, [wsPage]);
 
   // --- 2. Fetch Sessions from Laravel API (work_space_session) ---
   const fetchSessions = useCallback(async () => {
@@ -285,7 +616,7 @@ export default function WorkspaceManagement() {
       if (sessionStatusFilter !== "all") queryParams.set("status", sessionStatusFilter);
       queryParams.set("per_page", "50");
 
-      const res = await fetch(`/next/api/workspaces-proxy/workspace-sessions?${queryParams.toString()}`, {
+      const res = await fetch(`/next/api/workspaces/workspace-sessions?${queryParams.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -318,7 +649,7 @@ export default function WorkspaceManagement() {
     setUserWorkspacesError(null);
     try {
       const query = new URLSearchParams({ user_id: normalizedUserId });
-      const res = await fetch(`/next/api/workspaces-proxy/workspaces/user/data?${query.toString()}`, {
+      const res = await fetch(`/next/api/workspaces/user/data?${query.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -341,7 +672,7 @@ export default function WorkspaceManagement() {
     setRoutingSyncing(true);
     setRoutingSyncError(null);
     try {
-      const res = await fetch("/next/api/workspaces-proxy/workspaces/routing/update", {
+      const res = await fetch("/next/api/workspaces/routing/update", {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -365,7 +696,7 @@ export default function WorkspaceManagement() {
     setViewingWorkspaceSessions(workspace);
     setSpecificWsLoading(true);
     try {
-      const res = await fetch(`/next/api/workspaces-proxy/workspaces/${workspace.id}/sessions`, {
+      const res = await fetch(`/next/api/workspaces/${workspace.id}/sessions`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -455,7 +786,7 @@ export default function WorkspaceManagement() {
 
         // Gọi API edit mới: POST https://laravel_mt.hust.media/api/workspaces/main/edit
         try {
-          res = await fetch("/next/api/workspaces-proxy/workspaces/main/edit", {
+          res = await fetch("/next/api/workspaces/main/edit", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -478,7 +809,7 @@ export default function WorkspaceManagement() {
       } else {
         // Tạo mới: POST /api/workspaces
         try {
-          res = await fetch("/next/api/workspaces-proxy/workspaces", {
+          res = await fetch("/next/api/workspaces/workspaces", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -530,7 +861,7 @@ export default function WorkspaceManagement() {
     try {
       let res;
       try {
-        res = await fetch("/next/api/workspaces-proxy/workspaces/main/edit", {
+        res = await fetch("/next/api/workspaces/main/edit", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -570,7 +901,7 @@ export default function WorkspaceManagement() {
     }
 
     try {
-      const res = await fetch(`/next/api/workspaces-proxy/workspaces/${ws.id}`, {
+      const res = await fetch(`/next/api/workspaces/${ws.id}`, {
         method: "DELETE",
         headers: { Accept: "application/json" },
       });
@@ -587,24 +918,42 @@ export default function WorkspaceManagement() {
   };
 
   // --- Filtered Workspaces for client-side search smoothness ---
+  const normalizedWorkspaceSearch = wsSearch.trim().toLowerCase();
   const filteredWorkspaces = workspaces.filter((ws) => {
     const matchSearch =
-      !wsSearch.trim() ||
-      (ws.workspace_name && ws.workspace_name.toLowerCase().includes(wsSearch.toLowerCase())) ||
-      ws.work_space_code.toLowerCase().includes(wsSearch.toLowerCase()) ||
-      ws.slug.toLowerCase().includes(wsSearch.toLowerCase()) ||
-      (ws.description && ws.description.toLowerCase().includes(wsSearch.toLowerCase()));
+      !normalizedWorkspaceSearch ||
+      (ws.workspace_name && ws.workspace_name.toLowerCase().includes(normalizedWorkspaceSearch)) ||
+      ws.work_space_code.toLowerCase().includes(normalizedWorkspaceSearch) ||
+      ws.slug.toLowerCase().includes(normalizedWorkspaceSearch) ||
+      (ws.description && ws.description.toLowerCase().includes(normalizedWorkspaceSearch));
 
     const matchStatus = wsStatusFilter === "all" || ws.status === wsStatusFilter;
 
     return matchSearch && matchStatus;
   });
 
+  const filteredTree = useMemo(() => {
+    return filterWorkspaceTree(workspacesTree, wsSearch, wsStatusFilter);
+  }, [workspacesTree, wsSearch, wsStatusFilter]);
+
+  const parentGroups = useMemo(() => {
+    return filteredTree.filter(
+      (w) => (w.children && w.children.length > 0) || w.is_selectable === false
+    );
+  }, [filteredTree]);
+
+  const standaloneWorkspaces = useMemo(() => {
+    return filteredTree.filter(
+      (w) => (!w.children || w.children.length === 0) && w.is_selectable !== false
+    );
+  }, [filteredTree]);
+
   // --- Statistics strictly from Real Data ---
-  const totalWorkspaces = wsMeta?.total ?? workspaces.length;
+  const totalWorkspaces = workspaces.length;
   const activeWorkspacesCount = workspaces.filter((w) => w.status === "active").length;
   const archivedWorkspacesCount = workspaces.filter((w) => w.status === "archived").length;
   const totalSessionsCount = sessionMeta?.total ?? sessions.length;
+  const isInitialWorkspaceLoad = wsLoading && workspaces.length === 0;
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 pb-16 font-sans">
@@ -693,6 +1042,16 @@ export default function WorkspaceManagement() {
         </div>
 
         {/* Real Overview Stats Grid */}
+        {isInitialWorkspaceLoad && (
+          <div
+            className="mt-5 flex items-center gap-2 rounded-xl border border-purple-100 bg-purple-50/70 px-3.5 py-3 text-xs font-semibold text-purple-700"
+            role="status"
+            aria-live="polite"
+          >
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            Đang tải danh sách Workspace và các workspace con…
+          </div>
+        )}
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-slate-500">
@@ -700,9 +1059,9 @@ export default function WorkspaceManagement() {
               <Layers className="h-4 w-4 text-purple-600" />
             </div>
             <div className="mt-2 text-2xl font-black text-slate-800">
-              {totalWorkspaces}
+              {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-purple-100" /> : totalWorkspaces}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">meta.total từ API</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">Workspace cha + con trên trang</div>
           </div>
 
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 sm:p-4">
@@ -711,7 +1070,7 @@ export default function WorkspaceManagement() {
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
             <div className="mt-2 text-2xl font-black text-emerald-800">
-              {activeWorkspacesCount}
+              {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-emerald-100" /> : activeWorkspacesCount}
             </div>
             <div className="text-[11px] text-emerald-600/80 mt-0.5">status: &quot;active&quot;</div>
           </div>
@@ -722,7 +1081,7 @@ export default function WorkspaceManagement() {
               <Archive className="h-4 w-4 text-amber-600" />
             </div>
             <div className="mt-2 text-2xl font-black text-amber-800">
-              {archivedWorkspacesCount}
+              {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-amber-100" /> : archivedWorkspacesCount}
             </div>
             <div className="text-[11px] text-amber-600/80 mt-0.5">status: &quot;archived&quot;</div>
           </div>
@@ -760,7 +1119,7 @@ export default function WorkspaceManagement() {
                   activeTab === "workspaces" ? "bg-purple-200/80 text-purple-800" : "bg-slate-200 text-slate-600"
                 }`}
               >
-                {workspaces.length}
+                {isInitialWorkspaceLoad ? "…" : workspaces.length}
               </span>
             </button>
 
@@ -884,14 +1243,20 @@ export default function WorkspaceManagement() {
               <input
                 type="text"
                 value={wsSearch}
-                onChange={(e) => setWsSearch(e.target.value)}
+                onChange={(e) => {
+                  setWsSearch(e.target.value);
+                  setWsPage(1);
+                }}
                 placeholder="Tìm theo tên, mã code (WS-...), slug hoặc mô tả..."
                 className="w-full rounded-xl border border-slate-200 bg-white pl-9 pr-8 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 transition focus:border-purple-400 focus:outline-none focus:ring-3 focus:ring-purple-500/10"
               />
               {wsSearch && (
                 <button
                   type="button"
-                  onClick={() => setWsSearch("")}
+                  onClick={() => {
+                    setWsSearch("");
+                    setWsPage(1);
+                  }}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -903,36 +1268,45 @@ export default function WorkspaceManagement() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               <button
                 type="button"
-                onClick={() => setWsStatusFilter("all")}
+                onClick={() => {
+                  setWsStatusFilter("all");
+                  setWsPage(1);
+                }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                   wsStatusFilter === "all"
                     ? "bg-purple-600 text-white shadow-xs"
                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                Tất cả ({totalWorkspaces})
+                Tất cả ({isInitialWorkspaceLoad ? "…" : totalWorkspaces})
               </button>
               <button
                 type="button"
-                onClick={() => setWsStatusFilter("active")}
+                onClick={() => {
+                  setWsStatusFilter("active");
+                  setWsPage(1);
+                }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                   wsStatusFilter === "active"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                Hoạt động ({activeWorkspacesCount})
+                Hoạt động ({isInitialWorkspaceLoad ? "…" : activeWorkspacesCount})
               </button>
               <button
                 type="button"
-                onClick={() => setWsStatusFilter("archived")}
+                onClick={() => {
+                  setWsStatusFilter("archived");
+                  setWsPage(1);
+                }}
                 className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
                   wsStatusFilter === "archived"
                     ? "bg-amber-600 text-white shadow-xs"
                     : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                Lưu trữ ({archivedWorkspacesCount})
+                Lưu trữ ({isInitialWorkspaceLoad ? "…" : archivedWorkspacesCount})
               </button>
             </div>
           </div>
@@ -940,22 +1314,54 @@ export default function WorkspaceManagement() {
           {/* VIEW MODE 1: GRID CARDS (MODERN UI/UX) */}
           {viewMode === "card" && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredWorkspaces.length === 0 ? (
+              {isInitialWorkspaceLoad ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={`workspace-skeleton-${index}`}
+                    aria-hidden="true"
+                    className="min-h-[260px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-11 w-11 rounded-2xl bg-slate-100" />
+                        <div className="space-y-2">
+                          <div className="h-4 w-36 rounded bg-slate-100" />
+                          <div className="h-3 w-16 rounded bg-slate-100" />
+                        </div>
+                      </div>
+                      <div className="h-7 w-20 rounded-full bg-slate-100" />
+                    </div>
+                    <div className="mt-6 flex gap-2">
+                      <div className="h-6 w-36 rounded-lg bg-slate-100" />
+                      <div className="h-6 w-24 rounded-lg bg-slate-100" />
+                    </div>
+                    <div className="mt-5 h-3 w-full rounded bg-slate-100" />
+                    <div className="mt-2 h-3 w-3/4 rounded bg-slate-100" />
+                    <div className="mt-8 h-12 rounded-2xl bg-slate-100" />
+                  </div>
+                ))
+              ) : filteredWorkspaces.length === 0 ? (
                 <div className="col-span-full rounded-3xl border border-white/80 bg-white/95 p-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto">
                     <Briefcase className="h-10 w-10 text-slate-300" />
-                    <p className="font-bold text-slate-700 text-base">Không tìm thấy workspace nào</p>
-                    <p className="text-xs text-slate-400">
-                      Thử xóa bộ lọc tìm kiếm hoặc tạo thêm workspace mới.
+                    <p className="font-bold text-slate-700 text-base">
+                      {wsError ? "Chưa tải được danh sách Workspace" : "Không tìm thấy workspace nào"}
                     </p>
-                    <button
-                      type="button"
-                      onClick={handleOpenCreateModal}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 transition cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Thêm Workspace mới</span>
-                    </button>
+                    <p className="text-xs text-slate-400">
+                      {wsError
+                        ? "Kiểm tra kết nối API hoặc bấm Thử lại ở thông báo lỗi phía trên."
+                        : "Thử xóa bộ lọc tìm kiếm hoặc tạo thêm workspace mới."}
+                    </p>
+                    {!wsError && (
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateModal}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 transition cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Thêm Workspace mới</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -965,7 +1371,9 @@ export default function WorkspaceManagement() {
                   return (
                     <div
                       key={ws.id}
-                      className="group flex flex-col justify-between rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs transition-all hover:shadow-md hover:border-purple-200 backdrop-blur-xl relative overflow-hidden"
+                      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs backdrop-blur-xl transition-all hover:border-purple-200 hover:shadow-md ${
+                        (ws.hierarchy_depth || 0) > 0 ? "border-l-4 border-l-indigo-300 bg-indigo-50/30" : ""
+                      }`}
                     >
                       {/* Top Accent Line */}
                       <div
@@ -991,6 +1399,15 @@ export default function WorkspaceManagement() {
                               </div>
                               <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                                 ID: #{ws.id}
+                                {(ws.hierarchy_depth || 0) > 0 ? (
+                                  <span className="ml-2 rounded-full bg-indigo-50 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
+                                    Workspace con
+                                  </span>
+                                ) : ws.is_selectable === false ? (
+                                  <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
+                                    Nhóm cha · {ws.children_count || 0} workspace con
+                                  </span>
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -1135,14 +1552,26 @@ export default function WorkspaceManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredWorkspaces.length === 0 ? (
+                    {isInitialWorkspaceLoad ? (
+                      Array.from({ length: 4 }).map((_, index) => (
+                        <tr key={`workspace-row-skeleton-${index}`} aria-hidden="true" className="animate-pulse">
+                          {Array.from({ length: 7 }).map((__, cellIndex) => (
+                            <td key={cellIndex} className="px-4 py-5">
+                              <div className="h-4 w-3/4 rounded bg-slate-100" />
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : filteredWorkspaces.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-12 text-center text-slate-400">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <Briefcase className="h-9 w-9 text-slate-300" />
-                            <p className="font-semibold text-slate-600">Không tìm thấy workspace nào trong work_space_main</p>
+                            <p className="font-semibold text-slate-600">
+                              {wsError ? "Chưa tải được danh sách Workspace" : "Không tìm thấy workspace nào trong work_space_main"}
+                            </p>
                             <p className="text-xs text-slate-400">
-                              Chưa có dữ liệu hoặc từ khóa tìm kiếm không khớp.
+                              {wsError ? "Kiểm tra kết nối API hoặc bấm Thử lại ở thông báo lỗi phía trên." : "Chưa có dữ liệu hoặc từ khóa tìm kiếm không khớp."}
                             </p>
                           </div>
                         </td>
@@ -1163,6 +1592,15 @@ export default function WorkspaceManagement() {
                                 </div>
                                 <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                                   ID: {ws.id}
+                                  {(ws.hierarchy_depth || 0) > 0 ? (
+                                    <span className="ml-2 rounded-full bg-indigo-50 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
+                                      Workspace con
+                                    </span>
+                                  ) : ws.is_selectable === false ? (
+                                    <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
+                                      Nhóm cha · {ws.children_count || 0} con
+                                    </span>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>
@@ -1322,7 +1760,7 @@ export default function WorkspaceManagement() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-xs text-slate-600 backdrop-blur-md shadow-2xs">
               <div className="flex items-center gap-2">
                 <span>
-                  Hiển thị <strong className="text-slate-800">{wsMeta.from || 1}</strong> - <strong className="text-slate-800">{wsMeta.to || filteredWorkspaces.length}</strong> trên tổng số <strong className="text-purple-700">{wsMeta.total}</strong> workspace
+                  Đang hiển thị <strong className="text-purple-700">{filteredWorkspaces.length}</strong> / <strong className="text-slate-800">{totalWorkspaces}</strong> workspace cha và con trên trang này
                 </span>
                 <span className="text-slate-300">|</span>
                 <span className="text-slate-400">Trang {wsMeta.current_page} / {wsMeta.last_page}</span>
@@ -1331,7 +1769,8 @@ export default function WorkspaceManagement() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  disabled={wsMeta.current_page <= 1}
+                  onClick={() => setWsPage((page) => Math.max(1, page - 1))}
+                  disabled={wsLoading || wsMeta.current_page <= 1}
                   className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   &laquo; Trước
@@ -1341,7 +1780,8 @@ export default function WorkspaceManagement() {
                 </span>
                 <button
                   type="button"
-                  disabled={wsMeta.current_page >= wsMeta.last_page}
+                  onClick={() => setWsPage((page) => Math.min(wsMeta?.last_page || page, page + 1))}
+                  disabled={wsLoading || wsMeta.current_page >= wsMeta.last_page}
                   className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Sau &raquo;
@@ -1767,12 +2207,19 @@ export default function WorkspaceManagement() {
                   rawJsonData || {
                     data: workspaces,
                     links: {
-                      first: "http://vip.tecom.pro:8817/api/workspaces?page=1",
-                      last: "http://vip.tecom.pro:8817/api/workspaces?page=1",
+                      first: `/next/api/workspaces/main/data?per_page=50&page=${wsPage}`,
+                      last: `/next/api/workspaces/main/data?per_page=50&page=${wsPage}`,
                       prev: null,
                       next: null,
                     },
-                    meta: wsMeta || INITIAL_META,
+                    meta: wsMeta || {
+                      current_page: wsPage,
+                      from: workspaces.length ? 1 : null,
+                      last_page: 1,
+                      per_page: 50,
+                      to: workspaces.length || null,
+                      total: workspaces.length,
+                    },
                   },
                   null,
                   2

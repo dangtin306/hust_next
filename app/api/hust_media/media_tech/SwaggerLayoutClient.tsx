@@ -37,6 +37,9 @@ export default function SwaggerLayoutClient({
     pathname.includes("/chat_test") ||
     pathname.includes("/chat_bot") ||
     pathname.includes("/test_1");
+  const isWorkflow =
+    pathname.includes("/n8n") || pathname.includes("/workflow");
+  const isWorkspace = pathname.includes("/workspace");
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -53,17 +56,21 @@ export default function SwaggerLayoutClient({
       <SwaggerSwitcher
         className={isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
         active={
-          isLaravel
-            ? "laravel"
-            : isOpenClaw
-              ? "openclaw"
-              : isChatPublic
-                ? "chat_public"
-                : isChatTest
-                  ? "chat_test"
-                  : isHome
-                    ? "home"
-                    : "openclaw"
+          isWorkflow
+            ? "workflow"
+            : isWorkspace
+              ? "workspace"
+              : isLaravel
+                ? "laravel"
+                : isOpenClaw
+                  ? "openclaw"
+                  : isChatPublic
+                    ? "chat_public"
+                    : isChatTest
+                      ? "chat_test"
+                      : isHome
+                        ? "home"
+                        : "openclaw"
         }
       />
 
@@ -72,6 +79,8 @@ export default function SwaggerLayoutClient({
           {children}
         </div>
       ) : isChatPublic ? (
+        <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
+      ) : isWorkspace ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (
         <>

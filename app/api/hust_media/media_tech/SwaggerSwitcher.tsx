@@ -12,12 +12,14 @@ import {
   MessageSquare,
   Loader2,
   Workflow as WorkflowIcon,
+  Briefcase,
 } from "lucide-react";
 
 export type SwaggerTabKey =
   | "home"
   | "openclaw"
   | "laravel"
+  | "workspace"
   | "chat_test"
   | "chat_public"
   | "workflow";
@@ -38,6 +40,13 @@ const TABS = [
     description: "OpenClaw AI Gateway",
   },
   {
+    key: "workspace" as const,
+    label: "Workspace",
+    href: "/api/hust/workspace",
+    icon: Briefcase,
+    description: "AI Workspace Management",
+  },
+  {
     key: "chat_test" as const,
     label: "Chat Test",
     href: "/api/hust/chat_test",
@@ -54,9 +63,9 @@ const TABS = [
   {
     key: "workflow" as const,
     label: "Workflow",
-    href: "/api/hust/workflow/laravel",
+    href: "/api/hust/n8n",
     icon: WorkflowIcon,
-    description: "Sơ đồ Laravel n8n cũ của Hust",
+    description: "Sơ đồ Workflow n8n của Hust",
   },
 ];
 

@@ -9,11 +9,11 @@ export const OPENCLAW_WORKSPACE_NEW_ENDPOINT = "/next/api/hust/openclaw/v2/works
 export const OPENCLAW_WORKSPACE_SELECT_ENDPOINT = "/next/api/hust/openclaw/v2/workspace/select";
 export const OPENCLAW_USER_WORKSPACES_ENDPOINT = "/next/api/hust/openclaw/v2/workspace/user";
 export const LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT =
-  "/next/api/hust/workspaces-proxy/workspaces/routing/update";
+  "/next/api/hust/workspaces/routing/update";
 export const OPENCLAW_CHAT_COMPLETIONS_ENDPOINT = "/next/api/hust/openclaw/v1/chat/completions";
 export const OPENCLAW_RESPONSES_ENDPOINT = "/next/api/hust/openclaw/v1/responses";
 export const OPENCLAW_IMAGE_GENERATIONS_ENDPOINT = "/next/api/hust/openclaw/v1/images/generations";
-export const WORKSPACES_MAIN_DATA_ENDPOINT = "/next/api/hust/workspaces-proxy/workspaces/main/data";
+export const WORKSPACES_MAIN_DATA_ENDPOINT = "/next/api/hust/workspaces/main/data";
 
 export type WorkspaceOption = {
   id: number | string;

@@ -15,40 +15,56 @@ async function proxy(
   const customTarget = request.headers.get("x-laravel-target");
   const upstreamBase = normalizeLaravelApiBaseUrl(customTarget || HUST_LARAVEL_BASE);
   const search = request.nextUrl.search;
-  const upstreamUrl = `${upstreamBase}/${path.join("/")}${search}`;
+
+  const subPath =
+    !path.length || path[0].startsWith("workspace")
+      ? path.join("/")
+      : `workspaces/${path.join("/")}`;
+
+  const upstreamUrl = `${upstreamBase}/${subPath}${search}`;
 
   try {
     const requestHeaders: Record<string, string> = {
       accept: request.headers.get("accept") || "application/json",
     };
+
     const auth = request.headers.get("authorization");
-    if (auth) requestHeaders.authorization = auth;
+    if (auth) {
+      requestHeaders.authorization = auth;
+    }
+
     const contentType = request.headers.get("content-type");
-    if (contentType) requestHeaders["content-type"] = contentType;
+    if (contentType) {
+      requestHeaders["content-type"] = contentType;
+    }
 
     const body =
       request.method === "GET" || request.method === "HEAD"
         ? undefined
         : await request.arrayBuffer();
+
     const upstream = await fetch(upstreamUrl, {
       method: request.method,
       headers: requestHeaders,
       body,
       cache: "no-store",
     });
+
     const responseBody = await upstream.text();
+    const responseHeaders: Record<string, string> = {
+      "content-type": upstream.headers.get("content-type") || "application/json",
+      "x-upstream-url": upstreamUrl,
+    };
 
     return new NextResponse(responseBody, {
       status: upstream.status,
-      headers: {
-        "content-type": upstream.headers.get("content-type") || "application/json",
-      },
+      headers: responseHeaders,
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
       {
-        message: `Không thể kết nối đến máy chủ Laravel Hust (${upstreamUrl}): ${message}`,
+        message: `Không thể kết nối đến máy chủ Laravel Hust (${upstreamUrl}): ${errorMsg}`,
         error: "proxy_error",
       },
       { status: 502 },

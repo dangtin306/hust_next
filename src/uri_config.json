@@ -154,6 +154,18 @@
         "workflowLaravel": {
           "source": "/api/hust/workflow/laravel",
           "destination": "/api/hust_media/workflow/laravel"
+        },
+        "n8n": {
+          "source": "/api/hust/n8n",
+          "destination": "/api/hust_media/n8n"
+        },
+        "n8nLaravel": {
+          "source": "/api/hust/n8n/laravel",
+          "destination": "/api/hust_media/n8n/laravel"
+        },
+        "workspace": {
+          "source": "/api/hust/workspace",
+          "destination": "/api/hust_media/workspace"
         }
       },
       "chatProxy": {
@@ -167,6 +179,10 @@
       "openclawProxy": {
         "source": "/api/openclaw/:path*",
         "destination": "/api/media_tech/openclaw/gateway/:path*"
+      },
+      "workspaces": {
+        "source": "/api/workspaces/:path*",
+        "destination": "/api/media_tech/workspaces/:path*"
       },
       "workspacesProxy": {
         "source": "/api/workspaces-proxy/:path*",

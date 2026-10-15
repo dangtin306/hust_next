@@ -45,7 +45,7 @@ export default function WorkflowHomePage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {/* Card: Laravel n8n */}
           <Link
-            href={"/api/hust/workflow/laravel" as any}
+            href={"/api/hust/n8n/laravel" as any}
             className="group relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
