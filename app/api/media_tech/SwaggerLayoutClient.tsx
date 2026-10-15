@@ -29,7 +29,9 @@ export default function SwaggerLayoutClient({
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
-  const isHome = pathname.includes("/home") || pathname.includes("/dashboard");
+  const isHeyGen = pathname.includes("/heygen");
+  const isHome =
+    !isHeyGen && (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
   const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
@@ -38,7 +40,6 @@ export default function SwaggerLayoutClient({
   const isGiteaTest = pathname.includes("/gitea_test");
   const isWorkspace = pathname.includes("/workspace");
   const isChatPublic = pathname.includes("/chat_public");
-  const isHeyGen = pathname.includes("/heygen");
   const isChatTest =
     pathname.includes("/chat_test") ||
     pathname.includes("/chat_bot") ||

@@ -215,8 +215,8 @@
         "destination": "/api/media_tech/chat_public"
       },
       "heygen": {
-        "source": "/api/mt/media/heygen",
-        "destination": "/api/media_tech/heygen"
+        "source": "/api/mt/media/heygen/:path*",
+        "destination": "/api/media_tech/heygen/:path*"
       },
       "openclaw": {
         "source": "/api/mt/openclaw",
