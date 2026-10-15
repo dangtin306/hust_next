@@ -154,6 +154,7 @@ const normalizeSocketTrace = (input: N8nTracePayload): N8nTracePayload => {
 
   return {
     ...payload,
+    event_id: payload.event_id ?? input.event_id,
     stage_node_ids: stageNodeIds,
     stage_edges: Array.isArray(payload.stage_edges)
       ? payload.stage_edges
@@ -568,9 +569,13 @@ type TraceRun = {
   nodeFallbackTimers: Map<string, ReturnType<typeof setTimeout>>;
 };
 
-const EDGE_TRAVEL_MS = 1350;
-const NODE_FALLBACK_MS = 2000;
+const EDGE_TRAVEL_MS = 2400;
+const NODE_FALLBACK_MS = 3200;
 const RESULT_HOLD_MS = 1000;
+const TRACE_RUN_STALE_MS = 30_000;
+const TRACE_EVENT_DEDUPE_MS = 15_000;
+const MAX_SEEN_TRACE_EVENTS = 500;
+const MAX_ACTIVE_TRACE_PARTICLES = 6;
 
 function getTraceStageEdges(trace: N8nTracePayload): N8nStageEdge[] {
   if (Array.isArray(trace.stage_edges) && trace.stage_edges.length > 0) {
@@ -642,7 +647,8 @@ function N8nTraceEdge({
                     <animateMotion
                       path={path}
                       dur={`${EDGE_TRAVEL_MS}ms`}
-                      repeatCount="indefinite"
+                      repeatCount="1"
+                      fill="freeze"
                     />
                   </circle>
                 )
@@ -805,6 +811,7 @@ export const N8nDiagramRenderer = forwardRef<
   const graphEdgesRef = useRef<Edge[]>([]);
   const runsRef = useRef<Map<string, TraceRun>>(new Map());
   const anonymousRunCounterRef = useRef(0);
+  const seenTraceEventsRef = useRef<Map<string, number>>(new Map());
   const socketRef = useRef<Socket | null>(null);
 
   const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -866,7 +873,10 @@ export const N8nDiagramRenderer = forwardRef<
   }, []);
 
   const publishEdgeVisuals = useCallback(() => {
-    setEdgeVisuals([...runsRef.current.values()].flatMap((run) =>
+    const visibleRuns = [...runsRef.current.values()]
+      .filter((run) => run.edgeAnimationActive && run.activeEdgeIds.length > 0)
+      .slice(-MAX_ACTIVE_TRACE_PARTICLES);
+    setEdgeVisuals(visibleRuns.flatMap((run) =>
       run.edgeAnimationActive ? run.activeEdgeIds.map((edgeId) => ({
         edgeId,
         requestKey: run.key,
@@ -925,6 +935,24 @@ export const N8nDiagramRenderer = forwardRef<
   }, [publishEdgeVisuals]);
 
   const animateTrace = useCallback((trace: N8nTracePayload) => {
+    if (trace.event_id) {
+      const now = Date.now();
+      const seen = seenTraceEventsRef.current;
+      for (const [eventId, receivedAt] of seen) {
+        if (now - receivedAt <= TRACE_EVENT_DEDUPE_MS) break;
+        seen.delete(eventId);
+      }
+
+      const dedupeKey = `${trace.event_id}:${trace.phase ?? "event"}`;
+      if (seen.has(dedupeKey)) return;
+      seen.set(dedupeKey, now);
+      while (seen.size > MAX_SEEN_TRACE_EVENTS) {
+        const oldestEventId = seen.keys().next().value;
+        if (oldestEventId === undefined) break;
+        seen.delete(oldestEventId);
+      }
+    }
+
     const stageEdges = getTraceStageEdges(trace);
     const nodeIds = Array.isArray(trace.stage_node_ids) && trace.stage_node_ids.length > 0
       ? trace.stage_node_ids.filter((id): id is string => typeof id === "string")
@@ -945,6 +973,8 @@ export const N8nDiagramRenderer = forwardRef<
       activeEdgeIds: [], activatedNodeIds: [],
       edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
     };
+    // Keep recently updated requests ahead of older ones when the particle cap is reached.
+    runsRef.current.delete(key);
     runsRef.current.set(key, run);
     // Edge playback has its own lifecycle; a final node result must not hide it.
     run.edgeAnimationActive = true;
@@ -1012,6 +1042,13 @@ export const N8nDiagramRenderer = forwardRef<
 
     if (trace.phase === "start") {
       if (firstStep === steps && nodeIds.length > 0) activateNode(run, nodeIds[nodeIds.length - 1], false);
+      // A dropped completion event must not leave a looping trace on the canvas forever.
+      scheduleRunTimer(run, Math.max(TRACE_RUN_STALE_MS, finishDelay + 15_000), () => {
+        stopRunTimers(run);
+        runsRef.current.delete(key);
+        publishEdgeVisuals();
+        publishNodeStatuses();
+      });
       return;
     }
 
