@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Briefcase,
   Layers,
@@ -29,6 +29,8 @@ import {
   ArrowRight,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Eye,
   LayoutGrid,
   List,
@@ -100,33 +102,354 @@ export type PaginationMeta = {
   to: number | null;
 };
 
-function flattenWorkspaceHierarchy(value: unknown): WorkspaceRecord[] {
-  if (!Array.isArray(value)) return [];
+function buildWorkspaceHierarchy(value: unknown): { tree: WorkspaceRecord[]; flat: WorkspaceRecord[] } {
+  if (!Array.isArray(value)) return { tree: [], flat: [] };
 
-  const flattened: WorkspaceRecord[] = [];
+  const hasNestedChildren = value.some(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      "children" in item &&
+      Array.isArray((item as { children?: unknown[] }).children) &&
+      ((item as { children?: unknown[] }).children?.length ?? 0) > 0
+  );
+
+  const flat: WorkspaceRecord[] = [];
   const seenIds = new Set<number>();
 
-  const visit = (value: unknown, hierarchyDepth: number) => {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  if (hasNestedChildren) {
+    const processNode = (node: unknown, depth: number): WorkspaceRecord | null => {
+      if (!node || typeof node !== "object") return null;
+      const rec = node as WorkspaceRecord;
+      if (!Number.isInteger(rec.id)) return null;
+      if (seenIds.has(rec.id)) return null;
+      seenIds.add(rec.id);
 
-    const node = value as WorkspaceRecord;
-    if (!Number.isInteger(node.id) || seenIds.has(node.id)) return;
-    seenIds.add(node.id);
+      const rawChildren = Array.isArray(rec.children) ? rec.children : [];
+      const children: WorkspaceRecord[] = [];
 
-    const children = Array.isArray(node.children) ? node.children : [];
-    const workspace = { ...node };
-    delete workspace.children;
-    flattened.push({
-      ...workspace,
-      hierarchy_depth: hierarchyDepth,
-      children_count: children.length,
-    });
+      for (const rawChild of rawChildren) {
+        const child = processNode(rawChild, depth + 1);
+        if (child) children.push(child);
+      }
 
-    children.forEach((child) => visit(child, hierarchyDepth + 1));
+      const record: WorkspaceRecord = {
+        ...rec,
+        hierarchy_depth: depth,
+        children_count: children.length,
+        children,
+      };
+
+      const flatItem = { ...record };
+      delete flatItem.children;
+      flat.push({ ...flatItem, children_count: children.length });
+
+      return record;
+    };
+
+    const tree: WorkspaceRecord[] = [];
+    for (const item of value) {
+      const root = processNode(item, 0);
+      if (root) tree.push(root);
+    }
+
+    return { tree, flat };
+  } else {
+    // API returned a flat list; group by parent_workspace_code if present
+    const mapByCode = new Map<string, WorkspaceRecord>();
+    const roots: WorkspaceRecord[] = [];
+    const allRecords: WorkspaceRecord[] = [];
+
+    for (const raw of value) {
+      if (!raw || typeof raw !== "object") continue;
+      const rawRec = raw as WorkspaceRecord;
+      if (!Number.isInteger(rawRec.id)) continue;
+      const rec: WorkspaceRecord = {
+        ...rawRec,
+        children: [],
+        children_count: 0,
+        hierarchy_depth: 0,
+      };
+      mapByCode.set(rec.work_space_code, rec);
+      allRecords.push(rec);
+    }
+
+    for (const rec of allRecords) {
+      if (rec.parent_workspace_code && mapByCode.has(rec.parent_workspace_code)) {
+        const parent = mapByCode.get(rec.parent_workspace_code)!;
+        parent.children = parent.children || [];
+        rec.hierarchy_depth = (parent.hierarchy_depth || 0) + 1;
+        parent.children.push(rec);
+        parent.children_count = parent.children.length;
+      } else {
+        roots.push(rec);
+      }
+    }
+
+    for (const rec of allRecords) {
+      const flatItem = { ...rec };
+      delete flatItem.children;
+      flat.push(flatItem);
+    }
+
+    return { tree: roots, flat };
+  }
+}
+
+function flattenWorkspaceHierarchy(value: unknown): WorkspaceRecord[] {
+  return buildWorkspaceHierarchy(value).flat;
+}
+
+function filterWorkspaceTree(
+  nodes: WorkspaceRecord[],
+  searchTerm: string,
+  statusFilter: "all" | "active" | "archived"
+): WorkspaceRecord[] {
+  const term = searchTerm.trim().toLowerCase();
+
+  const filterNode = (node: WorkspaceRecord): WorkspaceRecord | null => {
+    const matchSearchSelf =
+      !term ||
+      (node.workspace_name && node.workspace_name.toLowerCase().includes(term)) ||
+      node.work_space_code.toLowerCase().includes(term) ||
+      node.slug.toLowerCase().includes(term) ||
+      (node.description && node.description.toLowerCase().includes(term));
+
+    const matchStatusSelf = statusFilter === "all" || node.status === statusFilter;
+
+    const filteredChildren: WorkspaceRecord[] = [];
+    if (Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const matchingChild = filterNode(child);
+        if (matchingChild) {
+          filteredChildren.push(matchingChild);
+        }
+      }
+    }
+
+    if ((matchSearchSelf && matchStatusSelf) || filteredChildren.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren,
+        children_count: filteredChildren.length,
+      };
+    }
+
+    return null;
   };
 
-  value.forEach((workspace) => visit(workspace, 0));
-  return flattened;
+  const result: WorkspaceRecord[] = [];
+  for (const node of nodes) {
+    const filtered = filterNode(node);
+    if (filtered) result.push(filtered);
+  }
+  return result;
+}
+
+type WorkspaceCardItemProps = {
+  ws: WorkspaceRecord;
+  isChild?: boolean;
+  onToggleStatus: (ws: WorkspaceRecord) => void;
+  onOpenEdit: (ws: WorkspaceRecord) => void;
+  onDelete: (ws: WorkspaceRecord) => void;
+  onViewSessions: (ws: WorkspaceRecord) => void;
+  onCopy: (key: string, text: string, label?: string) => void;
+  copiedKey: string | null;
+  formatDate: (iso?: string | null) => string;
+};
+
+function WorkspaceCardItem({
+  ws,
+  isChild = false,
+  onToggleStatus,
+  onOpenEdit,
+  onDelete,
+  onViewSessions,
+  onCopy,
+  copiedKey,
+  formatDate,
+}: WorkspaceCardItemProps) {
+  const isActive = ws.status === "active";
+
+  return (
+    <div
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs backdrop-blur-xl transition-all hover:border-purple-200 hover:shadow-md ${
+        isChild || (ws.hierarchy_depth || 0) > 0 ? "border-l-4 border-l-indigo-400 bg-white" : ""
+      }`}
+    >
+      {/* Top Accent Line */}
+      <div
+        className={`absolute top-0 left-0 right-0 h-1.5 ${
+          isActive
+            ? "bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500"
+            : "bg-gradient-to-r from-slate-300 via-slate-400 to-amber-400"
+        }`}
+      />
+
+      <div className="space-y-3.5">
+        {/* Header: Icon, Name & Status Badge */}
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                isChild
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700"
+              } shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200 transition`}
+            >
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3
+                  className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate group-hover:text-purple-700 transition"
+                  title={ws.workspace_name || ws.work_space_code}
+                >
+                  {ws.workspace_name || ws.work_space_code}
+                </h3>
+              </div>
+              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                ID: #{ws.id}
+                {isChild || (ws.hierarchy_depth || 0) > 0 ? (
+                  <span className="ml-2 rounded-full bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
+                    Workspace con
+                  </span>
+                ) : ws.is_selectable === false ? (
+                  <span className="ml-2 rounded-full bg-violet-50 border border-violet-100 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
+                    Nhóm cha · {ws.children_count || ws.children?.length || 0} workspace con
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {/* Status toggle pill */}
+          <button
+            type="button"
+            onClick={() => onToggleStatus(ws)}
+            title="Bấm để đổi trạng thái"
+            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
+            style={{
+              backgroundColor: isActive ? "#ecfdf5" : "#f1f5f9",
+              borderColor: isActive ? "#a7f3d0" : "#cbd5e1",
+              color: isActive ? "#065f46" : "#475569",
+            }}
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{
+                backgroundColor: isActive ? "#10b981" : "#94a3b8",
+              }}
+            />
+            <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
+          </button>
+        </div>
+
+        {/* Code & Slug & Parent Tags */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          <div className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-lg">
+            <span>{ws.work_space_code}</span>
+            <button
+              type="button"
+              onClick={() => onCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
+              className="text-purple-400 hover:text-purple-700 transition ml-0.5 cursor-pointer"
+              title="Sao chép mã code"
+            >
+              {copiedKey === `code-${ws.id}` ? (
+                <Check className="h-3 w-3 text-emerald-600" />
+              ) : (
+                <Copy className="h-3 w-3" />
+              )}
+            </button>
+          </div>
+
+          {ws.parent_workspace_code && (
+            <div
+              className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg"
+              title="Mã workspace cha"
+            >
+              <span className="text-indigo-400">parent:</span>
+              <span className="font-semibold">{ws.parent_workspace_code}</span>
+            </div>
+          )}
+
+          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[200px]">
+            <span className="truncate">slug: {ws.slug}</span>
+            <button
+              type="button"
+              onClick={() => onCopy(`slug-${ws.id}`, ws.slug, "slug")}
+              className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
+              title="Sao chép slug"
+            >
+              {copiedKey === `slug-${ws.id}` ? (
+                <Check className="h-2.5 w-2.5 text-emerald-600" />
+              ) : (
+                <Copy className="h-2.5 w-2.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Description */}
+        <div
+          className="text-xs text-slate-600 leading-relaxed min-h-[38px] line-clamp-2"
+          title={ws.description || ""}
+        >
+          {ws.description || (
+            <span className="text-slate-300 italic">Chưa có mô tả chi tiết cho workspace này.</span>
+          )}
+        </div>
+
+        {/* Sessions Counter Bar */}
+        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 p-2.5 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
+            <Radio className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+            <span>{ws.sessions_count ?? 0} sessions gắn liền</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onViewSessions(ws)}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200/80 rounded-lg px-2 py-1 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+          >
+            <Eye className="h-3 w-3" />
+            <span>Xem phiên</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Footer: Dates & Actions */}
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <div
+          className="flex items-center gap-1 truncate mr-2"
+          title={`Cập nhật: ${formatDate(ws.updated_at)}`}
+        >
+          <Clock className="h-3 w-3 shrink-0" />
+          <span className="truncate">{formatDate(ws.updated_at)}</span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => onOpenEdit(ws)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
+            title="Chỉnh sửa Workspace"
+          >
+            <Edit2 className="h-3 w-3" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(ws)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+            title="Xóa Workspace"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function WorkspaceManagement() {
@@ -138,12 +461,26 @@ export default function WorkspaceManagement() {
 
   // --- Workspaces State (work_space_main) ---
   const [workspaces, setWorkspaces] = useState<WorkspaceRecord[]>([]);
+  const [workspacesTree, setWorkspacesTree] = useState<WorkspaceRecord[]>([]);
+  const [collapsedParentIds, setCollapsedParentIds] = useState<Set<number>>(new Set());
   const [wsMeta, setWsMeta] = useState<PaginationMeta | null>(null);
   const [wsLoading, setWsLoading] = useState<boolean>(true);
   const [wsError, setWsError] = useState<string | null>(null);
   const [wsSearch, setWsSearch] = useState<string>("");
   const [wsStatusFilter, setWsStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [wsPage, setWsPage] = useState(1);
+
+  const toggleCollapseParent = useCallback((id: number) => {
+    setCollapsedParentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
 
   // --- Sessions State (work_space_session) ---
   const [sessions, setSessions] = useState<WorkspaceSessionRecord[]>([]);
@@ -260,7 +597,9 @@ export default function WorkspaceManagement() {
       }
 
       setRawJsonData(json);
-      setWorkspaces(flattenWorkspaceHierarchy(json.data));
+      const { tree: nextTree, flat: nextFlat } = buildWorkspaceHierarchy(json.data);
+      setWorkspacesTree(nextTree);
+      setWorkspaces(nextFlat);
       const nextMeta = json.meta || null;
       setWsMeta(nextMeta);
       if (nextMeta?.last_page && wsPage > nextMeta.last_page) {
@@ -477,7 +816,7 @@ export default function WorkspaceManagement() {
           });
         }
       } else {
-        // Tạo mới: POST /api/hust/workspaces
+        // Tạo mới: POST /api/workspaces
         try {
           res = await fetch("/next/api/hust/workspaces/workspaces", {
             method: "POST",
@@ -601,6 +940,22 @@ export default function WorkspaceManagement() {
 
     return matchSearch && matchStatus;
   });
+
+  const filteredTree = useMemo(() => {
+    return filterWorkspaceTree(workspacesTree, wsSearch, wsStatusFilter);
+  }, [workspacesTree, wsSearch, wsStatusFilter]);
+
+  const parentGroups = useMemo(() => {
+    return filteredTree.filter(
+      (w) => (w.children && w.children.length > 0) || w.is_selectable === false
+    );
+  }, [filteredTree]);
+
+  const standaloneWorkspaces = useMemo(() => {
+    return filteredTree.filter(
+      (w) => (!w.children || w.children.length === 0) && w.is_selectable !== false
+    );
+  }, [filteredTree]);
 
   // --- Statistics strictly from Real Data ---
   const totalWorkspaces = workspaces.length;
@@ -965,36 +1320,38 @@ export default function WorkspaceManagement() {
             </div>
           </div>
 
-          {/* VIEW MODE 1: GRID CARDS (MODERN UI/UX) */}
+          {/* VIEW MODE 1: GRID CARDS (MODERN HIERARCHICAL UI/UX) */}
           {viewMode === "card" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
               {isInitialWorkspaceLoad ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <div
-                    key={`workspace-skeleton-${index}`}
-                    aria-hidden="true"
-                    className="min-h-[260px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-11 w-11 rounded-2xl bg-slate-100" />
-                        <div className="space-y-2">
-                          <div className="h-4 w-36 rounded bg-slate-100" />
-                          <div className="h-3 w-16 rounded bg-slate-100" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={`workspace-skeleton-${index}`}
+                      aria-hidden="true"
+                      className="min-h-[260px] animate-pulse rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-11 w-11 rounded-2xl bg-slate-100" />
+                          <div className="space-y-2">
+                            <div className="h-4 w-36 rounded bg-slate-100" />
+                            <div className="h-3 w-16 rounded bg-slate-100" />
+                          </div>
                         </div>
+                        <div className="h-7 w-20 rounded-full bg-slate-100" />
                       </div>
-                      <div className="h-7 w-20 rounded-full bg-slate-100" />
+                      <div className="mt-6 flex gap-2">
+                        <div className="h-6 w-36 rounded-lg bg-slate-100" />
+                        <div className="h-6 w-24 rounded-lg bg-slate-100" />
+                      </div>
+                      <div className="mt-5 h-3 w-full rounded bg-slate-100" />
+                      <div className="mt-2 h-3 w-3/4 rounded bg-slate-100" />
+                      <div className="mt-8 h-12 rounded-2xl bg-slate-100" />
                     </div>
-                    <div className="mt-6 flex gap-2">
-                      <div className="h-6 w-36 rounded-lg bg-slate-100" />
-                      <div className="h-6 w-24 rounded-lg bg-slate-100" />
-                    </div>
-                    <div className="mt-5 h-3 w-full rounded bg-slate-100" />
-                    <div className="mt-2 h-3 w-3/4 rounded bg-slate-100" />
-                    <div className="mt-8 h-12 rounded-2xl bg-slate-100" />
-                  </div>
-                ))
-              ) : filteredWorkspaces.length === 0 ? (
+                  ))}
+                </div>
+              ) : filteredTree.length === 0 ? (
                 <div className="col-span-full rounded-3xl border border-white/80 bg-white/95 p-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto">
                     <Briefcase className="h-10 w-10 text-slate-300" />
@@ -1019,172 +1376,260 @@ export default function WorkspaceManagement() {
                   </div>
                 </div>
               ) : (
-                filteredWorkspaces.map((ws) => {
-                  const isActive = ws.status === "active";
+                <div className="space-y-6">
+                  {/* Nhóm Workspace cha và các con */}
+                  {parentGroups.map((parentWs) => {
+                    const isCollapsed = collapsedParentIds.has(parentWs.id);
+                    const isActive = parentWs.status === "active";
+                    const hasChildren = parentWs.children && parentWs.children.length > 0;
+                    const childCount = parentWs.children ? parentWs.children.length : (parentWs.children_count || 0);
 
-                  return (
-                    <div
-                      key={ws.id}
-                      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs backdrop-blur-xl transition-all hover:border-purple-200 hover:shadow-md ${
-                        (ws.hierarchy_depth || 0) > 0 ? "border-l-4 border-l-indigo-300 bg-indigo-50/30" : ""
-                      }`}
-                    >
-                      {/* Top Accent Line */}
+                    return (
                       <div
-                        className={`absolute top-0 left-0 right-0 h-1.5 ${
-                          isActive
-                            ? "bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500"
-                            : "bg-gradient-to-r from-slate-300 via-slate-400 to-amber-400"
-                        }`}
-                      />
+                        key={parentWs.id}
+                        className="overflow-hidden rounded-3xl border border-indigo-200/90 bg-white/95 shadow-sm backdrop-blur-xl transition-all hover:border-indigo-300 hover:shadow-md"
+                      >
+                        {/* Top Accent Gradient Line */}
+                        <div
+                          className={`h-2 ${
+                            isActive
+                              ? "bg-gradient-to-r from-purple-500 via-indigo-600 to-blue-500"
+                              : "bg-gradient-to-r from-slate-300 via-slate-400 to-amber-400"
+                          }`}
+                        />
 
-                      <div className="space-y-3.5">
-                        {/* Header: Icon, Name & Status Badge */}
-                        <div className="flex items-start justify-between gap-3 pt-1">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700 shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200 transition">
-                              <Briefcase className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate group-hover:text-purple-700 transition" title={ws.workspace_name || ws.work_space_code}>
-                                  {ws.workspace_name || ws.work_space_code}
-                                </h3>
+                        {/* Thông tin Workspace Mẹ (Header Panel) */}
+                        <div className="p-5 sm:p-6 bg-gradient-to-b from-indigo-50/50 via-white to-white">
+                          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            {/* Left: Info */}
+                            <div className="space-y-3 flex-1 min-w-0">
+                              <div className="flex items-start gap-3.5">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/20">
+                                  <Briefcase className="h-6 w-6" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3
+                                      className="font-bold text-slate-900 text-base sm:text-lg leading-tight truncate hover:text-purple-700 transition"
+                                      title={parentWs.workspace_name || parentWs.work_space_code}
+                                    >
+                                      {parentWs.workspace_name || parentWs.work_space_code}
+                                    </h3>
+                                    <span className="font-mono text-xs text-slate-400 font-bold">
+                                      #{parentWs.id}
+                                    </span>
+                                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 font-sans text-[11px] font-bold text-violet-800 border border-violet-200">
+                                      Nhóm cha · {childCount} workspace con
+                                    </span>
+                                  </div>
+
+                                  {/* Tags */}
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                    <div className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-lg">
+                                      <span>{parentWs.work_space_code}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`code-${parentWs.id}`, parentWs.work_space_code, "mã code")}
+                                        className="text-purple-400 hover:text-purple-700 transition ml-0.5 cursor-pointer"
+                                        title="Sao chép mã code"
+                                      >
+                                        {copiedKey === `code-${parentWs.id}` ? (
+                                          <Check className="h-3 w-3 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    {parentWs.parent_workspace_code && (
+                                      <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg" title="Mã workspace cha">
+                                        <span className="text-indigo-400">parent:</span>
+                                        <span className="font-semibold">{parentWs.parent_workspace_code}</span>
+                                      </div>
+                                    )}
+
+                                    <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[200px]">
+                                      <span className="truncate">slug: {parentWs.slug}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`slug-${parentWs.id}`, parentWs.slug, "slug")}
+                                        className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
+                                        title="Sao chép slug"
+                                      >
+                                        {copiedKey === `slug-${parentWs.id}` ? (
+                                          <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-2.5 w-2.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                ID: #{ws.id}
-                                {(ws.hierarchy_depth || 0) > 0 ? (
-                                  <span className="ml-2 rounded-full bg-indigo-50 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
-                                    Workspace con
-                                  </span>
-                                ) : ws.is_selectable === false ? (
-                                  <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
-                                    Nhóm cha · {ws.children_count || 0} workspace con
-                                  </span>
-                                ) : null}
+
+                              {/* Description */}
+                              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pl-1">
+                                {parentWs.description || (
+                                  <span className="text-slate-300 italic">Chưa có mô tả chi tiết cho workspace mẹ này.</span>
+                                )}
+                              </p>
+                            </div>
+
+                            {/* Right: Actions, Sessions, Status */}
+                            <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end justify-between gap-3 shrink-0 pt-2 border-t lg:border-t-0 border-indigo-100/60 lg:pt-0">
+                              <div className="flex items-center gap-2">
+                                {/* Status toggle */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStatus(parentWs)}
+                                  title="Bấm để đổi trạng thái"
+                                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
+                                  style={{
+                                    backgroundColor: isActive ? "#ecfdf5" : "#f1f5f9",
+                                    borderColor: isActive ? "#a7f3d0" : "#cbd5e1",
+                                    color: isActive ? "#065f46" : "#475569",
+                                  }}
+                                >
+                                  <span
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: isActive ? "#10b981" : "#94a3b8" }}
+                                  />
+                                  <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
+                                </button>
+
+                                {/* Edit */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditModal(parentWs)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
+                                  title="Chỉnh sửa Workspace mẹ"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+
+                                {/* Delete */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteWorkspace(parentWs)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                                  title="Xóa Workspace mẹ"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Sessions count */}
+                              <div className="flex items-center gap-2">
+                                <div className="rounded-xl border border-indigo-100 bg-indigo-50/80 px-2.5 py-1 text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
+                                  <Radio className="h-3.5 w-3.5 text-indigo-600" />
+                                  <span>{parentWs.sessions_count ?? 0} sessions</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => fetchSpecificWorkspaceSessions(parentWs)}
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200/80 rounded-xl px-2.5 py-1 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  <span>Xem phiên</span>
+                                </button>
+                              </div>
+
+                              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-slate-300" />
+                                <span>Cập nhật: {formatDate(parentWs.updated_at)}</span>
                               </div>
                             </div>
                           </div>
-
-                          {/* Status toggle pill */}
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(ws)}
-                            title="Bấm để đổi trạng thái"
-                            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
-                            style={{
-                              backgroundColor: isActive ? "#ecfdf5" : "#f1f5f9",
-                              borderColor: isActive ? "#a7f3d0" : "#cbd5e1",
-                              color: isActive ? "#065f46" : "#475569",
-                            }}
-                          >
-                            <span
-                              className="h-2 w-2 rounded-full"
-                              style={{
-                                backgroundColor: isActive ? "#10b981" : "#94a3b8",
-                              }}
-                            />
-                            <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
-                          </button>
                         </div>
 
-                        {/* Code & Slug & Parent Tags */}
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          <div className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-lg">
-                            <span>{ws.work_space_code}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
-                              className="text-purple-400 hover:text-purple-700 transition ml-0.5 cursor-pointer"
-                              title="Sao chép mã code"
-                            >
-                              {copiedKey === `code-${ws.id}` ? (
-                                <Check className="h-3 w-3 text-emerald-600" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </button>
-                          </div>
+                        {/* Phân hệ Workspace Con trực thuộc */}
+                        {hasChildren ? (
+                          <div className="border-t border-indigo-100 bg-slate-50/60 p-4 sm:p-5">
+                            <div className="flex items-center justify-between mb-3.5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                                  <Layers className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                                  Các Workspace con trực thuộc ({parentWs.children!.length})
+                                </span>
+                              </div>
 
-                          {ws.parent_workspace_code && (
-                            <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg" title="Mã workspace cha">
-                              <span className="text-indigo-400">parent:</span>
-                              <span className="font-semibold">{ws.parent_workspace_code}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleCollapseParent(parentWs.id)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200/80 px-3 py-1 rounded-xl transition cursor-pointer"
+                              >
+                                {isCollapsed ? (
+                                  <>
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                    <span>Mở rộng ({parentWs.children!.length})</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                    <span>Thu gọn ({parentWs.children!.length})</span>
+                                  </>
+                                )}
+                              </button>
                             </div>
-                          )}
 
-                          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[200px]">
-                            <span className="truncate">slug: {ws.slug}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(`slug-${ws.id}`, ws.slug, "slug")}
-                              className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
-                              title="Sao chép slug"
-                            >
-                              {copiedKey === `slug-${ws.id}` ? (
-                                <Check className="h-2.5 w-2.5 text-emerald-600" />
-                              ) : (
-                                <Copy className="h-2.5 w-2.5" />
-                              )}
-                            </button>
+                            {!isCollapsed && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {parentWs.children!.map((childWs) => (
+                                  <WorkspaceCardItem
+                                    key={childWs.id}
+                                    ws={childWs}
+                                    isChild
+                                    onToggleStatus={handleToggleStatus}
+                                    onOpenEdit={handleOpenEditModal}
+                                    onDelete={handleDeleteWorkspace}
+                                    onViewSessions={fetchSpecificWorkspaceSessions}
+                                    onCopy={handleCopy}
+                                    copiedKey={copiedKey}
+                                    formatDate={formatDate}
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
-
-                        {/* Description */}
-                        <div className="text-xs text-slate-600 leading-relaxed min-h-[38px] line-clamp-2" title={ws.description || ""}>
-                          {ws.description || (
-                            <span className="text-slate-300 italic">Chưa có mô tả chi tiết cho workspace này.</span>
-                          )}
-                        </div>
-
-                        {/* Sessions Counter Bar */}
-                        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 p-2.5 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
-                            <Radio className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                            <span>{ws.sessions_count ?? 0} sessions gắn liền</span>
+                        ) : (
+                          <div className="border-t border-indigo-100/60 bg-slate-50/40 px-5 py-3 text-xs text-slate-400 italic">
+                            Chưa có workspace con nào trực thuộc nhóm cha này.
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => fetchSpecificWorkspaceSessions(ws)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200/80 rounded-lg px-2 py-1 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
-                          >
-                            <Eye className="h-3 w-3" />
-                            <span>Xem phiên</span>
-                          </button>
-                        </div>
+                        )}
                       </div>
+                    );
+                  })}
 
-                      {/* Footer: Dates & Actions */}
-                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                        <div className="flex items-center gap-1 truncate mr-2" title={`Cập nhật: ${formatDate(ws.updated_at)}`}>
-                          <Clock className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{formatDate(ws.updated_at)}</span>
+                  {/* Danh sách Workspace độc lập (không có nhóm cha / con) */}
+                  {standaloneWorkspaces.length > 0 && (
+                    <div className="space-y-3">
+                      {parentGroups.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">
+                          <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                          <span>Workspace độc lập ({standaloneWorkspaces.length})</span>
                         </div>
-
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(ws)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
-                            title="Chỉnh sửa Workspace"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteWorkspace(ws)}
-                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
-                            title="Xóa Workspace"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {standaloneWorkspaces.map((ws) => (
+                          <WorkspaceCardItem
+                            key={ws.id}
+                            ws={ws}
+                            isChild={false}
+                            onToggleStatus={handleToggleStatus}
+                            onOpenEdit={handleOpenEditModal}
+                            onDelete={handleDeleteWorkspace}
+                            onViewSessions={fetchSpecificWorkspaceSessions}
+                            onCopy={handleCopy}
+                            copiedKey={copiedKey}
+                            formatDate={formatDate}
+                          />
+                        ))}
                       </div>
                     </div>
-                  );
-                })
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1216,7 +1661,7 @@ export default function WorkspaceManagement() {
                           ))}
                         </tr>
                       ))
-                    ) : filteredWorkspaces.length === 0 ? (
+                    ) : filteredTree.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-12 text-center text-slate-400">
                           <div className="flex flex-col items-center justify-center space-y-2">
@@ -1231,177 +1676,359 @@ export default function WorkspaceManagement() {
                         </td>
                       </tr>
                     ) : (
-                      filteredWorkspaces.map((ws) => (
-                        <tr key={ws.id} className="group transition-colors hover:bg-purple-50/30">
-                          {/* ID & Name */}
-                          <td className="py-4 px-4 sm:px-6">
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700 shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200">
-                                <Briefcase className="h-4 w-4" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-purple-700">
-                                  <span>{ws.workspace_name || ws.work_space_code}</span>
-                                  <span className="font-mono text-[10px] text-slate-400">#{ws.id}</span>
-                                </div>
-                                <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                  ID: {ws.id}
-                                  {(ws.hierarchy_depth || 0) > 0 ? (
-                                    <span className="ml-2 rounded-full bg-indigo-50 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
-                                      Workspace con
-                                    </span>
-                                  ) : ws.is_selectable === false ? (
-                                    <span className="ml-2 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
-                                      Nhóm cha · {ws.children_count || 0} con
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
+                      filteredTree.map((rootWs) => {
+                        const hasChildren = rootWs.children && rootWs.children.length > 0;
+                        const isCollapsed = collapsedParentIds.has(rootWs.id);
 
-                          {/* Code & Slug */}
-                          <td className="py-4 px-4">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-md">
-                                  {ws.work_space_code}
-                                </span>
+                        return (
+                          <React.Fragment key={rootWs.id}>
+                            {/* Row Cha / Độc lập */}
+                            <tr className="group transition-colors hover:bg-purple-50/30">
+                              {/* ID & Name */}
+                              <td className="py-4 px-4 sm:px-6">
+                                <div className="flex items-start gap-2.5">
+                                  {hasChildren ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleCollapseParent(rootWs.id)}
+                                      className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-indigo-200 bg-white text-indigo-700 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+                                      title={isCollapsed ? "Mở rộng danh sách con" : "Thu gọn danh sách con"}
+                                    >
+                                      {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    </button>
+                                  ) : (
+                                    <div className="w-1" />
+                                  )}
+                                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700 shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200">
+                                    <Briefcase className="h-4 w-4" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-purple-700">
+                                      <span>{rootWs.workspace_name || rootWs.work_space_code}</span>
+                                      <span className="font-mono text-[10px] text-slate-400">#{rootWs.id}</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                      ID: {rootWs.id}
+                                      {hasChildren || rootWs.is_selectable === false ? (
+                                        <span className="ml-2 rounded-full bg-violet-50 border border-violet-100 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
+                                          Nhóm cha · {rootWs.children_count || rootWs.children?.length || 0} con
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Code & Slug */}
+                              <td className="py-4 px-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-md">
+                                      {rootWs.work_space_code}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopy(`code-${rootWs.id}`, rootWs.work_space_code, "mã code")}
+                                      className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
+                                      title="Sao chép mã code"
+                                    >
+                                      {copiedKey === `code-${rootWs.id}` ? (
+                                        <Check className="h-3 w-3 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="h-3 w-3" />
+                                      )}
+                                    </button>
+                                  </div>
+                                  {rootWs.parent_workspace_code && (
+                                    <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-md inline-block">
+                                      <span className="text-indigo-400">parent: </span>
+                                      <span className="font-semibold">{rootWs.parent_workspace_code}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+                                    <span>slug: {rootWs.slug}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopy(`slug-${rootWs.id}`, rootWs.slug, "slug")}
+                                      className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
+                                      title="Sao chép slug"
+                                    >
+                                      {copiedKey === `slug-${rootWs.id}` ? (
+                                        <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="h-2.5 w-2.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Sessions */}
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => fetchSpecificWorkspaceSessions(rootWs)}
+                                    className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-900 cursor-pointer"
+                                    title="Xem danh sách session thuộc workspace này"
+                                  >
+                                    <Radio className="h-3 w-3 text-indigo-500" />
+                                    <span>{rootWs.sessions_count ?? 0} sessions</span>
+                                    <Eye className="h-3 w-3 ml-0.5 opacity-60" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => filterSessionsByWorkspace(rootWs.id)}
+                                    className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition cursor-pointer"
+                                    title="Chuyển sang tab Sessions và lọc theo workspace này"
+                                  >
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* Description */}
+                              <td className="py-4 px-4 max-w-xs">
+                                {rootWs.description ? (
+                                  <p className="text-slate-600 text-xs line-clamp-2" title={rootWs.description}>
+                                    {rootWs.description}
+                                  </p>
+                                ) : (
+                                  <span className="text-slate-300 italic text-xs">Chưa có mô tả</span>
+                                )}
+                              </td>
+
+                              {/* Status */}
+                              <td className="py-4 px-4">
                                 <button
                                   type="button"
-                                  onClick={() => handleCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
-                                  className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
-                                  title="Sao chép mã code"
+                                  onClick={() => handleToggleStatus(rootWs)}
+                                  title="Bấm để đổi trạng thái"
+                                  className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition hover:shadow-xs active:scale-95 cursor-pointer"
+                                  style={{
+                                    backgroundColor: rootWs.status === "active" ? "#ecfdf5" : "#f1f5f9",
+                                    borderColor: rootWs.status === "active" ? "#a7f3d0" : "#cbd5e1",
+                                    color: rootWs.status === "active" ? "#065f46" : "#475569",
+                                  }}
                                 >
-                                  {copiedKey === `code-${ws.id}` ? (
-                                    <Check className="h-3 w-3 text-emerald-600" />
-                                  ) : (
-                                    <Copy className="h-3 w-3" />
-                                  )}
+                                  <span
+                                    className="h-2 w-2 rounded-full"
+                                    style={{
+                                      backgroundColor: rootWs.status === "active" ? "#10b981" : "#94a3b8",
+                                    }}
+                                  />
+                                  <span className="capitalize">
+                                    {rootWs.status === "active" ? "Hoạt động" : "Lưu trữ"}
+                                  </span>
                                 </button>
-                              </div>
-                              {ws.parent_workspace_code && (
-                                <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-md inline-block">
-                                  <span className="text-indigo-400">parent: </span>
-                                  <span className="font-semibold">{ws.parent_workspace_code}</span>
+                              </td>
+
+                              {/* Timestamps */}
+                              <td className="py-4 px-4">
+                                <div className="space-y-0.5 text-[11px] text-slate-500">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3 text-slate-400" />
+                                    <span>Sửa: {formatDate(rootWs.updated_at)}</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400">
+                                    Tạo: {formatDate(rootWs.created_at)}
+                                  </div>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
-                                <span>slug: {ws.slug}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopy(`slug-${ws.id}`, ws.slug, "slug")}
-                                  className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
-                                  title="Sao chép slug"
-                                >
-                                  {copiedKey === `slug-${ws.id}` ? (
-                                    <Check className="h-2.5 w-2.5 text-emerald-600" />
+                              </td>
+
+                              {/* Actions */}
+                              <td className="py-4 px-4 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditModal(rootWs)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 cursor-pointer"
+                                    title="Chỉnh sửa Workspace"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteWorkspace(rootWs)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                                    title="Xóa Workspace"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+
+                            {/* Rows Con nếu có và chưa bị collapse */}
+                            {hasChildren && !isCollapsed && rootWs.children!.map((childWs) => (
+                              <tr key={childWs.id} className="group transition-colors bg-indigo-50/20 hover:bg-indigo-50/50">
+                                {/* ID & Name with indent */}
+                                <td className="py-3.5 px-4 sm:px-6">
+                                  <div className="flex items-start gap-2 pl-6 sm:pl-10">
+                                    <span className="font-mono text-indigo-400 font-bold select-none mt-1.5 text-xs">
+                                      └─
+                                    </span>
+                                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 shadow-2xs">
+                                      <Briefcase className="h-3.5 w-3.5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-purple-700">
+                                        <span>{childWs.workspace_name || childWs.work_space_code}</span>
+                                        <span className="font-mono text-[10px] text-slate-400">#{childWs.id}</span>
+                                      </div>
+                                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                        ID: {childWs.id}
+                                        <span className="ml-2 rounded-full bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
+                                          Workspace con
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Code & Slug */}
+                                <td className="py-3.5 px-4">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-mono text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-md">
+                                        {childWs.work_space_code}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`code-${childWs.id}`, childWs.work_space_code, "mã code")}
+                                        className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
+                                        title="Sao chép mã code"
+                                      >
+                                        {copiedKey === `code-${childWs.id}` ? (
+                                          <Check className="h-3 w-3 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                    {childWs.parent_workspace_code && (
+                                      <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-md inline-block">
+                                        <span className="text-indigo-400">parent: </span>
+                                        <span className="font-semibold">{childWs.parent_workspace_code}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+                                      <span>slug: {childWs.slug}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`slug-${childWs.id}`, childWs.slug, "slug")}
+                                        className="text-slate-400 hover:text-purple-600 transition cursor-pointer"
+                                        title="Sao chép slug"
+                                      >
+                                        {copiedKey === `slug-${childWs.id}` ? (
+                                          <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-2.5 w-2.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Sessions */}
+                                <td className="py-3.5 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => fetchSpecificWorkspaceSessions(childWs)}
+                                      className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-900 cursor-pointer"
+                                      title="Xem danh sách session thuộc workspace con này"
+                                    >
+                                      <Radio className="h-3 w-3 text-indigo-500" />
+                                      <span>{childWs.sessions_count ?? 0} sessions</span>
+                                      <Eye className="h-3 w-3 ml-0.5 opacity-60" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => filterSessionsByWorkspace(childWs.id)}
+                                      className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition cursor-pointer"
+                                      title="Chuyển sang tab Sessions và lọc theo workspace này"
+                                    >
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+
+                                {/* Description */}
+                                <td className="py-3.5 px-4 max-w-xs">
+                                  {childWs.description ? (
+                                    <p className="text-slate-600 text-xs line-clamp-2" title={childWs.description}>
+                                      {childWs.description}
+                                    </p>
                                   ) : (
-                                    <Copy className="h-2.5 w-2.5" />
+                                    <span className="text-slate-300 italic text-xs">Chưa có mô tả</span>
                                   )}
-                                </button>
-                              </div>
-                            </div>
-                          </td>
+                                </td>
 
-                          {/* Sessions Count & Quick Preview */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => fetchSpecificWorkspaceSessions(ws)}
-                                className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-900 cursor-pointer"
-                                title="Xem danh sách session thuộc workspace này"
-                              >
-                                <Radio className="h-3 w-3 text-indigo-500" />
-                                <span>{ws.sessions_count ?? 0} sessions</span>
-                                <Eye className="h-3 w-3 ml-0.5 opacity-60" />
-                              </button>
+                                {/* Status */}
+                                <td className="py-3.5 px-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleStatus(childWs)}
+                                    title="Bấm để đổi trạng thái"
+                                    className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition hover:shadow-xs active:scale-95 cursor-pointer"
+                                    style={{
+                                      backgroundColor: childWs.status === "active" ? "#ecfdf5" : "#f1f5f9",
+                                      borderColor: childWs.status === "active" ? "#a7f3d0" : "#cbd5e1",
+                                      color: childWs.status === "active" ? "#065f46" : "#475569",
+                                    }}
+                                  >
+                                    <span
+                                      className="h-2 w-2 rounded-full"
+                                      style={{
+                                        backgroundColor: childWs.status === "active" ? "#10b981" : "#94a3b8",
+                                      }}
+                                    />
+                                    <span className="capitalize">
+                                      {childWs.status === "active" ? "Hoạt động" : "Lưu trữ"}
+                                    </span>
+                                  </button>
+                                </td>
 
-                              <button
-                                type="button"
-                                onClick={() => filterSessionsByWorkspace(ws.id)}
-                                className="text-slate-400 hover:text-indigo-600 p-1 rounded-md hover:bg-slate-100 transition cursor-pointer"
-                                title="Chuyển sang tab Sessions và lọc theo workspace này"
-                              >
-                                <ArrowRight className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
+                                {/* Timestamps */}
+                                <td className="py-3.5 px-4">
+                                  <div className="space-y-0.5 text-[11px] text-slate-500">
+                                    <div className="flex items-center gap-1">
+                                      <Clock className="h-3 w-3 text-slate-400" />
+                                      <span>Sửa: {formatDate(childWs.updated_at)}</span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      Tạo: {formatDate(childWs.created_at)}
+                                    </div>
+                                  </div>
+                                </td>
 
-                          {/* Description */}
-                          <td className="py-4 px-4 max-w-xs">
-                            {ws.description ? (
-                              <p className="text-slate-600 text-xs line-clamp-2" title={ws.description}>
-                                {ws.description}
-                              </p>
-                            ) : (
-                              <span className="text-slate-300 italic text-xs">Chưa có mô tả</span>
-                            )}
-                          </td>
-
-                          {/* Status */}
-                          <td className="py-4 px-4">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleStatus(ws)}
-                              title="Bấm để đổi trạng thái"
-                              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold transition hover:shadow-xs active:scale-95 cursor-pointer"
-                              style={{
-                                backgroundColor: ws.status === "active" ? "#ecfdf5" : "#f1f5f9",
-                                borderColor: ws.status === "active" ? "#a7f3d0" : "#cbd5e1",
-                                color: ws.status === "active" ? "#065f46" : "#475569",
-                              }}
-                            >
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={{
-                                  backgroundColor: ws.status === "active" ? "#10b981" : "#94a3b8",
-                                }}
-                              />
-                              <span className="capitalize">
-                                {ws.status === "active" ? "Hoạt động" : "Lưu trữ"}
-                              </span>
-                            </button>
-                          </td>
-
-                          {/* Timestamps */}
-                          <td className="py-4 px-4">
-                            <div className="space-y-0.5 text-[11px] text-slate-500">
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-slate-400" />
-                                <span>Sửa: {formatDate(ws.updated_at)}</span>
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                Tạo: {formatDate(ws.created_at)}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-4 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => handleOpenEditModal(ws)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 cursor-pointer"
-                                title="Chỉnh sửa Workspace"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteWorkspace(ws)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-                                title="Xóa Workspace"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                                {/* Actions */}
+                                <td className="py-3.5 px-4 text-center">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditModal(childWs)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 cursor-pointer"
+                                      title="Chỉnh sửa Workspace con"
+                                    >
+                                      <Edit2 className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteWorkspace(childWs)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                                      title="Xóa Workspace con"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
