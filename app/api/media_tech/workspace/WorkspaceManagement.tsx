@@ -273,184 +273,143 @@ function WorkspaceCardItem({
 
   return (
     <div
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xs backdrop-blur-xl transition-all hover:border-purple-200 hover:shadow-md ${
-        isChild || (ws.hierarchy_depth || 0) > 0 ? "border-l-4 border-l-indigo-400 bg-white" : ""
+      className={`group relative flex flex-col justify-between rounded-2xl border bg-white p-4 shadow-xs transition-all duration-200 hover:shadow-md ${
+        isChild || (ws.hierarchy_depth || 0) > 0
+          ? "border-slate-200/90 border-l-4 border-l-indigo-500 hover:border-indigo-300 hover:border-l-indigo-600"
+          : "border-slate-200/90 hover:border-purple-300"
       }`}
     >
-      {/* Top Accent Line */}
-      <div
-        className={`absolute top-0 left-0 right-0 h-1.5 ${
-          isActive
-            ? "bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500"
-            : "bg-gradient-to-r from-slate-300 via-slate-400 to-amber-400"
-        }`}
-      />
-
-      <div className="space-y-3.5">
-        {/* Header: Icon, Name & Status Badge */}
-        <div className="flex items-start justify-between gap-3 pt-1">
-          <div className="flex items-center gap-3 min-w-0">
+      <div className="space-y-2.5">
+        {/* Header: Icon + Title & Identifiers + Status Badge */}
+        <div className="flex items-start justify-between gap-2.5">
+          <div className="flex items-start gap-2.5 min-w-0 flex-1">
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl mt-0.5 ${
                 isChild
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-gradient-to-tr from-purple-100 to-indigo-100 text-purple-700"
-              } shadow-2xs group-hover:from-purple-200 group-hover:to-indigo-200 transition`}
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-100/90"
+                  : "bg-purple-50 text-purple-700 border border-purple-100/90"
+              } transition-transform group-hover:scale-105`}
             >
-              <Briefcase className="h-5 w-5" />
+              <Briefcase className="h-4 w-4" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h3
-                  className="font-bold text-slate-900 text-sm sm:text-base leading-tight truncate group-hover:text-purple-700 transition"
-                  title={ws.workspace_name || ws.work_space_code}
-                >
-                  {ws.workspace_name || ws.work_space_code}
-                </h3>
-              </div>
-              <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                ID: #{ws.id}
-                {isChild || (ws.hierarchy_depth || 0) > 0 ? (
-                  <span className="ml-2 rounded-full bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 font-sans font-semibold text-indigo-700">
-                    Workspace con
+
+            <div className="min-w-0 flex-1">
+              <h3
+                className="font-bold text-slate-900 text-sm leading-snug line-clamp-1 group-hover:text-indigo-600 transition"
+                title={ws.workspace_name || ws.work_space_code}
+              >
+                {ws.workspace_name || ws.work_space_code}
+              </h3>
+
+              {/* Sub-identifiers: ID badge & Code with copy & Agent */}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200/80 px-1.5 py-0.2 rounded-md">
+                  ID: {ws.id}
+                </span>
+
+                <div className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-purple-900 bg-purple-50/90 border border-purple-200/80 px-1.5 py-0.2 rounded-md">
+                  <span className="truncate max-w-[150px]">{ws.work_space_code}</span>
+                  <button
+                    type="button"
+                    onClick={() => onCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
+                    className="text-purple-400 hover:text-purple-700 transition cursor-pointer shrink-0"
+                    title="Sao chép mã code"
+                  >
+                    {copiedKey === `code-${ws.id}` ? (
+                      <Check className="h-2.5 w-2.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-2.5 w-2.5" />
+                    )}
+                  </button>
+                </div>
+
+                {ws.agent_code && (
+                  <span
+                    className="font-mono text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200/80 px-1.5 py-0.2 rounded-md"
+                    title="Mã Agent"
+                  >
+                    agent: {ws.agent_code}
                   </span>
-                ) : ws.is_selectable === false ? (
-                  <span className="ml-2 rounded-full bg-violet-50 border border-violet-100 px-1.5 py-0.5 font-sans font-semibold text-violet-700">
-                    Nhóm cha · {ws.children_count || ws.children?.length || 0} workspace con
-                  </span>
-                ) : null}
+                )}
               </div>
             </div>
           </div>
 
-          {/* Status toggle pill */}
+          {/* Status Toggle Pill */}
           <button
             type="button"
             onClick={() => onToggleStatus(ws)}
             title="Bấm để đổi trạng thái"
-            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold transition hover:shadow-xs active:scale-95 cursor-pointer shrink-0"
-            style={{
-              backgroundColor: isActive ? "#ecfdf5" : "#f1f5f9",
-              borderColor: isActive ? "#a7f3d0" : "#cbd5e1",
-              color: isActive ? "#065f46" : "#475569",
-            }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium transition cursor-pointer shrink-0 border mt-0.5 ${
+              isActive
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100"
+                : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+            }`}
           >
-            <span
-              className="h-2 w-2 rounded-full"
-              style={{
-                backgroundColor: isActive ? "#10b981" : "#94a3b8",
-              }}
-            />
+            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-slate-400"}`} />
             <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
           </button>
         </div>
 
-        {/* Code & Slug & Parent Tags */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          <div className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-purple-900 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-lg">
-            <span>{ws.work_space_code}</span>
-            <button
-              type="button"
-              onClick={() => onCopy(`code-${ws.id}`, ws.work_space_code, "mã code")}
-              className="text-purple-400 hover:text-purple-700 transition ml-0.5 cursor-pointer"
-              title="Sao chép mã code"
-            >
-              {copiedKey === `code-${ws.id}` ? (
-                <Check className="h-3 w-3 text-emerald-600" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-            </button>
-          </div>
-
-          {ws.parent_workspace_code && (
-            <div
-              className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg"
-              title="Mã workspace cha"
-            >
-              <span className="text-indigo-400">parent:</span>
-              <span className="font-semibold">{ws.parent_workspace_code}</span>
-            </div>
-          )}
-
-          <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[200px]">
-            <span className="truncate">slug: {ws.slug}</span>
-            <button
-              type="button"
-              onClick={() => onCopy(`slug-${ws.id}`, ws.slug, "slug")}
-              className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
-              title="Sao chép slug"
-            >
-              {copiedKey === `slug-${ws.id}` ? (
-                <Check className="h-2.5 w-2.5 text-emerald-600" />
-              ) : (
-                <Copy className="h-2.5 w-2.5" />
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* Description */}
-        <div
-          className="text-xs text-slate-600 leading-relaxed min-h-[38px] line-clamp-2"
+        <p
+          className="text-xs text-slate-600 leading-relaxed line-clamp-2 min-h-[34px] pl-0.5"
           title={ws.description || ""}
         >
           {ws.description || (
-            <span className="text-slate-300 italic">Chưa có mô tả chi tiết cho workspace này.</span>
+            <span className="text-slate-300 italic">Chưa có mô tả cho workspace này.</span>
           )}
-        </div>
+        </p>
+      </div>
 
-        {/* Sessions Counter Bar */}
-        <div className="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/70 to-purple-50/40 p-2.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 font-semibold text-indigo-900">
-            <Radio className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-            <span>{ws.sessions_count ?? 0} sessions gắn liền</span>
-          </div>
-
+      {/* Footer: Sessions Clickable Pill + Date on Left | Actions on Right */}
+      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={() => onViewSessions(ws)}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white border border-indigo-200/80 rounded-lg px-2 py-1 shadow-2xs hover:bg-indigo-50 transition cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg border border-indigo-100 bg-indigo-50/70 px-2 py-0.5 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100 transition cursor-pointer shrink-0"
+            title="Xem danh sách phiên của workspace này"
           >
-            <Eye className="h-3 w-3" />
-            <span>Xem phiên</span>
+            <Radio className="h-3 w-3 text-indigo-500" />
+            <span>{ws.sessions_count ?? 0} sessions</span>
+            <Eye className="h-2.5 w-2.5 text-indigo-400 ml-0.5" />
           </button>
-        </div>
-      </div>
 
-      {/* Footer: Dates & Actions */}
-      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <div
-          className="flex items-center gap-1 truncate mr-2"
-          title={`Cập nhật: ${formatDate(ws.updated_at)}`}
-        >
-          <Clock className="h-3 w-3 shrink-0" />
-          <span className="truncate">{formatDate(ws.updated_at)}</span>
+          {/* Date: subtle, clean, refined */}
+          <div
+            className="flex items-center gap-1 text-[11px] font-normal text-slate-400 truncate"
+            title={`Cập nhật: ${formatDate(ws.updated_at)}`}
+          >
+            <Clock className="h-3 w-3 text-slate-300 shrink-0" />
+            <span>{formatDate(ws.updated_at).split(" ")[1] || formatDate(ws.updated_at)}</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => onOpenEdit(ws)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
+            className="flex h-7.5 w-7.5 items-center justify-center rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition cursor-pointer shadow-2xs active:scale-95"
             title="Chỉnh sửa Workspace"
           >
-            <Edit2 className="h-3 w-3" />
+            <Edit2 className="h-3.5 w-3.5" />
           </button>
 
           <button
             type="button"
             onClick={() => onDelete(ws)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+            className="flex h-7.5 w-7.5 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:border-rose-300 transition cursor-pointer shadow-2xs active:scale-95"
             title="Xóa Workspace"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
     </div>
   );
 }
+
 
 export default function WorkspaceManagement() {
   // Navigation tab: 'workspaces' (work_space_main) | 'sessions' (work_space_session)
@@ -523,6 +482,7 @@ export default function WorkspaceManagement() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     workspace_name: "",
+    agent_code: "",
     work_space_code: "",
     parent_workspace_code: "",
     slug: "",
@@ -740,13 +700,14 @@ export default function WorkspaceManagement() {
   }, [activeTab, fetchSessions]);
 
   // --- Modal Open Helpers ---
-  const handleOpenCreateModal = () => {
+  const handleOpenCreateModal = (parentCode?: string) => {
     setModalMode("create");
     setEditingWs(null);
     setFormData({
       workspace_name: "",
+      agent_code: "",
       work_space_code: "",
-      parent_workspace_code: "",
+      parent_workspace_code: typeof parentCode === "string" ? parentCode : "",
       slug: "",
       description: "",
       status: "active",
@@ -760,9 +721,10 @@ export default function WorkspaceManagement() {
     setEditingWs(ws);
     setFormData({
       workspace_name: ws.workspace_name || "",
+      agent_code: ws.agent_code || "",
       work_space_code: ws.work_space_code,
       parent_workspace_code: ws.parent_workspace_code || "",
-      slug: ws.slug,
+      slug: ws.slug || "",
       description: ws.description || "",
       status: ws.status,
     });
@@ -779,6 +741,7 @@ export default function WorkspaceManagement() {
     try {
       const payload: Record<string, unknown> = {
         workspace_name: formData.workspace_name.trim() || null,
+        agent_code: formData.agent_code.trim() || null,
         work_space_code: formData.work_space_code.trim(),
         parent_workspace_code: formData.parent_workspace_code.trim() || null,
         slug: formData.slug.trim() || undefined,
@@ -1415,8 +1378,8 @@ export default function WorkspaceManagement() {
                                     >
                                       {parentWs.workspace_name || parentWs.work_space_code}
                                     </h3>
-                                    <span className="font-mono text-xs text-slate-400 font-bold">
-                                      #{parentWs.id}
+                                    <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                                      ID: {parentWs.id}
                                     </span>
                                     <span className="rounded-full bg-violet-100 px-2.5 py-0.5 font-sans text-[11px] font-bold text-violet-800 border border-violet-200">
                                       Nhóm cha · {childCount} workspace con
@@ -1445,6 +1408,13 @@ export default function WorkspaceManagement() {
                                       <div className="inline-flex items-center gap-1 font-mono text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.5 rounded-lg" title="Mã workspace cha">
                                         <span className="text-indigo-400">parent:</span>
                                         <span className="font-semibold">{parentWs.parent_workspace_code}</span>
+                                      </div>
+                                    )}
+
+                                    {parentWs.agent_code && (
+                                      <div className="inline-flex items-center gap-1 font-mono text-[10px] text-purple-700 bg-purple-50 border border-purple-200/80 px-1.5 py-0.5 rounded-lg" title="Mã Agent">
+                                        <span className="text-purple-400">agent:</span>
+                                        <span className="font-semibold">{parentWs.agent_code}</span>
                                       </div>
                                     )}
 
@@ -1497,11 +1467,22 @@ export default function WorkspaceManagement() {
                                   <span>{isActive ? "Hoạt động" : "Lưu trữ"}</span>
                                 </button>
 
+                                {/* Add Child Workspace */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenCreateModal(parentWs.work_space_code)}
+                                  className="inline-flex h-8 items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
+                                  title="Thêm workspace con cho nhóm này"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Thêm con</span>
+                                </button>
+
                                 {/* Edit */}
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditModal(parentWs)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition cursor-pointer"
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-purple-200 bg-purple-50/90 text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition cursor-pointer shadow-xs active:scale-95"
                                   title="Chỉnh sửa Workspace mẹ"
                                 >
                                   <Edit2 className="h-3.5 w-3.5" />
@@ -1511,7 +1492,7 @@ export default function WorkspaceManagement() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteWorkspace(parentWs)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 transition cursor-pointer"
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-rose-200 bg-rose-50/90 text-rose-600 hover:bg-rose-100 hover:border-rose-300 transition cursor-pointer shadow-xs active:scale-95"
                                   title="Xóa Workspace mẹ"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1534,8 +1515,8 @@ export default function WorkspaceManagement() {
                                 </button>
                               </div>
 
-                              <div className="text-[11px] text-slate-400 flex items-center gap-1">
-                                <Clock className="h-3 w-3 text-slate-300" />
+                              <div className="text-xs font-normal text-slate-500 flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5 text-slate-400" />
                                 <span>Cập nhật: {formatDate(parentWs.updated_at)}</span>
                               </div>
                             </div>
@@ -1705,7 +1686,7 @@ export default function WorkspaceManagement() {
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-purple-700">
                                       <span>{rootWs.workspace_name || rootWs.work_space_code}</span>
-                                      <span className="font-mono text-[10px] text-slate-400">#{rootWs.id}</span>
+                                      <span className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">ID: {rootWs.id}</span>
                                     </div>
                                     <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                                       ID: {rootWs.id}
@@ -1841,8 +1822,16 @@ export default function WorkspaceManagement() {
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button
                                     type="button"
+                                    onClick={() => handleOpenCreateModal(rootWs.work_space_code)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-600 transition hover:bg-indigo-100 cursor-pointer"
+                                    title="Thêm workspace con"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
                                     onClick={() => handleOpenEditModal(rootWs)}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 cursor-pointer"
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-purple-200 bg-purple-50/90 text-purple-700 transition hover:bg-purple-100 hover:border-purple-300 cursor-pointer shadow-2xs active:scale-95"
                                     title="Chỉnh sửa Workspace"
                                   >
                                     <Edit2 className="h-3.5 w-3.5" />
@@ -1850,7 +1839,7 @@ export default function WorkspaceManagement() {
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteWorkspace(rootWs)}
-                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50/90 text-rose-600 transition hover:bg-rose-100 hover:border-rose-300 cursor-pointer shadow-2xs active:scale-95"
                                     title="Xóa Workspace"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1874,7 +1863,7 @@ export default function WorkspaceManagement() {
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-1.5 font-bold text-slate-800 group-hover:text-purple-700">
                                         <span>{childWs.workspace_name || childWs.work_space_code}</span>
-                                        <span className="font-mono text-[10px] text-slate-400">#{childWs.id}</span>
+                                        <span className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">ID: {childWs.id}</span>
                                       </div>
                                       <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                                         ID: {childWs.id}
@@ -2009,7 +1998,7 @@ export default function WorkspaceManagement() {
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEditModal(childWs)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 cursor-pointer"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-purple-200 bg-purple-50/90 text-purple-700 transition hover:bg-purple-100 hover:border-purple-300 cursor-pointer shadow-2xs active:scale-95"
                                       title="Chỉnh sửa Workspace con"
                                     >
                                       <Edit2 className="h-3.5 w-3.5" />
@@ -2017,7 +2006,7 @@ export default function WorkspaceManagement() {
                                     <button
                                       type="button"
                                       onClick={() => handleDeleteWorkspace(childWs)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50/90 text-rose-600 transition hover:bg-rose-100 hover:border-rose-300 cursor-pointer shadow-2xs active:scale-95"
                                       title="Xóa Workspace con"
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -2672,17 +2661,32 @@ export default function WorkspaceManagement() {
                   <span className="font-bold text-purple-950">ID #{editingWs.id} — {editingWs.work_space_code}</span>
                 </div>
               )}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tên Workspace (workspace_name)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: OpenClaw Codex Gateway Core"
-                  value={formData.workspace_name}
-                  onChange={(e) => setFormData({ ...formData, workspace_name: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-3 focus:ring-purple-500/10"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Tên Workspace (workspace_name)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: OpenClaw Codex Gateway Core"
+                    value={formData.workspace_name}
+                    onChange={(e) => setFormData({ ...formData, workspace_name: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs sm:text-sm text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-3 focus:ring-purple-500/10"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Mã Agent (agent_code)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: test hoặc main"
+                    value={formData.agent_code}
+                    onChange={(e) => setFormData({ ...formData, agent_code: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-mono text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-3 focus:ring-purple-500/10"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2706,11 +2710,19 @@ export default function WorkspaceManagement() {
                   </label>
                   <input
                     type="text"
+                    list="parent-workspace-code-options"
                     placeholder="VD: workspace-test"
                     value={formData.parent_workspace_code}
                     onChange={(e) => setFormData({ ...formData, parent_workspace_code: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-mono text-slate-800 focus:border-purple-400 focus:outline-none focus:ring-3 focus:ring-purple-500/10"
                   />
+                  <datalist id="parent-workspace-code-options">
+                    {flatWorkspaces.map((w) => (
+                      <option key={w.id} value={w.work_space_code}>
+                        {w.workspace_name ? `${w.workspace_name} (${w.work_space_code})` : w.work_space_code}
+                      </option>
+                    ))}
+                  </datalist>
                 </div>
               </div>
 

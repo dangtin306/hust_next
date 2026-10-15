@@ -76,7 +76,7 @@ const TABS = [
   {
     key: "n8n" as const,
     label: "Workflow",
-    href: "/api/mt/n8n",
+    href: "/api/mt/n8n/home",
     icon: Workflow,
     description: "n8n Automation Workflows",
   },

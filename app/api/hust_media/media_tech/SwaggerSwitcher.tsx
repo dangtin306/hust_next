@@ -63,7 +63,7 @@ const TABS = [
   {
     key: "workflow" as const,
     label: "Workflow",
-    href: "/api/hust/n8n",
+    href: "/api/hust/n8n/home",
     icon: WorkflowIcon,
     description: "Sơ đồ Workflow n8n của Hust",
   },

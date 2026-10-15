@@ -80,6 +80,8 @@ export default function SwaggerLayoutClient({
         </div>
       ) : isChatPublic ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
+      ) : isWorkflow ? (
+        <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkspace ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (

@@ -156,8 +156,8 @@
           "destination": "/api/hust_media/workflow/laravel"
         },
         "n8n": {
-          "source": "/api/hust/n8n",
-          "destination": "/api/hust_media/n8n"
+          "source": "/api/hust/n8n/home",
+          "destination": "/api/hust_media/n8n/home"
         },
         "n8nLaravel": {
           "source": "/api/hust/n8n/laravel",
@@ -227,8 +227,8 @@
         "destination": "/api/media_tech/laravel"
       },
       "n8n": {
-        "source": "/api/mt/n8n",
-        "destination": "/api/media_tech/n8n"
+        "source": "/api/mt/n8n/home",
+        "destination": "/api/media_tech/n8n/home"
       },
       "n8nNodeJs": {
         "source": "/api/mt/n8n/node_js",

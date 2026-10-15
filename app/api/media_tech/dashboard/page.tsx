@@ -77,7 +77,7 @@ const destinations = [
     title: "Sơ đồ và giám sát luồng",
     description:
       "Xem bản đồ kiến trúc tổng quát và sơ đồ realtime của backend Laravel, Node.js cùng luồng sự kiện n8n.",
-    href: "/api/mt/n8n",
+    href: "/api/mt/n8n/home",
     action: "Mở sơ đồ hệ thống",
     Icon: Workflow,
     tone: "emerald",
