@@ -299,11 +299,6 @@ paths:
                   enum: [active, archived]
                   description: Trạng thái workspace.
                   example: active
-                is_selectable:
-                  type: boolean
-                  nullable: true
-                  description: Workspace có được phép chọn khi chat hay không; false vẫn được cập nhật.
-                  example: false
             examples:
               renameWorkspace:
                 summary: Đổi tên workspace
@@ -355,9 +350,6 @@ paths:
                       status:
                         type: string
                         example: active
-                      is_selectable:
-                        type: boolean
-                        example: true
                       created_at:
                         type: string
                         format: date-time
@@ -374,7 +366,6 @@ paths:
                   slug: workspace-media-tech-users
                   description: Hướng dẫn sử dụng workspace Media Tech.
                   status: active
-                  is_selectable: true
                   created_at: "2026-10-01T15:52:28.000000Z"
                   updated_at: "2026-10-15T12:00:00.000000Z"
 
