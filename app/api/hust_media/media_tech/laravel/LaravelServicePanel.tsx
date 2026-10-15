@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Sparkles,
   Edit3,
+  FileCode2,
 } from "lucide-react";
 
 type EndpointItem = {
@@ -34,6 +35,15 @@ const endpoints: EndpointItem[] = [
     operationId: "updateLaravelMainWorkspace",
     summary: "Cập nhật workspace (POST edit)",
     note: "Sửa tên, mô tả, trạng thái (active/archived), mã code, slug, parent_workspace_code theo ID.",
+    isNew: true,
+  },
+  {
+    category: "workspace",
+    method: "GET",
+    path: "/api/workspaces/main/markdown",
+    operationId: "getWorkspaceMainMarkdown",
+    summary: "Xem cấu trúc Markdown workspace",
+    note: "Trả về cây thư mục và danh sách file .md của workspace con theo id.",
     isNew: true,
   },
   {
@@ -291,6 +301,15 @@ export default function LaravelServicePanel() {
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
               Endpoint <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">POST /api/workspaces/main/edit</code> nhận trường <code className="font-mono text-purple-800 font-bold">id</code> và các trường cần sửa: <code className="font-mono">workspace_name</code>, <code className="font-mono">agent_code</code>, <code className="font-mono">work_space_code</code>, <code className="font-mono">parent_workspace_code</code>, <code className="font-mono">slug</code>, <code className="font-mono">status</code>, <code className="font-mono">description</code>.
+            </p>
+          </div>
+
+          <div className="border-t border-blue-100 pt-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <FileCode2 className="h-4 w-4 text-emerald-600" /> API Cấu trúc Markdown
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+              Endpoint <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code> trả về cây thư mục (<code className="font-mono font-semibold">tree</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) các file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con trực tiếp.
             </p>
           </div>
 

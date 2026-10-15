@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { readFile } from "fs/promises";
 import path from "path";
 import { parse } from "yaml";
@@ -10,30 +11,25 @@ const readOpenApiSpec = async (folder: string, filename: string) => {
   return parse(source) as Record<string, unknown>;
 };
 
-let cachedSpecs: {
-  loadedSpec: Record<string, unknown>;
-  laravelSpec: Record<string, unknown>;
-  homeSpec: Record<string, unknown>;
-  categories: Array<[string, ServiceCategory]>;
-} | null = null;
+const getSpecs = cache(async () => {
+  const loadedSpec = await readOpenApiSpec("openclaw", "openclaw.yaml");
+  const laravelSpec = await readOpenApiSpec("laravel", "laravel.yaml");
+  const homeSpec = await readOpenApiSpec("dashboard", "home.yaml");
+  const categories = Object.entries(
+    (loadedSpec["x-service-categories"] || {}) as Record<string, ServiceCategory>,
+  );
+  return { loadedSpec, laravelSpec, homeSpec, categories };
+});
 
 export default async function SwaggerLayout({ children }: { children: React.ReactNode }) {
-  if (!cachedSpecs) {
-    const loadedSpec = await readOpenApiSpec("openclaw", "openclaw.yaml");
-    const laravelSpec = await readOpenApiSpec("laravel", "laravel.yaml");
-    const homeSpec = await readOpenApiSpec("dashboard", "home.yaml");
-    const categories = Object.entries(
-      (loadedSpec["x-service-categories"] || {}) as Record<string, ServiceCategory>,
-    );
-    cachedSpecs = { loadedSpec, laravelSpec, homeSpec, categories };
-  }
+  const { loadedSpec, laravelSpec, homeSpec, categories } = await getSpecs();
 
   return (
     <SwaggerLayoutClient
-      spec={cachedSpecs.loadedSpec}
-      laravelSpec={cachedSpecs.laravelSpec}
-      homeSpec={cachedSpecs.homeSpec}
-      categories={cachedSpecs.categories}
+      spec={loadedSpec}
+      laravelSpec={laravelSpec}
+      homeSpec={homeSpec}
+      categories={categories}
     >
       {children}
     </SwaggerLayoutClient>

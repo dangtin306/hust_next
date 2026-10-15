@@ -37,6 +37,7 @@ import {
   Code2,
   Calendar,
   Sparkles,
+  Folder,
 } from "lucide-react";
 
 export type WorkspaceRecord = {
@@ -91,6 +92,23 @@ export type UserWorkspaceRecord = {
   status: string;
   created_at: string;
   updated_at: string;
+};
+
+export type MarkdownTreeItem = {
+  type: "file" | "directory";
+  name: string;
+  path: string;
+  children?: MarkdownTreeItem[];
+};
+
+export type WorkspaceMarkdownData = {
+  id: number;
+  workspace_name: string;
+  work_space_code: string;
+  parent_workspace_code: string;
+  relative_path: string;
+  markdown_count: number;
+  tree: MarkdownTreeItem[];
 };
 
 export type PaginationMeta = {
@@ -246,6 +264,79 @@ function filterWorkspaceTree(
   return result;
 }
 
+function MarkdownTreeNode({
+  item,
+  depth = 0,
+  onCopyPath,
+  copiedKey,
+}: {
+  item: MarkdownTreeItem;
+  depth?: number;
+  onCopyPath: (key: string, text: string, label?: string) => void;
+  copiedKey: string | null;
+}) {
+  const isDirectory = item.type === "directory";
+  const copyKey = `md-path-${item.path}`;
+
+  return (
+    <div className="text-xs">
+      <div
+        className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 transition ${
+          isDirectory
+            ? "bg-slate-100/70 font-bold text-slate-800"
+            : "bg-white border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 text-slate-700"
+        }`}
+        style={{ marginLeft: `${depth * 16}px` }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {isDirectory ? (
+            <Folder className="h-4 w-4 text-amber-500 shrink-0" />
+          ) : (
+            <FileCode2 className="h-4 w-4 text-emerald-600 shrink-0" />
+          )}
+          <span className="font-mono font-semibold truncate text-slate-800">{item.name}</span>
+          <span className="font-mono text-[10px] text-slate-400 truncate">({item.path})</span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {!isDirectory && (
+            <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+              .md
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => onCopyPath(copyKey, item.path, "đường dẫn file")}
+            className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition cursor-pointer"
+            title="Sao chép đường dẫn file"
+          >
+            {copiedKey === copyKey ? (
+              <Check className="h-3 w-3 text-emerald-600" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            <span className="hidden sm:inline">Copy</span>
+          </button>
+        </div>
+      </div>
+
+      {isDirectory && item.children && item.children.length > 0 && (
+        <div className="mt-1 space-y-1 border-l-2 border-slate-200 ml-4 pl-1">
+          {item.children.map((child, idx) => (
+            <MarkdownTreeNode
+              key={`${child.path}-${idx}`}
+              item={child}
+              depth={depth + 1}
+              onCopyPath={onCopyPath}
+              copiedKey={copiedKey}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type WorkspaceCardItemProps = {
   ws: WorkspaceRecord;
   isChild?: boolean;
@@ -253,6 +344,7 @@ type WorkspaceCardItemProps = {
   onOpenEdit: (ws: WorkspaceRecord) => void;
   onDelete: (ws: WorkspaceRecord) => void;
   onViewSessions: (ws: WorkspaceRecord) => void;
+  onViewMarkdown?: (ws: WorkspaceRecord) => void;
   onCopy: (key: string, text: string, label?: string) => void;
   copiedKey: string | null;
   formatDate: (iso?: string | null) => string;
@@ -265,6 +357,7 @@ function WorkspaceCardItem({
   onOpenEdit,
   onDelete,
   onViewSessions,
+  onViewMarkdown,
   onCopy,
   copiedKey,
   formatDate,
@@ -387,6 +480,17 @@ function WorkspaceCardItem({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {onViewMarkdown && ws.work_space_code !== "workspace-test" && (
+            <button
+              type="button"
+              onClick={() => onViewMarkdown(ws)}
+              className="flex h-7.5 w-7.5 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer shadow-2xs active:scale-95"
+              title="Xem cấu trúc file Markdown (.md)"
+            >
+              <FileCode2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => onOpenEdit(ws)}
@@ -412,8 +516,14 @@ function WorkspaceCardItem({
 
 
 export default function WorkspaceManagement() {
-  // Navigation tab: 'workspaces' (work_space_main) | 'sessions' (work_space_session)
-  const [activeTab, setActiveTab] = useState<"workspaces" | "sessions" | "user-workspaces">("workspaces");
+  // Navigation tab: 'workspaces' | 'markdown' | 'sessions' | 'user-workspaces'
+  const [activeTab, setActiveTab] = useState<"workspaces" | "markdown" | "sessions" | "user-workspaces">("workspaces");
+
+  // --- Markdown State (API /api/workspaces/main/markdown?id={id}) ---
+  const [selectedMarkdownWsId, setSelectedMarkdownWsId] = useState<number | null>(null);
+  const [markdownData, setMarkdownData] = useState<WorkspaceMarkdownData | null>(null);
+  const [markdownLoading, setMarkdownLoading] = useState<boolean>(false);
+  const [markdownError, setMarkdownError] = useState<string | null>(null);
 
   // View Mode: 'card' (Grid cards) | 'table' (Tabular rows)
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
@@ -572,6 +682,52 @@ export default function WorkspaceManagement() {
       setWsLoading(false);
     }
   }, [wsPage]);
+
+  // --- Fetch Workspace Markdown Tree (API /api/workspaces/main/markdown?id={id}) ---
+  const fetchWorkspaceMarkdown = useCallback(async (id: number) => {
+    setSelectedMarkdownWsId(id);
+    setMarkdownLoading(true);
+    setMarkdownError(null);
+    try {
+      let res = await fetch(`/next/api/workspaces/main/markdown?id=${id}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        // Fallback trực tiếp Laravel MT API
+        res = await fetch(`https://laravel_mt.hust.media/api/workspaces/main/markdown?id=${id}`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+      }
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.data) {
+        throw new Error(json.message || `Lỗi tải cấu trúc Markdown (HTTP ${res.status})`);
+      }
+      setMarkdownData(json.data);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMarkdownError(msg);
+      setMarkdownData(null);
+    } finally {
+      setMarkdownLoading(false);
+    }
+  }, []);
+
+  const handleViewMarkdown = useCallback((ws: WorkspaceRecord) => {
+    setActiveTab("markdown");
+    void fetchWorkspaceMarkdown(ws.id);
+  }, [fetchWorkspaceMarkdown]);
+
+  const eligibleMarkdownWorkspaces = useMemo(() => {
+    return workspaces.filter((w) => {
+      if (w.work_space_code === "workspace-test" && !w.parent_workspace_code) return false;
+      if (w.id === 5) return false;
+      return true;
+    });
+  }, [workspaces]);
 
   // --- 2. Fetch Sessions from Laravel API (work_space_session) ---
   const fetchSessions = useCallback(async () => {
@@ -963,6 +1119,16 @@ export default function WorkspaceManagement() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/next/api/mt/laravel"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs font-bold text-blue-700 shadow-xs transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 cursor-pointer"
+              title="Quay về trang Danh mục API & Swagger Laravel"
+            >
+              <Server className="h-3.5 w-3.5 text-blue-600" />
+              <span>List API Laravel</span>
+              <ExternalLink className="h-3 w-3 text-blue-400" />
+            </a>
+
             <button
               type="button"
               onClick={() => setIsJsonModalOpen(true)}
@@ -978,14 +1144,22 @@ export default function WorkspaceManagement() {
               onClick={
                 activeTab === "workspaces"
                   ? fetchWorkspaces
-                  : activeTab === "sessions"
-                    ? fetchSessions
-                    : fetchUserWorkspaces
+                  : activeTab === "markdown"
+                    ? () => {
+                        if (selectedMarkdownWsId) {
+                          void fetchWorkspaceMarkdown(selectedMarkdownWsId);
+                        } else {
+                          void fetchWorkspaces();
+                        }
+                      }
+                    : activeTab === "sessions"
+                      ? fetchSessions
+                      : fetchUserWorkspaces
               }
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer"
               title="Tải lại dữ liệu mới nhất từ máy chủ"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${wsLoading || sessionLoading || userWorkspacesLoading ? "animate-spin text-purple-600" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${wsLoading || markdownLoading || sessionLoading || userWorkspacesLoading ? "animate-spin text-purple-600" : ""}`} />
               <span>Làm mới</span>
             </button>
 
@@ -1097,21 +1271,21 @@ export default function WorkspaceManagement() {
 
             <button
               type="button"
-              onClick={() => setActiveTab("sessions")}
+              onClick={() => setActiveTab("markdown")}
               className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
-                activeTab === "sessions"
-                  ? "border-indigo-600 text-indigo-700 bg-indigo-50/40 rounded-t-xl"
+                activeTab === "markdown"
+                  ? "border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-xl"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               }`}
             >
-              <Radio className="h-4 w-4" />
-              <span>Phiên làm việc Sessions</span>
+              <FileCode2 className="h-4 w-4 text-emerald-600" />
+              <span>Cấu trúc Markdown</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                  activeTab === "sessions" ? "bg-indigo-200/80 text-indigo-800" : "bg-slate-200 text-slate-600"
+                  activeTab === "markdown" ? "bg-emerald-200/80 text-emerald-800" : "bg-slate-200 text-slate-600"
                 }`}
               >
-                {sessions.length}
+                {eligibleMarkdownWorkspaces.length}
               </span>
             </button>
 
@@ -1566,6 +1740,7 @@ export default function WorkspaceManagement() {
                                     onOpenEdit={handleOpenEditModal}
                                     onDelete={handleDeleteWorkspace}
                                     onViewSessions={fetchSpecificWorkspaceSessions}
+                                    onViewMarkdown={handleViewMarkdown}
                                     onCopy={handleCopy}
                                     copiedKey={copiedKey}
                                     formatDate={formatDate}
@@ -1602,6 +1777,7 @@ export default function WorkspaceManagement() {
                             onOpenEdit={handleOpenEditModal}
                             onDelete={handleDeleteWorkspace}
                             onViewSessions={fetchSpecificWorkspaceSessions}
+                            onViewMarkdown={handleViewMarkdown}
                             onCopy={handleCopy}
                             copiedKey={copiedKey}
                             formatDate={formatDate}
@@ -1995,6 +2171,14 @@ export default function WorkspaceManagement() {
                                 {/* Actions */}
                                 <td className="py-3.5 px-4 text-center">
                                   <div className="flex items-center justify-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewMarkdown(childWs)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/90 text-emerald-700 transition hover:bg-emerald-100 hover:border-emerald-300 cursor-pointer shadow-2xs active:scale-95"
+                                      title="Xem cấu trúc file Markdown (.md)"
+                                    >
+                                      <FileCode2 className="h-3.5 w-3.5" />
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEditModal(childWs)}

@@ -520,6 +520,130 @@ paths:
               example:
                 success: false
 
+  /api/workspaces/main/markdown:
+    get:
+      operationId: getWorkspaceMainMarkdown
+      tags: [Workspace]
+      summary: Xem cấu trúc Markdown của workspace
+      description: |
+        Xem cây thư mục và danh sách file Markdown (`.md`) của workspace con theo `id`.
+        API chỉ nhận workspace con trực tiếp của `WORKSPACE_PARENT_CODE` (mặc định là `workspace-test`).
+        API trả cây thư mục và tên, đường dẫn các file `.md`, không trả nội dung file.
+
+        Đường dẫn Laravel đọc thư mục theo mẫu:
+        `{OPENCLAW_WORKSPACES_PATH}/{WORKSPACE_PARENT_CODE}/{work_space_code}`
+      security: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: ID workspace con trong bảng `work_space_main`.
+          schema:
+            type: integer
+            example: 8
+      responses:
+        '200':
+          description: Cấu trúc cây thư mục và file Markdown của workspace con.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - workspace_name
+                      - work_space_code
+                      - parent_workspace_code
+                      - relative_path
+                      - markdown_count
+                      - tree
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      workspace_name:
+                        type: string
+                        example: Hướng dẫn đấu API
+                      work_space_code:
+                        type: string
+                        example: workspace_tech_api
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-test
+                      relative_path:
+                        type: string
+                        example: workspace-test/workspace_tech_api
+                      markdown_count:
+                        type: integer
+                        example: 1
+                      tree:
+                        type: array
+                        description: Cây thư mục và tên, đường dẫn file .md.
+                        items:
+                          type: object
+                          required: [type, name, path]
+                          properties:
+                            type:
+                              type: string
+                              enum: [file, directory]
+                              example: file
+                            name:
+                              type: string
+                              example: SKILL.md
+                            path:
+                              type: string
+                              example: SKILL.md
+                            children:
+                              type: array
+                              description: Danh sách con nếu type là directory.
+                              items:
+                                type: object
+              example:
+                data:
+                  id: 8
+                  workspace_name: "Hướng dẫn đấu API"
+                  work_space_code: "workspace_tech_api"
+                  parent_workspace_code: "workspace-test"
+                  relative_path: "workspace-test/workspace_tech_api"
+                  markdown_count: 1
+                  tree:
+                    - type: "file"
+                      name: "SKILL.md"
+                      path: "SKILL.md"
+        '404':
+          description: Không tìm thấy workspace theo `id` hoặc thư mục của workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Không tìm thấy workspace theo id hoặc thư mục của workspace."
+        '422':
+          description: Thiếu/sai `id`, mã thư mục không hợp lệ hoặc workspace không phải con trực tiếp của workspace cha đã cấu hình.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Thiếu/sai id hoặc workspace không phải con trực tiếp."
+        '503':
+          description: Laravel không đọc được thư mục workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Laravel không đọc được thư mục workspace."
+
   /api/demo/hello:
     get:
       operationId: getDemoHello

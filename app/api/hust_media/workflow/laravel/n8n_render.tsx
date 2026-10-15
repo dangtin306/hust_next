@@ -546,6 +546,10 @@ type EdgeRunVisual = {
   requestKey: string;
   status: LiveNodeStatus;
   version: number;
+  startedAt: number;
+  durationMs: number;
+  laneOffset: number;
+  motionActive: boolean;
 };
 
 type TraceEdgeData = {
@@ -569,8 +573,8 @@ type TraceRun = {
   nodeFallbackTimers: Map<string, ReturnType<typeof setTimeout>>;
 };
 
-const EDGE_TRAVEL_MS = 2400;
-const NODE_FALLBACK_MS = 3200;
+const EDGE_TRAVEL_MS = 4200;
+const NODE_FALLBACK_MS = 5000;
 const RESULT_HOLD_MS = 1000;
 const TRACE_RUN_STALE_MS = 30_000;
 const TRACE_EVENT_DEDUPE_MS = 15_000;
@@ -626,6 +630,8 @@ function N8nTraceEdge({
     curvature: pathOptions?.curvature,
   });
   const { activities = [], traceMotionEnabled = true } = (data ?? {}) as TraceEdgeData;
+  const motionPathRef = useRef<SVGPathElement | null>(null);
+  const particleRefs = useRef<Map<string, SVGCircleElement>>(new Map());
   const colors: Record<LiveNodeStatus, string> = {
     idle: "#64748b",
     running: "#22d3ee",
@@ -634,26 +640,75 @@ function N8nTraceEdge({
     error: "#fb7185",
   };
 
+  useEffect(() => {
+    const movingActivities = activities.filter((activity) => activity.motionActive && traceMotionEnabled);
+    const motionPath = motionPathRef.current;
+    if (!movingActivities.length || !motionPath) return;
+
+    const pathLength = motionPath.getTotalLength();
+    if (!Number.isFinite(pathLength) || pathLength <= 0) return;
+
+    let frameId = 0;
+    const moveParticles = (now: number) => {
+      let hasMovingParticles = false;
+      const startPoint = motionPath.getPointAtLength(0);
+
+      movingActivities.forEach((activity) => {
+        const key = `${activity.requestKey}:${activity.version}`;
+        const particle = particleRefs.current.get(key);
+        if (!particle) return;
+
+        const elapsed = now - activity.startedAt;
+        if (elapsed < 0) {
+          particle.setAttribute("cx", String(startPoint.x));
+          particle.setAttribute("cy", String(startPoint.y));
+          hasMovingParticles = true;
+          return;
+        }
+
+        const progress = Math.min(1, elapsed / Math.max(1, activity.durationMs));
+        const distance = pathLength * progress;
+        const point = motionPath.getPointAtLength(distance);
+        const before = motionPath.getPointAtLength(Math.max(0, distance - 1));
+        const after = motionPath.getPointAtLength(Math.min(pathLength, distance + 1));
+        const tangentX = after.x - before.x;
+        const tangentY = after.y - before.y;
+        const tangentLength = Math.max(1, Math.hypot(tangentX, tangentY));
+        particle.setAttribute("cx", String(point.x - (tangentY / tangentLength) * activity.laneOffset));
+        particle.setAttribute("cy", String(point.y + (tangentX / tangentLength) * activity.laneOffset));
+
+        if (progress < 1) hasMovingParticles = true;
+      });
+
+      if (hasMovingParticles) frameId = requestAnimationFrame(moveParticles);
+    };
+
+    frameId = requestAnimationFrame(moveParticles);
+    return () => cancelAnimationFrame(frameId);
+  }, [activities, path, traceMotionEnabled]);
+
   return (
     <>
       <BaseEdge id={id} path={path} style={style} markerStart={markerStart} markerEnd={markerEnd} />
+      <path ref={motionPathRef} d={path} fill="none" stroke="none" aria-hidden="true" />
       {activities.map((activity) => {
         const color = colors[activity.status];
+        const key = `${activity.requestKey}:${activity.version}`;
         return (
-          <g key={`${activity.requestKey}:${activity.version}`} aria-hidden="true" pointerEvents="none">
-            {activity.status === "running" && traceMotionEnabled
-              ? (
-                  <circle r={4} fill={color}>
-                    <animateMotion
-                      path={path}
-                      dur={`${EDGE_TRAVEL_MS}ms`}
-                      repeatCount="1"
-                      fill="freeze"
-                    />
-                  </circle>
-                )
-              : <circle cx={centerX} cy={centerY} r={4} fill={color} />}
-          </g>
+          <circle
+            key={key}
+            ref={(element) => {
+              if (element) particleRefs.current.set(key, element);
+              else particleRefs.current.delete(key);
+            }}
+            cx={centerX}
+            cy={centerY}
+            r={4}
+            fill={color}
+            filter={`drop-shadow(0 0 5px ${color})`}
+            aria-hidden="true"
+            pointerEvents="none"
+          />
         );
       })}
     </>
@@ -876,13 +931,22 @@ export const N8nDiagramRenderer = forwardRef<
     const visibleRuns = [...runsRef.current.values()]
       .filter((run) => run.edgeAnimationActive && run.activeEdgeIds.length > 0)
       .slice(-MAX_ACTIVE_TRACE_PARTICLES);
+    const laneCounts = new Map<string, number>();
     setEdgeVisuals(visibleRuns.flatMap((run) =>
-      run.edgeAnimationActive ? run.activeEdgeIds.map((edgeId) => ({
+      run.activeEdgeIds.map((edgeId) => ({
         edgeId,
         requestKey: run.key,
-        status: "running" as const,
+        status: run.status,
         version: run.edgeVersions.get(edgeId) ?? 0,
-      })) : [],
+        startedAt: run.activeEdgeStartedAt ?? performance.now(),
+        durationMs: EDGE_TRAVEL_MS,
+        motionActive: run.activeEdgeStartedAt !== null,
+        laneOffset: (() => {
+          const lane = laneCounts.get(edgeId) ?? 0;
+          laneCounts.set(edgeId, lane + 1);
+          return lane === 0 ? 0 : Math.ceil(lane / 2) * 3 * (lane % 2 === 1 ? 1 : -1);
+        })(),
+      })),
     ));
   }, []);
 
@@ -929,21 +993,25 @@ export const N8nDiagramRenderer = forwardRef<
 
   const activateEdge = useCallback((run: TraceRun, edgeId: string) => {
     run.activeEdgeIds = [edgeId];
-    run.activeEdgeStartedAt = Date.now();
+    run.activeEdgeStartedAt = performance.now();
     run.edgeVersions.set(edgeId, (run.edgeVersions.get(edgeId) ?? 0) + 1);
     publishEdgeVisuals();
   }, [publishEdgeVisuals]);
 
   const animateTrace = useCallback((trace: N8nTracePayload) => {
-    if (trace.event_id) {
+    const dedupeKey = trace.request_id && (trace.phase === "start" || trace.phase === "complete")
+      ? `request:${trace.request_id}:${trace.phase}`
+      : trace.event_id
+        ? `event:${trace.event_id}:${trace.phase ?? "event"}`
+        : null;
+
+    if (dedupeKey) {
       const now = Date.now();
       const seen = seenTraceEventsRef.current;
       for (const [eventId, receivedAt] of seen) {
-        if (now - receivedAt <= TRACE_EVENT_DEDUPE_MS) break;
-        seen.delete(eventId);
+        if (now - receivedAt > TRACE_EVENT_DEDUPE_MS) seen.delete(eventId);
       }
 
-      const dedupeKey = `${trace.event_id}:${trace.phase ?? "event"}`;
       if (seen.has(dedupeKey)) return;
       seen.set(dedupeKey, now);
       while (seen.size > MAX_SEEN_TRACE_EVENTS) {
@@ -989,7 +1057,7 @@ export const N8nDiagramRenderer = forwardRef<
     const lastVisitedEdgeId = run.visitedEdgeSlots[run.visitedEdgeSlots.length - 1] ?? null;
     run.activeEdgeIds = lastVisitedEdgeId ? [lastVisitedEdgeId] : [];
     if (lastVisitedEdgeId !== previousActiveEdgeId) {
-      run.activeEdgeStartedAt = lastVisitedEdgeId ? Date.now() : null;
+      run.activeEdgeStartedAt = lastVisitedEdgeId ? performance.now() : null;
     }
     run.activatedNodeIds = [...new Set(run.visitedNodeIds)];
     run.nodeStates.forEach((_status, id) => {
@@ -1013,7 +1081,7 @@ export const N8nDiagramRenderer = forwardRef<
     const steps = Math.max(nodeIds.length, edgeSlots.length);
     const firstStep = Math.min(nodePrefix, edgePrefix, steps);
     const activeEdgeRemainingMs = run.activeEdgeIds.length > 0 && run.activeEdgeStartedAt !== null
-      ? Math.max(0, EDGE_TRAVEL_MS - (Date.now() - run.activeEdgeStartedAt))
+      ? Math.max(0, EDGE_TRAVEL_MS - (performance.now() - run.activeEdgeStartedAt))
       : 0;
     let stepDelay = firstStep === 0 ? 0 : activeEdgeRemainingMs;
     let finishDelay = stepDelay;
@@ -1042,7 +1110,7 @@ export const N8nDiagramRenderer = forwardRef<
 
     if (trace.phase === "start") {
       if (firstStep === steps && nodeIds.length > 0) activateNode(run, nodeIds[nodeIds.length - 1], false);
-      // A dropped completion event must not leave a looping trace on the canvas forever.
+      // A dropped completion event must not leave a stale trace on the canvas forever.
       scheduleRunTimer(run, Math.max(TRACE_RUN_STALE_MS, finishDelay + 15_000), () => {
         stopRunTimers(run);
         runsRef.current.delete(key);

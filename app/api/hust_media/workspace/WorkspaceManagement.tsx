@@ -963,6 +963,16 @@ export default function WorkspaceManagement() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/next/api/hust/laravel"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs font-bold text-blue-700 shadow-xs transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 cursor-pointer"
+              title="Quay về trang Danh mục API & Swagger Laravel"
+            >
+              <Server className="h-3.5 w-3.5 text-blue-600" />
+              <span>List API Laravel</span>
+              <ExternalLink className="h-3 w-3 text-blue-400" />
+            </a>
+
             <button
               type="button"
               onClick={() => setIsJsonModalOpen(true)}
