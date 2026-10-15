@@ -1,6 +1,6 @@
 # HeyGen Video API demo
 
-Open `/next/api/mt/media/heygen` while running the Next.js app. The page accepts
+Open `/next/api/mt/media/heygen/video` while running the Next.js app. The page accepts
 a short script, a saved avatar or public HTTPS photo, and a voice, then creates
 a video and checks its render status.
 

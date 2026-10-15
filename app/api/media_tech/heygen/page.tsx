@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import HeyGenDemo from "./HeyGenDemo";
-
-export const metadata: Metadata = {
-  title: "HeyGen Video Demo | Hust Media",
-  description: "Video MC ảo với HeyGen Avatar IV Photo API.",
-};
+import { permanentRedirect } from "next/navigation";
 
 export default function HeyGenPage() {
-  return <HeyGenDemo />;
+  permanentRedirect("/api/mt/media/heygen/video");
 }
