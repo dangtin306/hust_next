@@ -596,6 +596,10 @@ paths:
                             path:
                               type: string
                               example: SKILL.md
+                            full_path:
+                              type: string
+                              description: Đường dẫn đầy đủ tương đối với workspace root, dùng làm path khi gọi API đọc nội dung.
+                              example: workspace-chat_bot/workspace_hust_test/SKILL.md
                             children:
                               type: array
                               description: Danh sách con nếu type là directory.
@@ -603,16 +607,17 @@ paths:
                                 type: object
               example:
                 data:
-                  id: 8
-                  workspace_name: "Hướng dẫn đấu API"
-                  work_space_code: "workspace_tech_api"
-                  parent_workspace_code: "workspace-test"
-                  relative_path: "workspace-test/workspace_tech_api"
+                  id: 2
+                  workspace_name: "Hust Workspace Test"
+                  work_space_code: "workspace_hust_test"
+                  parent_workspace_code: "workspace-chat_bot"
+                  relative_path: "workspace-chat_bot/workspace_hust_test"
                   markdown_count: 1
                   tree:
                     - type: "file"
                       name: "SKILL.md"
                       path: "SKILL.md"
+                      full_path: "workspace-chat_bot/workspace_hust_test/SKILL.md"
         '404':
           description: Không tìm thấy workspace theo `id` hoặc thư mục của workspace.
           content:
@@ -643,6 +648,355 @@ paths:
                   message:
                     type: string
                     example: "Laravel không đọc được thư mục workspace."
+
+  /api/workspaces/content/markdown:
+    get:
+      operationId: getWorkspaceMarkdownContent
+      tags: [Workspace]
+      summary: Đọc nội dung một file .md của workspace
+      description: |
+        Đọc nội dung một file `.md` cụ thể của workspace con.
+        Dùng `full_path` lấy từ API cây thư mục (`GET /api/workspaces/main/markdown`) làm giá trị tham số `path`.
+
+        - Media Tech: workspace cha là `workspace-test` (https://laravel_mt.hust.media)
+        - Hust: workspace cha là `workspace-chat_bot` (https://laravel.hust.media)
+
+        `path` phải là đường dẫn tương đối từ workspace root, dùng dấu `/` và trỏ tới file `.md`.
+        Không gửi đường dẫn tuyệt đối như `D:\...`.
+      security: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: ID của workspace con trong bảng workspace.
+          schema:
+            type: integer
+            example: 2
+        - name: path
+          in: query
+          required: true
+          description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+          schema:
+            type: string
+            example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      responses:
+        '200':
+          description: Nội dung file Markdown thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - workspace_name
+                      - work_space_code
+                      - parent_workspace_code
+                      - path
+                      - content
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      content:
+                        type: string
+                        description: Nội dung định dạng Markdown của file.
+                        example: "# Nội dung Markdown..."
+              example:
+                data:
+                  id: 2
+                  workspace_name: "Hust Workspace Test"
+                  work_space_code: "workspace_hust_test"
+                  parent_workspace_code: "workspace-chat_bot"
+                  path: "workspace-chat_bot/workspace_hust_test/SKILL.md"
+                  content: "# Nội dung Markdown..."
+        '404':
+          description: Không tìm thấy workspace theo ID hoặc file Markdown theo đường dẫn.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Không tìm thấy file Markdown hoặc workspace."
+        '422':
+          description: Thiếu hoặc sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Đường dẫn path không hợp lệ hoặc thiếu id."
+        '503':
+          description: Không thể đọc file từ hệ thống lưu trữ.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Không thể đọc nội dung file Markdown."
+
+  /api/workspaces/content/markdown/get:
+    get:
+      operationId: getWorkspaceMarkdownContentGet
+      tags: [Workspace]
+      summary: Đọc nội dung một file .md (GET /get)
+      description: |
+        Đọc nội dung một file `.md` cụ thể của workspace con qua route `/api/workspaces/content/markdown/get`.
+        Dùng `full_path` lấy từ API cây thư mục (`GET /api/workspaces/main/markdown`) làm giá trị tham số `path`.
+
+        - Media Tech: workspace cha là `workspace-test` (https://laravel_mt.hust.media)
+        - Hust: workspace cha là `workspace-chat_bot` (https://laravel.hust.media)
+
+        `path` phải là đường dẫn tương đối từ workspace root, dùng dấu `/` và trỏ tới file `.md`.
+        Không gửi đường dẫn tuyệt đối như `D:\...`.
+      security: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: ID của workspace con trong bảng workspace.
+          schema:
+            type: integer
+            example: 2
+        - name: path
+          in: query
+          required: true
+          description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+          schema:
+            type: string
+            example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      responses:
+        '200':
+          description: Nội dung file Markdown thành công trong data.content.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - workspace_name
+                      - work_space_code
+                      - parent_workspace_code
+                      - path
+                      - content
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      content:
+                        type: string
+                        description: Toàn bộ nội dung định dạng Markdown của file.
+                        example: "# Nội dung Markdown..."
+              example:
+                data:
+                  id: 2
+                  workspace_name: "Hust Workspace Test"
+                  work_space_code: "workspace_hust_test"
+                  parent_workspace_code: "workspace-chat_bot"
+                  path: "workspace-chat_bot/workspace_hust_test/SKILL.md"
+                  content: "# Nội dung Markdown..."
+        '404':
+          description: Không tìm thấy workspace theo ID hoặc file Markdown theo đường dẫn.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "File không tồn tại."
+        '422':
+          description: Thiếu hoặc sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Đường dẫn path không hợp lệ hoặc thiếu id."
+        '503':
+          description: Thư mục hoặc file không truy cập được trên máy chủ Laravel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Không thể đọc nội dung file Markdown."
+
+  /api/workspaces/content/markdown/edit:
+    post:
+      operationId: updateWorkspaceMarkdownContentEdit
+      tags: [Workspace]
+      summary: Ghi nội dung mới vào file .md (POST /edit)
+      description: |
+        Ghi nội dung mới vào file `.md` đã tồn tại của workspace.
+        Truyền `id` và `path` trên query string; nội dung mới gửi bằng JSON body `{"content": "..."}`.
+
+        - Khi thành công, API trả `success: true`, thông tin workspace, `path` và `bytes_written`.
+        - Gửi `"content": ""` sẽ làm trống file.
+        - API chỉ sửa file `.md` đã có, không tạo file mới.
+      security: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: ID của workspace con trong bảng workspace.
+          schema:
+            type: integer
+            example: 2
+        - name: path
+          in: query
+          required: true
+          description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+          schema:
+            type: string
+            example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      requestBody:
+        required: true
+        description: JSON body chứa nội dung Markdown mới cần ghi vào file.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: Nội dung Markdown mới cần ghi đè vào file. Gửi chuỗi rỗng để làm trống file.
+                  example: "# Nội dung Markdown mới\n..."
+            examples:
+              updateContent:
+                summary: Ghi nội dung Markdown mới
+                value:
+                  content: "# Nội dung Markdown mới\n\nCập nhật tài liệu API."
+              clearContent:
+                summary: Làm trống file Markdown
+                value:
+                  content: ""
+      responses:
+        '200':
+          description: Cập nhật nội dung file Markdown thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Markdown file updated."
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - workspace_name
+                      - work_space_code
+                      - parent_workspace_code
+                      - path
+                      - bytes_written
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      bytes_written:
+                        type: integer
+                        description: Số bytes đã ghi vào file.
+                        example: 6483
+              example:
+                success: true
+                message: "Markdown file updated."
+                data:
+                  id: 2
+                  workspace_name: "Hust Workspace Test"
+                  work_space_code: "workspace_hust_test"
+                  parent_workspace_code: "workspace-chat_bot"
+                  path: "workspace-chat_bot/workspace_hust_test/SKILL.md"
+                  bytes_written: 6483
+        '404':
+          description: Không tìm thấy file Markdown hoặc workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "File không tồn tại."
+        '422':
+          description: Thiếu/sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Đường dẫn sai hoặc workspace không hợp lệ."
+        '503':
+          description: Thư mục hoặc file không truy cập được / lỗi ghi file.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Thư mục hoặc file không truy cập được."
 
   /api/demo/hello:
     get:

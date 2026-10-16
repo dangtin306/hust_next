@@ -31,10 +31,28 @@ const endpoints: EndpointItem[] = [
   {
     category: "workspace",
     method: "POST",
-    path: "/api/workspaces/main/edit",
+    path: "/api/workspaces/main/data",
     operationId: "updateLaravelMainWorkspace",
-    summary: "Cập nhật workspace (POST edit)",
+    summary: "Sửa một workspace (POST main/data)",
     note: "Sửa tên, mô tả, trạng thái (active/archived), mã code, slug, parent_workspace_code theo ID.",
+    isNew: true,
+  },
+  {
+    category: "workspace",
+    method: "POST",
+    path: "/api/workspaces/content/markdown/edit",
+    operationId: "updateWorkspaceMarkdownContentEdit",
+    summary: "Ghi nội dung mới vào file .md (POST edit)",
+    note: "Sửa nội dung file .md theo id và path (query string), gửi JSON body { content }.",
+    isNew: true,
+  },
+  {
+    category: "workspace",
+    method: "GET",
+    path: "/api/workspaces/content/markdown/get",
+    operationId: "getWorkspaceMarkdownContentGet",
+    summary: "Đọc nội dung file Markdown (GET get)",
+    note: "Đọc nội dung file .md theo id workspace và path (full_path tương đối từ root).",
     isNew: true,
   },
   {
@@ -306,10 +324,16 @@ export default function LaravelServicePanel() {
 
           <div className="border-t border-blue-100 pt-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <FileCode2 className="h-4 w-4 text-emerald-600" /> API Cấu trúc Markdown
+              <FileCode2 className="h-4 w-4 text-emerald-600" /> Bộ 3 API Xem và Sửa Markdown Workspace
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              Endpoint <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code> trả về cây thư mục (<code className="font-mono font-semibold">tree</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) các file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con trực tiếp.
+              1. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code>: Trả về cây thư mục (<code className="font-mono font-semibold">tree</code> có <code className="font-mono">full_path</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con.
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+              2. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/get?id={"{id}"}&path={"{full_path}"}</code>: Đọc toàn bộ nội dung file <code className="font-mono font-bold text-slate-800">.md</code> với đường dẫn tương đối từ workspace root (<code className="font-mono">path</code>).
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+              3. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">POST /api/workspaces/content/markdown/edit?id={"{id}"}&path={"{full_path}"}</code>: Ghi nội dung mới vào file <code className="font-mono font-bold text-slate-800">.md</code> đã có qua JSON body <code className="font-mono">{"{\"content\": \"...\"}"}</code>. Trả về <code className="font-mono font-semibold">bytes_written</code>.
             </p>
           </div>
 

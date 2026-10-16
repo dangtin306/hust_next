@@ -121,7 +121,7 @@ export interface N8nTracePayload {
   event_id?: string;
   workflow_id?: string;
   status?: "running" | "success" | "slow" | "error";
-  phase?: "start" | "complete";
+  phase?: "start" | "module_start" | "module_complete" | "complete";
   request_id?: string;
   status_code?: number;
   duration_ms?: number;
@@ -136,7 +136,7 @@ export interface N8nTracePayload {
     method?: string;
     stage_node_ids?: string[];
     stage_edges?: N8nStageEdge[];
-    phase?: "start" | "complete";
+    phase?: "start" | "module_start" | "module_complete" | "complete";
     request_id?: string;
   };
   timestamp?: string;
@@ -145,21 +145,26 @@ export interface N8nTracePayload {
 const normalizeSocketTrace = (input: N8nTracePayload): N8nTracePayload => {
   const payload = input.api_results ?? input.data ?? input.payload ?? input;
   const nestedStageIds = payload.trace?.stage_node_ids;
+  const hasNestedStageIds = Array.isArray(nestedStageIds) && nestedStageIds.length > 0;
   const stageNodeIds =
-    Array.isArray(payload.stage_node_ids) && payload.stage_node_ids.length > 0
-      ? payload.stage_node_ids
-      : Array.isArray(nestedStageIds)
-        ? nestedStageIds
+    hasNestedStageIds
+      ? nestedStageIds
+      : Array.isArray(payload.stage_node_ids)
+        ? payload.stage_node_ids
         : [];
+  const nestedStageEdges = payload.trace?.stage_edges;
 
   return {
     ...payload,
     event_id: payload.event_id ?? input.event_id,
     stage_node_ids: stageNodeIds,
-    stage_edges: Array.isArray(payload.stage_edges)
-      ? payload.stage_edges
-      : Array.isArray(payload.trace?.stage_edges)
-        ? payload.trace.stage_edges
+    // Keep each Laravel phase aligned with the path it actually reports.
+    // Node may synthesize a full outcome path for the outer event while the
+    // nested Laravel trace is still at ingress or inside its module.
+    stage_edges: Array.isArray(nestedStageEdges) && nestedStageEdges.length > 0
+      ? nestedStageEdges
+      : Array.isArray(payload.stage_edges)
+        ? payload.stage_edges
         : undefined,
     phase: payload.phase ?? payload.trace?.phase ?? input.phase,
     request_id: payload.request_id ?? payload.trace?.request_id ?? input.request_id,
@@ -569,15 +574,16 @@ type TraceRun = {
   activatedNodeIds: string[];
   edgeVersions: Map<string, number>;
   nodeStates: Map<string, LiveNodeStatus>;
+  completedNodeStatuses: Map<string, LiveNodeStatus>;
   timers: Set<ReturnType<typeof setTimeout>>;
   nodeFallbackTimers: Map<string, ReturnType<typeof setTimeout>>;
 };
 
-const EDGE_TRAVEL_MS = 4200;
-const NODE_FALLBACK_MS = 5000;
+const EDGE_TRAVEL_MS = 1250;
+const NODE_FALLBACK_MS = 15_000;
 const RESULT_HOLD_MS = 1000;
-const TRACE_RUN_STALE_MS = 30_000;
-const TRACE_EVENT_DEDUPE_MS = 15_000;
+const TRACE_RUN_STALE_MS = 120_000;
+const TRACE_EVENT_DEDUPE_MS = 120_000;
 const MAX_SEEN_TRACE_EVENTS = 500;
 const MAX_ACTIVE_TRACE_PARTICLES = 6;
 
@@ -635,9 +641,9 @@ function N8nTraceEdge({
   const colors: Record<LiveNodeStatus, string> = {
     idle: "#64748b",
     running: "#22d3ee",
-    success: "#34d399",
-    slow: "#fbbf24",
-    error: "#fb7185",
+    success: "#22c55e",
+    slow: "#eab308",
+    error: "#ef4444",
   };
 
   useEffect(() => {
@@ -974,7 +980,14 @@ export const N8nDiagramRenderer = forwardRef<
     if (!nodeId) return;
     if (recordStep) run.visitedNodeIds.push(nodeId);
     if (!run.activatedNodeIds.includes(nodeId)) run.activatedNodeIds.push(nodeId);
-    run.nodeStates.set(nodeId, "running");
+    const completedStatus = run.completedNodeStatuses.get(nodeId);
+    const currentStatus = run.nodeStates.get(nodeId);
+    if (completedStatus) {
+      run.nodeStates.set(nodeId, completedStatus);
+      run.completedNodeStatuses.delete(nodeId);
+    } else if (!currentStatus || currentStatus === "running") {
+      run.nodeStates.set(nodeId, "running");
+    }
     const oldFallback = run.nodeFallbackTimers.get(nodeId);
     if (oldFallback) {
       clearTimeout(oldFallback);
@@ -999,7 +1012,7 @@ export const N8nDiagramRenderer = forwardRef<
   }, [publishEdgeVisuals]);
 
   const animateTrace = useCallback((trace: N8nTracePayload) => {
-    const dedupeKey = trace.request_id && (trace.phase === "start" || trace.phase === "complete")
+    const dedupeKey = trace.request_id && trace.phase
       ? `request:${trace.request_id}:${trace.phase}`
       : trace.event_id
         ? `event:${trace.event_id}:${trace.phase ?? "event"}`
@@ -1026,28 +1039,30 @@ export const N8nDiagramRenderer = forwardRef<
       ? trace.stage_node_ids.filter((id): id is string => typeof id === "string")
       : stageEdges.flatMap((edge, index) => index === 0 ? [edge.source, edge.target] : [edge.target]);
     const edgeSlots = matchTraceEdges(trace, graphEdgesRef.current);
-    const key = trace.request_id && (trace.phase === "start" || trace.phase === "complete")
+    const key = trace.request_id && trace.phase
       ? `request:${trace.request_id}`
       : `single:${++anonymousRunCounterRef.current}`;
     const prior = runsRef.current.get(key);
     const result: LiveNodeStatus = trace.status === "error" || (trace.status_code ?? 0) >= 400
-      ? "error" : trace.status === "slow" ? "slow" : "success";
+      ? "error" : trace.status === "slow" || (trace.duration_ms ?? 0) > 1000 ? "slow" : "success";
 
     // A completion may arrive before its start. In that case play its full path once.
     if (prior) stopRunTimers(prior);
     const run: TraceRun = prior ?? {
-      key, status: "running", edgeAnimationActive: true, activeEdgeStartedAt: null,
+      key, status: "running",
+      edgeAnimationActive: true, activeEdgeStartedAt: null,
       visitedEdgeSlots: [], visitedNodeIds: [],
       activeEdgeIds: [], activatedNodeIds: [],
-      edgeVersions: new Map(), nodeStates: new Map(), timers: new Set(), nodeFallbackTimers: new Map(),
+      edgeVersions: new Map(), nodeStates: new Map(), completedNodeStatuses: new Map(),
+      timers: new Set(), nodeFallbackTimers: new Map(),
     };
     // Keep recently updated requests ahead of older ones when the particle cap is reached.
     runsRef.current.delete(key);
     runsRef.current.set(key, run);
     // Edge playback has its own lifecycle; a final node result must not hide it.
     run.edgeAnimationActive = true;
-    run.status = trace.phase === "complete" ? result : "running";
-
+    const isTerminalTrace = trace.phase === "complete" || !trace.phase;
+    run.status = isTerminalTrace ? result : "running";
     // On completion, retain only the executed prefix; never light a speculative branch.
     const edgePrefix = matchingPrefixLength(edgeSlots, run.visitedEdgeSlots);
     const nodePrefix = matchingPrefixLength(nodeIds, run.visitedNodeIds);
@@ -1060,6 +1075,13 @@ export const N8nDiagramRenderer = forwardRef<
       run.activeEdgeStartedAt = lastVisitedEdgeId ? performance.now() : null;
     }
     run.activatedNodeIds = [...new Set(run.visitedNodeIds)];
+    if (trace.phase === "module_complete") {
+      const moduleNodeId = nodeIds[nodeIds.length - 1];
+      if (moduleNodeId) {
+        run.completedNodeStatuses.set(moduleNodeId, result);
+        if (run.visitedNodeIds.includes(moduleNodeId)) run.nodeStates.set(moduleNodeId, result);
+      }
+    }
     run.nodeStates.forEach((_status, id) => {
       if (!run.activatedNodeIds.includes(id)) run.nodeStates.delete(id);
     });
@@ -1108,9 +1130,10 @@ export const N8nDiagramRenderer = forwardRef<
       finishDelay = stepDelay;
     }
 
-    if (trace.phase === "start") {
+    if (!isTerminalTrace) {
       if (firstStep === steps && nodeIds.length > 0) activateNode(run, nodeIds[nodeIds.length - 1], false);
-      // A dropped completion event must not leave a stale trace on the canvas forever.
+      // Keep a live request visible while Laravel is still working; the final
+      // response event closes it and chooses the result branch.
       scheduleRunTimer(run, Math.max(TRACE_RUN_STALE_MS, finishDelay + 15_000), () => {
         stopRunTimers(run);
         runsRef.current.delete(key);
