@@ -37,7 +37,7 @@ const destinations = [
     title: "Laravel Backend",
     description:
       "Tài liệu và giao diện thử API Laravel cho Workspace, phòng chat, session và tin nhắn.",
-    href: "/api/mt/laravel",
+    href: "/api/mt/list/laravel",
     action: "Mở tài liệu Laravel",
     Icon: Server,
     tone: "blue",
@@ -47,7 +47,7 @@ const destinations = [
     title: "OpenClaw Gateway",
     description:
       "Xem và thử các endpoint AI như hội thoại, responses, model, workspace và tạo ảnh.",
-    href: "/api/mt/openclaw",
+    href: "/api/mt/list/openclaw",
     action: "Mở tài liệu OpenClaw",
     Icon: Sparkles,
     tone: "violet",
@@ -87,7 +87,7 @@ const destinations = [
     title: "Quản trị Workspace",
     description:
       "Xem session và quản lý Workspace: tạo, sửa, đổi trạng thái, xóa hoặc đồng bộ routing qua API.",
-    href: "/api/mt/workspace",
+    href: "/api/mt/workspace/home",
     action: "Mở quản trị Workspace",
     Icon: BriefcaseBusiness,
     tone: "indigo",

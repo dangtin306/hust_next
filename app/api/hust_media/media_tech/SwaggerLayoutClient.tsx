@@ -29,7 +29,15 @@ export default function SwaggerLayoutClient({
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
-  const isHome = pathname.includes("/home") || pathname.includes("/dashboard");
+  const isWorkspace = pathname.includes("/workspace");
+  const isWorkflow =
+    pathname.includes("/n8n") || pathname.includes("/workflow");
+  const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
+  const isHome =
+    !isWorkspace &&
+    !isWorkflow &&
+    !isApiListHome &&
+    (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
   const isChatPublic = pathname.includes("/chat_public");
@@ -37,9 +45,6 @@ export default function SwaggerLayoutClient({
     pathname.includes("/chat_test") ||
     pathname.includes("/chat_bot") ||
     pathname.includes("/test_1");
-  const isWorkflow =
-    pathname.includes("/n8n") || pathname.includes("/workflow");
-  const isWorkspace = pathname.includes("/workspace");
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -60,17 +65,19 @@ export default function SwaggerLayoutClient({
             ? "workflow"
             : isWorkspace
               ? "workspace"
-              : isLaravel
-                ? "laravel"
-                : isOpenClaw
-                  ? "openclaw"
-                  : isChatPublic
-                    ? "chat_public"
-                    : isChatTest
-                      ? "chat_test"
-                      : isHome
-                        ? "home"
-                        : "openclaw"
+              : isApiListHome
+                ? "api_list"
+                : isLaravel
+                  ? "laravel"
+                  : isOpenClaw
+                    ? "openclaw"
+                    : isChatPublic
+                      ? "chat_public"
+                      : isChatTest
+                        ? "chat_test"
+                        : isHome
+                          ? "home"
+                          : "api_list"
         }
       />
 
@@ -83,6 +90,8 @@ export default function SwaggerLayoutClient({
       ) : isWorkflow ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkspace ? (
+        <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
+      ) : isApiListHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (
         <>

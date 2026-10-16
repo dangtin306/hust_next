@@ -127,9 +127,25 @@
           "source": "/api/hust/home",
           "destination": "/api/hust_media/media_tech/dashboard"
         },
+        "apiListHome": {
+          "source": "/api/hust/list/home",
+          "destination": "/api/hust_media/media_tech/list/home"
+        },
+        "apiList": {
+          "source": "/api/hust/list",
+          "destination": "/api/hust_media/media_tech/list/home"
+        },
+        "laravelList": {
+          "source": "/api/hust/list/laravel",
+          "destination": "/api/hust_media/media_tech/laravel"
+        },
         "laravel": {
           "source": "/api/hust/laravel",
           "destination": "/api/hust_media/media_tech/laravel"
+        },
+        "openclawList": {
+          "source": "/api/hust/list/openclaw",
+          "destination": "/api/hust_media/media_tech/openclaw"
         },
         "openclaw": {
           "source": "/api/hust/openclaw",
@@ -162,6 +178,14 @@
         "n8nLaravel": {
           "source": "/api/hust/n8n/laravel",
           "destination": "/api/hust_media/n8n/laravel"
+        },
+        "workspaceHome": {
+          "source": "/api/hust/workspace/home",
+          "destination": "/api/hust_media/workspace/home"
+        },
+        "workspaceMarkdown": {
+          "source": "/api/hust/workspace/markdown",
+          "destination": "/api/hust_media/workspace/markdown"
         },
         "workspace": {
           "source": "/api/hust/workspace",
@@ -218,9 +242,25 @@
         "source": "/api/mt/media/heygen/:path*",
         "destination": "/api/media_tech/heygen/:path*"
       },
+      "apiListHome": {
+        "source": "/api/mt/list/home",
+        "destination": "/api/media_tech/list/home"
+      },
+      "apiList": {
+        "source": "/api/mt/list",
+        "destination": "/api/media_tech/list/home"
+      },
+      "openclawList": {
+        "source": "/api/mt/list/openclaw",
+        "destination": "/api/media_tech/openclaw"
+      },
       "openclaw": {
         "source": "/api/mt/openclaw",
         "destination": "/api/media_tech/openclaw"
+      },
+      "laravelList": {
+        "source": "/api/mt/list/laravel",
+        "destination": "/api/media_tech/laravel"
       },
       "laravel": {
         "source": "/api/mt/laravel",
@@ -241,6 +281,14 @@
       "n8nLaravel": {
         "source": "/api/mt/n8n/laravel",
         "destination": "/api/media_tech/n8n/laravel"
+      },
+      "workspaceHome": {
+        "source": "/api/mt/workspace/home",
+        "destination": "/api/media_tech/workspace/home"
+      },
+      "workspaceMarkdown": {
+        "source": "/api/mt/workspace/markdown",
+        "destination": "/api/media_tech/workspace/markdown"
       },
       "workspace": {
         "source": "/api/mt/workspace",

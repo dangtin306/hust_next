@@ -153,7 +153,7 @@ export default function LaravelServicePanel() {
   const [categoryFilter, setCategoryFilter] = useState<"all" | "workspace" | "chat">("all");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
-  const workspacePath = isHust ? "/next/api/hust/workspace" : "/next/api/mt/workspace";
+  const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
 
   useEffect(() => {
     const ensurePanelSlot = () => {

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Briefcase,
   Layers,
+  FolderTree,
   Search,
   Plus,
   Copy,
@@ -94,7 +95,16 @@ export type MarkdownTreeItem = {
   path: string;
   full_path?: string;
   children?: MarkdownTreeItem[];
+  workspace_id?: number;
 };
+
+function attachWorkspaceId(item: MarkdownTreeItem, wsId: number): MarkdownTreeItem {
+  return {
+    ...item,
+    workspace_id: wsId,
+    children: item.children ? item.children.map((child) => attachWorkspaceId(child, wsId)) : undefined,
+  };
+}
 
 export type WorkspaceMarkdownData = {
   id: number;
@@ -125,6 +135,23 @@ function findFirstMarkdownFile(items?: MarkdownTreeItem[]): MarkdownTreeItem | n
     }
   }
   return null;
+}
+
+function collectAllMarkdownFiles(items?: MarkdownTreeItem[]): MarkdownTreeItem[] {
+  if (!items || items.length === 0) return [];
+  const result: MarkdownTreeItem[] = [];
+  function traverse(list: MarkdownTreeItem[]) {
+    for (const item of list) {
+      if (item.type === "file") {
+        result.push(item);
+      }
+      if (item.children && item.children.length > 0) {
+        traverse(item.children);
+      }
+    }
+  }
+  traverse(items);
+  return result;
 }
 
 function buildWorkspaceHierarchy(value: unknown): { tree: WorkspaceRecord[]; flat: WorkspaceRecord[] } {
@@ -271,31 +298,67 @@ function filterWorkspaceTree(
   return result;
 }
 
+export type InlineFileState = {
+  isOpen: boolean;
+  isEditing: boolean;
+  content: string | null;
+  loading: boolean;
+  error: string | null;
+  editDraft: string;
+  isSaving: boolean;
+  saveError: string | null;
+};
+
+type MarkdownTreeNodeProps = {
+  item: MarkdownTreeItem;
+  depth?: number;
+  selectedWsId: number | null;
+  openFiles: Record<string, InlineFileState>;
+  onToggleView: (item: MarkdownTreeItem) => void;
+  onToggleEdit: (item: MarkdownTreeItem) => void;
+  onSaveFile: (item: MarkdownTreeItem) => void;
+  onCancelEdit: (item: MarkdownTreeItem) => void;
+  onCloseFile: (item: MarkdownTreeItem) => void;
+  onChangeDraft: (item: MarkdownTreeItem, draft: string) => void;
+  onRefreshFile: (item: MarkdownTreeItem) => void;
+  onCopyPath: (key: string, text: string, label?: string) => void;
+  copiedKey: string | null;
+};
+
 function MarkdownTreeNode({
   item,
   depth = 0,
+  selectedWsId,
+  openFiles,
+  onToggleView,
+  onToggleEdit,
+  onSaveFile,
+  onCancelEdit,
+  onCloseFile,
+  onChangeDraft,
+  onRefreshFile,
   onCopyPath,
   copiedKey,
-  onViewContent,
-  onEditContent,
-}: {
-  item: MarkdownTreeItem;
-  depth?: number;
-  onCopyPath: (key: string, text: string, label?: string) => void;
-  copiedKey: string | null;
-  onViewContent?: (item: MarkdownTreeItem) => void;
-  onEditContent?: (item: MarkdownTreeItem) => void;
-}) {
+}: MarkdownTreeNodeProps) {
   const isDirectory = item.type === "directory";
   const effectivePath = item.full_path || item.path;
   const copyKey = `md-path-${effectivePath}`;
+  const fileKey = effectivePath;
+  const fileState = openFiles[fileKey];
+  const isExpandedInView = fileState?.isOpen && !fileState?.isEditing;
+  const isExpandedInEdit = fileState?.isOpen && fileState?.isEditing;
 
   return (
     <div className="text-xs">
+      {/* File or Directory Item Row */}
       <div
         className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 transition ${
           isDirectory
             ? "bg-slate-100/70 font-bold text-slate-800"
+            : isExpandedInView
+            ? "bg-emerald-50/80 border border-emerald-300 ring-2 ring-emerald-500/10 text-slate-800 shadow-2xs"
+            : isExpandedInEdit
+            ? "bg-blue-50/80 border border-blue-300 ring-2 ring-blue-500/10 text-slate-800 shadow-2xs"
             : "bg-white border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 text-slate-700"
         }`}
         style={{ marginLeft: `${depth * 16}px` }}
@@ -304,9 +367,27 @@ function MarkdownTreeNode({
           {isDirectory ? (
             <Folder className="h-4 w-4 text-amber-500 shrink-0" />
           ) : (
-            <FileCode2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <FileCode2
+              className={`h-4 w-4 shrink-0 transition ${
+                isExpandedInEdit
+                  ? "text-blue-600"
+                  : isExpandedInView
+                  ? "text-emerald-700"
+                  : "text-emerald-600"
+              }`}
+            />
           )}
-          <span className="font-mono font-semibold truncate text-slate-800">{item.name}</span>
+          <span
+            className={`font-mono font-semibold truncate ${
+              isExpandedInEdit
+                ? "text-blue-950 font-bold"
+                : isExpandedInView
+                ? "text-emerald-950 font-bold"
+                : "text-slate-800"
+            }`}
+          >
+            {item.name}
+          </span>
           <span className="font-mono text-[10px] text-slate-400 truncate">({item.path})</span>
         </div>
 
@@ -315,27 +396,38 @@ function MarkdownTreeNode({
             <>
               <button
                 type="button"
-                onClick={() => onViewContent?.(item)}
-                className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-300 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 transition cursor-pointer"
-                title="Đọc nội dung file Markdown qua API GET"
+                onClick={() => onToggleView(item)}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer ${
+                  isExpandedInView
+                    ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700"
+                    : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                }`}
+                title={isExpandedInView ? "Thu gọn file này" : "Xem nội dung file Markdown (.md)"}
               >
-                <Eye className="h-3 w-3 text-emerald-600" />
-                <span>Xem file</span>
+                <Eye className="h-3 w-3" />
+                <span>{isExpandedInView ? "Thu gọn" : "Xem file"}</span>
               </button>
+
               <button
                 type="button"
-                onClick={() => onEditContent?.(item)}
-                className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-300 px-2 py-0.5 text-[11px] font-semibold text-blue-800 hover:bg-blue-100 transition cursor-pointer"
-                title="Sửa nội dung file Markdown qua API POST /edit"
+                onClick={() => onToggleEdit(item)}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer ${
+                  isExpandedInEdit
+                    ? "bg-blue-600 text-white shadow-xs hover:bg-blue-700"
+                    : "bg-blue-50 border border-blue-300 text-blue-800 hover:bg-blue-100"
+                }`}
+                title={isExpandedInEdit ? "Đang sửa file (bấm để thu gọn)" : "Sửa nội dung file Markdown qua API POST /edit"}
               >
-                <Edit2 className="h-3 w-3 text-blue-600" />
-                <span>Sửa file</span>
+                <Edit2 className="h-3 w-3" />
+                <span>{isExpandedInEdit ? "Đang sửa" : "Sửa file"}</span>
               </button>
+
               <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
                 .md
               </span>
             </>
           )}
+
           <button
             type="button"
             onClick={() => onCopyPath(copyKey, effectivePath, "đường dẫn file")}
@@ -352,6 +444,267 @@ function MarkdownTreeNode({
         </div>
       </div>
 
+      {/* INLINE FILE VIEWER & EDITOR (EXPANDED RIGHT BENEATH THIS FILE ROW) */}
+      {!isDirectory && fileState?.isOpen && (
+        <div
+          className={`mt-1.5 mb-2.5 rounded-xl bg-white shadow-xs overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150 border border-slate-200/90 ${
+            fileState.isEditing
+              ? "border-l-4 border-l-blue-600 ring-1 ring-blue-500/10"
+              : "border-l-4 border-l-emerald-600 ring-1 ring-emerald-500/10"
+          }`}
+          style={{ marginLeft: `${depth * 16}px` }}
+        >
+          {/* Header Toolbar - Compact harmonious styling */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/90 px-3.5 py-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Tab Mode Toggle */}
+              <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (fileState.isEditing) onToggleView(item);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-semibold transition cursor-pointer ${
+                    !fileState.isEditing
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Eye className="h-3 w-3 text-emerald-600" />
+                  <span>Xem trước</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!fileState.isEditing) onToggleEdit(item);
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-semibold transition cursor-pointer ${
+                    fileState.isEditing
+                      ? "bg-blue-50 text-blue-800 border border-blue-200/80 shadow-2xs font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Edit2 className="h-3 w-3 text-blue-600" />
+                  <span>Chỉnh sửa</span>
+                </button>
+              </div>
+
+              <span className="font-mono text-xs text-slate-800 font-bold truncate max-w-xs sm:max-w-md" title={effectivePath}>
+                {item.name}
+              </span>
+
+              <span className="rounded-md bg-emerald-100 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800">
+                .md
+              </span>
+
+              {fileState.content !== null && !fileState.loading && (
+                <span className="text-[11px] text-slate-500 font-mono hidden sm:inline">
+                  • {fileState.content.split("\n").length} dòng • {fileState.content.length} bytes
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!fileState.isEditing && fileState.content !== null && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onCopyPath(`inline-copy-${fileKey}`, fileState.content || "", `nội dung file ${item.name}`)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition cursor-pointer"
+                    title="Sao chép toàn bộ nội dung file"
+                  >
+                    {copiedKey === `inline-copy-${fileKey}` ? (
+                      <Check className="h-3 w-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3 w-3 text-slate-500" />
+                    )}
+                    <span className="hidden sm:inline">Sao chép</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRefreshFile(item)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition cursor-pointer"
+                    title="Tải lại nội dung file từ API"
+                  >
+                    <RefreshCw className="h-3 w-3 text-slate-500" />
+                    <span className="hidden sm:inline">Tải lại</span>
+                  </button>
+                </>
+              )}
+
+              {fileState.isEditing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onCancelEdit(item)}
+                    disabled={fileState.isSaving}
+                    className="rounded-lg border border-slate-200 bg-white px-2.5 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSaveFile(item)}
+                    disabled={fileState.isSaving}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-0.5 text-xs font-bold text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+                  >
+                    {fileState.isSaving ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    <span>{fileState.isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => onCloseFile(item)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 transition cursor-pointer ml-1"
+                title="Thu gọn file này"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Content View / Editor Body */}
+          {fileState.saveError && (
+            <div className="mx-3 mt-2 rounded-lg border border-rose-200 bg-rose-50/90 p-2.5 text-xs text-rose-800 flex items-start gap-2 shadow-2xs">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-snug">
+                <strong className="font-bold text-rose-900">Lỗi khi lưu file:</strong> {fileState.saveError}
+              </div>
+            </div>
+          )}
+
+          {fileState.loading && (
+            <div className="flex flex-col items-center justify-center py-6 text-center bg-slate-50/40">
+              <RefreshCw className="h-6 w-6 text-emerald-600 animate-spin" />
+              <p className="mt-2 text-xs font-bold text-slate-700">
+                Đang tải nội dung file qua API GET...
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-400 font-mono truncate max-w-md">
+                {effectivePath}
+              </p>
+            </div>
+          )}
+
+          {!fileState.loading && fileState.error && (
+            <div className="p-3 bg-white">
+              <div className="rounded-lg border border-rose-200 bg-rose-50/80 p-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h5 className="text-xs font-bold text-rose-900">Không thể tải nội dung file</h5>
+                    <p className="mt-1 text-[11px] font-mono text-rose-700 leading-relaxed">
+                      {fileState.error}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onRefreshFile(item)}
+                      className="mt-2 inline-flex items-center gap-1 rounded-md bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 text-xs font-bold shadow-2xs transition cursor-pointer"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Thử lại</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!fileState.loading && !fileState.error && fileState.content !== null && (
+            fileState.isEditing ? (
+              <div className="bg-white">
+                <div className="flex items-center justify-between px-3.5 py-1.5 bg-blue-50/40 border-b border-blue-100 text-xs">
+                  <div className="flex items-center gap-1.5 truncate max-w-md">
+                    <span className="font-semibold text-slate-700">Đang chỉnh sửa:</span>
+                    <code className="text-blue-700 font-bold font-mono text-[11px] truncate">
+                      {effectivePath}
+                    </code>
+                  </div>
+                  <span className="font-mono text-[10px] text-blue-600/90 bg-blue-100/60 border border-blue-200/60 px-1.5 py-0.2 rounded hidden sm:inline">
+                    POST /api/workspaces/content/markdown/edit
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50/30">
+                  <textarea
+                    value={fileState.editDraft}
+                    onChange={(e) => onChangeDraft(item, e.target.value)}
+                    rows={Math.min(Math.max((fileState.editDraft.split("\n").length || 1), 6), 16)}
+                    className="w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-xs text-slate-850 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/15 resize-y leading-relaxed select-text shadow-2xs transition"
+                    placeholder="# Nhập nội dung Markdown tại đây..."
+                  />
+                </div>
+                <div className="flex items-center justify-between px-3.5 py-1.5 border-t border-slate-200 bg-slate-50/80 text-xs">
+                  <span className="text-[11px] text-slate-400 font-mono truncate max-w-xs">
+                    id={selectedWsId}&path={effectivePath}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onCancelEdit(item)}
+                      disabled={fileState.isSaving}
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 shadow-2xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSaveFile(item)}
+                      disabled={fileState.isSaving}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1 text-xs font-bold text-white shadow-xs transition cursor-pointer disabled:opacity-50"
+                    >
+                      {fileState.isSaving ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      <span>{fileState.isSaving ? "Đang lưu..." : "Lưu thay đổi"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="relative group bg-slate-50/40">
+                  <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap select-text text-slate-850 px-3.5 py-2.5 max-h-[380px] overflow-y-auto">
+                    {fileState.content ? (
+                      fileState.content.trimEnd()
+                    ) : (
+                      <span className="text-slate-400 italic font-sans">(File rỗng - 0 bytes)</span>
+                    )}
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={() => onToggleEdit(item)}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 rounded-md border border-blue-200 bg-white hover:bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs cursor-pointer"
+                    title="Chuyển sang chế độ chỉnh sửa file"
+                  >
+                    <Edit2 className="h-3 w-3 text-blue-600" />
+                    <span>Sửa</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between px-3.5 py-1 border-t border-slate-200/70 bg-white text-[11px] text-slate-400 font-mono">
+                  <span className="truncate max-w-sm" title={effectivePath}>path: {effectivePath}</span>
+                  <button
+                    type="button"
+                    onClick={() => onToggleEdit(item)}
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium transition cursor-pointer text-xs"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                    <span>Chỉnh sửa</span>
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
+
       {isDirectory && item.children && item.children.length > 0 && (
         <div className="mt-1 space-y-1 border-l-2 border-slate-200 ml-4 pl-1">
           {item.children.map((child, idx) => (
@@ -359,10 +712,17 @@ function MarkdownTreeNode({
               key={`${child.path}-${idx}`}
               item={child}
               depth={depth + 1}
+              selectedWsId={child.workspace_id || selectedWsId}
+              openFiles={openFiles}
+              onToggleView={onToggleView}
+              onToggleEdit={onToggleEdit}
+              onSaveFile={onSaveFile}
+              onCancelEdit={onCancelEdit}
+              onCloseFile={onCloseFile}
+              onChangeDraft={onChangeDraft}
+              onRefreshFile={onRefreshFile}
               onCopyPath={onCopyPath}
               copiedKey={copiedKey}
-              onViewContent={onViewContent}
-              onEditContent={onEditContent}
             />
           ))}
         </div>
@@ -514,14 +874,14 @@ function WorkspaceCardItem({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {onViewMarkdown && ws.work_space_code !== "workspace-test" && (
+          {onViewMarkdown && ws.is_selectable !== false && (!ws.children || ws.children.length === 0) && (
             <button
               type="button"
               onClick={() => onViewMarkdown(ws)}
               className="flex h-7.5 w-7.5 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer shadow-2xs active:scale-95"
               title="Xem cấu trúc file Markdown (.md)"
             >
-              <FileCode2 className="h-3.5 w-3.5" />
+              <Eye className="h-3.5 w-3.5" />
             </button>
           )}
 
@@ -549,9 +909,62 @@ function WorkspaceCardItem({
 }
 
 
-export default function WorkspaceManagement() {
+export interface WorkspaceManagementProps {
+  initialTab?: "workspaces" | "markdown" | "sessions" | "user-workspaces";
+}
+
+export default function WorkspaceManagement({
+  initialTab = "workspaces",
+}: WorkspaceManagementProps = {}) {
   // Navigation tab: 'workspaces' | 'markdown' | 'sessions' | 'user-workspaces'
-  const [activeTab, setActiveTab] = useState<"workspaces" | "markdown" | "sessions" | "user-workspaces">("workspaces");
+  const [activeTab, setActiveTab] = useState<"workspaces" | "markdown" | "sessions" | "user-workspaces">(initialTab);
+
+  const navigateTab = useCallback(
+    (tab: "workspaces" | "markdown" | "sessions" | "user-workspaces") => {
+      setActiveTab(tab);
+      if (typeof window !== "undefined") {
+        const targetUri =
+          tab === "markdown"
+            ? "/next/api/hust/workspace/markdown"
+            : "/next/api/hust/workspace/home";
+        if (window.location.pathname !== targetUri) {
+          window.history.pushState(null, "", targetUri);
+        }
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === "undefined") return;
+      const path = window.location.pathname;
+      if (path.includes("/markdown")) {
+        setActiveTab("markdown");
+      } else if (path.includes("/home") || path.includes("/workspace")) {
+        setActiveTab("workspaces");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (path.includes("/markdown")) {
+        setActiveTab("markdown");
+      } else if (path.includes("/home")) {
+        setActiveTab("workspaces");
+      }
+    }
+  }, []);
 
   // --- Markdown State (API /api/workspaces/main/markdown?id={id}) ---
   const [selectedMarkdownWsId, setSelectedMarkdownWsId] = useState<number | null>(null);
@@ -559,21 +972,8 @@ export default function WorkspaceManagement() {
   const [markdownLoading, setMarkdownLoading] = useState<boolean>(false);
   const [markdownError, setMarkdownError] = useState<string | null>(null);
 
-  // --- Markdown File Content State (API /api/workspaces/content/markdown?id={id}&path={path}) ---
-  const [viewingFile, setViewingFile] = useState<{
-    name: string;
-    path: string;
-    full_path: string;
-    content: string | null;
-    loading: boolean;
-    error: string | null;
-  } | null>(null);
-
-  // Markdown File Editing State (API POST /api/workspaces/content/markdown/edit)
-  const [isEditingFile, setIsEditingFile] = useState(false);
-  const [editFileContent, setEditFileContent] = useState("");
-  const [savingFile, setSavingFile] = useState(false);
-  const [saveFileError, setSaveFileError] = useState<string | null>(null);
+  // --- Inline Markdown Files Preview & Edit State (keyed by item.full_path || item.path) ---
+  const [openFiles, setOpenFiles] = useState<Record<string, InlineFileState>>({});
 
   // View Mode: 'card' (Grid cards) | 'table' (Tabular rows)
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
@@ -733,23 +1133,27 @@ export default function WorkspaceManagement() {
     }
   }, [wsPage]);
 
-  // --- Fetch Workspace Markdown File Content (API /api/workspaces/content/markdown/get?id={id}&path={path}) ---
-  const handleViewFileContent = useCallback(
-    async (item: MarkdownTreeItem, startInEditMode = false, explicitWsId?: number) => {
-      const targetWsId = explicitWsId ?? selectedMarkdownWsId;
+  // --- Load Workspace Markdown File Content (API /api/workspaces/content/markdown/get?id={id}&path={path}) ---
+  const loadFileContent = useCallback(
+    async (item: MarkdownTreeItem, startInEdit = false, explicitWsId?: number) => {
+      const targetWsId = explicitWsId ?? item.workspace_id ?? selectedMarkdownWsId;
       if (!targetWsId) return;
       const targetPath = item.full_path || item.path;
-      setViewingFile({
-        name: item.name,
-        path: item.path,
-        full_path: targetPath,
-        content: null,
-        loading: true,
-        error: null,
-      });
-      setIsEditingFile(startInEditMode);
-      setEditFileContent("");
-      setSaveFileError(null);
+      const fileKey = targetPath;
+
+      setOpenFiles((prev) => ({
+        ...prev,
+        [fileKey]: {
+          isOpen: true,
+          isEditing: startInEdit,
+          content: prev[fileKey]?.content ?? null,
+          loading: true,
+          error: null,
+          editDraft: prev[fileKey]?.editDraft ?? "",
+          isSaving: false,
+          saveError: null,
+        },
+      }));
 
       try {
         let res = await fetch(
@@ -786,40 +1190,319 @@ export default function WorkspaceManagement() {
         }
         const data = await res.json();
         const content = data?.data?.content ?? data?.content ?? "";
-        setViewingFile((prev) => (prev ? { ...prev, content, loading: false } : null));
-        setEditFileContent(content);
-        if (startInEditMode) {
-          setIsEditingFile(true);
-        }
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            isOpen: true,
+            isEditing: startInEdit,
+            content,
+            loading: false,
+            error: null,
+            editDraft: content,
+            isSaving: false,
+            saveError: null,
+          },
+        }));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setViewingFile((prev) => (prev ? { ...prev, error: msg, loading: false } : null));
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            ...(prev[fileKey] || {
+              isOpen: true,
+              isEditing: startInEdit,
+              content: null,
+              editDraft: "",
+              isSaving: false,
+              saveError: null,
+            }),
+            loading: false,
+            error: msg,
+          },
+        }));
       }
     },
     [selectedMarkdownWsId]
+  );
+
+  const handleToggleViewFile = useCallback(
+    (item: MarkdownTreeItem) => {
+      const fileKey = item.full_path || item.path;
+      const current = openFiles[fileKey];
+
+      // If already open in view mode -> toggle closed
+      if (current?.isOpen && !current.isEditing) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isOpen: false },
+        }));
+        return;
+      }
+
+      // If already open in edit mode -> switch to view mode
+      if (current?.isOpen && current.isEditing) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isEditing: false },
+        }));
+        return;
+      }
+
+      // If closed but content already cached -> open immediately
+      if (current?.content !== null && current?.content !== undefined) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isOpen: true, isEditing: false },
+        }));
+        return;
+      }
+
+      // Otherwise fetch from API
+      void loadFileContent(item, false);
+    },
+    [openFiles, loadFileContent]
+  );
+
+  const handleToggleEditFile = useCallback(
+    (item: MarkdownTreeItem) => {
+      const fileKey = item.full_path || item.path;
+      const current = openFiles[fileKey];
+
+      // If already open in edit mode -> toggle closed
+      if (current?.isOpen && current.isEditing) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isOpen: false },
+        }));
+        return;
+      }
+
+      // If open in view mode -> switch to edit mode
+      if (current?.isOpen && !current.isEditing) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            isEditing: true,
+            editDraft: prev[fileKey].content ?? "",
+            saveError: null,
+          },
+        }));
+        return;
+      }
+
+      // If closed but content cached -> open in edit mode
+      if (current?.content !== null && current?.content !== undefined) {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            isOpen: true,
+            isEditing: true,
+            editDraft: prev[fileKey].content ?? "",
+            saveError: null,
+          },
+        }));
+        return;
+      }
+
+      // Otherwise fetch from API and open in edit mode
+      void loadFileContent(item, true);
+    },
+    [openFiles, loadFileContent]
+  );
+
+  const handleCloseFile = useCallback((item: MarkdownTreeItem) => {
+    const fileKey = item.full_path || item.path;
+    setOpenFiles((prev) => {
+      if (!prev[fileKey]) return prev;
+      return {
+        ...prev,
+        [fileKey]: { ...prev[fileKey], isOpen: false },
+      };
+    });
+  }, []);
+
+  const handleChangeDraft = useCallback((item: MarkdownTreeItem, draft: string) => {
+    const fileKey = item.full_path || item.path;
+    setOpenFiles((prev) => {
+      if (!prev[fileKey]) return prev;
+      return {
+        ...prev,
+        [fileKey]: { ...prev[fileKey], editDraft: draft },
+      };
+    });
+  }, []);
+
+  const handleCancelEdit = useCallback((item: MarkdownTreeItem) => {
+    const fileKey = item.full_path || item.path;
+    setOpenFiles((prev) => {
+      if (!prev[fileKey]) return prev;
+      return {
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          isEditing: false,
+          editDraft: prev[fileKey].content ?? "",
+          saveError: null,
+        },
+      };
+    });
+  }, []);
+
+  const handleSaveFileContent = useCallback(
+    async (item: MarkdownTreeItem) => {
+      const targetWsId = item.workspace_id ?? selectedMarkdownWsId;
+      if (!targetWsId) return;
+      const fileKey = item.full_path || item.path;
+      const current = openFiles[fileKey];
+      if (!current) return;
+
+      setOpenFiles((prev) => ({
+        ...prev,
+        [fileKey]: { ...prev[fileKey], isSaving: true, saveError: null },
+      }));
+
+      try {
+        const encodedPath = encodeURIComponent(fileKey);
+        let res = await fetch(
+          `/next/api/hust/workspaces/content/markdown/edit?id=${targetWsId}&path=${encodedPath}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ content: current.editDraft }),
+          }
+        );
+        if (!res.ok) {
+          res = await fetch(
+            `https://laravel.hust.media/api/workspaces/content/markdown/edit?id=${targetWsId}&path=${encodedPath}`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+              },
+              body: JSON.stringify({ content: current.editDraft }),
+            }
+          );
+        }
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errText.slice(0, 150)}`);
+        }
+        const data = await res.json();
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            content: current.editDraft,
+            isEditing: false,
+            isSaving: false,
+            saveError: null,
+          },
+        }));
+        showToast(`Đã lưu file ${item.name} thành công! (${data?.data?.bytes_written ?? 0} bytes)`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isSaving: false, saveError: msg },
+        }));
+      }
+    },
+    [openFiles, selectedMarkdownWsId]
   );
 
   // --- Fetch Workspace Markdown Tree (API /api/workspaces/main/markdown?id={id}) ---
   const fetchWorkspaceMarkdown = useCallback(
     async (id: number, autoOpenEdit = false) => {
       setSelectedMarkdownWsId(id);
+      setOpenFiles({});
       setMarkdownLoading(true);
       setMarkdownError(null);
       try {
+        // Check if this id belongs to a parent workspace with children
+        const parentWs = workspacesTree.find(
+          (w) => w.id === id && ((w.children && w.children.length > 0) || w.is_selectable === false)
+        );
+
+        if (parentWs && parentWs.children && parentWs.children.length > 0) {
+          // Parent workspace: Aggregate full markdown tree from all of its children
+          const childFetches = await Promise.allSettled(
+            parentWs.children.map(async (child) => {
+              let res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
+                method: "GET",
+                headers: { Accept: "application/json" },
+                cache: "no-store",
+              });
+              if (!res.ok) {
+                res = await fetch(
+                  `https://laravel.hust.media/api/workspaces/main/markdown?id=${child.id}`,
+                  {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                    cache: "no-store",
+                  }
+                );
+              }
+              const json = await res.json().catch(() => ({}));
+              if (!res.ok || !json.data) {
+                throw new Error(json.message || `Lỗi tải ${child.work_space_code}`);
+              }
+              return { child, data: json.data as WorkspaceMarkdownData };
+            })
+          );
+
+          let totalMarkdownCount = 0;
+          const combinedTree: MarkdownTreeItem[] = [];
+
+          for (const result of childFetches) {
+            if (result.status === "fulfilled") {
+              const { child, data } = result.value;
+              totalMarkdownCount += data.markdown_count || 0;
+              const childItems = Array.isArray(data.tree) ? data.tree : [];
+              combinedTree.push({
+                type: "directory",
+                name: `${child.workspace_name || child.work_space_code}`,
+                path: child.work_space_code,
+                full_path: data.relative_path || `${parentWs.work_space_code}/${child.work_space_code}`,
+                workspace_id: child.id,
+                children: childItems.map((t) => attachWorkspaceId(t, child.id)),
+              });
+            }
+          }
+
+          setMarkdownData({
+            id: parentWs.id,
+            workspace_name: `${parentWs.workspace_name || parentWs.work_space_code} (Toàn bộ nhóm mẹ)`,
+            work_space_code: parentWs.work_space_code,
+            parent_workspace_code: parentWs.parent_workspace_code,
+            relative_path: parentWs.work_space_code,
+            markdown_count: totalMarkdownCount,
+            tree: combinedTree,
+          });
+
+          if (autoOpenEdit && combinedTree.length > 0) {
+            const firstFile = findFirstMarkdownFile(combinedTree);
+            if (firstFile) {
+              void loadFileContent(firstFile, true, firstFile.workspace_id || id);
+            }
+          }
+          return;
+        }
+
+        // Child workspace: fetch directly from API
         let res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${id}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
         });
         if (!res.ok) {
+          // Fallback trực tiếp Laravel MT API
           res = await fetch(`https://laravel.hust.media/api/workspaces/main/markdown?id=${id}`, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-            cache: "no-store",
-          });
-        }
-        if (!res.ok) {
-          res = await fetch(`https://laravel_mt.hust.media/api/workspaces/main/markdown?id=${id}`, {
             method: "GET",
             headers: { Accept: "application/json" },
             cache: "no-store",
@@ -833,7 +1516,7 @@ export default function WorkspaceManagement() {
         if (autoOpenEdit && Array.isArray(json.data.tree)) {
           const firstFile = findFirstMarkdownFile(json.data.tree);
           if (firstFile) {
-            void handleViewFileContent(firstFile, true, id);
+            void loadFileContent(firstFile, true, id);
           }
         }
       } catch (err: unknown) {
@@ -844,71 +1527,66 @@ export default function WorkspaceManagement() {
         setMarkdownLoading(false);
       }
     },
-    [handleViewFileContent]
+    [workspacesTree, loadFileContent]
   );
 
   const handleViewMarkdown = useCallback(
     (ws: WorkspaceRecord) => {
-      setActiveTab("markdown");
+      navigateTab("markdown");
       void fetchWorkspaceMarkdown(ws.id, false);
     },
-    [fetchWorkspaceMarkdown]
+    [fetchWorkspaceMarkdown, navigateTab]
   );
 
-  // --- Save Workspace Markdown File Content (API POST /api/workspaces/content/markdown/edit?id={id}&path={path}) ---
-  const handleSaveFileContent = useCallback(async () => {
-    if (!viewingFile || !selectedMarkdownWsId) return;
-    setSavingFile(true);
-    setSaveFileError(null);
-    try {
-      const encodedPath = encodeURIComponent(viewingFile.full_path);
-      let res = await fetch(
-        `/next/api/hust/workspaces/content/markdown/edit?id=${selectedMarkdownWsId}&path=${encodedPath}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({ content: editFileContent }),
-        }
-      );
-      if (!res.ok) {
-        res = await fetch(
-          `https://laravel.hust.media/api/workspaces/content/markdown/edit?id=${selectedMarkdownWsId}&path=${encodedPath}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({ content: editFileContent }),
-          }
-        );
+  const handleExpandAllFiles = useCallback(() => {
+    if (!markdownData?.tree) return;
+    const allFiles = collectAllMarkdownFiles(markdownData.tree);
+    for (const file of allFiles) {
+      const fileKey = file.full_path || file.path;
+      const current = openFiles[fileKey];
+      if (!current?.content) {
+        void loadFileContent(file, false);
+      } else {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: { ...prev[fileKey], isOpen: true, isEditing: false },
+        }));
       }
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`HTTP ${res.status}: ${errText.slice(0, 150)}`);
-      }
-      const data = await res.json();
-      setViewingFile((prev) => (prev ? { ...prev, content: editFileContent } : null));
-      setIsEditingFile(false);
-      showToast(`Đã lưu file thành công! (${data?.data?.bytes_written ?? 0} bytes)`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setSaveFileError(msg);
-    } finally {
-      setSavingFile(false);
     }
-  }, [viewingFile, selectedMarkdownWsId, editFileContent]);
+  }, [markdownData, openFiles, loadFileContent]);
+
+  const handleCollapseAllFiles = useCallback(() => {
+    setOpenFiles((prev) => {
+      const next: Record<string, InlineFileState> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        next[k] = { ...v, isOpen: false };
+      }
+      return next;
+    });
+  }, []);
+
+  const openFilesCount = useMemo(() => {
+    return Object.values(openFiles).filter((f) => f.isOpen).length;
+  }, [openFiles]);
 
   const eligibleMarkdownWorkspaces = useMemo(() => {
     return workspaces.filter((w) => {
-      if (w.work_space_code === "workspace-test" && !w.parent_workspace_code) return false;
-      if (w.id === 5) return false;
-      return true;
+      const isParent = (w.children_count && w.children_count > 0) || w.is_selectable === false;
+      return !isParent;
     });
   }, [workspaces]);
+
+  const markdownParentGroups = useMemo(() => {
+    return workspacesTree.filter(
+      (w) => (w.children && w.children.length > 0) || w.is_selectable === false
+    );
+  }, [workspacesTree]);
+
+  const markdownStandaloneWorkspaces = useMemo(() => {
+    return workspacesTree.filter(
+      (w) => (!w.children || w.children.length === 0) && w.is_selectable !== false
+    );
+  }, [workspacesTree]);
 
   // --- 2. Fetch Sessions from Laravel API (work_space_session) ---
   const fetchSessions = useCallback(async () => {
@@ -1321,7 +1999,7 @@ export default function WorkspaceManagement() {
 
           <div className="flex flex-wrap items-center gap-2">
             <a
-              href="/next/api/hust/laravel"
+              href="/next/api/hust/list/laravel"
               className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs font-bold text-blue-700 shadow-xs transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 cursor-pointer"
               title="Quay về trang Danh mục API & Swagger Laravel"
             >
@@ -1450,9 +2128,12 @@ export default function WorkspaceManagement() {
         {/* Tab & View Mode Switcher */}
         <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200">
           <div className="flex">
-            <button
-              type="button"
-              onClick={() => setActiveTab("workspaces")}
+            <a
+              href="/next/api/hust/workspace/home"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateTab("workspaces");
+              }}
               className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 activeTab === "workspaces"
                   ? "border-purple-600 text-purple-700 bg-purple-50/40 rounded-t-xl"
@@ -1468,11 +2149,14 @@ export default function WorkspaceManagement() {
               >
                 {isInitialWorkspaceLoad ? "…" : workspaces.length}
               </span>
-            </button>
+            </a>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("markdown")}
+            <a
+              href="/next/api/hust/workspace/markdown"
+              onClick={(e) => {
+                e.preventDefault();
+                navigateTab("markdown");
+              }}
               className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 activeTab === "markdown"
                   ? "border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-xl"
@@ -1488,7 +2172,7 @@ export default function WorkspaceManagement() {
               >
                 {eligibleMarkdownWorkspaces.length}
               </span>
-            </button>
+            </a>
 
             <button
               type="button"
@@ -1853,6 +2537,16 @@ export default function WorkspaceManagement() {
                                   <span className="hidden sm:inline">Thêm con</span>
                                 </button>
 
+                                {/* View Full Markdown */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewMarkdown(parentWs)}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer shadow-xs active:scale-95"
+                                  title="Xem toàn bộ cấu trúc file Markdown (.md) của cả nhóm mẹ"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+
                                 {/* Edit */}
                                 <button
                                   type="button"
@@ -1939,9 +2633,9 @@ export default function WorkspaceManagement() {
                                     isChild
                                     onToggleStatus={handleToggleStatus}
                                     onOpenEdit={handleOpenEditModal}
-                                    onDelete={handleDeleteWorkspace}
+                                     onDelete={handleDeleteWorkspace}
                                     onViewSessions={fetchSpecificWorkspaceSessions}
-                                     onViewMarkdown={handleViewMarkdown}
+                                    onViewMarkdown={handleViewMarkdown}
                                     onCopy={handleCopy}
                                     copiedKey={copiedKey}
                                     formatDate={formatDate}
@@ -2378,7 +3072,7 @@ export default function WorkspaceManagement() {
                                       className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/90 text-emerald-700 transition hover:bg-emerald-100 hover:border-emerald-300 cursor-pointer shadow-2xs active:scale-95"
                                       title="Xem cấu trúc file Markdown (.md)"
                                     >
-                                      <FileCode2 className="h-3.5 w-3.5" />
+                                      <Eye className="h-3.5 w-3.5" />
                                     </button>
                                     <button
                                       type="button"
@@ -2557,7 +3251,7 @@ export default function WorkspaceManagement() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                    API đọc cây thư mục và danh sách file <code className="font-mono font-bold text-emerald-800">.md</code> theo từng ID workspace con trực tiếp của <code className="font-mono text-purple-700">workspace-test</code>.
+                    API đọc cây thư mục và danh sách file <code className="font-mono font-bold text-emerald-800">.md</code> theo từng ID workspace con trực tiếp thuộc workspace cha.
                   </p>
                 </div>
               </div>
@@ -2599,15 +3293,15 @@ export default function WorkspaceManagement() {
             )}
           </div>
 
-          {/* List of eligible child workspaces to choose from */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
+          {/* List of eligible child workspaces grouped by Parent Workspace */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-700">
-                  Danh sách Workspace con để kiểm tra Markdown
+                  Danh sách Workspace con theo nhóm Mẹ để kiểm tra Markdown
                 </h3>
                 <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-600">
-                  {eligibleMarkdownWorkspaces.length} workspace
+                  {eligibleMarkdownWorkspaces.length} workspace con
                 </span>
               </div>
               {selectedMarkdownWsId && (
@@ -2617,68 +3311,279 @@ export default function WorkspaceManagement() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {eligibleMarkdownWorkspaces.map((ws) => {
-                const isSelected = selectedMarkdownWsId === ws.id;
-                return (
-                  <div
-                    key={ws.id}
-                    onClick={() => void fetchWorkspaceMarkdown(ws.id)}
-                    className={`group relative rounded-2xl p-3.5 transition cursor-pointer text-left border ${
-                      isSelected
-                        ? "border-emerald-500 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 ring-2 ring-emerald-400/40 shadow-sm"
-                        : "border-slate-200 bg-white/90 hover:border-emerald-300 hover:bg-slate-50/80 shadow-2xs hover:shadow-xs"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
-                            isSelected
-                              ? "bg-emerald-600 text-white border-emerald-600"
-                              : "bg-slate-100 text-slate-600 border-slate-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200"
-                          }`}
-                        >
-                          <FileCode2 className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-slate-800 truncate" title={ws.workspace_name || ws.work_space_code}>
-                            {ws.workspace_name || ws.work_space_code}
-                          </h4>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded">
-                              ID: {ws.id}
-                            </span>
-                            <span className="font-mono text-[10px] text-slate-500 truncate">
-                              {ws.work_space_code}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+            {markdownParentGroups.map((parentWs) => {
+              const children = parentWs.children || [];
+              if (children.length === 0) return null;
+              const isParentSelected = selectedMarkdownWsId === parentWs.id;
 
-                      <div className="shrink-0">
-                        {isSelected ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                            Đang xem
+              return (
+                <div
+                  key={`md-parent-${parentWs.id}`}
+                  className={`rounded-2xl border p-3.5 sm:p-4 shadow-2xs backdrop-blur-sm space-y-2.5 transition-all ${
+                    isParentSelected
+                      ? "border-emerald-500 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 ring-2 ring-emerald-400/40 shadow-sm"
+                      : "border-indigo-200/90 bg-white/95 hover:border-indigo-300"
+                  }`}
+                >
+                  {/* Header thông tin nhóm Mẹ */}
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-xs">
+                        <Briefcase className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                            {parentWs.workspace_name || parentWs.work_space_code}
+                          </h4>
+                          <span className="font-mono text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200/80 px-1.5 py-0.2 rounded-md">
+                            {parentWs.work_space_code}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition px-2 py-0.5 text-[10px] font-semibold">
-                            Chọn xem →
+                          <span className="rounded-full bg-violet-100 border border-violet-200 px-2 py-0.2 text-[10px] font-bold text-violet-800">
+                            Nhóm cha · {children.length} workspace con
                           </span>
+                        </div>
+                        {parentWs.description && (
+                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            {parentWs.description}
+                          </p>
                         )}
                       </div>
                     </div>
 
-                    {ws.description && (
-                      <p className="mt-2 text-[11px] text-slate-500 line-clamp-1">
-                        {ws.description}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                        ID: {parentWs.id}
+                      </span>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* Phần riêng biệt: Khung Workspace Mẹ - Tách riêng ra, kích thước gọn gàng đúng bằng 1 khung con */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.2 rounded-md">
+                        Xem tổng quan cả nhóm mẹ:
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                      {/* Thẻ Mẹ - Nằm riêng trong 1 cột của lưới 3 cột, kích thước gọn gàng */}
+                      <div
+                        onClick={() => void fetchWorkspaceMarkdown(parentWs.id)}
+                        className={`group relative rounded-xl px-3.5 py-2.5 transition cursor-pointer text-left border flex flex-col justify-between ${
+                          isParentSelected
+                            ? "border-emerald-500 bg-gradient-to-br from-emerald-100/90 via-emerald-50/70 to-teal-50/80 ring-2 ring-emerald-500/40 shadow-xs"
+                            : "border-emerald-300/80 bg-gradient-to-br from-emerald-50/70 via-white to-teal-50/40 hover:border-emerald-500 hover:bg-emerald-50/90 shadow-2xs hover:shadow-xs"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg border transition ${
+                                isParentSelected
+                                  ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                                  : "bg-emerald-100/90 text-emerald-700 border-emerald-200 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600"
+                              }`}
+                            >
+                              <FolderTree className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-800 transition truncate">
+                                Xem full cả nhóm mẹ
+                              </h4>
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span className="font-mono text-[10px] font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-1.5 py-0.2 rounded">
+                                  ID: {parentWs.id}
+                                </span>
+                                <span className="font-mono text-[10px] font-bold text-emerald-700 truncate max-w-[140px]" title={parentWs.work_space_code}>
+                                  {parentWs.work_space_code}
+                                </span>
+                                <span className="font-bold text-[9px] text-teal-800 bg-teal-100/80 border border-teal-200 px-1.5 py-0.2 rounded-full">
+                                  {children.length} con
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            {isParentSelected ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white border border-emerald-600 px-2 py-0.5 text-[10px] font-bold shadow-2xs">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Đang xem
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-white text-emerald-700 border border-emerald-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition px-2 py-0.5 text-[10px] font-semibold">
+                                <Eye className="h-3 w-3" />
+                                Chọn xem →
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <p
+                          className="text-[11px] text-slate-600 group-hover:text-slate-700 line-clamp-2 mt-1 leading-snug"
+                          title={`Tổng hợp toàn bộ cây file Markdown từ cả ${children.length} workspace con trong nhóm này.`}
+                        >
+                          Tổng hợp toàn bộ cây file Markdown từ cả {children.length} workspace con trong nhóm này.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phân cách giữa nhóm mẹ tách riêng và các nhóm con */}
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Danh sách workspace con ({children.length} workspace con):
+                    </span>
+                    <div className="h-px flex-1 bg-slate-200/70" />
+                  </div>
+
+                  {/* Lưới các thẻ Workspace Con riêng biệt - Chiều cao gọn gàng */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                    {children.map((ws) => {
+                      const isSelected = selectedMarkdownWsId === ws.id;
+                      return (
+                        <div
+                          key={ws.id}
+                          onClick={() => void fetchWorkspaceMarkdown(ws.id)}
+                          className={`group relative rounded-xl px-3.5 py-2.5 transition cursor-pointer text-left border flex flex-col justify-between ${
+                            isSelected
+                              ? "border-emerald-500 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 ring-2 ring-emerald-400/40 shadow-xs"
+                              : "border-indigo-100/90 bg-gradient-to-br from-white via-indigo-50/20 to-blue-50/30 hover:border-indigo-300 hover:bg-gradient-to-br hover:from-white hover:to-indigo-50/50 shadow-2xs hover:shadow-xs"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div
+                                className={`flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg border transition ${
+                                  isSelected
+                                    ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                                    : "bg-indigo-50 text-indigo-600 border-indigo-200/70 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600"
+                                }`}
+                              >
+                                <FileCode2 className="h-4 w-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4
+                                  className="text-xs font-bold text-slate-800 group-hover:text-indigo-900 transition truncate"
+                                  title={ws.workspace_name || ws.work_space_code}
+                                >
+                                  {ws.workspace_name || ws.work_space_code}
+                                </h4>
+                                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                  <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded">
+                                    ID: {ws.id}
+                                  </span>
+                                  <span
+                                    className="font-mono text-[10px] font-semibold text-indigo-700 bg-indigo-50/90 border border-indigo-200/80 px-1.5 py-0.2 rounded truncate max-w-[150px]"
+                                    title={ws.work_space_code}
+                                  >
+                                    {ws.work_space_code}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0">
+                              {isSelected ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white border border-emerald-600 px-2 py-0.5 text-[10px] font-bold shadow-2xs">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Đang xem
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-white text-indigo-700 border border-indigo-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition px-2 py-0.5 text-[10px] font-semibold">
+                                  Chọn xem →
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <p
+                            className="text-[11px] text-slate-500 group-hover:text-slate-600 line-clamp-2 mt-1 leading-snug"
+                            title={ws.description || ""}
+                          >
+                            {ws.description || "Workspace con phục vụ kiểm tra và quản trị nội dung Markdown."}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {markdownStandaloneWorkspaces.length > 0 && (
+              <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-700">Workspace độc lập</h4>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    {markdownStandaloneWorkspaces.length} workspace
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {markdownStandaloneWorkspaces.map((ws) => {
+                    const isSelected = selectedMarkdownWsId === ws.id;
+                    return (
+                      <div
+                        key={ws.id}
+                        onClick={() => void fetchWorkspaceMarkdown(ws.id)}
+                        className={`group relative rounded-xl p-3 transition cursor-pointer text-left border ${
+                          isSelected
+                            ? "border-emerald-500 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 ring-2 ring-emerald-400/40 shadow-xs"
+                            : "border-slate-200 bg-white hover:border-emerald-300 hover:bg-slate-50 shadow-2xs hover:shadow-xs"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
+                                isSelected
+                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  : "bg-slate-100 text-slate-600 border-slate-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:border-emerald-200"
+                              }`}
+                            >
+                              <FileCode2 className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-slate-800 truncate" title={ws.workspace_name || ws.work_space_code}>
+                                {ws.workspace_name || ws.work_space_code}
+                              </h4>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded">
+                                  ID: {ws.id}
+                                </span>
+                                <span className="font-mono text-[10px] text-slate-500 truncate">
+                                  {ws.work_space_code}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            {isSelected ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                Đang xem
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition px-2 py-0.5 text-[10px] font-semibold">
+                                Chọn xem →
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {ws.description && (
+                          <p className="mt-2 text-[11px] text-slate-500 line-clamp-1">
+                            {ws.description}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Result Inspection Section */}
@@ -2777,9 +3682,40 @@ export default function WorkspaceManagement() {
 
                 {/* File Tree List */}
                 <div>
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-2.5">
-                    Cây thư mục & Files (.md)
-                  </h4>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                      Cây thư mục & Files (.md)
+                    </h4>
+                    {markdownData.tree && markdownData.tree.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {openFilesCount > 0 && (
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                            Đang mở {openFilesCount} file
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleExpandAllFiles}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                          title="Mở xem nội dung tất cả các file .md cùng lúc"
+                        >
+                          <Eye className="h-3 w-3 text-emerald-600" />
+                          <span>Mở xem tất cả</span>
+                        </button>
+                        {openFilesCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleCollapseAllFiles}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer shadow-2xs"
+                            title="Thu gọn tất cả file đang mở"
+                          >
+                            <ChevronUp className="h-3 w-3 text-slate-500" />
+                            <span>Thu gọn tất cả</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {markdownData.tree && markdownData.tree.length > 0 ? (
                     <div className="space-y-1.5 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3">
                       {markdownData.tree.map((item, idx) => (
@@ -2787,10 +3723,17 @@ export default function WorkspaceManagement() {
                           key={`${item.path}-${idx}`}
                           item={item}
                           depth={0}
+                          selectedWsId={item.workspace_id || selectedMarkdownWsId}
+                          openFiles={openFiles}
+                          onToggleView={handleToggleViewFile}
+                          onToggleEdit={handleToggleEditFile}
+                          onSaveFile={handleSaveFileContent}
+                          onCancelEdit={handleCancelEdit}
+                          onCloseFile={handleCloseFile}
+                          onChangeDraft={handleChangeDraft}
+                          onRefreshFile={(it) => void loadFileContent(it, false)}
                           onCopyPath={handleCopy}
                           copiedKey={copiedKey}
-                          onViewContent={handleViewFileContent}
-                          onEditContent={(targetItem) => handleViewFileContent(targetItem, true)}
                         />
                       ))}
                     </div>
@@ -2817,191 +3760,6 @@ export default function WorkspaceManagement() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: VIEW MARKDOWN FILE CONTENT (API /api/workspaces/content/markdown)   */}
-      {/* ========================================================================= */}
-      {viewingFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-150 max-h-[88vh] flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-6 py-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 border border-emerald-200 text-emerald-700">
-                  <FileCode2 className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 truncate">
-                      {viewingFile.name}
-                    </h3>
-                    <span className="rounded-md bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                      .md
-                    </span>
-                  </div>
-                  <p className="text-[11px] font-mono text-slate-500 truncate" title={viewingFile.full_path}>
-                    path: {viewingFile.full_path}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {!isEditingFile && viewingFile.content !== null && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditFileContent(viewingFile.content || "");
-                        setIsEditingFile(true);
-                        setSaveFileError(null);
-                      }}
-                      className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 shadow-2xs hover:bg-emerald-100 transition cursor-pointer"
-                      title="Chỉnh sửa nội dung file Markdown qua API POST /edit"
-                    >
-                      <Edit2 className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>Sửa file</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(`file-content-${viewingFile.name}`, viewingFile.content || "", "nội dung Markdown")}
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition cursor-pointer"
-                    >
-                      {copiedKey === `file-content-${viewingFile.name}` ? (
-                        <Check className="h-3.5 w-3.5 text-emerald-600" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                      <span>Sao chép</span>
-                    </button>
-                  </>
-                )}
-                {isEditingFile && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditingFile(false);
-                        setEditFileContent(viewingFile.content || "");
-                        setSaveFileError(null);
-                      }}
-                      disabled={savingFile}
-                      className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer disabled:opacity-50"
-                    >
-                      <span>Hủy</span>
-                    </button>
-                    {!viewingFile.loading && viewingFile.content !== null && (
-                      <button
-                        type="button"
-                        onClick={handleSaveFileContent}
-                        disabled={savingFile}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition cursor-pointer disabled:opacity-50"
-                      >
-                        {savingFile ? (
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Save className="h-3.5 w-3.5" />
-                        )}
-                        <span>{savingFile ? "Đang lưu..." : "Lưu thay đổi"}</span>
-                      </button>
-                    )}
-                  </>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewingFile(null);
-                    setIsEditingFile(false);
-                  }}
-                  className="rounded-xl p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-900 text-slate-100">
-              {saveFileError && (
-                <div className="mb-4 rounded-xl border border-rose-500/40 bg-rose-950/60 p-3 text-xs text-rose-300 flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
-                  <div>
-                    <strong>Lỗi khi lưu file:</strong> {saveFileError}
-                  </div>
-                </div>
-              )}
-
-              {viewingFile.loading && (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <RefreshCw className="h-8 w-8 text-emerald-400 animate-spin" />
-                  <p className="mt-3 text-sm font-semibold text-emerald-200">
-                    {isEditingFile
-                      ? "Đang tải nội dung file để chỉnh sửa..."
-                      : "Đang gọi GET /api/workspaces/content/markdown/get..."}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400 font-mono">
-                    path: {viewingFile.full_path}
-                  </p>
-                </div>
-              )}
-
-              {!viewingFile.loading && viewingFile.error && (
-                <div className="rounded-2xl border border-rose-500/30 bg-rose-950/40 p-5">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-rose-300">Không thể đọc file Markdown</h4>
-                      <p className="mt-1 text-xs font-mono text-rose-400 leading-relaxed">
-                        {viewingFile.error}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!viewingFile.loading && !viewingFile.error && viewingFile.content !== null && (
-                isEditingFile ? (
-                  <div className="flex flex-col h-full space-y-2">
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Đang chỉnh sửa: <code className="text-emerald-300 font-mono">{viewingFile.full_path}</code></span>
-                      <span className="font-mono text-emerald-400">POST /api/workspaces/content/markdown/edit</span>
-                    </div>
-                    <textarea
-                      value={editFileContent}
-                      onChange={(e) => setEditFileContent(e.target.value)}
-                      rows={18}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 font-mono text-xs text-slate-100 placeholder-slate-600 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-y leading-relaxed"
-                      placeholder="# Nhập nội dung Markdown tại đây..."
-                    />
-                  </div>
-                ) : (
-                  <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap select-text text-slate-200 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-                    {viewingFile.content || "(File rỗng - 0 bytes)"}
-                  </pre>
-                )
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between text-xs text-slate-500 font-mono">
-              <span className="truncate max-w-[70%]">
-                {isEditingFile
-                  ? `POST /api/workspaces/content/markdown/edit?id=${selectedMarkdownWsId}&path=${viewingFile.full_path}`
-                  : `GET /api/workspaces/content/markdown/get?id=${selectedMarkdownWsId}&path=${viewingFile.full_path}`}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setViewingFile(null);
-                  setIsEditingFile(false);
-                }}
-                className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 transition cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
           </div>
         </div>
       )}
@@ -3245,7 +4003,7 @@ export default function WorkspaceManagement() {
                     <span className="text-purple-800 font-semibold">Đang chỉnh sửa:</span>
                     <span className="font-bold text-purple-950">ID #{editingWs.id} — {editingWs.work_space_code}</span>
                   </div>
-                  {editingWs.work_space_code !== "workspace-test" && (
+                  {editingWs.is_selectable !== false && (!editingWs.children || editingWs.children.length === 0) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -3254,7 +4012,7 @@ export default function WorkspaceManagement() {
                       }}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-800 shadow-2xs hover:bg-emerald-50 transition cursor-pointer shrink-0"
                     >
-                      <FileCode2 className="h-3.5 w-3.5 text-emerald-600" />
+                      <Eye className="h-3.5 w-3.5 text-emerald-600" />
                       <span>Xem cấu trúc Markdown (.md)</span>
                     </button>
                   )}
@@ -3317,7 +4075,7 @@ export default function WorkspaceManagement() {
                   />
                   <datalist id="parent-workspace-code-options">
                     {workspaces.map((w) => (
-                       <option key={w.id} value={w.work_space_code}>
+                      <option key={w.id} value={w.work_space_code}>
                         {w.workspace_name ? `${w.workspace_name} (${w.work_space_code})` : w.work_space_code}
                       </option>
                     ))}

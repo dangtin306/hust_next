@@ -13,10 +13,12 @@ import {
   Loader2,
   Workflow as WorkflowIcon,
   Briefcase,
+  Code2,
 } from "lucide-react";
 
 export type SwaggerTabKey =
   | "home"
+  | "api_list"
   | "openclaw"
   | "laravel"
   | "workspace"
@@ -26,23 +28,16 @@ export type SwaggerTabKey =
 
 const TABS = [
   {
-    key: "laravel" as const,
-    label: "Laravel",
-    href: "/api/hust/laravel",
-    icon: Server,
-    description: "Laravel Chat Backend API",
-  },
-  {
-    key: "openclaw" as const,
-    label: "OpenClaw",
-    href: "/api/hust/openclaw",
-    icon: Sparkles,
-    description: "OpenClaw AI Gateway",
+    key: "api_list" as const,
+    label: "Api List",
+    href: "/api/hust/list/home",
+    icon: Code2,
+    description: "Danh sách API: Laravel & OpenClaw",
   },
   {
     key: "workspace" as const,
     label: "Workspace",
-    href: "/api/hust/workspace",
+    href: "/api/hust/workspace/home",
     icon: Briefcase,
     description: "AI Workspace Management",
   },
@@ -142,7 +137,10 @@ export default function SwaggerSwitcher({
         {/* Tab Items */}
         {TABS.map((tab) => {
           const Icon = tab.icon;
-          const isActive = active === tab.key;
+          const isActive =
+            active === tab.key ||
+            (tab.key === "api_list" &&
+              (active === "api_list" || active === "laravel" || active === "openclaw"));
           const isNavigating = navigatingKey === tab.key;
           return (
             <Link

@@ -30,15 +30,20 @@ export default function SwaggerLayoutClient({
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
   const isHeyGen = pathname.includes("/heygen");
+  const isWorkspace = pathname.includes("/workspace");
+  const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
+  const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
   const isHome =
-    !isHeyGen && (pathname.includes("/home") || pathname.includes("/dashboard"));
+    !isHeyGen &&
+    !isWorkspace &&
+    !isN8n &&
+    !isApiListHome &&
+    (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
-  const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
   const isGitAuto = pathname.includes("/git_auto");
   const isGitTest = pathname.includes("/git_test");
   const isGiteaTest = pathname.includes("/gitea_test");
-  const isWorkspace = pathname.includes("/workspace");
   const isChatPublic = pathname.includes("/chat_public");
   const isChatTest =
     pathname.includes("/chat_test") ||
@@ -64,25 +69,29 @@ export default function SwaggerLayoutClient({
         active={
           isHome
             ? "home"
-            : isLaravel
-              ? "laravel"
-              : isN8n
-                ? "n8n"
-                : isWorkspace
-                  ? "workspace"
-                : isGitAuto
-                  ? "git_auto"
-                  : isGitTest
-                    ? "git_test"
-                  : isGiteaTest
-                    ? "gitea_test"
-                  : isChatPublic
-                    ? "chat_public"
-                    : isHeyGen
-                      ? "heygen"
-                      : isChatTest
-                        ? "chat_test"
-                        : "openclaw"
+            : isApiListHome
+              ? "api_list"
+              : isLaravel
+                ? "laravel"
+                : isN8n
+                  ? "n8n"
+                  : isWorkspace
+                    ? "workspace"
+                  : isGitAuto
+                    ? "git_auto"
+                    : isGitTest
+                      ? "git_test"
+                    : isGiteaTest
+                      ? "gitea_test"
+                    : isChatPublic
+                      ? "chat_public"
+                      : isHeyGen
+                        ? "heygen"
+                        : isChatTest
+                          ? "chat_test"
+                          : isOpenClaw
+                            ? "openclaw"
+                            : "api_list"
         }
       />
 
@@ -92,7 +101,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>
-      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic ? (
+      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isApiListHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isHome ? (
         <>

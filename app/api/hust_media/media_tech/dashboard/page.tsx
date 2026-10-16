@@ -21,7 +21,7 @@ const destinations = [
     title: "Laravel Backend",
     description:
       "Tài liệu và giao diện thử API Laravel cho Workspace, phòng chat, session và tin nhắn.",
-    href: "/api/hust/laravel",
+    href: "/api/hust/list/laravel",
     action: "Mở tài liệu Laravel",
     Icon: Server,
     tone: "blue",
@@ -31,7 +31,7 @@ const destinations = [
     title: "OpenClaw Gateway",
     description:
       "Xem và thử các endpoint AI như hội thoại, responses, model, workspace và tạo ảnh.",
-    href: "/api/hust/openclaw",
+    href: "/api/hust/list/openclaw",
     action: "Mở tài liệu OpenClaw",
     Icon: Sparkles,
     tone: "violet",

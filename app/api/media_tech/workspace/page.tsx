@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import WorkspaceManagement from "./WorkspaceManagement";
-
-export const metadata: Metadata = {
-  title: "Quản trị Workspace | Hust Media",
-  description: "Trang quản trị các workspace dự án, đường dẫn mã nguồn, mã định danh và trạng thái.",
-};
+import { redirect } from "next/navigation";
 
 export default function WorkspacePage() {
-  return <WorkspaceManagement />;
+  redirect("/api/mt/workspace/home");
 }
