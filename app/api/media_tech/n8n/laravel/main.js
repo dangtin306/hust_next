@@ -30,16 +30,14 @@ import {
   SAMPLE_REALTIME_LARAVEL_PIPELINE,
   fetchWorkflowGraph,
   fetchWorkflowHealth,
-  HEALTH_API_URL,
-  LARAVEL_TRACE_URL,
-  API_BASE_URL,
-  SOCKET_SERVER_URL,
+  getNodeBackendUrl,
 } from "./process";
 
 import N8nDiagramRenderer from "./n8n_render";
 
 export default function N8nWorkflowMain() {
   const [graphData, setGraphData] = useState(null);
+  const [nodeBackendUrl, setNodeBackendUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [reloading, setReloading] = useState(false);
   const [errorInfo, setErrorInfo] = useState(null);
@@ -56,6 +54,10 @@ export default function N8nWorkflowMain() {
   const [showEndpointGuide, setShowEndpointGuide] = useState(false);
 
   const rendererRef = useRef(null);
+
+  useEffect(() => {
+    setNodeBackendUrl(getNodeBackendUrl());
+  }, []);
 
   const handleSseStatusChange = useCallback((status) => {
     if (typeof status === "boolean") {
@@ -528,7 +530,7 @@ export default function N8nWorkflowMain() {
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">GET</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                {API_BASE_URL}
+                {nodeBackendUrl + "/openclaw/workflow/laravel/graph"}
               </p>
               <p className="text-[11px] text-slate-400">
                 Trả về: <code className="text-slate-300">id</code>, <code className="text-slate-300">workflow_id</code>, <code className="text-slate-300">nodes</code>, <code className="text-slate-300">stickyNotes</code>, <code className="text-slate-300">connections</code>.
@@ -542,7 +544,7 @@ export default function N8nWorkflowMain() {
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">Socket.IO</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                {SOCKET_SERVER_URL}
+                {nodeBackendUrl}
               </p>
               <p className="text-[11px] text-slate-400">
                 Sự kiện: <code className="text-slate-300">n8n:trace</code>, <code className="text-slate-300">n8n:graph</code>, <code className="text-slate-300">connect</code>.
@@ -556,7 +558,7 @@ export default function N8nWorkflowMain() {
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">GET</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                {HEALTH_API_URL}
+                {nodeBackendUrl + "/openclaw/workflow/laravel/health"}
               </p>
               <p className="text-[11px] text-slate-400">
                 Kiểm tra: <code className="text-slate-300">laravel_trace_receiver_configured</code>.
@@ -570,7 +572,7 @@ export default function N8nWorkflowMain() {
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">POST</span>
               </div>
               <p className="font-mono text-[11px] text-slate-300 break-all bg-slate-900/80 p-1.5 rounded border border-slate-800">
-                {LARAVEL_TRACE_URL}
+                {nodeBackendUrl + "/openclaw/workflow/laravel/trace"}
               </p>
               <p className="text-[11px] text-slate-400">
                 Laravel backend gọi endpoint nội bộ; payload gồm <code className="text-slate-300">stage_node_ids</code>, <code className="text-slate-300">stage_edges</code>.
@@ -677,7 +679,7 @@ export default function N8nWorkflowMain() {
             onClick={() => checkHealth()}
             disabled={checkingHealth}
             className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Gọi GET https://node_md.hust.media/openclaw/workflow/health"
+            title={`Gọi GET ${nodeBackendUrl}/openclaw/workflow/laravel/health`}
           >
             <Server className={`w-3 h-3 text-slate-400 ${checkingHealth ? "animate-spin" : ""}`} /> Kiểm tra Health (GET)
           </button>
@@ -751,6 +753,7 @@ export default function N8nWorkflowMain() {
           <N8nDiagramRenderer
             ref={rendererRef}
             graph={graphData}
+            socketUrl={nodeBackendUrl}
             onTraceReceived={setLatestTrace}
             onGraphReceived={handleGraphReceived}
             onSSEStatusChange={handleSseStatusChange}

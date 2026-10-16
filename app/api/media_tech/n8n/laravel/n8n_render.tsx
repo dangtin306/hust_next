@@ -907,7 +907,7 @@ export const N8nDiagramRenderer = forwardRef<
 >(function N8nDiagramRenderer(
   {
     graph,
-    socketUrl = "https://node_md.hust.media",
+    socketUrl = "",
     sseUrl = "",
     enableRealtime = true,
     onTraceReceived,
@@ -1334,7 +1334,7 @@ export const N8nDiagramRenderer = forwardRef<
     } satisfies TraceEdgeData,
   })), [edges, edgeVisuals, traceMotionEnabled]);
 
-  // Kết nối Realtime qua SSE EventSource: https://node_md.hust.media/openclaw/workflow/events
+  // Kết nối realtime qua Socket.IO tới Node backend của dịch vụ Laravel workflow.
   useEffect(() => {
     if (!enableRealtime || !socketUrl) return;
     onSSEStatusChangeRef.current?.("connecting");

@@ -1,8 +1,22 @@
 export const DEFAULT_WORKFLOW_ID = "UpmkgXAE2dj58nV0";
-export const API_BASE_URL = "https://node_md.hust.media/openclaw/workflow/laravel/graph";
-export const SOCKET_SERVER_URL = "https://node_md.hust.media";
-export const HEALTH_API_URL = "https://node_md.hust.media/openclaw/workflow/laravel/health";
-export const LARAVEL_TRACE_URL = "https://node_md.hust.media/openclaw/workflow/laravel/trace";
+const CONFIGURED_NODE_BACKEND_URL = (process.env.NEXT_PUBLIC_MEDIA_TECH_NODE_URL || "").trim().replace(/\/+$/, "");
+const DEFAULT_NODE_BACKEND_URL = CONFIGURED_NODE_BACKEND_URL || "https://node_md.hust.media";
+
+export const getNodeBackendUrl = () => {
+  if (CONFIGURED_NODE_BACKEND_URL) return CONFIGURED_NODE_BACKEND_URL;
+  if (
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname.toLowerCase())
+  ) {
+    return "http://127.0.0.1:8818";
+  }
+  return DEFAULT_NODE_BACKEND_URL;
+};
+
+export const API_BASE_URL = DEFAULT_NODE_BACKEND_URL + "/openclaw/workflow/laravel/graph";
+export const SOCKET_SERVER_URL = DEFAULT_NODE_BACKEND_URL;
+export const HEALTH_API_URL = DEFAULT_NODE_BACKEND_URL + "/openclaw/workflow/laravel/health";
+export const LARAVEL_TRACE_URL = DEFAULT_NODE_BACKEND_URL + "/openclaw/workflow/laravel/trace";
 
 
 // Mock graph fallback matching the exact 16 flowNodes, 4 stickyNotes, 16 edges
@@ -528,7 +542,7 @@ export const SAMPLE_TRACES = [
 export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
   try {
     const query = workflowId ? `?workflow_id=${encodeURIComponent(workflowId)}` : "";
-    const response = await fetch(`${API_BASE_URL}${query}`, {
+    const response = await fetch(`${getNodeBackendUrl()}/openclaw/workflow/laravel/graph${query}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
@@ -539,8 +553,7 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
     }
 
     const body = await response.json();
-    // Upstream node_md trả về trực tiếp: { id, workflow_id, name, nodes, stickyNotes, connections, version, updated_at }
-    // hoặc có thể bọc trong api_results
+    // Node backend bọc graph n8n đã chuẩn hóa trong api_results.graph.
     const graph = body.nodes || body.connections ? body : body.api_results?.graph || body.graph;
 
     if (graph && (graph.nodes || graph.flowNodes)) {
@@ -615,11 +628,11 @@ export const fetchWorkflowGraph = async (workflowId = DEFAULT_WORKFLOW_ID) => {
 
 /**
  * Kiểm tra trạng thái health và cấu hình xác thực Laravel trace của Node backend
- * Endpoint: GET https://node_md.hust.media/openclaw/workflow/laravel/health
+ * Endpoint: GET <Node backend>/openclaw/workflow/laravel/health
  */
 export const fetchWorkflowHealth = async () => {
   try {
-    const response = await fetch(HEALTH_API_URL, {
+    const response = await fetch(`${getNodeBackendUrl()}/openclaw/workflow/laravel/health`, {
       method: "GET",
       headers: { Accept: "application/json" },
       cache: "no-store",
