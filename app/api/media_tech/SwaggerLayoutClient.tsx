@@ -25,7 +25,6 @@ export default function SwaggerLayoutClient({
   children,
   spec,
   laravelSpec,
-  homeSpec,
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
@@ -101,15 +100,8 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>
-      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isApiListHome ? (
+      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isApiListHome || isHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
-      ) : isHome ? (
-        <>
-          <SwaggerClient spec={homeSpec} hideEmptySpecNotice hideLoading />
-          <div className="mx-auto max-w-[1480px] px-4 pb-10 pt-8 sm:px-8">
-            {children}
-          </div>
-        </>
       ) : (
         <>
           {isLaravel ? (

@@ -43,18 +43,45 @@ async function proxy(
         ? undefined
         : await request.arrayBuffer();
 
-    const upstream = await fetch(upstreamUrl, {
-      method: request.method,
-      headers: requestHeaders,
-      body,
-      cache: "no-store",
-    });
+    let upstream: Response;
+    let didFallback = false;
+    try {
+      upstream = await fetch(upstreamUrl, {
+        method: request.method,
+        headers: requestHeaders,
+        body,
+        cache: "no-store",
+        signal: AbortSignal.timeout(customTarget ? 3000 : 15000),
+      });
+    } catch (fetchErr) {
+      const defaultBase = normalizeLaravelApiBaseUrl(HUST_LARAVEL_BASE);
+      if (customTarget && upstreamBase !== defaultBase) {
+        const fallbackUrl = `${defaultBase}/${subPath}${search}`;
+        try {
+          upstream = await fetch(fallbackUrl, {
+            method: request.method,
+            headers: requestHeaders,
+            body,
+            cache: "no-store",
+            signal: AbortSignal.timeout(15000),
+          });
+          didFallback = true;
+        } catch {
+          throw fetchErr;
+        }
+      } else {
+        throw fetchErr;
+      }
+    }
 
     const responseBody = await upstream.text();
     const responseHeaders: Record<string, string> = {
       "content-type": upstream.headers.get("content-type") || "application/json",
       "x-upstream-url": upstreamUrl,
     };
+    if (didFallback) {
+      responseHeaders["x-laravel-fallback"] = "true";
+    }
 
     return new NextResponse(responseBody, {
       status: upstream.status,

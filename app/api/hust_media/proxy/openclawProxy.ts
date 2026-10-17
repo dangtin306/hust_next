@@ -86,12 +86,24 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     // Forward or synthesize Cookie header
     let cookieHeader = request.headers.get("cookie") || "";
     const customSession =
+      request.headers.get("x-hust-chat-bot-session") ||
       request.headers.get("x-chat-bot-session") ||
       request.headers.get("x-cookie-hash");
-    if (customSession && !cookieHeader.includes("chat_bot_session=")) {
+
+    let sessionToken = customSession;
+    if (!sessionToken) {
+      const match =
+        cookieHeader.match(/(?:^|;\s*)hust_chat_bot_session=([^;]+)/i) ||
+        cookieHeader.match(/(?:^|;\s*)chat_bot_session=([^;]+)/i);
+      if (match) {
+        sessionToken = match[1];
+      }
+    }
+
+    if (sessionToken && !/(?<![a-zA-Z0-9_])chat_bot_session=/.test(cookieHeader)) {
       cookieHeader = cookieHeader
-        ? `${cookieHeader}; chat_bot_session=${customSession}`
-        : `chat_bot_session=${customSession}`;
+        ? `${cookieHeader}; chat_bot_session=${sessionToken}`
+        : `chat_bot_session=${sessionToken}`;
     }
     if (cookieHeader) {
       requestHeaders.cookie = cookieHeader;
@@ -124,14 +136,23 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
     // Forward Set-Cookie headers back to the browser
     const getSetCookie = upstream.headers.getSetCookie?.();
-    if (Array.isArray(getSetCookie) && getSetCookie.length > 0) {
-      for (const setCookie of getSetCookie) {
+    const setCookieList: string[] =
+      Array.isArray(getSetCookie) && getSetCookie.length > 0
+        ? getSetCookie
+        : ([upstream.headers.get("set-cookie")].filter(Boolean) as string[]);
+
+    for (const setCookie of setCookieList) {
+      if (/chat_bot_session=/i.test(setCookie)) {
+        response.headers.append(
+          "set-cookie",
+          setCookie.replace(/chat_bot_session=/gi, "hust_chat_bot_session=")
+        );
+        response.headers.append(
+          "set-cookie",
+          setCookie.replace(/chat_bot_session=/gi, "hust_cookie_hash=")
+        );
+      } else {
         response.headers.append("set-cookie", setCookie);
-      }
-    } else {
-      const singleSetCookie = upstream.headers.get("set-cookie");
-      if (singleSetCookie) {
-        response.headers.set("set-cookie", singleSetCookie);
       }
     }
 

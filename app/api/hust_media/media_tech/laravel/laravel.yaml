@@ -649,6 +649,167 @@ paths:
                     type: string
                     example: "Laravel không đọc được thư mục workspace."
 
+  /api/workspaces/content/markdown/full:
+    get:
+      operationId: getWorkspaceMarkdownContentFull
+      tags: [Workspace]
+      summary: Lấy toàn bộ nội dung Markdown của workspace (cây thư mục & nội dung file)
+      description: |
+        Dùng API này để frontend lấy cây thư mục và nội dung của tất cả file `.md` trong một workspace con chỉ bằng một request.
+
+        Workspace phải là workspace con theo cấu hình của project:
+        - Media Tech: workspace mẹ là `workspace-test` (https://laravel_mt.hust.media)
+        - Hust: workspace mẹ là `workspace-chat_bot` (https://laravel.hust.media)
+
+        ### Ý nghĩa các trường response
+        - `relative_path`: đường dẫn workspace tính từ thư mục gốc OpenClaw workspaces.
+        - `tree`: cây thư mục, chỉ gồm thư mục có chứa file `.md` và các file `.md`.
+        - `type`: `directory` là thư mục, `file` là file Markdown.
+        - `path`: đường dẫn tương đối bên trong workspace; dùng để xác định file khi gọi API đọc hoặc sửa file.
+        - `full_path`: đường dẫn tương đối từ thư mục gốc OpenClaw workspaces.
+        - `content`: toàn bộ nội dung file Markdown.
+        - `size_bytes`: kích thước nội dung file tính bằng byte.
+        - `markdown_count`: tổng số file `.md` tìm được trong workspace.
+
+        Frontend có thể duyệt đệ quy `tree`: hiển thị các node `directory`, rồi hiển thị `content` của từng node `file`.
+        Vì API trả nội dung đầy đủ, không cần gọi API đọc riêng cho từng file để dựng màn hình workspace.
+      security: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: ID workspace trong database. Workspace phải là workspace con theo cấu hình project.
+          schema:
+            type: integer
+            example: 8
+      responses:
+        '200':
+          description: Cây thư mục kèm toàn bộ nội dung Markdown của workspace con thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - id
+                      - workspace_name
+                      - work_space_code
+                      - parent_workspace_code
+                      - relative_path
+                      - markdown_count
+                      - tree
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      workspace_name:
+                        type: string
+                        example: Hướng dẫn đấu API
+                      work_space_code:
+                        type: string
+                        example: workspace_tech_api
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-test
+                      relative_path:
+                        type: string
+                        example: workspace-test/workspace_tech_api
+                      markdown_count:
+                        type: integer
+                        example: 5
+                      tree:
+                        type: array
+                        description: Cây thư mục gồm thư mục chứa file .md và các file .md kèm toàn bộ nội dung content.
+                        items:
+                          type: object
+                          required: [type, name, path, full_path]
+                          properties:
+                            type:
+                              type: string
+                              enum: [file, directory]
+                              example: file
+                            name:
+                              type: string
+                              example: SKILL.md
+                            path:
+                              type: string
+                              example: SKILL.md
+                            full_path:
+                              type: string
+                              example: workspace-test/workspace_tech_api/SKILL.md
+                            content:
+                              type: string
+                              description: Toàn bộ nội dung file Markdown.
+                              example: "# Hướng dẫn đấu API..."
+                            size_bytes:
+                              type: integer
+                              description: Kích thước file tính bằng byte.
+                              example: 1250
+                            children:
+                              type: array
+                              description: Danh sách con nếu type là directory.
+                              items:
+                                type: object
+              example:
+                data:
+                  id: 8
+                  workspace_name: "Hướng dẫn đấu API"
+                  work_space_code: "workspace_tech_api"
+                  parent_workspace_code: "workspace-test"
+                  relative_path: "workspace-test/workspace_tech_api"
+                  markdown_count: 5
+                  tree:
+                    - type: "file"
+                      name: "SKILL.md"
+                      path: "SKILL.md"
+                      full_path: "workspace-test/workspace_tech_api/SKILL.md"
+                      content: "# Hướng dẫn đấu API..."
+                      size_bytes: 1250
+                    - type: "directory"
+                      name: "workspaces"
+                      path: "workspaces"
+                      full_path: "workspace-test/workspace_tech_api/workspaces"
+                      children:
+                        - type: "file"
+                          name: "api-map-and-flow.md"
+                          path: "workspaces/api-map-and-flow.md"
+                          full_path: "workspace-test/workspace_tech_api/workspaces/api-map-and-flow.md"
+                          content: "# Luồng request/response..."
+                          size_bytes: 3990
+        '404':
+          description: Không tìm thấy workspace hoặc thư mục workspace trên ổ đĩa.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Không tìm thấy workspace theo id hoặc thư mục của workspace."
+        '422':
+          description: Thiếu `id`, `id` không hợp lệ hoặc workspace không phải con trực tiếp (workspace_child_required).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Workspace con được yêu cầu (workspace_child_required) hoặc id không hợp lệ."
+        '503':
+          description: Laravel không đọc được thư mục hoặc file Markdown (workspace_content_unavailable).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Laravel không đọc được thư mục hoặc file Markdown."
+
   /api/workspaces/content/markdown:
     get:
       operationId: getWorkspaceMarkdownContent

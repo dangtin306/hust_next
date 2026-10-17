@@ -55,34 +55,38 @@ async function proxy(
 
     // Forward and synthesize Cookie header (DO NOT send session cookie on POST /rooms)
     let cookieHeader = request.headers.get("cookie") || "";
-    const isPostRooms = request.method === "POST" && path.length === 1 && path[0] === "rooms";
+    const joinedPath = path.join("/");
+    const isPostRooms = request.method === "POST" && (joinedPath === "rooms" || joinedPath === "bot/rooms");
+
+    const customSession =
+      request.headers.get("x-media-chat-bot-session") ||
+      request.headers.get("x-chat-bot-session") ||
+      request.headers.get("x-cookie-hash");
+
+    let resolvedSession: string | null = null;
+    if (customSession) {
+      resolvedSession = resolveSessionValue(customSession);
+    } else {
+      const match =
+        cookieHeader.match(/(?:^|;\s*)media_chat_bot_session=([^;]+)/i) ||
+        cookieHeader.match(/(?:^|;\s*)chat_bot_session=([^;]+)/i);
+      if (match) {
+        resolvedSession = resolveSessionValue(match[1]);
+      }
+    }
 
     if (isPostRooms) {
       cookieHeader = cookieHeader
-        .replace(/(?:^|;\s*)(?:chat_bot_session|cookie_hash)=[^;]*/gi, "")
+        .replace(/(?:^|;\s*)(?:media_chat_bot_session|media_cookie_hash|chat_bot_session|cookie_hash)=[^;]*/gi, "")
         .replace(/^;\s*/, "")
         .trim();
-    } else {
-      const customSession =
-        request.headers.get("x-chat-bot-session") ||
-        request.headers.get("x-cookie-hash");
-
-      if (customSession) {
-        const resolved = resolveSessionValue(customSession);
-        if (resolved) {
-          if (cookieHeader.includes("chat_bot_session=")) {
-            cookieHeader = cookieHeader.replace(/chat_bot_session=([^;]+)/gi, `chat_bot_session=${resolved}`);
-          } else {
-            cookieHeader = cookieHeader
-              ? `${cookieHeader}; chat_bot_session=${resolved}`
-              : `chat_bot_session=${resolved}`;
-          }
-        }
-      } else if (cookieHeader.includes("chat_bot_session=")) {
-        cookieHeader = cookieHeader.replace(/chat_bot_session=([^;]+)/gi, (_match, raw) => {
-          const resolved = resolveSessionValue(raw);
-          return `chat_bot_session=${resolved}`;
-        });
+    } else if (resolvedSession) {
+      if (/(?<![a-zA-Z0-9_])chat_bot_session=/.test(cookieHeader)) {
+        cookieHeader = cookieHeader.replace(/(?<![a-zA-Z0-9_])chat_bot_session=[^;]+/gi, `chat_bot_session=${resolvedSession}`);
+      } else {
+        cookieHeader = cookieHeader
+          ? `${cookieHeader}; chat_bot_session=${resolvedSession}`
+          : `chat_bot_session=${resolvedSession}`;
       }
     }
 
@@ -90,29 +94,79 @@ async function proxy(
       requestHeaders["cookie"] = cookieHeader;
     }
 
-    const body =
-      request.method === "GET" || request.method === "HEAD"
-        ? undefined
-        : await request.arrayBuffer();
+    let requestBody: BodyInit | undefined = undefined;
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      if (contentType?.includes("application/json")) {
+        try {
+          const rawText = await request.text();
+          const parsed = JSON.parse(rawText);
+          if (parsed && typeof parsed === "object") {
+            if (isPostRooms) {
+              delete parsed.chat_bot_session;
+              delete parsed.cookie_hash;
+              requestBody = JSON.stringify(parsed);
+            } else if (resolvedSession && !parsed.chat_bot_session) {
+              parsed.chat_bot_session = resolvedSession;
+              requestBody = JSON.stringify(parsed);
+            } else {
+              requestBody = rawText;
+            }
+          } else {
+            requestBody = rawText;
+          }
+        } catch {
+          requestBody = await request.arrayBuffer();
+        }
+      } else {
+        requestBody = await request.arrayBuffer();
+      }
+    }
 
-    const upstream = await fetch(upstreamUrl, {
-      method: request.method,
-      headers: requestHeaders,
-      body,
-      cache: "no-store",
-    });
+    let upstream: Response;
+    let didFallback = false;
+    try {
+      upstream = await fetch(upstreamUrl, {
+        method: request.method,
+        headers: requestHeaders,
+        body: requestBody,
+        cache: "no-store",
+        signal: AbortSignal.timeout(customTarget ? 3000 : 15000),
+      });
+    } catch (fetchErr) {
+      const defaultBase = normalizeLaravelChatBaseUrl(LARAVEL_CHAT_BASE);
+      if (customTarget && upstreamBase !== defaultBase) {
+        const fallbackUrl = `${defaultBase}/${path.join("/")}${search}`;
+        try {
+          upstream = await fetch(fallbackUrl, {
+            method: request.method,
+            headers: requestHeaders,
+            body: requestBody,
+            cache: "no-store",
+            signal: AbortSignal.timeout(15000),
+          });
+          didFallback = true;
+        } catch {
+          throw fetchErr;
+        }
+      } else {
+        throw fetchErr;
+      }
+    }
 
     const responseBody = await upstream.text();
     const responseHeaders: Record<string, string> = {
       "content-type": upstream.headers.get("content-type") || "application/json",
     };
+    if (didFallback) {
+      responseHeaders["x-laravel-fallback"] = "true";
+    }
 
     const response = new NextResponse(responseBody, {
       status: upstream.status,
       headers: responseHeaders,
     });
 
-    // Forward Set-Cookie headers back to the browser
+    // Forward Set-Cookie headers back to the browser (rewriting chat_bot_session to media_chat_bot_session)
     const getSetCookie = upstream.headers.getSetCookie?.();
     const setCookieList: string[] =
       Array.isArray(getSetCookie) && getSetCookie.length > 0
@@ -120,14 +174,20 @@ async function proxy(
         : ([upstream.headers.get("set-cookie")].filter(Boolean) as string[]);
 
     for (const setCookie of setCookieList) {
-      const match = setCookie.match(/chat_bot_session=([^;]+)/i);
+      const match = setCookie.match(/(?<![a-zA-Z0-9_])chat_bot_session=([^;]+)/i);
       if (match) {
-        registerPlainSession(decodeURIComponent(match[1]));
+        const token = decodeURIComponent(match[1]);
+        registerPlainSession(token);
+        const mediaSetCookie = setCookie.replace(/(?<![a-zA-Z0-9_])chat_bot_session=/gi, "media_chat_bot_session=");
+        response.headers.append("set-cookie", mediaSetCookie);
+        const mediaHashCookie = setCookie.replace(/(?<![a-zA-Z0-9_])chat_bot_session=/gi, "media_cookie_hash=");
+        response.headers.append("set-cookie", mediaHashCookie);
+      } else {
+        response.headers.append("set-cookie", setCookie);
       }
-      response.headers.append("set-cookie", setCookie);
     }
 
-    // Also extract chat_bot_session from response body (new and old format) and set cookie
+    // Also extract chat_bot_session from response body and set media_ cookies
     try {
       const parsed = JSON.parse(responseBody);
       const sessionToken =
@@ -141,11 +201,11 @@ async function proxy(
         registerPlainSession(sessionToken);
         response.headers.append(
           "set-cookie",
-          `chat_bot_session=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=31536000; SameSite=Lax`
+          `media_chat_bot_session=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=31536000; SameSite=Lax`
         );
         response.headers.append(
           "set-cookie",
-          `cookie_hash=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=31536000; SameSite=Lax`
+          `media_cookie_hash=${encodeURIComponent(sessionToken)}; Path=/; Max-Age=31536000; SameSite=Lax`
         );
       }
     } catch {}
@@ -157,6 +217,14 @@ async function proxy(
           parsedErr?.error?.code === "CHAT_SESSION_INVALID" ||
           String(parsedErr?.error?.message || parsedErr?.message || "").toLowerCase().includes("session")
         ) {
+          response.headers.append(
+            "set-cookie",
+            "media_chat_bot_session=; Path=/; Max-Age=0; SameSite=Lax"
+          );
+          response.headers.append(
+            "set-cookie",
+            "media_cookie_hash=; Path=/; Max-Age=0; SameSite=Lax"
+          );
           response.headers.append(
             "set-cookie",
             "chat_bot_session=; Path=/; Max-Age=0; SameSite=Lax"

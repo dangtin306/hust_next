@@ -145,13 +145,16 @@ export async function apiUpdateWorkspaceRouting(customBaseUrl?: string): Promise
   }
 }
 
+export const MEDIA_SESSION_STORAGE_KEY = "media_chat_bot_session";
+export const MEDIA_COOKIE_HASH_KEY = "media_cookie_hash";
+
 /** Read and persist the Laravel bearer session from localStorage and document.cookie */
 export function getLaravelChatSession(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const local = window.localStorage.getItem("chat_bot_session");
+    const local = window.localStorage.getItem(MEDIA_SESSION_STORAGE_KEY);
     if (local) return local;
-    const match = document.cookie.match(/(?:^|;\s*)chat_bot_session=([^;]+)/);
+    const match = document.cookie.match(/(?:^|;\s*)media_chat_bot_session=([^;]+)/);
     if (match) return decodeURIComponent(match[1]);
     return null;
   } catch {
@@ -170,28 +173,28 @@ export function rememberLaravelChatSession(token: string): void {
     const host = window.location.hostname;
     const domainPart = host.endsWith("hust.media") ? "; domain=.hust.media" : "";
 
-    // 1. Set chat_bot_session and cookie_hash cookies on current path
-    document.cookie = `chat_bot_session=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
-    document.cookie = `cookie_hash=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
+    // 1. Set media_chat_bot_session and media_cookie_hash cookies on current path
+    document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
+    document.cookie = `${MEDIA_COOKIE_HASH_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=Lax${secureFlag}`;
 
     // 2. Set for .hust.media domain if applicable
     if (domainPart) {
-      document.cookie = `chat_bot_session=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
-      document.cookie = `cookie_hash=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
+      document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
+      document.cookie = `${MEDIA_COOKIE_HASH_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=Lax${secureFlag}`;
     }
 
     // 3. Set SameSite=None; Secure for cross-site fetch credentials inclusion
     if (isHttps) {
-      document.cookie = `chat_bot_session=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=None; Secure`;
-      document.cookie = `cookie_hash=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=None; Secure`;
+      document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=None; Secure`;
+      document.cookie = `${MEDIA_COOKIE_HASH_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; SameSite=None; Secure`;
       if (domainPart) {
-        document.cookie = `chat_bot_session=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
-        document.cookie = `cookie_hash=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
+        document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
+        document.cookie = `${MEDIA_COOKIE_HASH_KEY}=${encodeURIComponent(cleanToken)}; max-age=31536000; path=/; domain=.hust.media; SameSite=None; Secure`;
       }
     }
 
-    window.localStorage.setItem("chat_bot_session", cleanToken);
-    window.localStorage.setItem("cookie_hash", cleanToken);
+    window.localStorage.setItem(MEDIA_SESSION_STORAGE_KEY, cleanToken);
+    window.localStorage.setItem(MEDIA_COOKIE_HASH_KEY, cleanToken);
   } catch (e) {
     console.warn("Không thể ghi cookie/localStorage:", e);
   }
@@ -200,15 +203,17 @@ export function rememberLaravelChatSession(token: string): void {
 export function clearLaravelChatSession(): void {
   if (typeof window === "undefined") return;
   try {
+    window.localStorage.removeItem(MEDIA_SESSION_STORAGE_KEY);
+    window.localStorage.removeItem(MEDIA_COOKIE_HASH_KEY);
     window.localStorage.removeItem("chat_bot_session");
     window.localStorage.removeItem("cookie_hash");
     const domainPart = window.location.hostname.endsWith("hust.media") ? "; domain=.hust.media" : "";
-    document.cookie = `chat_bot_session=; max-age=0; path=/${domainPart}`;
-    document.cookie = `cookie_hash=; max-age=0; path=/${domainPart}`;
-    document.cookie = "chat_bot_session=; max-age=0; path=/";
-    document.cookie = "cookie_hash=; max-age=0; path=/";
+    document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=; max-age=0; path=/${domainPart}`;
+    document.cookie = `${MEDIA_COOKIE_HASH_KEY}=; max-age=0; path=/${domainPart}`;
+    document.cookie = `${MEDIA_SESSION_STORAGE_KEY}=; max-age=0; path=/`;
+    document.cookie = `${MEDIA_COOKIE_HASH_KEY}=; max-age=0; path=/`;
   } catch (e) {
-    console.warn("Không thể xóa cookie/localStorage chat_bot_session:", e);
+    console.warn("Không thể xóa cookie/localStorage media_chat_bot_session:", e);
   }
 }
 
@@ -330,10 +335,50 @@ export async function apiEnsureLaravelRoom({
 
   if (!response.ok || body?.success === false) {
     const errorCode = body?.error?.code || body?.code;
+    const errorMessage = String(body?.error?.message || body?.message || "");
+
+    if (
+      response.status === 401 ||
+      errorCode === "CHAT_SESSION_INVALID" ||
+      errorMessage.toLowerCase().includes("session")
+    ) {
+      clearLaravelChatSession();
+      // Retry without chat_bot_session in payload so Laravel issues a fresh room & session
+      const retryResponse = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+        method: "POST",
+        credentials: "omit",
+        cache: "no-store",
+        headers,
+        body: JSON.stringify({
+          upstream_conversation_id: upstreamConversationId,
+          title: title.slice(0, 255),
+          model,
+          ...(normalizedUserId !== undefined ? { user_id: normalizedUserId } : {}),
+          agent,
+        }),
+      });
+
+      const retryBody = await retryResponse.json().catch(() => null);
+      extractAndRememberSession(retryBody);
+
+      if (!retryResponse.ok || retryBody?.success === false) {
+        throw new Error(
+          retryBody?.error?.message ||
+            retryBody?.message ||
+            `Laravel room sync failed on retry (${retryResponse.status})`
+        );
+      }
+
+      const retryRoomId = retryBody?.data?.room_id ?? retryBody?.room_id;
+      if (retryRoomId === undefined || retryRoomId === null) {
+        throw new Error("Laravel room response did not include data.room_id");
+      }
+      return String(retryRoomId);
+    }
+
     if (errorCode === "CONVERSATION_ALREADY_LINKED") {
       const err = new Error(
-        body?.error?.message ||
-          body?.message ||
+        errorMessage ||
           "This conversation is already linked to another chat user.",
       );
       (err as any).code = "CONVERSATION_ALREADY_LINKED";
@@ -341,8 +386,7 @@ export async function apiEnsureLaravelRoom({
       throw err;
     }
     throw new Error(
-      body?.error?.message ||
-        body?.message ||
+      errorMessage ||
         `Laravel room sync failed (${response.status})`
     );
   }
@@ -376,9 +420,14 @@ export async function apiPersistChatMessage({
       : Number.isInteger(Number(userId))
       ? Number(userId)
       : userId;
+  const sessionToken = getLaravelChatSession();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  if (sessionToken) {
+    headers["x-chat-bot-session"] = sessionToken;
+    headers["x-media-chat-bot-session"] = sessionToken;
+  }
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
@@ -411,6 +460,13 @@ export async function apiPersistChatMessage({
   const body = await response.json().catch(() => null);
   extractAndRememberSession(body);
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      (body?.error?.code === "CHAT_SESSION_INVALID" ||
+        String(body?.error?.message || body?.message || "").toLowerCase().includes("session"))
+    ) {
+      clearLaravelChatSession();
+    }
     throw new Error(`Laravel message sync failed (${response.status})`);
   }
 }
@@ -552,6 +608,7 @@ export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl
   };
   if (sessionToken) {
     headers["x-chat-bot-session"] = sessionToken;
+    headers["x-media-chat-bot-session"] = sessionToken;
   }
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
@@ -602,6 +659,7 @@ export async function apiFetchRoomMessages(
   };
   if (sessionToken) {
     headers["x-chat-bot-session"] = sessionToken;
+    headers["x-media-chat-bot-session"] = sessionToken;
   }
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;

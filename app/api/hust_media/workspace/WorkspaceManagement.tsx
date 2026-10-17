@@ -96,6 +96,8 @@ export type MarkdownTreeItem = {
   full_path?: string;
   children?: MarkdownTreeItem[];
   workspace_id?: number;
+  content?: string;
+  size_bytes?: number;
 };
 
 function attachWorkspaceId(item: MarkdownTreeItem, wsId: number): MarkdownTreeItem {
@@ -308,6 +310,35 @@ export type InlineFileState = {
   isSaving: boolean;
   saveError: string | null;
 };
+
+function extractFilesWithContent(items?: MarkdownTreeItem[]): Record<string, InlineFileState> {
+  const result: Record<string, InlineFileState> = {};
+  if (!items || items.length === 0) return result;
+  function traverse(list: MarkdownTreeItem[]) {
+    for (const item of list) {
+      if (item.type === "file") {
+        const fileKey = item.full_path || item.path;
+        if (typeof item.content === "string") {
+          result[fileKey] = {
+            isOpen: true,
+            isEditing: false,
+            content: item.content,
+            loading: false,
+            error: null,
+            editDraft: item.content,
+            isSaving: false,
+            saveError: null,
+          };
+        }
+      }
+      if (item.children && item.children.length > 0) {
+        traverse(item.children);
+      }
+    }
+  }
+  traverse(items);
+  return result;
+}
 
 type MarkdownTreeNodeProps = {
   item: MarkdownTreeItem;
@@ -971,6 +1002,7 @@ export default function WorkspaceManagement({
   const [markdownData, setMarkdownData] = useState<WorkspaceMarkdownData | null>(null);
   const [markdownLoading, setMarkdownLoading] = useState<boolean>(false);
   const [markdownError, setMarkdownError] = useState<string | null>(null);
+  const [markdownApiMode, setMarkdownApiMode] = useState<"standard" | "full">("standard");
 
   // --- Inline Markdown Files Preview & Edit State (keyed by item.full_path || item.path) ---
   const [openFiles, setOpenFiles] = useState<Record<string, InlineFileState>>({});
@@ -1135,11 +1167,33 @@ export default function WorkspaceManagement({
 
   // --- Load Workspace Markdown File Content (API /api/workspaces/content/markdown/get?id={id}&path={path}) ---
   const loadFileContent = useCallback(
-    async (item: MarkdownTreeItem, startInEdit = false, explicitWsId?: number) => {
+    async (
+      item: MarkdownTreeItem,
+      startInEdit = false,
+      explicitWsId?: number,
+      forceRefresh = false
+    ) => {
       const targetWsId = explicitWsId ?? item.workspace_id ?? selectedMarkdownWsId;
       if (!targetWsId) return;
       const targetPath = item.full_path || item.path;
       const fileKey = targetPath;
+
+      if (!forceRefresh && typeof item.content === "string") {
+        setOpenFiles((prev) => ({
+          ...prev,
+          [fileKey]: {
+            isOpen: true,
+            isEditing: startInEdit,
+            content: item.content ?? "",
+            loading: false,
+            error: null,
+            editDraft: prev[fileKey]?.editDraft || item.content || "",
+            isSaving: false,
+            saveError: null,
+          },
+        }));
+        return;
+      }
 
       setOpenFiles((prev) => ({
         ...prev,
@@ -1420,6 +1474,7 @@ export default function WorkspaceManagement({
   const fetchWorkspaceMarkdown = useCallback(
     async (id: number, autoOpenEdit = false) => {
       setSelectedMarkdownWsId(id);
+      setMarkdownApiMode("standard");
       setOpenFiles({});
       setMarkdownLoading(true);
       setMarkdownError(null);
@@ -1528,6 +1583,150 @@ export default function WorkspaceManagement({
       }
     },
     [workspacesTree, loadFileContent]
+  );
+
+  // --- Fetch Full Workspace Markdown with Contents (API /api/workspaces/content/markdown/full?id={id}) ---
+  const fetchWorkspaceMarkdownFull = useCallback(
+    async (id: number) => {
+      setSelectedMarkdownWsId(id);
+      setMarkdownApiMode("full");
+      setOpenFiles({});
+      setMarkdownLoading(true);
+      setMarkdownError(null);
+      try {
+        const parentWs = workspacesTree.find(
+          (w) => w.id === id && ((w.children && w.children.length > 0) || w.is_selectable === false)
+        );
+
+        if (parentWs && parentWs.children && parentWs.children.length > 0) {
+          // Parent workspace: Aggregate full markdown tree + content from all child workspaces in parallel
+          const childFetches = await Promise.allSettled(
+            parentWs.children.map(async (child) => {
+              let res = await fetch(`/next/api/hust/workspaces/content/markdown/full?id=${child.id}`, {
+                method: "GET",
+                headers: { Accept: "application/json" },
+                cache: "no-store",
+              });
+              if (!res.ok) {
+                res = await fetch(
+                  `https://laravel.hust.media/api/workspaces/content/markdown/full?id=${child.id}`,
+                  {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                    cache: "no-store",
+                  }
+                );
+              }
+              if (!res.ok) {
+                res = await fetch(
+                  `https://laravel_mt.hust.media/api/workspaces/content/markdown/full?id=${child.id}`,
+                  {
+                    method: "GET",
+                    headers: { Accept: "application/json" },
+                    cache: "no-store",
+                  }
+                );
+              }
+              if (!res.ok) {
+                res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
+                  method: "GET",
+                  headers: { Accept: "application/json" },
+                  cache: "no-store",
+                });
+              }
+              const json = await res.json().catch(() => ({}));
+              if (!res.ok || !json.data) {
+                throw new Error(json.message || `Lỗi tải ${child.work_space_code}`);
+              }
+              return { child, data: json.data as WorkspaceMarkdownData };
+            })
+          );
+
+          let totalMarkdownCount = 0;
+          const combinedTree: MarkdownTreeItem[] = [];
+          const allExtractedFiles: Record<string, InlineFileState> = {};
+
+          for (const result of childFetches) {
+            if (result.status === "fulfilled") {
+              const { child, data } = result.value;
+              totalMarkdownCount += data.markdown_count || 0;
+              const childItems = Array.isArray(data.tree) ? data.tree : [];
+              const attachedChildItems = childItems.map((t) => attachWorkspaceId(t, child.id));
+              combinedTree.push({
+                type: "directory",
+                name: `${child.workspace_name || child.work_space_code}`,
+                path: child.work_space_code,
+                full_path: data.relative_path || `${parentWs.work_space_code}/${child.work_space_code}`,
+                workspace_id: child.id,
+                children: attachedChildItems,
+              });
+              const extracted = extractFilesWithContent(attachedChildItems);
+              Object.assign(allExtractedFiles, extracted);
+            }
+          }
+
+          setMarkdownData({
+            id: parentWs.id,
+            workspace_name: `${parentWs.workspace_name || parentWs.work_space_code} (Toàn bộ nhóm mẹ - Full nội dung)`,
+            work_space_code: parentWs.work_space_code,
+            parent_workspace_code: parentWs.parent_workspace_code,
+            relative_path: parentWs.work_space_code,
+            markdown_count: totalMarkdownCount,
+            tree: combinedTree,
+          });
+          setOpenFiles(allExtractedFiles);
+          return;
+        }
+
+        // Child workspace: fetch directly from full API
+        let res = await fetch(`/next/api/hust/workspaces/content/markdown/full?id=${id}`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          res = await fetch(
+            `https://laravel.hust.media/api/workspaces/content/markdown/full?id=${id}`,
+            {
+              method: "GET",
+              headers: { Accept: "application/json" },
+              cache: "no-store",
+            }
+          );
+        }
+        if (!res.ok) {
+          res = await fetch(
+            `https://laravel_mt.hust.media/api/workspaces/content/markdown/full?id=${id}`,
+            {
+              method: "GET",
+              headers: { Accept: "application/json" },
+              cache: "no-store",
+            }
+          );
+        }
+        if (!res.ok) {
+          res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${id}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          });
+        }
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.data) {
+          throw new Error(json.message || `Lỗi tải toàn bộ nội dung Markdown (HTTP ${res.status})`);
+        }
+        setMarkdownData(json.data);
+        const extracted = extractFilesWithContent(json.data.tree);
+        setOpenFiles(extracted);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setMarkdownError(msg);
+        setMarkdownData(null);
+      } finally {
+        setMarkdownLoading(false);
+      }
+    },
+    [workspacesTree]
   );
 
   const handleViewMarkdown = useCallback(
@@ -3355,6 +3554,24 @@ export default function WorkspaceManagement({
                       <span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
                         ID: {parentWs.id}
                       </span>
+                      {/* Nút Xem full cả nhóm mẹ đặt ngay trên thanh Header */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void fetchWorkspaceMarkdownFull(parentWs.id);
+                        }}
+                        disabled={markdownLoading}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 disabled:opacity-60 ${
+                          isParentSelected && markdownApiMode === "full"
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20"
+                            : "border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-800 hover:border-emerald-500 hover:from-emerald-100 hover:to-teal-100"
+                        }`}
+                        title="Nạp toàn bộ cây thư mục & toàn bộ nội dung file .md của cả nhóm mẹ qua API GET /api/workspaces/content/markdown/full"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>Xem full cả nhóm mẹ</span>
+                      </button>
                     </div>
                   </div>
 
@@ -3369,7 +3586,7 @@ export default function WorkspaceManagement({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                       {/* Thẻ Mẹ - Nằm riêng trong 1 cột của lưới 3 cột, kích thước gọn gàng */}
                       <div
-                        onClick={() => void fetchWorkspaceMarkdown(parentWs.id)}
+                        onClick={() => void fetchWorkspaceMarkdownFull(parentWs.id)}
                         className={`group relative rounded-xl px-3.5 py-2.5 transition cursor-pointer text-left border flex flex-col justify-between ${
                           isParentSelected
                             ? "border-emerald-500 bg-gradient-to-br from-emerald-100/90 via-emerald-50/70 to-teal-50/80 ring-2 ring-emerald-500/40 shadow-xs"
@@ -3405,16 +3622,16 @@ export default function WorkspaceManagement({
                             </div>
                           </div>
 
-                          <div className="shrink-0">
+                          <div className="shrink-0 flex items-center gap-1.5">
                             {isParentSelected ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white border border-emerald-600 px-2 py-0.5 text-[10px] font-bold shadow-2xs">
                                 <CheckCircle2 className="h-3 w-3" />
-                                Đang xem
+                                {markdownApiMode === "full" ? "Đã nạp full" : "Đang xem"}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 rounded-full bg-white text-emerald-700 border border-emerald-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition px-2 py-0.5 text-[10px] font-semibold">
-                                <Eye className="h-3 w-3" />
-                                Chọn xem →
+                                <Sparkles className="h-3 w-3" />
+                                Xem full →
                               </span>
                             )}
                           </div>
@@ -3422,9 +3639,9 @@ export default function WorkspaceManagement({
 
                         <p
                           className="text-[11px] text-slate-600 group-hover:text-slate-700 line-clamp-2 mt-1 leading-snug"
-                          title={`Tổng hợp toàn bộ cây file Markdown từ cả ${children.length} workspace con trong nhóm này.`}
+                          title={`Tổng hợp toàn bộ cây file & nội dung Markdown từ cả ${children.length} workspace con trong nhóm này qua API full.`}
                         >
-                          Tổng hợp toàn bộ cây file Markdown từ cả {children.length} workspace con trong nhóm này.
+                          Tổng hợp toàn bộ cây file & nạp sẵn nội dung Markdown từ cả {children.length} workspace con trong nhóm này.
                         </p>
                       </div>
                     </div>
@@ -3484,11 +3701,27 @@ export default function WorkspaceManagement({
                               </div>
                             </div>
 
-                            <div className="shrink-0">
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void fetchWorkspaceMarkdownFull(ws.id);
+                                }}
+                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-2xs transition cursor-pointer ${
+                                  isSelected && markdownApiMode === "full"
+                                    ? "bg-emerald-600 text-white border-emerald-600"
+                                    : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
+                                }`}
+                                title="Nạp toàn bộ cấu trúc & nội dung tất cả file .md qua API GET /api/workspaces/content/markdown/full"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                                <span>Xem full</span>
+                              </button>
                               {isSelected ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white border border-emerald-600 px-2 py-0.5 text-[10px] font-bold shadow-2xs">
                                   <CheckCircle2 className="h-3 w-3" />
-                                  Đang xem
+                                  {markdownApiMode === "full" ? "Đã nạp full" : "Đang xem"}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-white text-indigo-700 border border-indigo-200 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition px-2 py-0.5 text-[10px] font-semibold">
@@ -3559,11 +3792,27 @@ export default function WorkspaceManagement({
                             </div>
                           </div>
 
-                          <div className="shrink-0">
+                          <div className="shrink-0 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void fetchWorkspaceMarkdownFull(ws.id);
+                              }}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-2xs transition cursor-pointer ${
+                                isSelected && markdownApiMode === "full"
+                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
+                              }`}
+                              title="Nạp ngay toàn bộ file .md qua API GET /api/workspaces/content/markdown/full"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span>Xem full</span>
+                            </button>
                             {isSelected ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold">
                                 <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                                Đang xem
+                                {markdownApiMode === "full" ? "Đã nạp full" : "Đang xem"}
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition px-2 py-0.5 text-[10px] font-semibold">
@@ -3592,10 +3841,12 @@ export default function WorkspaceManagement({
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-10 text-center shadow-xs">
                 <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mx-auto" />
                 <p className="mt-3 text-sm font-bold text-emerald-900">
-                  Đang gọi API: GET /api/workspaces/main/markdown?id={selectedMarkdownWsId}
+                  Đang gọi API: GET {markdownApiMode === "full" ? "/api/workspaces/content/markdown/full" : "/api/workspaces/main/markdown"}?id={selectedMarkdownWsId}
                 </p>
                 <p className="mt-1 text-xs text-emerald-700">
-                  Đang quét cấu trúc thư mục và file .md của workspace…
+                  {markdownApiMode === "full"
+                    ? "Đang nạp toàn bộ cấu trúc thư mục & toàn bộ nội dung file .md…"
+                    : "Đang quét cấu trúc thư mục và file .md của workspace…"}
                 </p>
               </div>
             )}
@@ -3672,9 +3923,15 @@ export default function WorkspaceManagement({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {markdownApiMode === "full" && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-100 border border-teal-300 px-3 py-1 text-xs font-bold text-teal-800 shadow-2xs">
+                        <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                        <span>API Full · Đã nạp sẵn nội dung</span>
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-800">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                      <FileCode2 className="h-3.5 w-3.5 text-emerald-600" />
                       <span>{markdownData.markdown_count} file .md</span>
                     </span>
                   </div>
@@ -3755,7 +4012,7 @@ export default function WorkspaceManagement({
                     </code>
                   </div>
                   <div className="font-mono text-slate-400">
-                    GET /api/workspaces/main/markdown?id={markdownData.id}
+                    GET {markdownApiMode === "full" ? "/api/workspaces/content/markdown/full" : "/api/workspaces/main/markdown"}?id={markdownData.id}
                   </div>
                 </div>
               </div>

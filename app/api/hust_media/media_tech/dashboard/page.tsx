@@ -1,12 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import {
   ArrowUpRight,
   Bot,
   MessageSquare,
   Radio,
-  Server,
-  Sparkles,
+  Code2,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -17,24 +17,24 @@ export const metadata: Metadata = {
 
 const destinations = [
   {
-    label: "Laravel API",
-    title: "Laravel Backend",
+    label: "API List · 2 Hệ thống",
+    title: "Danh Sách API Hệ Thống",
     description:
-      "Tài liệu và giao diện thử API Laravel cho Workspace, phòng chat, session và tin nhắn.",
-    href: "/api/hust/list/laravel",
-    action: "Mở tài liệu Laravel",
-    Icon: Server,
+      "Trung tâm tra cứu nhanh 2 hệ thống API: Laravel Backend REST API và OpenClaw AI Gateway trên giao diện 2 khung tập trung.",
+    href: "/api/hust/list/home",
+    action: "Mở API List",
+    Icon: Code2,
     tone: "blue",
   },
   {
-    label: "OpenClaw API",
-    title: "OpenClaw Gateway",
+    label: "Workspace",
+    title: "Quản trị Workspace",
     description:
-      "Xem và thử các endpoint AI như hội thoại, responses, model, workspace và tạo ảnh.",
-    href: "/api/hust/list/openclaw",
-    action: "Mở tài liệu OpenClaw",
-    Icon: Sparkles,
-    tone: "violet",
+      "Xem session và quản lý Workspace: tạo, sửa, đổi trạng thái, xóa hoặc đồng bộ routing qua API.",
+    href: "/api/hust/workspace/home",
+    action: "Mở quản trị Workspace",
+    Icon: BriefcaseBusiness,
+    tone: "indigo",
   },
   {
     label: "Chat Test",
@@ -73,6 +73,7 @@ const toneClasses: Record<string, string> = {
   violet: "border-violet-200 bg-violet-50 text-violet-700",
   cyan: "border-cyan-200 bg-cyan-50 text-cyan-700",
   sky: "border-sky-200 bg-sky-50 text-sky-700",
+  indigo: "border-indigo-200 bg-indigo-50 text-indigo-700",
   purple: "border-purple-200 bg-purple-50 text-purple-700",
 };
 
@@ -96,7 +97,7 @@ export default function SwaggerHomePage() {
           <Link
             key={`${href}-${label}`}
             prefetch={false}
-            href={href as any}
+            href={href as unknown as Route}
             className="group flex min-h-56 flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <div className="flex items-center gap-2">

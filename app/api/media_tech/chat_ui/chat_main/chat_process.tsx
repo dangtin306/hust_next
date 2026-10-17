@@ -394,6 +394,11 @@ function writeCookie(name: string, value: string): void {
   document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 }
 
+function isLikelyDeadLocalUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return url.includes("192.168.0.189");
+}
+
 function getSavedApiUrl(
   storageKey: string | undefined,
   cookieName: string,
@@ -404,16 +409,32 @@ function getSavedApiUrl(
 
   if (storageKey === CHAT_TEST_STORAGE_KEY) {
     const cookieValue = readCookie(cookieName)?.trim();
-    if (cookieValue) return cookieValue;
+    if (cookieValue) {
+      if (isLikelyDeadLocalUrl(cookieValue)) {
+        writeCookie(cookieName, defaultUrl);
+        return defaultUrl;
+      }
+      return cookieValue;
+    }
 
     // Migrate any previously saved sessionStorage value into a durable cookie.
     const legacyValue = window.sessionStorage?.getItem(legacyStorageName)?.trim();
+    if (legacyValue && isLikelyDeadLocalUrl(legacyValue)) {
+      window.sessionStorage?.removeItem(legacyStorageName);
+      writeCookie(cookieName, defaultUrl);
+      return defaultUrl;
+    }
     const value = legacyValue || defaultUrl;
     writeCookie(cookieName, value);
     return value;
   }
 
-  return window.sessionStorage?.getItem(legacyStorageName)?.trim() || defaultUrl;
+  const sessionVal = window.sessionStorage?.getItem(legacyStorageName)?.trim();
+  if (sessionVal && isLikelyDeadLocalUrl(sessionVal)) {
+    window.sessionStorage?.removeItem(legacyStorageName);
+    return defaultUrl;
+  }
+  return sessionVal || defaultUrl;
 }
 
 export function useMediaChatProcess({
@@ -801,12 +822,31 @@ export function useMediaChatProcess({
               historyProgress,
               activeLaravelUrlRef.current || activeLaravelUrl,
             );
-          } catch (historyErr: any) {
+          } catch (historyErr: unknown) {
+            const errObj = historyErr as { status?: number; code?: string; message?: string } | null;
+            const isConnectionError =
+              errObj?.status === 502 ||
+              String(errObj?.message || "").includes("502") ||
+              String(errObj?.message || "").includes("fetch failed") ||
+              String(errObj?.message || "").toLowerCase().includes("không kết nối được");
+
+            if (isConnectionError && activeLaravelUrl && activeLaravelUrl !== defaultLaravelUrl) {
+              console.warn(
+                `[Chat] Custom Laravel URL ${activeLaravelUrl} không kết nối được (502). Đang tự động chuyển về mặc định ${defaultLaravelUrl}...`,
+              );
+              setActiveLaravelUrl(defaultLaravelUrl);
+              activeLaravelUrlRef.current = defaultLaravelUrl;
+              writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, defaultLaravelUrl);
+              try {
+                window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
+              } catch {}
+            }
+
             const isSessionInvalid =
-              historyErr?.status === 401 ||
-              historyErr?.code === "CHAT_SESSION_INVALID" ||
-              String(historyErr?.message || "").includes("401") ||
-              String(historyErr?.message || "").toLowerCase().includes("session is invalid");
+              errObj?.status === 401 ||
+              errObj?.code === "CHAT_SESSION_INVALID" ||
+              String(errObj?.message || "").includes("401") ||
+              String(errObj?.message || "").toLowerCase().includes("session is invalid");
 
             if (isSessionInvalid) {
               console.warn("Phiên chat Laravel không hợp lệ hoặc đã hết hạn (401), đang tự động xóa session cũ và tạo lại phiên mới...");
@@ -817,7 +857,7 @@ export function useMediaChatProcess({
               return false;
             }
 
-            console.error("Lỗi khi tải lịch sử tin nhắn (POST /messages/list):", historyErr);
+            console.warn("Lỗi khi tải lịch sử tin nhắn (POST /messages/list):", historyErr);
             if (cancelled) return true;
             const conversationIdValue = String(upstreamConvId);
             setConversationId(conversationIdValue);
@@ -825,7 +865,7 @@ export function useMediaChatProcess({
             setHistoryFetchError({
               failedRoomId: String(targetRoomId),
               upstreamConversationId: conversationIdValue,
-              errorStatus: historyErr?.message || "Lỗi tải dữ liệu",
+              errorStatus: errObj?.message || "Lỗi tải dữ liệu",
             });
             setMessages([
               {

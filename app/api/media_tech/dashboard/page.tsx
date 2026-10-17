@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -9,10 +9,9 @@ import {
   MessageSquare,
   Network,
   Radio,
-  Server,
-  Sparkles,
   Workflow,
   Video,
+  Code2,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -23,6 +22,16 @@ export const metadata: Metadata = {
 
 const destinations = [
   {
+    label: "API List · 2 Hệ thống",
+    title: "Danh Sách API Hệ Thống",
+    description:
+      "Trung tâm tra cứu nhanh 2 hệ thống API: Laravel Backend REST API và OpenClaw AI Gateway trên giao diện 2 khung tập trung.",
+    href: "/api/mt/list/home",
+    action: "Mở API List",
+    Icon: Code2,
+    tone: "blue",
+  },
+  {
     label: "HeyGen Video",
     title: "Demo MC ảo",
     description:
@@ -31,26 +40,6 @@ const destinations = [
     action: "Mở demo HeyGen",
     Icon: Video,
     tone: "rose",
-  },
-  {
-    label: "Laravel API",
-    title: "Laravel Backend",
-    description:
-      "Tài liệu và giao diện thử API Laravel cho Workspace, phòng chat, session và tin nhắn.",
-    href: "/api/mt/list/laravel",
-    action: "Mở tài liệu Laravel",
-    Icon: Server,
-    tone: "blue",
-  },
-  {
-    label: "OpenClaw API",
-    title: "OpenClaw Gateway",
-    description:
-      "Xem và thử các endpoint AI như hội thoại, responses, model, workspace và tạo ảnh.",
-    href: "/api/mt/list/openclaw",
-    action: "Mở tài liệu OpenClaw",
-    Icon: Sparkles,
-    tone: "violet",
   },
   {
     label: "Chat Test",
@@ -169,7 +158,7 @@ export default function SwaggerHomePage() {
           <Link
             key={`${href}-${label}`}
             prefetch={false}
-            href={href as any}
+            href={href as unknown as Route}
             className="group flex min-h-56 flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <div className="flex items-center gap-2">

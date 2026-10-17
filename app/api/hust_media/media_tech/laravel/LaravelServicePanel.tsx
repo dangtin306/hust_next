@@ -58,6 +58,15 @@ const endpoints: EndpointItem[] = [
   {
     category: "workspace",
     method: "GET",
+    path: "/api/workspaces/content/markdown/full",
+    operationId: "getWorkspaceMarkdownContentFull",
+    summary: "Lấy toàn bộ Markdown workspace (GET full)",
+    note: "Frontend lấy cây thư mục và nội dung tất cả file .md trong workspace con chỉ bằng 1 request theo id.",
+    isNew: true,
+  },
+  {
+    category: "workspace",
+    method: "GET",
     path: "/api/workspaces/main/markdown",
     operationId: "getWorkspaceMainMarkdown",
     summary: "Xem cấu trúc Markdown workspace",
@@ -324,16 +333,19 @@ export default function LaravelServicePanel() {
 
           <div className="border-t border-blue-100 pt-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <FileCode2 className="h-4 w-4 text-emerald-600" /> Bộ 3 API Xem và Sửa Markdown Workspace
+              <FileCode2 className="h-4 w-4 text-emerald-600" /> Bộ API Xem, Lấy Toàn Bộ và Sửa Markdown Workspace
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              1. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code>: Trả về cây thư mục (<code className="font-mono font-semibold">tree</code> có <code className="font-mono">full_path</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con.
+              1. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/full?id={"{id}"}</code>: Lấy cây thư mục kèm toàn bộ nội dung của tất cả file <code className="font-mono font-bold text-slate-800">.md</code> trong workspace con chỉ bằng 1 request duy nhất (trả về trường <code className="font-mono">content</code> ở từng node file, không cần gọi lẻ từng file).
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              2. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/get?id={"{id}"}&path={"{full_path}"}</code>: Đọc toàn bộ nội dung file <code className="font-mono font-bold text-slate-800">.md</code> với đường dẫn tương đối từ workspace root (<code className="font-mono">path</code>).
+              2. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code>: Trả về cây thư mục (<code className="font-mono font-semibold">tree</code> có <code className="font-mono">full_path</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con (chỉ metadata, không có content).
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              3. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">POST /api/workspaces/content/markdown/edit?id={"{id}"}&path={"{full_path}"}</code>: Ghi nội dung mới vào file <code className="font-mono font-bold text-slate-800">.md</code> đã có qua JSON body <code className="font-mono">{"{\"content\": \"...\"}"}</code>. Trả về <code className="font-mono font-semibold">bytes_written</code>.
+              3. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/get?id={"{id}"}&path={"{full_path}"}</code>: Đọc toàn bộ nội dung của một file <code className="font-mono font-bold text-slate-800">.md</code> lẻ với đường dẫn tương đối từ workspace root (<code className="font-mono">path</code>).
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+              4. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">POST /api/workspaces/content/markdown/edit?id={"{id}"}&path={"{full_path}"}</code>: Ghi nội dung mới vào file <code className="font-mono font-bold text-slate-800">.md</code> đã có qua JSON body <code className="font-mono">{"{\"content\": \"...\"}"}</code>. Trả về <code className="font-mono font-semibold">bytes_written</code>.
             </p>
           </div>
 
