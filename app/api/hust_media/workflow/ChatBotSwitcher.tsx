@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -51,7 +52,7 @@ export default function ChatBotSwitcher({ active }: ChatBotSwitcherProps) {
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Home Button */}
           <Link
-            href={"/api/hust/home" as any}
+            href={"/api/hust/home" as unknown as Route}
             onClick={clearHash}
             className={`group flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all sm:px-3.5 sm:py-2 sm:text-sm active:scale-[0.98] ${
               currentActive === "home"
@@ -74,7 +75,7 @@ export default function ChatBotSwitcher({ active }: ChatBotSwitcherProps) {
 
           {/* Laravel n8n */}
           <Link
-            href={"/api/hust/n8n/laravel" as any}
+            href={"/api/hust/n8n/laravel" as unknown as Route}
             onClick={clearHash}
             className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-all sm:px-3 sm:py-2 sm:text-sm active:scale-[0.98] ${
               currentActive === "laravel"
@@ -86,9 +87,9 @@ export default function ChatBotSwitcher({ active }: ChatBotSwitcherProps) {
             <span>Laravel n8n</span>
           </Link>
 
-          {/* Chat Test */}
+          {/* Chat Bot */}
           <Link
-            href={"/api/hust/chat_test" as any}
+            href={"/api/hust/chat/home" as unknown as Route}
             onClick={clearHash}
             className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-all sm:px-3 sm:py-2 sm:text-sm active:scale-[0.98] ${
               currentActive === "test_1"
@@ -97,12 +98,12 @@ export default function ChatBotSwitcher({ active }: ChatBotSwitcherProps) {
             }`}
           >
             <Bot className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${currentActive === "test_1" ? "text-white" : "text-slate-400 group-hover:text-blue-500"}`} />
-            <span>Chat Test</span>
+            <span>Chat Bot</span>
           </Link>
 
           {/* API Test */}
           <Link
-            href={"/api/hust/api_test" as any}
+            href={"/api/hust/api_test" as unknown as Route}
             onClick={clearHash}
             className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition-all sm:px-3 sm:py-2 sm:text-sm active:scale-[0.98] ${
               currentActive === "api_1"

@@ -7,6 +7,7 @@ export default function FooterWeb({ initialHost = "", initialLatestVersion = "" 
   const isChatRoute =
     pathname.includes("/chat_bot") ||
     pathname.includes("/chat_test") ||
+    pathname.includes("/chat/test") ||
     pathname.includes("/test_1");
 
   if (isChatRoute) {

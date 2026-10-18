@@ -5,7 +5,7 @@ import { MessageSquare, Sparkles, X } from "lucide-react";
 import MediaTechChatClient from "../main/media_main";
 
 export default function ChatPublicLauncher() {
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
 
   const openChat = () => {
     try {
@@ -22,6 +22,20 @@ export default function ChatPublicLauncher() {
     }
     setIsChatOpen(true);
   };
+
+  useEffect(() => {
+    try {
+      const identityMigrationKey = "chat_public_identity_migrated_v1";
+      if (!window.localStorage.getItem(identityMigrationKey)) {
+        if (window.localStorage.getItem("chat_public_conv_id_user_id") === "502") {
+          window.localStorage.removeItem("chat_public_conv_id_user_id");
+        }
+        window.localStorage.setItem(identityMigrationKey, "1");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (!isChatOpen) return;

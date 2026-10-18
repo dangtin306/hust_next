@@ -32,18 +32,38 @@ export default function SwaggerLayoutClient({
   const isWorkflow =
     pathname.includes("/n8n") || pathname.includes("/workflow");
   const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
+  const isChatHome =
+    pathname.includes("/chat/home") || pathname.includes("/chat_home");
+  const isGitHome =
+    pathname.includes("/git/home") || pathname.includes("/git_home");
   const isHome =
     !isWorkspace &&
     !isWorkflow &&
     !isApiListHome &&
+    !isChatHome &&
+    !isGitHome &&
     (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
-  const isChatPublic = pathname.includes("/chat_public");
+  const isGitAuto = !isGitHome && (pathname.includes("/git_auto") || pathname.includes("/git/auto"));
+  const isGitTest = !isGitHome && (pathname.includes("/git_test") || pathname.includes("/git/test"));
+  const isGiteaTest =
+    !isGitHome &&
+    (pathname.includes("/gitea_test") ||
+      pathname.includes("/git/gitea") ||
+      pathname.includes("/gitea"));
+  const isChatManage =
+    !isChatHome &&
+    (pathname.includes("/chat_manage") || pathname.includes("/chat/manage"));
+  const isChatPublic =
+    !isChatHome &&
+    (pathname.includes("/chat_public") || pathname.includes("/chat/public"));
   const isChatTest =
-    pathname.includes("/chat_test") ||
-    pathname.includes("/chat_bot") ||
-    pathname.includes("/test_1");
+    !isChatHome &&
+    (pathname.includes("/chat_test") ||
+      pathname.includes("/chat/test") ||
+      pathname.includes("/chat_bot") ||
+      pathname.includes("/test_1"));
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -54,7 +74,9 @@ export default function SwaggerLayoutClient({
       className={`min-w-0 overflow-x-hidden bg-transparent ${
         isChatTest
           ? "h-[calc(100vh-48px)] h-[calc(100dvh-48px)] max-h-[calc(100dvh-48px)] flex flex-col p-1.5 pb-1 sm:px-3 sm:pt-1.5 sm:pb-1 overflow-hidden"
-          : "min-h-screen w-full max-w-[1840px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5"
+          : isGitAuto || isGitTest
+            ? "min-h-screen px-1 py-4 sm:px-6 sm:py-6"
+            : "min-h-screen w-full max-w-[1840px] mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-3.5"
       }`}
     >
       <SwaggerSwitcher
@@ -64,19 +86,23 @@ export default function SwaggerLayoutClient({
             ? "workflow"
             : isWorkspace
               ? "workspace"
-              : isApiListHome
-                ? "api_list"
-                : isLaravel
-                  ? "laravel"
-                  : isOpenClaw
-                    ? "openclaw"
-                    : isChatPublic
-                      ? "chat_public"
-                      : isChatTest
-                        ? "chat_test"
-                        : isHome
-                          ? "home"
-                          : "api_list"
+              : isGitHome || isGitAuto
+                ? "git_auto"
+                : isGitTest
+                  ? "git_test"
+                  : isGiteaTest
+                    ? "gitea_test"
+                    : isApiListHome
+                      ? "api_list"
+                      : isLaravel
+                        ? "laravel"
+                        : isOpenClaw
+                          ? "openclaw"
+                          : isChatHome || isChatPublic || isChatTest || isChatManage
+                            ? "chat_bot"
+                            : isHome
+                              ? "home"
+                              : "api_list"
         }
       />
 
@@ -84,13 +110,13 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>
-      ) : isChatPublic ? (
+      ) : isChatPublic || isChatManage ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkflow ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkspace ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
-      ) : isApiListHome || isHome ? (
+      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : (
         <>

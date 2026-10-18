@@ -151,11 +151,35 @@
           "source": "/api/hust/openclaw",
           "destination": "/api/hust_media/media_tech/openclaw"
         },
+        "chatHome": {
+          "source": "/api/hust/chat/home",
+          "destination": "/api/hust_media/media_tech/chat_home"
+        },
+        "chatRoot": {
+          "source": "/api/hust/chat",
+          "destination": "/api/hust_media/media_tech/chat_home"
+        },
+        "chatManage": {
+          "source": "/api/hust/chat/manage",
+          "destination": "/api/hust_media/media_tech/chat_manage"
+        },
+        "chatManageLegacy": {
+          "source": "/api/hust/chat_manage",
+          "destination": "/api/hust_media/media_tech/chat_manage"
+        },
         "chatTest": {
+          "source": "/api/hust/chat/test",
+          "destination": "/api/hust_media/media_tech/chat_test"
+        },
+        "chatTestLegacy": {
           "source": "/api/hust/chat_test",
           "destination": "/api/hust_media/media_tech/chat_test"
         },
         "chatPublic": {
+          "source": "/api/hust/chat/public",
+          "destination": "/api/hust_media/media_tech/chat_public"
+        },
+        "chatPublicLegacy": {
           "source": "/api/hust/chat_public",
           "destination": "/api/hust_media/media_tech/chat_public"
         },
@@ -190,6 +214,38 @@
         "workspace": {
           "source": "/api/hust/workspace",
           "destination": "/api/hust_media/workspace"
+        },
+        "gitHome": {
+          "source": "/api/hust/git/home",
+          "destination": "/api/hust_media/media_tech/git_home"
+        },
+        "gitRoot": {
+          "source": "/api/hust/git",
+          "destination": "/api/hust_media/media_tech/git_home"
+        },
+        "gitAuto": {
+          "source": "/api/hust/git/auto",
+          "destination": "/api/hust_media/media_tech/git_auto"
+        },
+        "gitAutoLegacy": {
+          "source": "/api/hust/git_auto",
+          "destination": "/api/hust_media/media_tech/git_auto"
+        },
+        "gitTest": {
+          "source": "/api/hust/git/test",
+          "destination": "/api/hust_media/media_tech/git_test"
+        },
+        "gitTestLegacy": {
+          "source": "/api/hust/git_test",
+          "destination": "/api/hust_media/media_tech/git_test"
+        },
+        "giteaTest": {
+          "source": "/api/hust/git/gitea",
+          "destination": "/api/hust_media/media_tech/gitea_test"
+        },
+        "giteaTestLegacy": {
+          "source": "/api/hust/gitea_test",
+          "destination": "/api/hust_media/media_tech/gitea_test"
         }
       },
       "chatProxy": {
@@ -230,11 +286,35 @@
         "source": "/api/mt",
         "destination": "/api/media_tech"
       },
+      "chatHome": {
+        "source": "/api/mt/chat/home",
+        "destination": "/api/media_tech/chat_home"
+      },
+      "chatRoot": {
+        "source": "/api/mt/chat",
+        "destination": "/api/media_tech/chat_home"
+      },
+      "chatManage": {
+        "source": "/api/mt/chat/manage",
+        "destination": "/api/media_tech/chat_manage"
+      },
+      "chatManageLegacy": {
+        "source": "/api/mt/chat_manage",
+        "destination": "/api/media_tech/chat_manage"
+      },
       "chatTest": {
+        "source": "/api/mt/chat/test",
+        "destination": "/api/media_tech/chat_test"
+      },
+      "chatTestLegacy": {
         "source": "/api/mt/chat_test",
         "destination": "/api/media_tech/chat_test"
       },
       "chatPublic": {
+        "source": "/api/mt/chat/public",
+        "destination": "/api/media_tech/chat_public"
+      },
+      "chatPublicLegacy": {
         "source": "/api/mt/chat_public",
         "destination": "/api/media_tech/chat_public"
       },
@@ -298,15 +378,35 @@
         "source": "/api/mt/home",
         "destination": "/api/media_tech/dashboard"
       },
+      "gitHome": {
+        "source": "/api/mt/git/home",
+        "destination": "/api/media_tech/git_home"
+      },
+      "gitRoot": {
+        "source": "/api/mt/git",
+        "destination": "/api/media_tech/git_home"
+      },
       "gitAuto": {
+        "source": "/api/mt/git/auto",
+        "destination": "/api/media_tech/git_auto"
+      },
+      "gitAutoLegacy": {
         "source": "/api/mt/git_auto",
         "destination": "/api/media_tech/git_auto"
       },
       "gitTest": {
+        "source": "/api/mt/git/test",
+        "destination": "/api/media_tech/git_test"
+      },
+      "gitTestLegacy": {
         "source": "/api/mt/git_test",
         "destination": "/api/media_tech/git_test"
       },
       "giteaTest": {
+        "source": "/api/mt/git/gitea",
+        "destination": "/api/media_tech/gitea_test"
+      },
+      "giteaTestLegacy": {
         "source": "/api/mt/gitea_test",
         "destination": "/api/media_tech/gitea_test"
       }

@@ -57,11 +57,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return {
-      beforeFiles: rewriteRules.filter((r) => r.destination.startsWith("http")),
-      afterFiles: [
+      beforeFiles: [
         legacyMapsRewrite,
-        ...rewriteRules.filter((r) => !r.destination.startsWith("http")),
+        ...rewriteRules,
       ],
+      afterFiles: [],
       fallback: [],
     };
   },

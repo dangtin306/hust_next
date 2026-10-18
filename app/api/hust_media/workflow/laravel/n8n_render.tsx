@@ -400,6 +400,7 @@ const formatNodeType = (nodeType = "") => {
 function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
   const theme = STICKY_COLOR_MAP[data.color] || STICKY_COLOR_MAP[5];
   const contentLines = String(data.content || "").split("\n");
+  const heading = contentLines[0]?.replace(/^#{1,6}\s*/, "");
 
   return (
     <div
@@ -409,9 +410,9 @@ function N8nStickyNoteRenderer({ data }: NodeProps<Node<StickyNoteData>>) {
       }}
       className={`rounded-2xl border-2 border-dashed ${theme.border} ${theme.bg} p-5 select-text nodrag nopan pointer-events-auto transition-all duration-300 flex flex-col justify-start`}
     >
-      {contentLines[0] && (
+      {heading && (
         <h4 className={`text-xl leading-5 font-bold tracking-wide uppercase ${theme.header} mb-2`}>
-          {contentLines[0]}
+          {heading}
         </h4>
       )}
       <div className="text-[17px] text-slate-300/85 leading-5 space-y-1 whitespace-pre-wrap">
@@ -438,7 +439,9 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
 
   return (
     <div
-      className={`flex flex-col items-center justify-start group pointer-events-auto ${
+      className={`relative group flex flex-col items-center transition-transform duration-200 pointer-events-auto ${
+        liveStatus === "running" ? "scale-105" : ""
+      } ${
         hasMermaidDiagram ? "cursor-pointer" : "cursor-default"
       }`}
       title={hasMermaidDiagram ? `${data.name} — bấm để mở sơ đồ con` : data.name}
@@ -446,11 +449,11 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
       {/* Khung vuông icon chính (~64x64) mô phỏng chuẩn node n8n Editor */}
       <div
         key={data.signalVersion ?? 0}
-        className={`relative w-20 h-20 rounded-2xl bg-slate-900/95 border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
+        className={`relative w-20 h-20 rounded-2xl border-2 flex items-center justify-center shadow-lg transition-all duration-300 ${
           liveClass ||
           (data.disabled
-            ? "opacity-50 grayscale border-slate-700"
-            : "border-slate-700/80 hover:border-slate-500")
+            ? "opacity-50 grayscale border-slate-700 bg-slate-900/90"
+            : "border-slate-800 hover:border-slate-700 bg-slate-900/90")
         } ${selected ? "!border-amber-400 !ring-2 !ring-amber-400/40" : ""}`}
       >
         {targetHandles.map((handleId, index) => (
@@ -460,42 +463,30 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
             position={Position.Left}
             id={handleId ?? undefined}
             style={{ top: handleTop(index, targetHandles.length) }}
-            className="!w-2.5 !h-2.5 !-left-1.5 !bg-slate-300 !border-2 !border-slate-950 hover:!bg-amber-400 transition-colors"
+            className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
             title={`Input ${handleId ?? "default"}`}
           />
         ))}
 
         {/* Khung Icon màu theo phân loại n8n */}
         <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md transition-transform duration-300 ${
-            data.disabled
-              ? "bg-slate-800 text-slate-500"
-              : liveStatus === "running"
-              ? "bg-cyan-400 text-slate-950 scale-110"
-              : `${meta.bg} text-white`
+          className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md transition-transform duration-200 group-hover:scale-105 ${
+            data.disabled ? "bg-slate-800 text-slate-500" : `${meta.bg} text-white`
           }`}
         >
           <Icon className="w-6 h-6 stroke-[2.2]" />
         </div>
 
         {/* Huy hiệu mini trạng thái realtime trên góc icon */}
-        {liveStatus === "running" && (
-          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-cyan-400 border-2 border-slate-950 animate-ping" />
-        )}
-        {liveStatus === "success" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
-            ✓
-          </span>
-        )}
-        {liveStatus === "slow" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
-            ⏱
-          </span>
-        )}
-        {liveStatus === "error" && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 border border-slate-900 flex items-center justify-center text-[11px] font-bold text-white shadow">
-            ✕
-          </span>
+        {liveStatus !== "idle" && (
+          <span
+            className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-slate-950 shadow-sm ${
+              liveStatus === "running" ? "bg-cyan-400 n8n-node-signal-ping"
+              : liveStatus === "success" ? "bg-emerald-400"
+              : liveStatus === "slow" ? "bg-amber-400"
+              : "bg-rose-500 animate-pulse"
+            }`}
+          />
         )}
         {hasMermaidDiagram && (
           <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-950 bg-violet-500 text-white shadow" aria-label="Có sơ đồ Mermaid">
@@ -510,7 +501,7 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
             position={Position.Right}
             id={handleId ?? undefined}
             style={{ top: handleTop(index, sourceHandles.length) }}
-            className="!w-2.5 !h-2.5 !-right-1.5 !bg-emerald-400 !border-2 !border-slate-950 hover:!bg-emerald-300 transition-colors"
+            className="!w-2.5 !h-2.5 !bg-slate-400 !border-2 !border-slate-950 transition-transform group-hover:scale-125"
             title={`Output ${handleId ?? "default"}`}
           />
         ))}
@@ -519,13 +510,13 @@ function N8nFlowNodeRenderer({ data, selected }: NodeProps<Node<FlowNodeData>>) 
       {/* Tên node và version nằm bên dưới icon box, căn giữa, tối đa 2 dòng */}
       <div className="nodrag nopan select-text mt-1.5 text-center w-full px-0.5 flex flex-col items-center">
         <span
-          className={`text-[17px] font-medium leading-5 line-clamp-2 max-w-[112px] break-words ${hasMermaidDiagram ? "text-violet-200" : "text-slate-200"}`}
+          className={`text-[17px] font-medium leading-5 line-clamp-2 max-w-[124px] break-words ${hasMermaidDiagram ? "text-violet-200" : "text-slate-200"}`}
           title={data.name}
         >
           {data.name}
         </span>
-        <div className="flex items-center gap-1 mt-0.5 text-sm leading-4 text-slate-400 font-mono">
-          <span className="truncate max-w-[85px]">{formatNodeType(data.nodeType)}</span>
+        <div className="flex items-center gap-1 mt-0.5 text-[13px] leading-[14px] text-slate-400 font-mono max-w-[124px]">
+          <span className="truncate max-w-[100px]">{formatNodeType(data.nodeType)}</span>
           {data.typeVersion !== undefined && (
             <span className="text-slate-500 font-normal">v{data.typeVersion}</span>
           )}
@@ -1365,7 +1356,7 @@ export const N8nDiagramRenderer = forwardRef<
       <ReactFlow
         nodes={nodes}
         edges={renderedEdges}
-        minZoom={0.35}
+        minZoom={0.25}
         maxZoom={3}
         onNodeClick={handleNodeClick}
         onNodesChange={onNodesChange}

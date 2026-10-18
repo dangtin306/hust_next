@@ -3,10 +3,9 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Bot,
-  MessageSquare,
-  Radio,
   Code2,
   BriefcaseBusiness,
+  GitBranch,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -37,34 +36,24 @@ const destinations = [
     tone: "indigo",
   },
   {
-    label: "Chat Test",
-    title: "Giao diện chat thử nghiệm",
+    label: "AI Chat Bot · 2 Giao diện",
+    title: "Trung Tâm AI Chat Bot",
     description:
-      "Kiểm tra luồng chat AI từ giao diện, gồm gửi yêu cầu và làm việc với workspace hội thoại.",
-    href: "/api/hust/chat_test",
-    action: "Mở Chat Test",
+      "Trung tâm AI Chat Bot gồm 2 giao diện: Chat Test kiểm thử Prompt/Session Laravel và Chat Public dành cho người dùng cuối.",
+    href: "/api/hust/chat/home",
+    action: "Mở Chat Bot Hub",
     Icon: Bot,
-    tone: "cyan",
-  },
-  {
-    label: "Chat Public",
-    title: "Chat công khai",
-    description:
-      "Mở giao diện chat dành cho người dùng; trang này khởi chạy khung chat công khai.",
-    href: "/api/hust/chat_public",
-    action: "Mở Chat Public",
-    Icon: MessageSquare,
-    tone: "sky",
-  },
-  {
-    label: "AI Chat Bot",
-    title: "Ứng dụng AI Chat Bot",
-    description:
-      "Mở trợ lý AI Hust Media để sử dụng các chức năng hội thoại.",
-    href: "/api/hust/chat_test",
-    action: "Mở ứng dụng Chat Bot",
-    Icon: Radio,
     tone: "purple",
+  },
+  {
+    label: "Git Auto · 3 Phân Hệ",
+    title: "Trung Tâm Git Control",
+    description:
+      "Trung tâm Git Hub quản trị 3 phân hệ: Git Auto tự động đồng bộ & commit, Git Test kiểm thử thao tác qua API, và Gitea Test kết nối kho lưu trữ.",
+    href: "/api/hust/git/home",
+    action: "Mở Git Auto Hub",
+    Icon: GitBranch,
+    tone: "amber",
   },
 ] as const;
 
@@ -75,6 +64,9 @@ const toneClasses: Record<string, string> = {
   sky: "border-sky-200 bg-sky-50 text-sky-700",
   indigo: "border-indigo-200 bg-indigo-50 text-indigo-700",
   purple: "border-purple-200 bg-purple-50 text-purple-700",
+  amber: "border-amber-200 bg-amber-50 text-amber-700",
+  orange: "border-orange-200 bg-orange-50 text-orange-700",
+  rose: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
 export default function SwaggerHomePage() {

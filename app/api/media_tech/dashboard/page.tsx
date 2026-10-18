@@ -5,10 +5,6 @@ import {
   Bot,
   BriefcaseBusiness,
   GitBranch,
-  GitPullRequest,
-  MessageSquare,
-  Network,
-  Radio,
   Workflow,
   Video,
   Code2,
@@ -42,24 +38,14 @@ const destinations = [
     tone: "rose",
   },
   {
-    label: "Chat Test",
-    title: "Giao diện chat thử nghiệm",
+    label: "AI Chat Bot · 2 Giao diện",
+    title: "Trung Tâm AI Chat Bot",
     description:
-      "Kiểm tra luồng chat AI từ giao diện, gồm gửi yêu cầu và làm việc với workspace hội thoại.",
-    href: "/api/mt/chat_test",
-    action: "Mở Chat Test",
+      "Trung tâm AI Chat Bot gồm 2 giao diện: Chat Test kiểm thử Prompt/Session Laravel và Chat Public dành cho người dùng cuối.",
+    href: "/api/mt/chat/home",
+    action: "Mở Chat Bot Hub",
     Icon: Bot,
-    tone: "cyan",
-  },
-  {
-    label: "Chat Public",
-    title: "Chat công khai",
-    description:
-      "Mở giao diện chat dành cho người dùng; trang này khởi chạy khung chat công khai.",
-    href: "/api/mt/chat_public",
-    action: "Mở Chat Public",
-    Icon: MessageSquare,
-    tone: "sky",
+    tone: "purple",
   },
   {
     label: "Workflow & Maps",
@@ -82,44 +68,14 @@ const destinations = [
     tone: "indigo",
   },
   {
-    label: "Git Auto · Có ghi dữ liệu",
-    title: "Quản lý Git Auto",
+    label: "Git Auto · 3 Phân Hệ",
+    title: "Trung Tâm Git Control",
     description:
-      "Theo dõi repository và thực hiện fetch/pull, stage, commit, push, đổi branch hoặc tạo Pull Request. Một số thao tác cập nhật code và remote repository.",
-    href: "/api/mt/git_auto",
-    action: "Mở Git Auto",
+      "Trung tâm Git Hub quản trị 3 phân hệ: Git Auto tự động đồng bộ & commit, Git Test kiểm thử thao tác qua API, và Gitea Test kết nối kho lưu trữ.",
+    href: "/api/mt/git/home",
+    action: "Mở Git Auto Hub",
     Icon: GitBranch,
     tone: "amber",
-  },
-  {
-    label: "Git Test · Môi trường kiểm thử",
-    title: "Kiểm thử Git Control",
-    description:
-      "Kiểm tra các thao tác Git qua API và cấu hình thử nghiệm riêng. Hãy xác nhận repository đích trước khi dùng thao tác ghi.",
-    href: "/api/mt/git_test",
-    action: "Mở Git Test",
-    Icon: GitPullRequest,
-    tone: "orange",
-  },
-  {
-    label: "Gitea Test",
-    title: "Thông tin repository Gitea",
-    description:
-      "Kiểm tra kết nối và xem repository, branch, commit, cây file cùng thông tin package/deploy.",
-    href: "/api/mt/gitea_test",
-    action: "Mở Gitea Test",
-    Icon: Network,
-    tone: "rose",
-  },
-  {
-    label: "AI Chat Bot",
-    title: "Ứng dụng AI Chat Bot",
-    description:
-      "Mở trợ lý AI Hust Media để sử dụng các chức năng hội thoại.",
-    href: "/api/mt/chat_test",
-    action: "Mở ứng dụng Chat Bot",
-    Icon: Radio,
-    tone: "purple",
   },
 ] as const;
 

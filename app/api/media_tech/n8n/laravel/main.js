@@ -274,7 +274,7 @@ export default function N8nWorkflowMain() {
       {/* Top Header Card */}
       <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-md shadow-xl">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shrink-0">
             <Workflow className="w-6 h-6" />
           </div>
           <div className="min-w-0">
@@ -344,31 +344,31 @@ export default function N8nWorkflowMain() {
           >
             {sseStatus === "connected" ? (
               <>
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="font-semibold text-emerald-300">Live: Connected (Socket.IO)</span>
               </>
             ) : sseStatus === "reconnecting" ? (
               <>
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                 </span>
                 <span className="font-semibold text-amber-300">Live: Reconnecting</span>
               </>
             ) : sseStatus === "connecting" ? (
               <>
-                <span className="relative flex h-2.5 w-2.5">
+                <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-500"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
                 </span>
                 <span className="font-semibold text-sky-300">Live: Connecting (Socket.IO)</span>
               </>
             ) : (
               <>
-                <span className="inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                <span className="inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                 <span>Live: Disconnected</span>
               </>
             )}
@@ -421,9 +421,9 @@ export default function N8nWorkflowMain() {
           </button>
 
           {graphData && (
-            <div className="flex items-center gap-2.5 bg-slate-950/80 px-3.5 py-2 rounded-xl border border-slate-800 text-xs">
+            <div className="flex items-center gap-2.5 bg-slate-950/80 px-3 py-2 rounded-xl border border-slate-800 text-xs">
               <div className="flex items-center gap-1.5 text-slate-300" title="Số lượng Node xử lý">
-                <Boxes className="w-4 h-4 text-amber-400" />
+                <Boxes className="w-4 h-4 text-cyan-400" />
                 <span>Nodes:</span>
                 <span className="font-bold text-white">{flowNodeCount}</span>
               </div>
@@ -445,9 +445,9 @@ export default function N8nWorkflowMain() {
           <button
             onClick={() => loadWorkflow(DEFAULT_WORKFLOW_ID)}
             disabled={reloading || loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 text-cyan-200 border border-cyan-700/80 font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${reloading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${reloading ? "animate-spin" : ""}`} />
             <span>{reloading ? "Đang tải..." : "Tải lại"}</span>
           </button>
         </div>
@@ -694,7 +694,7 @@ export default function N8nWorkflowMain() {
       </div>
 
       {/* Content Area - Rendered by N8nDiagramRenderer */}
-      <main className="relative w-full h-[760px] rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl flex flex-col">
+      <main className="relative w-full h-[min(1000px,calc(100vh-180px))] min-h-[760px] rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden shadow-2xl flex flex-col">
         {loading ? (
           /* Loading State */
           <div className="flex-1 flex flex-col items-center justify-center gap-4 bg-slate-950/90 text-slate-300">

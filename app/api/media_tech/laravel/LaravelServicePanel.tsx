@@ -14,10 +14,11 @@ import {
   Sparkles,
   Edit3,
   FileCode2,
+  Users,
 } from "lucide-react";
 
 type EndpointItem = {
-  category: "workspace" | "chat";
+  category: "workspace" | "manage" | "chat";
   method: "GET" | "POST" | "PATCH";
   path: string;
   operationId: string;
@@ -98,6 +99,53 @@ const endpoints: EndpointItem[] = [
     note: "Đồng bộ bảng routing định tuyến OpenClaw và hệ thống.",
   },
 
+  // Nhóm Chat Bot Manage API
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/overview",
+    operationId: "getChatBotManageOverview",
+    summary: "Xem thống kê tổng quan",
+    note: "Thống kê tổng user (active/disabled/mixed), sessions, và rooms.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/users",
+    operationId: "listChatBotManageUsers",
+    summary: "Tìm kiếm & phân trang người dùng",
+    note: "Tìm theo ID/số (q), lọc status (active/disabled/mixed), phân trang per_page và page.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/users/{userId}",
+    operationId: "getChatBotManageUserDetail",
+    summary: "Chi tiết người dùng & sessions",
+    note: "Xem chi tiết user (user_123 hoặc guest_456) kèm danh sách các session trực thuộc.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/users/{userId}/rooms",
+    operationId: "listChatBotManageUserRooms",
+    summary: "Danh sách phòng chat của người dùng",
+    note: "Lấy danh sách metadata phòng chat của user kèm phân trang per_page và page.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "PATCH",
+    path: "/api/chat/bot/manage/users/{userId}",
+    operationId: "updateChatBotManageUserStatus",
+    summary: "Khóa hoặc mở người dùng",
+    note: "Cập nhật status: 0 (khóa tất cả session) hoặc 1 (mở tất cả session).",
+    isNew: true,
+  },
+
   // Nhóm Chat Bot Rooms API
   {
     category: "chat",
@@ -159,7 +207,7 @@ const endpoints: EndpointItem[] = [
 
 export default function LaravelServicePanel() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "workspace" | "chat">("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "workspace" | "manage" | "chat">("all");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
   const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
@@ -210,6 +258,7 @@ export default function LaravelServicePanel() {
     categoryFilter === "all" ? endpoints : endpoints.filter((e) => e.category === categoryFilter);
 
   const workspaceCount = endpoints.filter((e) => e.category === "workspace").length;
+  const manageCount = endpoints.filter((e) => e.category === "manage").length;
   const chatCount = endpoints.filter((e) => e.category === "chat").length;
 
   return createPortal(
@@ -235,7 +284,7 @@ export default function LaravelServicePanel() {
             Tài liệu & Danh mục API Laravel
           </h2>
           <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-            Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID) và nhóm API Phòng chat Laravel (quản lý session, phòng và lịch sử chat).
+            Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID), nhóm Quản trị Người dùng Chat Bot (Manage API), và nhóm API Phòng chat Laravel (quản lý session, phòng và lịch sử chat).
           </p>
         </div>
 
@@ -259,6 +308,16 @@ export default function LaravelServicePanel() {
           >
             <Briefcase className="h-3 w-3" />
             <span>Workspace ({workspaceCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter("manage")}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
+              categoryFilter === "manage" ? "bg-white text-emerald-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Users className="h-3 w-3" />
+            <span>Manage ({manageCount})</span>
           </button>
           <button
             type="button"
@@ -346,6 +405,21 @@ export default function LaravelServicePanel() {
             </p>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
               4. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">POST /api/workspaces/content/markdown/edit?id={"{id}"}&path={"{full_path}"}</code>: Ghi nội dung mới vào file <code className="font-mono font-bold text-slate-800">.md</code> đã có qua JSON body <code className="font-mono">{"{\"content\": \"...\"}"}</code>. Trả về <code className="font-mono font-semibold">bytes_written</code>.
+            </p>
+          </div>
+
+          <div className="border-t border-blue-100 pt-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <Users className="h-4 w-4 text-emerald-600" /> Quản lý Người dùng Chat Bot (Manage API)
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
+              Gồm các API thống kê tổng quan, tìm kiếm và phân trang, xem chi tiết user, xem phòng chat, khóa hoặc mở user. Các API này <span className="font-semibold text-emerald-700">không yêu cầu Bearer token</span>.
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              Quy ước <code className="font-mono font-semibold">userId</code>: <code className="font-mono text-emerald-800 font-bold">user_123</code> (người dùng liên kết) hoặc <code className="font-mono text-emerald-800 font-bold">guest_456</code> (session guest).
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600">
+              Khóa / Mở user (<code className="font-mono">PATCH /api/chat/bot/manage/users/{"{userId}"}</code>): gửi body <code className="font-mono">{"{\"status\": 0}"}</code> để khóa tất cả session, hoặc <code className="font-mono">{"{\"status\": 1}"}</code> để mở lại.
             </p>
           </div>
 

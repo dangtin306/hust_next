@@ -22,11 +22,11 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "laravel" | "openclaw">("all");
 
-  const basePrefix = isHust ? "/next/api/hust" : "/next/api/mt";
+  const basePrefix = isHust ? "/api/hust" : "/api/mt";
   const laravelUrl = `${basePrefix}/list/laravel`;
   const openclawUrl = `${basePrefix}/list/openclaw`;
   const workspaceUrl = `${basePrefix}/workspace/home`;
-  const chatTestUrl = `${basePrefix}/chat_test`;
+  const chatBotHomeUrl = `${basePrefix}/chat/home`;
   const laravelHost = isHust ? "laravel.hust.media" : "laravel_mt.hust.media";
 
   const handleCopy = (text: string) => {
@@ -356,7 +356,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
             {/* Frame Footer Actions */}
             <div className="border-t border-slate-100 bg-slate-50/90 px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
               <Link
-                href={chatTestUrl as unknown as Route}
+                href={chatBotHomeUrl as unknown as Route}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100/80 transition-all hover:scale-[1.01] active:scale-95 shadow-2xs"
               >
                 <Bot className="h-4 w-4 text-purple-600" />

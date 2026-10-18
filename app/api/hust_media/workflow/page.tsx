@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import SwaggerSwitcher from "@/app/api/hust_media/media_tech/SwaggerSwitcher";
 import {
@@ -45,7 +45,7 @@ export default function WorkflowHomePage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
           {/* Card: Laravel n8n */}
           <Link
-            href={"/api/hust/n8n/laravel" as any}
+            href={"/api/hust/n8n/laravel" as unknown as Route}
             className="group relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
@@ -68,9 +68,9 @@ export default function WorkflowHomePage() {
             </div>
           </Link>
 
-          {/* Card: Chat Test */}
+          {/* Card: Chat Bot Hub */}
           <Link
-            href={"/api/hust/chat_test" as any}
+            href={"/api/hust/chat/home" as unknown as Route}
             className="group relative overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
@@ -78,24 +78,24 @@ export default function WorkflowHomePage() {
                 <Bot className="h-5 w-5" />
               </div>
               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                Chatbot AI
+                AI Chat Bot
               </span>
             </div>
             <h2 className="mt-3 text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-              Chat Test (Hust AI Assistant)
+              AI Chat Bot (Hust AI Assistant)
             </h2>
             <p className="mt-1.5 text-sm text-slate-600">
-              Trải nghiệm trò chuyện trực tiếp cùng trợ lý AI của Hust Media, hỗ trợ sinh viên và kết nối luồng agent OpenClaw.
+              Trải nghiệm trò chuyện trực tiếp cùng trợ lý AI của Hust Media: Chat Test kiểm thử và Chat Public người dùng.
             </p>
             <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-blue-600">
-              <span>Mở phòng chat test</span>
+              <span>Mở AI Chat Bot Hub</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </div>
           </Link>
 
           {/* Card: API Test & Swagger */}
           <Link
-            href={"/api/hust/api_test" as any}
+            href={"/api/hust/api_test" as unknown as Route}
             className="group relative overflow-hidden rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/70 to-pink-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-400 hover:shadow-md"
           >
             <div className="flex items-start justify-between">

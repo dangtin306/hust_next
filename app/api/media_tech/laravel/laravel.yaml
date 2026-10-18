@@ -21,6 +21,10 @@ tags:
       Các mã lỗi phổ biến: 401, 403, 404, 409, 422, 429, 500 và 503.
   - name: Workspace
     description: Lấy danh sách và quản lý dữ liệu Workspace trên Laravel.
+  - name: Manage
+    description: |
+      API quản lý người dùng Chat Bot.
+      Gồm các API thống kê tổng quan, tìm kiếm và phân trang, xem chi tiết user, xem phòng chat, khóa hoặc mở user. Các API này không yêu cầu Bearer token.
   - name: Demo
     description: Các API Demo thử nghiệm và dữ liệu mẫu trên Laravel.
 paths:
@@ -69,6 +73,72 @@ paths:
             maximum: 100
             default: 20
       responses:
+    ManageUnauthorized:
+      description: Thiếu hoặc sai Bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_UNAUTHORIZED
+              message: A valid bearer token is required.
+
+    ManageUserNotFound:
+      description: Không tìm thấy user hoặc session tương ứng.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGED_USER_NOT_FOUND
+              message: User or session not found.
+
+    ManageValidationError:
+      description: Tham số query hoặc request body không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageValidationError'
+          example:
+            message: The status field is required.
+            errors:
+              status:
+                - The status field is required.
+
+    ManageRateLimited:
+      description: Vượt giới hạn request (mặc định 60 request/phút theo IP). Xem header Retry-After.
+      headers:
+        Retry-After:
+          description: Số giây cần chờ trước khi thử lại
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_RATE_LIMITED
+              message: Too many requests. Please retry later.
+
+    ManageNotConfigured:
+      description: API quản lý chưa được cấu hình API Token trên máy chủ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_API_NOT_CONFIGURED
+              message: API token is not configured on server.
+
         '200':
           description: Danh sách workspace và phân trang.
           content:
@@ -1159,6 +1229,439 @@ paths:
                     type: string
                     example: "Thư mục hoặc file không truy cập được."
 
+  /api/chat/bot/manage/overview:
+    get:
+      operationId: getChatBotManageOverview
+      tags: [Manage]
+      summary: Xem thống kê tổng quan
+      description: |
+        Xem thống kê tổng quan người dùng, session và phòng chat của Chat Bot.
+        Không có query parameter hoặc request body. API này không yêu cầu Bearer token.
+      responses:
+        '200':
+          description: Thống kê tổng quan thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required: [users, sessions, rooms]
+                    properties:
+                      users:
+                        type: object
+                        required: [total, active, disabled, mixed_status]
+                        properties:
+                          total:
+                            type: integer
+                            example: 7
+                          active:
+                            type: integer
+                            example: 6
+                          disabled:
+                            type: integer
+                            example: 0
+                          mixed_status:
+                            type: integer
+                            example: 1
+                      sessions:
+                        type: integer
+                        example: 8
+                      rooms:
+                        type: object
+                        required: [total, active]
+                        properties:
+                          total:
+                            type: integer
+                            example: 15
+                          active:
+                            type: integer
+                            example: 12
+        '429':
+          $ref: '#/components/responses/ManageRateLimited'
+        '503':
+          $ref: '#/components/responses/ManageNotConfigured'
+
+  /api/chat/bot/manage/users:
+    get:
+      operationId: listChatBotManageUsers
+      tags: [Manage]
+      summary: Tìm kiếm, lọc và phân trang người dùng
+      description: |
+        Tìm kiếm và phân trang người dùng. Có thể tìm chính xác bằng `q=user_123` hoặc `q=guest_456`.
+        Từ khóa số như `q=123` tìm các ID có chứa số đó. Danh sách được sắp theo thời gian hoạt động gần nhất. API này không yêu cầu Bearer token.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Tìm theo ID user/guest hoặc một phần ID dạng số; tối đa 120 ký tự.
+          schema:
+            type: string
+            maxLength: 120
+            example: user_123
+        - name: status
+          in: query
+          required: false
+          description: Lọc theo active, disabled hoặc mixed.
+          schema:
+            type: string
+            enum: [active, disabled, mixed]
+            example: active
+        - name: per_page
+          in: query
+          required: false
+          description: Số user mỗi trang; từ 1 đến 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: page
+          in: query
+          required: false
+          description: Số trang cần lấy.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+      responses:
+        '200':
+          description: Lấy danh sách người dùng thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [user_id, session_count, active_session_count, disabled_session_count, room_count, created_at, status]
+                      properties:
+                        user_id:
+                          type: string
+                          example: user_123
+                        upstream_user_id:
+                          type: integer
+                          nullable: true
+                          example: 123
+                        session_count:
+                          type: integer
+                          example: 2
+                        active_session_count:
+                          type: integer
+                          example: 2
+                        disabled_session_count:
+                          type: integer
+                          example: 0
+                        room_count:
+                          type: integer
+                          example: 5
+                        last_activity_at:
+                          type: string
+                          nullable: true
+                          example: "2026-10-18 10:20:30"
+                        created_at:
+                          type: string
+                          example: "2026-10-10 08:00:00"
+                        status:
+                          type: string
+                          enum: [active, disabled, mixed]
+                          example: active
+                  meta:
+                    type: object
+                    required: [current_page, per_page, total, last_page]
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 20
+                      total:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+        '422':
+          $ref: '#/components/responses/ManageValidationError'
+        '429':
+          $ref: '#/components/responses/ManageRateLimited'
+        '503':
+          $ref: '#/components/responses/ManageNotConfigured'
+
+  /api/chat/bot/manage/users/{userId}:
+    get:
+      operationId: getChatBotManageUserDetail
+      tags: [Manage]
+      summary: Xem chi tiết người dùng và các session
+      description: |
+        Xem chi tiết người dùng và danh sách session trực thuộc theo `userId`.
+        `userId` có định dạng `user_123` (liên kết ngoài) hoặc `guest_456` (guest session). API này không yêu cầu Bearer token.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Định dạng user_123 hoặc guest_456.
+          schema:
+            type: string
+            pattern: '^(user|guest)_[1-9][0-9]*$'
+            example: user_123
+      responses:
+        '200':
+          description: Chi tiết người dùng thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required: [user_id, session_count, active_session_count, disabled_session_count, room_count, created_at, status, sessions]
+                    properties:
+                      user_id:
+                        type: string
+                        example: user_123
+                      upstream_user_id:
+                        type: integer
+                        nullable: true
+                        example: 123
+                      session_count:
+                        type: integer
+                        example: 2
+                      active_session_count:
+                        type: integer
+                        example: 2
+                      disabled_session_count:
+                        type: integer
+                        example: 0
+                      room_count:
+                        type: integer
+                        example: 5
+                      last_activity_at:
+                        type: string
+                        nullable: true
+                        example: "2026-10-18 10:20:30"
+                      created_at:
+                        type: string
+                        example: "2026-10-10 08:00:00"
+                      status:
+                        type: string
+                        enum: [active, disabled, mixed]
+                        example: active
+                      sessions:
+                        type: array
+                        items:
+                          type: object
+                          required: [id, status, created_at, updated_at]
+                          properties:
+                            id:
+                              type: integer
+                              example: 456
+                            status:
+                              type: integer
+                              example: 1
+                            created_at:
+                              type: string
+                              example: "2026-10-10 08:00:00"
+                            updated_at:
+                              type: string
+                              example: "2026-10-18 10:20:30"
+        '404':
+          $ref: '#/components/responses/ManageUserNotFound'
+        '429':
+          $ref: '#/components/responses/ManageRateLimited'
+        '503':
+          $ref: '#/components/responses/ManageNotConfigured'
+    patch:
+      operationId: updateChatBotManageUserStatus
+      tags: [Manage]
+      summary: Khóa hoặc mở người dùng
+      description: |
+        Cập nhật trạng thái khóa/mở người dùng.
+        - `status = 0`: khóa tất cả session thuộc user.
+        - `status = 1`: mở tất cả session thuộc user.
+        Với `guest_456`, thao tác chỉ ảnh hưởng session guest đó. API này không yêu cầu Bearer token.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Định dạng user_123 hoặc guest_456.
+          schema:
+            type: string
+            pattern: '^(user|guest)_[1-9][0-9]*$'
+            example: user_123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: integer
+                  enum: [0, 1]
+                  description: "0: khóa user/session, 1: mở lại user/session"
+                  example: 0
+      responses:
+        '200':
+          description: Cập nhật trạng thái người dùng thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required: [user_id, status, session_count, changed_session_count]
+                    properties:
+                      user_id:
+                        type: string
+                        example: user_123
+                      status:
+                        type: string
+                        enum: [active, disabled]
+                        example: disabled
+                      session_count:
+                        type: integer
+                        example: 2
+                      changed_session_count:
+                        type: integer
+                        example: 2
+        '404':
+          $ref: '#/components/responses/ManageUserNotFound'
+        '422':
+          $ref: '#/components/responses/ManageValidationError'
+        '429':
+          $ref: '#/components/responses/ManageRateLimited'
+        '503':
+          $ref: '#/components/responses/ManageNotConfigured'
+
+  /api/chat/bot/manage/users/{userId}/rooms:
+    get:
+      operationId: listChatBotManageUserRooms
+      tags: [Manage]
+      summary: Xem phòng chat của người dùng
+      description: |
+        Lấy danh sách metadata phòng chat của người dùng theo `userId`.
+        Danh sách được sắp xếp theo thời gian cập nhật gần nhất. Không trả nội dung tin nhắn. API này không yêu cầu Bearer token.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Định dạng user_123 hoặc guest_456.
+          schema:
+            type: string
+            pattern: '^(user|guest)_[1-9][0-9]*$'
+            example: user_123
+        - name: per_page
+          in: query
+          required: false
+          description: Số phòng mỗi trang; từ 1 đến 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+        - name: page
+          in: query
+          required: false
+          description: Số trang cần lấy.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+            example: 1
+      responses:
+        '200':
+          description: Lấy danh sách phòng chat thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, id_chat_users, title, status, model, created_at, updated_at]
+                      properties:
+                        id:
+                          type: integer
+                          example: 789
+                        id_chat_users:
+                          type: integer
+                          example: 456
+                        title:
+                          type: string
+                          example: Trao đổi về API
+                        status:
+                          type: integer
+                          example: 1
+                        model:
+                          type: string
+                          example: model-name
+                        agent:
+                          type: string
+                          nullable: true
+                          example: null
+                        created_at:
+                          type: string
+                          example: "2026-10-12 08:00:00"
+                        updated_at:
+                          type: string
+                          example: "2026-10-18 10:20:30"
+                  meta:
+                    type: object
+                    required: [current_page, per_page, total, last_page]
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 20
+                      total:
+                        type: integer
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+        '404':
+          $ref: '#/components/responses/ManageUserNotFound'
+        '422':
+          $ref: '#/components/responses/ManageValidationError'
+        '429':
+          $ref: '#/components/responses/ManageRateLimited'
+        '503':
+          $ref: '#/components/responses/ManageNotConfigured'
+
   /api/demo/hello:
     get:
       operationId: getDemoHello
@@ -1780,7 +2283,46 @@ paths:
           $ref: '#/components/responses/ChatBotError'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API Token được cấp để gọi nhóm API quản lý người dùng Chat Bot.
   schemas:
+    ManageError:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: CHAT_BOT_MANAGE_UNAUTHORIZED
+            message:
+              type: string
+              example: A valid bearer token is required.
+
+    ManageValidationError:
+      type: object
+      required: [message, errors]
+      properties:
+        message:
+          type: string
+          example: The status field is required.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            status:
+              - The status field is required.
     WorkspaceRoutingUpdateResult:
       type: object
       required: [success]

@@ -32,22 +32,39 @@ export default function SwaggerLayoutClient({
   const isWorkspace = pathname.includes("/workspace");
   const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
   const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
+  const isChatHome =
+    pathname.includes("/chat/home") || pathname.includes("/chat_home");
+  const isGitHome =
+    pathname.includes("/git/home") || pathname.includes("/git_home");
   const isHome =
     !isHeyGen &&
     !isWorkspace &&
     !isN8n &&
     !isApiListHome &&
+    !isChatHome &&
+    !isGitHome &&
     (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
-  const isGitAuto = pathname.includes("/git_auto");
-  const isGitTest = pathname.includes("/git_test");
-  const isGiteaTest = pathname.includes("/gitea_test");
-  const isChatPublic = pathname.includes("/chat_public");
+  const isGitAuto = !isGitHome && (pathname.includes("/git_auto") || pathname.includes("/git/auto"));
+  const isGitTest = !isGitHome && (pathname.includes("/git_test") || pathname.includes("/git/test"));
+  const isGiteaTest =
+    !isGitHome &&
+    (pathname.includes("/gitea_test") ||
+      pathname.includes("/git/gitea") ||
+      pathname.includes("/gitea"));
+  const isChatManage =
+    !isChatHome &&
+    (pathname.includes("/chat_manage") || pathname.includes("/chat/manage"));
+  const isChatPublic =
+    !isChatHome &&
+    (pathname.includes("/chat_public") || pathname.includes("/chat/public"));
   const isChatTest =
-    pathname.includes("/chat_test") ||
-    pathname.includes("/chat_bot") ||
-    pathname.includes("/test_1");
+    !isChatHome &&
+    (pathname.includes("/chat_test") ||
+      pathname.includes("/chat/test") ||
+      pathname.includes("/chat_bot") ||
+      pathname.includes("/test_1"));
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -76,21 +93,19 @@ export default function SwaggerLayoutClient({
                   ? "n8n"
                   : isWorkspace
                     ? "workspace"
-                  : isGitAuto
+                  : isGitHome || isGitAuto
                     ? "git_auto"
                     : isGitTest
                       ? "git_test"
                     : isGiteaTest
                       ? "gitea_test"
-                    : isChatPublic
-                      ? "chat_public"
+                    : isChatHome || isChatPublic || isChatTest || isChatManage
+                      ? "chat_bot"
                       : isHeyGen
                         ? "heygen"
-                        : isChatTest
-                          ? "chat_test"
-                          : isOpenClaw
-                            ? "openclaw"
-                            : "api_list"
+                        : isOpenClaw
+                          ? "openclaw"
+                          : "api_list"
         }
       />
 
@@ -100,7 +115,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>
-      ) : isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isApiListHome || isHome ? (
+      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isChatManage || isApiListHome || isHome || isChatHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : (
         <>

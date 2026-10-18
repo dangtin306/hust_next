@@ -4,6 +4,9 @@
 export const LARAVEL_CHAT_API =
   process.env.NEXT_PUBLIC_CHAT_BOT_API_BASE || "/next/api/chat/bot";
 
+export const LARAVEL_CHAT_MANAGE_API =
+  process.env.NEXT_PUBLIC_CHAT_BOT_MANAGE_API_BASE || `${LARAVEL_CHAT_API}/manage`;
+
 export const OPENCLAW_CONVERSATIONS_ENDPOINT = "/next/api/openclaw/v1/conversations";
 export const OPENCLAW_WORKSPACE_NEW_ENDPOINT = "/next/api/openclaw/v2/workspace/new";
 export const OPENCLAW_WORKSPACE_SELECT_ENDPOINT = "/next/api/openclaw/v2/workspace/select";
@@ -758,3 +761,126 @@ export async function apiResetOpenClawChat({
     throw new Error(`Không reset được phiên chat: ${message}`);
   }
 }
+
+/**
+ * Chat Bot Manage APIs (Các API quản trị, không yêu cầu Bearer token)
+ */
+
+export interface ChatBotManageOverviewResponse {
+  success: boolean;
+  data: {
+    users: {
+      total: number;
+      active: number;
+      disabled: number;
+      mixed_status: number;
+    };
+    sessions: number;
+    rooms: {
+      total: number;
+      active: number;
+    };
+  };
+}
+
+export interface ChatBotManageUser {
+  user_id: string;
+  upstream_user_id?: number | null;
+  session_count: number;
+  active_session_count: number;
+  disabled_session_count: number;
+  room_count: number;
+  last_activity_at?: string | null;
+  created_at: string;
+  status: "active" | "disabled" | "mixed";
+}
+
+export interface ChatBotManageUsersResponse {
+  success: boolean;
+  data: ChatBotManageUser[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+export async function apiFetchChatBotManageOverview(
+  customBaseUrl?: string,
+): Promise<ChatBotManageOverviewResponse> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+  const res = await fetch(`${LARAVEL_CHAT_MANAGE_API}/overview`, {
+    headers,
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function apiFetchChatBotManageUsers(
+  options?: { q?: string; status?: string; per_page?: number; page?: number },
+  customBaseUrl?: string,
+): Promise<ChatBotManageUsersResponse> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.q) params.set("q", options.q);
+  if (options?.status && options.status !== "all") params.set("status", options.status);
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+  if (options?.page) params.set("page", String(options.page));
+
+  const url = `${LARAVEL_CHAT_MANAGE_API}/users${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  return res.json();
+}
+
+export async function apiFetchChatBotManageUserDetails(
+  userId: string,
+  customBaseUrl?: string,
+) {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+  const res = await fetch(`${LARAVEL_CHAT_MANAGE_API}/users/${userId}`, {
+    headers,
+    cache: "no-store",
+  });
+  return res.json();
+}
+
+export async function apiUpdateChatBotManageUserStatus(
+  userId: string,
+  status: 0 | 1,
+  customBaseUrl?: string,
+) {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+  const res = await fetch(`${LARAVEL_CHAT_MANAGE_API}/users/${userId}`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
+}
+
+export async function apiFetchChatBotManageUserRooms(
+  userId: string,
+  options?: { per_page?: number; page?: number },
+  customBaseUrl?: string,
+) {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+  if (options?.page) params.set("page", String(options.page));
+
+  const url = `${LARAVEL_CHAT_MANAGE_API}/users/${userId}/rooms${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  return res.json();
+}
+

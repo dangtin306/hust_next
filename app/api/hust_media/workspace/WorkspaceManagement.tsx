@@ -34,6 +34,7 @@ import {
   Folder,
   Save,
 } from "lucide-react";
+import MarkdownViewer from "@/app/api/media_tech/workspace/MarkdownViewer";
 
 export type WorkspaceRecord = {
   id: number;
@@ -127,9 +128,51 @@ export type PaginationMeta = {
   to: number | null;
 };
 
+/**
+ * Sắp xếp cây Markdown theo quy tắc:
+ * 1. File luôn đứng TRƯỚC Folder (áp dụng đệ quy cho mọi tầng: root, thư mục con, thư mục cháu...)
+ * 2. Trong các file: ưu tiên SKILL.md lên đầu, tiếp đến README.md, sau đó sắp xếp theo bảng chữ cái.
+ * 3. Trong các folder: sắp xếp theo bảng chữ cái, và các con bên trong cũng sắp xếp file trước folder đệ quy.
+ */
+function sortMarkdownTree(items?: MarkdownTreeItem[]): MarkdownTreeItem[] {
+  if (!items || items.length === 0) return [];
+
+  const files: MarkdownTreeItem[] = [];
+  const directories: MarkdownTreeItem[] = [];
+
+  for (const item of items) {
+    if (item.type === "directory") {
+      directories.push({
+        ...item,
+        children: item.children ? sortMarkdownTree(item.children) : [],
+      });
+    } else {
+      files.push({ ...item });
+    }
+  }
+
+  // Sắp xếp file: SKILL.md -> README.md -> các file khác theo alphabet (A-Z)
+  files.sort((a, b) => {
+    const nameA = (a.name || "").toLowerCase();
+    const nameB = (b.name || "").toLowerCase();
+    const rankA = nameA === "skill.md" ? 1 : nameA === "readme.md" ? 2 : 3;
+    const rankB = nameB === "skill.md" ? 1 : nameB === "readme.md" ? 2 : 3;
+    if (rankA !== rankB) return rankA - rankB;
+    return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" });
+  });
+
+  // Sắp xếp thư mục theo alphabet (A-Z)
+  directories.sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" })
+  );
+
+  return [...files, ...directories];
+}
+
 function findFirstMarkdownFile(items?: MarkdownTreeItem[]): MarkdownTreeItem | null {
   if (!items || items.length === 0) return null;
-  for (const it of items) {
+  const sorted = sortMarkdownTree(items);
+  for (const it of sorted) {
     if (it.type === "file") return it;
     if (it.children && it.children.length > 0) {
       const found = findFirstMarkdownFile(it.children);
@@ -141,6 +184,7 @@ function findFirstMarkdownFile(items?: MarkdownTreeItem[]): MarkdownTreeItem | n
 
 function collectAllMarkdownFiles(items?: MarkdownTreeItem[]): MarkdownTreeItem[] {
   if (!items || items.length === 0) return [];
+  const sorted = sortMarkdownTree(items);
   const result: MarkdownTreeItem[] = [];
   function traverse(list: MarkdownTreeItem[]) {
     for (const item of list) {
@@ -152,7 +196,7 @@ function collectAllMarkdownFiles(items?: MarkdownTreeItem[]): MarkdownTreeItem[]
       }
     }
   }
-  traverse(items);
+  traverse(sorted);
   return result;
 }
 
@@ -314,6 +358,7 @@ export type InlineFileState = {
 function extractFilesWithContent(items?: MarkdownTreeItem[]): Record<string, InlineFileState> {
   const result: Record<string, InlineFileState> = {};
   if (!items || items.length === 0) return result;
+  const sorted = sortMarkdownTree(items);
   function traverse(list: MarkdownTreeItem[]) {
     for (const item of list) {
       if (item.type === "file") {
@@ -336,7 +381,7 @@ function extractFilesWithContent(items?: MarkdownTreeItem[]): Record<string, Inl
       }
     }
   }
-  traverse(items);
+  traverse(sorted);
   return result;
 }
 
@@ -700,34 +745,22 @@ function MarkdownTreeNode({
               </div>
             ) : (
               <div>
-                <div className="relative group bg-slate-50/40">
-                  <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap select-text text-slate-850 px-3.5 py-2.5 max-h-[380px] overflow-y-auto">
-                    {fileState.content ? (
-                      fileState.content.trimEnd()
-                    ) : (
-                      <span className="text-slate-400 italic font-sans">(File rỗng - 0 bytes)</span>
-                    )}
-                  </pre>
-                  <button
-                    type="button"
-                    onClick={() => onToggleEdit(item)}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 rounded-md border border-blue-200 bg-white hover:bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700 shadow-2xs cursor-pointer"
-                    title="Chuyển sang chế độ chỉnh sửa file"
-                  >
-                    <Edit2 className="h-3 w-3 text-blue-600" />
-                    <span>Sửa</span>
-                  </button>
-                </div>
+                <MarkdownViewer
+                  content={fileState.content ?? ""}
+                  filePath={effectivePath}
+                  maxHeight="max-h-[460px]"
+                  onSwitchToEdit={() => onToggleEdit(item)}
+                />
 
-                <div className="flex items-center justify-between px-3.5 py-1 border-t border-slate-200/70 bg-white text-[11px] text-slate-400 font-mono">
+                <div className="flex items-center justify-between px-3.5 py-1.5 border-t border-slate-200/70 bg-slate-50/80 text-[11px] text-slate-500 font-mono">
                   <span className="truncate max-w-sm" title={effectivePath}>path: {effectivePath}</span>
                   <button
                     type="button"
                     onClick={() => onToggleEdit(item)}
-                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium transition cursor-pointer text-xs"
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold transition cursor-pointer text-xs"
                   >
                     <Edit2 className="h-3 w-3" />
-                    <span>Chỉnh sửa</span>
+                    <span>Chỉnh sửa file này</span>
                   </button>
                 </div>
               </div>
@@ -738,7 +771,7 @@ function MarkdownTreeNode({
 
       {isDirectory && item.children && item.children.length > 0 && (
         <div className="mt-1 space-y-1 border-l-2 border-slate-200 ml-4 pl-1">
-          {item.children.map((child, idx) => (
+          {sortMarkdownTree(item.children).map((child, idx) => (
             <MarkdownTreeNode
               key={`${child.path}-${idx}`}
               item={child}
@@ -1530,6 +1563,7 @@ export default function WorkspaceManagement({
             }
           }
 
+          const sortedCombinedTree = sortMarkdownTree(combinedTree);
           setMarkdownData({
             id: parentWs.id,
             workspace_name: `${parentWs.workspace_name || parentWs.work_space_code} (Toàn bộ nhóm mẹ)`,
@@ -1537,11 +1571,11 @@ export default function WorkspaceManagement({
             parent_workspace_code: parentWs.parent_workspace_code,
             relative_path: parentWs.work_space_code,
             markdown_count: totalMarkdownCount,
-            tree: combinedTree,
+            tree: sortedCombinedTree,
           });
 
-          if (autoOpenEdit && combinedTree.length > 0) {
-            const firstFile = findFirstMarkdownFile(combinedTree);
+          if (autoOpenEdit && sortedCombinedTree.length > 0) {
+            const firstFile = findFirstMarkdownFile(sortedCombinedTree);
             if (firstFile) {
               void loadFileContent(firstFile, true, firstFile.workspace_id || id);
             }
@@ -1567,9 +1601,13 @@ export default function WorkspaceManagement({
         if (!res.ok || !json.data) {
           throw new Error(json.message || `Lỗi tải cấu trúc Markdown (HTTP ${res.status})`);
         }
-        setMarkdownData(json.data);
-        if (autoOpenEdit && Array.isArray(json.data.tree)) {
-          const firstFile = findFirstMarkdownFile(json.data.tree);
+        const sortedTree = sortMarkdownTree(json.data.tree);
+        setMarkdownData({
+          ...json.data,
+          tree: sortedTree,
+        });
+        if (autoOpenEdit && Array.isArray(sortedTree)) {
+          const firstFile = findFirstMarkdownFile(sortedTree);
           if (firstFile) {
             void loadFileContent(firstFile, true, id);
           }
@@ -1665,6 +1703,7 @@ export default function WorkspaceManagement({
             }
           }
 
+          const sortedCombinedTree = sortMarkdownTree(combinedTree);
           setMarkdownData({
             id: parentWs.id,
             workspace_name: `${parentWs.workspace_name || parentWs.work_space_code} (Toàn bộ nhóm mẹ - Full nội dung)`,
@@ -1672,7 +1711,7 @@ export default function WorkspaceManagement({
             parent_workspace_code: parentWs.parent_workspace_code,
             relative_path: parentWs.work_space_code,
             markdown_count: totalMarkdownCount,
-            tree: combinedTree,
+            tree: sortedCombinedTree,
           });
           setOpenFiles(allExtractedFiles);
           return;
@@ -1715,8 +1754,12 @@ export default function WorkspaceManagement({
         if (!res.ok || !json.data) {
           throw new Error(json.message || `Lỗi tải toàn bộ nội dung Markdown (HTTP ${res.status})`);
         }
-        setMarkdownData(json.data);
-        const extracted = extractFilesWithContent(json.data.tree);
+        const sortedTree = sortMarkdownTree(json.data.tree);
+        setMarkdownData({
+          ...json.data,
+          tree: sortedTree,
+        });
+        const extracted = extractFilesWithContent(sortedTree);
         setOpenFiles(extracted);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -3554,6 +3597,24 @@ export default function WorkspaceManagement({
                       <span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
                         ID: {parentWs.id}
                       </span>
+                      {/* Nút Chọn xem cả nhóm mẹ */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void fetchWorkspaceMarkdown(parentWs.id);
+                        }}
+                        disabled={markdownLoading}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition shadow-xs cursor-pointer active:scale-95 disabled:opacity-60 ${
+                          isParentSelected && markdownApiMode === "standard"
+                            ? "border-emerald-600 bg-emerald-600 text-white shadow-emerald-500/20"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50"
+                        }`}
+                        title="Xem cây thư mục Markdown của tất cả workspace con trong nhóm"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>Chọn xem cả nhóm</span>
+                      </button>
                       {/* Nút Xem full cả nhóm mẹ đặt ngay trên thanh Header */}
                       <button
                         type="button"
@@ -3586,7 +3647,7 @@ export default function WorkspaceManagement({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                       {/* Thẻ Mẹ - Nằm riêng trong 1 cột của lưới 3 cột, kích thước gọn gàng */}
                       <div
-                        onClick={() => void fetchWorkspaceMarkdownFull(parentWs.id)}
+                        onClick={() => void fetchWorkspaceMarkdown(parentWs.id)}
                         className={`group relative rounded-xl px-3.5 py-2.5 transition cursor-pointer text-left border flex flex-col justify-between ${
                           isParentSelected
                             ? "border-emerald-500 bg-gradient-to-br from-emerald-100/90 via-emerald-50/70 to-teal-50/80 ring-2 ring-emerald-500/40 shadow-xs"
@@ -3606,7 +3667,7 @@ export default function WorkspaceManagement({
                             </div>
                             <div className="min-w-0">
                               <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-800 transition truncate">
-                                Xem full cả nhóm mẹ
+                                Tổng quan cả nhóm mẹ
                               </h4>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="font-mono text-[10px] font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-200 px-1.5 py-0.2 rounded">
@@ -3623,6 +3684,22 @@ export default function WorkspaceManagement({
                           </div>
 
                           <div className="shrink-0 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void fetchWorkspaceMarkdownFull(parentWs.id);
+                              }}
+                              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-2xs transition cursor-pointer ${
+                                isParentSelected && markdownApiMode === "full"
+                                  ? "bg-emerald-600 text-white border-emerald-600"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
+                              }`}
+                              title="Nạp toàn bộ cấu trúc & nội dung tất cả file .md từ cả nhóm mẹ qua API GET /api/workspaces/content/markdown/full"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span>Xem full</span>
+                            </button>
                             {isParentSelected ? (
                               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 text-white border border-emerald-600 px-2 py-0.5 text-[10px] font-bold shadow-2xs">
                                 <CheckCircle2 className="h-3 w-3" />
@@ -3630,8 +3707,7 @@ export default function WorkspaceManagement({
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 rounded-full bg-white text-emerald-700 border border-emerald-300 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition px-2 py-0.5 text-[10px] font-semibold">
-                                <Sparkles className="h-3 w-3" />
-                                Xem full →
+                                Chọn xem →
                               </span>
                             )}
                           </div>
@@ -3975,7 +4051,7 @@ export default function WorkspaceManagement({
                   </div>
                   {markdownData.tree && markdownData.tree.length > 0 ? (
                     <div className="space-y-1.5 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3">
-                      {markdownData.tree.map((item, idx) => (
+                      {sortMarkdownTree(markdownData.tree).map((item, idx) => (
                         <MarkdownTreeNode
                           key={`${item.path}-${idx}`}
                           item={item}
