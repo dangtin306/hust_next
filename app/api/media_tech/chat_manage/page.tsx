@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function MediaTechChatManageRoute() {
-  return <ChatManagePage isHust={false} />;
+  return <ChatManagePage isHust={false} initialTab="bot" />;
 }

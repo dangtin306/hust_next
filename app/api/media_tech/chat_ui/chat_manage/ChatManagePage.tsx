@@ -8,6 +8,7 @@ import {
   Users,
   Layers,
   MessageSquare,
+  MessageSquareText,
   Search,
   Filter,
   RefreshCw,
@@ -25,9 +26,11 @@ import {
   X,
   Info,
 } from "lucide-react";
+import ChatMessagesPanel, { RoomOption } from "./ChatMessagesPanel";
 
 interface ChatManagePageProps {
   isHust?: boolean;
+  initialTab?: "bot" | "messages";
 }
 
 export interface ManagePaginationMeta {
@@ -238,11 +241,58 @@ const MOCK_ROOMS_MAP: Record<string, ManageRoomItem[]> = {
   ],
 };
 
-export default function ChatManagePage({ isHust = false }: ChatManagePageProps) {
+export default function ChatManagePage({ isHust = false, initialTab = "bot" }: ChatManagePageProps) {
   // Navigation & Prefix
   const linkPrefix = isHust ? "/api/hust" : "/api/mt";
+  const displayPrefix = isHust ? "/next/api/hust" : "/next/api/mt";
   const chatHomeLink = `${linkPrefix}/chat/home`;
+  const chatManageUrl = `${displayPrefix}/chat/manage`;
+  const chatMessagesUrl = `${displayPrefix}/chat/messages`;
   const brandName = isHust ? "Hust Media AI" : "Media Tech AI";
+
+  // Tab & Branch State
+  const [activeTab, setActiveTab] = useState<"bot" | "messages">(initialTab);
+  const [selectedRoomIdForMessages, setSelectedRoomIdForMessages] = useState<number | undefined>(undefined);
+  const [selectedUserForMessages, setSelectedUserForMessages] = useState<string | undefined>(undefined);
+
+  // Sync with browser URL / query params on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const rid = params.get("room_id");
+      const uid = params.get("user_id") || params.get("q");
+      if (rid) {
+        const num = Number(rid);
+        if (!isNaN(num) && num > 0) {
+          setSelectedRoomIdForMessages(num);
+          setActiveTab("messages");
+        }
+      } else if (uid) {
+        setSelectedUserForMessages(uid);
+        setActiveTab("messages");
+      }
+    }
+  }, []);
+
+  const navigateTab = (tab: "bot" | "messages", roomId?: number, userId?: string) => {
+    setActiveTab(tab);
+    if (roomId !== undefined) {
+      setSelectedRoomIdForMessages(roomId);
+    }
+    if (userId !== undefined) {
+      setSelectedUserForMessages(userId);
+    }
+    let query = "";
+    if (roomId) query = `?room_id=${roomId}`;
+    else if (userId) query = `?user_id=${encodeURIComponent(userId)}`;
+    const targetUrl =
+      tab === "bot"
+        ? chatManageUrl
+        : `${chatMessagesUrl}${query}`;
+    if (typeof window !== "undefined") {
+      window.history.pushState(null, "", targetUrl);
+    }
+  };
 
   // State
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
@@ -271,6 +321,25 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
   const [activeModal, setActiveModal] = useState<"sessions" | "rooms" | null>(null);
   const [isModalLoading, setIsModalLoading] = useState<boolean>(false);
   const [actionSuccessToast, setActionSuccessToast] = useState<string | null>(null);
+
+  // All combined rooms for Messages management branch
+  const allAvailableRooms = useMemo<RoomOption[]>(() => {
+    const list: RoomOption[] = [];
+    Object.entries(MOCK_ROOMS_MAP).forEach(([uid, rooms]) => {
+      rooms.forEach((r) => {
+        list.push({
+          id: r.id,
+          title: r.title,
+          user_id: uid,
+          model: r.model,
+          status: r.status,
+          id_chat_users: r.id_chat_users,
+          created_at: r.created_at,
+        });
+      });
+    });
+    return list;
+  }, []);
 
   // Dynamic API base with fallback
   const primaryApiBase = isHust ? "/next/api/hust/chat/bot/manage" : "/next/api/chat/bot/manage";
@@ -752,12 +821,74 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
         </div>
       )}
 
-      {/* ======================================================================= */}
-      {/* USERS TABLE & CONTROLS                                                  */}
-      {/* ======================================================================= */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
-        {/* Controls Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200/80 bg-slate-50/70 p-3 sm:px-4">
+      {/* ========================================================================= */}
+      {/* 2 MAIN BRANCH TABS: QUẢN TRỊ CHAT BOT & QUẢN TRỊ MESSAGES                  */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200">
+        <div className="flex gap-2">
+          <a
+            href={chatManageUrl}
+            onClick={(e) => {
+              e.preventDefault();
+              navigateTab("bot");
+            }}
+            className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+              activeTab === "bot"
+                ? "border-purple-600 text-purple-700 bg-purple-50/40 rounded-t-xl"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            <Bot className="h-4 w-4 text-purple-600" />
+            <span>Quản trị Chat Bot</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "bot"
+                  ? "bg-purple-200/80 text-purple-800"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {isInitialLoading ? "…" : users.length}
+            </span>
+          </a>
+
+          <a
+            href={chatMessagesUrl}
+            onClick={(e) => {
+              e.preventDefault();
+              navigateTab("messages");
+            }}
+            className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+              activeTab === "messages"
+                ? "border-purple-600 text-purple-700 bg-purple-50/40 rounded-t-xl"
+                : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            <MessageSquare className="h-4 w-4 text-purple-600" />
+            <span>Quản trị Messages</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                activeTab === "messages"
+                  ? "bg-purple-200/80 text-purple-800"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {allAvailableRooms.length} phòng
+            </span>
+          </a>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-400 font-mono pr-2">
+          <span>Nhánh URL:</span>
+          <span className="rounded bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 border border-slate-200">
+            {activeTab === "bot" ? chatManageUrl : chatMessagesUrl}
+          </span>
+        </div>
+      </div>
+
+      {activeTab === "bot" ? (
+        <div className="rounded-2xl border border-slate-200/90 bg-white shadow-2xs overflow-hidden">
+          {/* Controls Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200/80 bg-slate-50/70 p-3 sm:px-4">
           {/* Search bar */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -887,6 +1018,7 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
                     </td>
                     <td className="py-3 px-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <div className="h-6 w-14 bg-slate-100 rounded-lg" />
                         <div className="h-6 w-14 bg-slate-100 rounded-lg" />
                         <div className="h-6 w-14 bg-slate-100 rounded-lg" />
                         <div className="h-6 w-12 bg-slate-100 rounded-lg" />
@@ -1031,6 +1163,19 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
                             <span className="hidden sm:inline">Phòng</span>
                           </button>
 
+                          {/* Messages / Inbox button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigateTab("messages", undefined, user.user_id);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 hover:text-purple-800 px-2 py-1 text-[11px] font-bold text-purple-700 transition cursor-pointer shadow-2xs"
+                            title={`Xem toàn bộ tin nhắn / inbox của ${user.user_id}`}
+                          >
+                            <MessageSquareText className="h-3 w-3 text-purple-600" />
+                            <span className="hidden sm:inline">Xem ib</span>
+                          </button>
+
                           {/* Lock / Unlock Toggle Button */}
                           <button
                             type="button"
@@ -1125,6 +1270,18 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
           </div>
         </div>
       </div>
+      ) : (
+        <ChatMessagesPanel
+          isHust={isHust}
+          initialRoomId={selectedRoomIdForMessages}
+          initialUserId={selectedUserForMessages}
+          availableRooms={allAvailableRooms}
+          onSelectUser={(uid) => {
+            setSearchQuery(uid);
+            navigateTab("bot");
+          }}
+        />
+      )}
 
       {/* ======================================================================= */}
       {/* MODAL 1: SESSIONS INSPECTOR                                             */}
@@ -1286,6 +1443,20 @@ export default function ChatManagePage({ isHust = false }: ChatManagePageProps) 
                         <span>Cập nhật: {room.updated_at}</span>
                       </div>
                     </div>
+
+                    {/* View Messages Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveModal(null);
+                        navigateTab("messages", room.id);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 text-[11px] font-bold text-purple-700 transition cursor-pointer shadow-2xs shrink-0"
+                      title="Xem chi tiết các tin nhắn trong phòng này"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      <span>Xem tin nhắn</span>
+                    </button>
                   </div>
                 ))
               )}

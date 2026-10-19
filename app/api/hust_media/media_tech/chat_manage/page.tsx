@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function HustMediaChatManageRoute() {
-  return <ChatManagePage isHust={true} />;
+  return <ChatManagePage isHust={true} initialTab="bot" />;
 }

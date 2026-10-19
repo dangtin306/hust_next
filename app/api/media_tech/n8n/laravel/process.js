@@ -3,13 +3,6 @@ const CONFIGURED_NODE_BACKEND_URL = (process.env.NEXT_PUBLIC_MEDIA_TECH_NODE_URL
 const DEFAULT_NODE_BACKEND_URL = CONFIGURED_NODE_BACKEND_URL || "https://node_md.hust.media";
 
 export const getNodeBackendUrl = () => {
-  if (CONFIGURED_NODE_BACKEND_URL) return CONFIGURED_NODE_BACKEND_URL;
-  if (
-    typeof window !== "undefined" &&
-    ["localhost", "127.0.0.1", "::1", "[::1]"].includes(window.location.hostname.toLowerCase())
-  ) {
-    return "http://127.0.0.1:8818";
-  }
   return DEFAULT_NODE_BACKEND_URL;
 };
 
@@ -22,11 +15,11 @@ export const LARAVEL_TRACE_URL = DEFAULT_NODE_BACKEND_URL + "/openclaw/workflow/
 // Mock graph fallback matching the exact 16 flowNodes, 4 stickyNotes, 16 edges
 export const MOCK_GRAPH_DATA = {
   workflowId: DEFAULT_WORKFLOW_ID,
-  name: "Hust Laravel Tracing & Monitor",
+  name: "Media Tech Laravel Tracing & Monitor",
   active: true,
   workflow: {
     id: DEFAULT_WORKFLOW_ID,
-    name: "Hust Laravel Tracing & Monitor",
+    name: "Media Tech Laravel Tracing & Monitor",
     active: true,
   },
   nodes: [
@@ -695,4 +688,3 @@ export const SAMPLE_REALTIME_LARAVEL_PIPELINE = [
     timestamp: new Date().toISOString(),
   },
 ];
-

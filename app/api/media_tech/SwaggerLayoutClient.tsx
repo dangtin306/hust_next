@@ -59,7 +59,10 @@ export default function SwaggerLayoutClient({
       pathname.includes("/gitea"));
   const isChatManage =
     !isChatHome &&
-    (pathname.includes("/chat_manage") || pathname.includes("/chat/manage"));
+    (pathname.includes("/chat_manage") ||
+      pathname.includes("/chat/manage") ||
+      pathname.includes("/chat_messages") ||
+      pathname.includes("/chat/messages"));
   const isChatPublic =
     !isChatHome &&
     (pathname.includes("/chat_public") || pathname.includes("/chat/public"));

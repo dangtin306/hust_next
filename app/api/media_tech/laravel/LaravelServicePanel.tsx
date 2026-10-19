@@ -9,6 +9,7 @@ import {
   ChevronRight,
   KeyRound,
   MessageSquareText,
+  MessageSquare,
   Briefcase,
   ExternalLink,
   Sparkles,
@@ -20,8 +21,8 @@ import {
 } from "lucide-react";
 
 type EndpointItem = {
-  category: "workspace" | "manage" | "chat";
-  method: "GET" | "POST" | "PATCH";
+  category: "workspace" | "manage" | "messages" | "chat";
+  method: "GET" | "POST" | "PATCH" | "DELETE";
   path: string;
   operationId: string;
   summary: string;
@@ -101,14 +102,14 @@ const endpoints: EndpointItem[] = [
     note: "Đồng bộ bảng routing định tuyến OpenClaw và hệ thống.",
   },
 
-  // Nhóm Chat Bot Manage API
+  // Nhóm Chat Bot Manage API (11 endpoints)
   {
     category: "manage",
     method: "GET",
     path: "/api/chat/bot/manage/overview",
     operationId: "getChatBotManageOverview",
     summary: "Xem thống kê tổng quan",
-    note: "Thống kê tổng user (active/disabled/mixed), sessions, và rooms.",
+    note: "Thống kê tổng user (active/disabled/mixed), sessions, rooms (total/active/archived), và messages (total/active/hidden).",
     isNew: true,
   },
   {
@@ -131,6 +132,15 @@ const endpoints: EndpointItem[] = [
   },
   {
     category: "manage",
+    method: "PATCH",
+    path: "/api/chat/bot/manage/users/{userId}",
+    operationId: "updateChatBotManageUserStatus",
+    summary: "Khóa hoặc mở người dùng",
+    note: "Cập nhật status: 0 (khóa tất cả session) hoặc 1 (mở tất cả session).",
+    isNew: true,
+  },
+  {
+    category: "manage",
     method: "GET",
     path: "/api/chat/bot/manage/users/{userId}/rooms",
     operationId: "listChatBotManageUserRooms",
@@ -140,11 +150,112 @@ const endpoints: EndpointItem[] = [
   },
   {
     category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/users/{userId}/messages",
+    operationId: "listChatBotManageUserMessages",
+    summary: "Xem tin nhắn của user trên tất cả phòng",
+    note: "Xem tin nhắn của user trên mọi phòng chat. Query: q, room_id, role, status, created_from, created_to, page, per_page.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/rooms",
+    operationId: "listChatBotManageRooms",
+    summary: "Tìm kiếm & lọc phòng toàn hệ thống",
+    note: "Tìm theo tiêu đề phòng; lọc theo user (user_123/guest_456), status, ngày tạo và phân trang.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/rooms/{roomId}",
+    operationId: "getChatBotManageRoomDetail",
+    summary: "Xem chi tiết phòng",
+    note: "Xem chi tiết phòng chat và số lượng tin nhắn theo trạng thái (total, active, hidden).",
+    isNew: true,
+  },
+  {
+    category: "manage",
     method: "PATCH",
-    path: "/api/chat/bot/manage/users/{userId}",
-    operationId: "updateChatBotManageUserStatus",
-    summary: "Khóa hoặc mở người dùng",
-    note: "Cập nhật status: 0 (khóa tất cả session) hoặc 1 (mở tất cả session).",
+    path: "/api/chat/bot/manage/rooms/{roomId}",
+    operationId: "updateChatBotManageRoom",
+    summary: "Đổi tiêu đề hoặc trạng thái phòng",
+    note: "Đổi tiêu đề hoặc trạng thái (status: 0 lưu trữ, 1 hoạt động). Gửi ít nhất một trường.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "DELETE",
+    path: "/api/chat/bot/manage/rooms/{roomId}",
+    operationId: "archiveChatBotManageRoom",
+    summary: "Lưu trữ mềm phòng (status = 0)",
+    note: "Lưu trữ mềm phòng bằng cách đặt status: 0. Phòng và lịch sử tin nhắn không bị xóa vật lý.",
+    isNew: true,
+  },
+  {
+    category: "manage",
+    method: "GET",
+    path: "/api/chat/bot/manage/rooms/{roomId}/messages",
+    operationId: "listChatBotManageRoomMessages",
+    summary: "Xem lịch sử tin nhắn phòng quản lý",
+    note: "Xem lịch sử tin nhắn phòng trong giao diện quản lý. Query: before_id, per_page (tối đa 100), status (0 hoặc 1).",
+    isNew: true,
+  },
+
+  // Nhóm Quản trị Messages API (Mess_Controller & Mess_History - 6 endpoints)
+  {
+    category: "messages",
+    method: "GET",
+    path: "/api/chat/bot/messages",
+    operationId: "listLaravelChatBotMessages",
+    summary: "Lọc và phân trang danh sách tin nhắn",
+    note: "Tìm kiếm, lọc theo user_id, room_id, role, status, khoảng ngày và phân trang. Controller: Mess_Controller.php.",
+    isNew: true,
+  },
+  {
+    category: "messages",
+    method: "GET",
+    path: "/api/chat/bot/messages/rooms/{roomId}",
+    operationId: "listLaravelChatBotMessagesByRoom",
+    summary: "Lịch sử tin nhắn trong phòng",
+    note: "Xem lịch sử tin nhắn trong phòng theo thứ tự thời gian. Query: before_id, per_page, status.",
+    isNew: true,
+  },
+  {
+    category: "messages",
+    method: "PATCH",
+    path: "/api/chat/bot/messages/bulk-status",
+    operationId: "bulkUpdateLaravelChatBotMessageStatus",
+    summary: "Cập nhật trạng thái hàng loạt (bulk-status)",
+    note: "Cập nhật trạng thái (0 hoặc 1) cho từ 1 đến 100 tin nhắn cùng lúc. Trả 404 nếu có ID không tồn tại.",
+    isNew: true,
+  },
+  {
+    category: "messages",
+    method: "GET",
+    path: "/api/chat/bot/messages/{messageId}",
+    operationId: "getLaravelChatBotMessage",
+    summary: "Xem chi tiết một tin nhắn",
+    note: "Tra cứu thông tin chi tiết, token usage và model của tin nhắn theo ID.",
+    isNew: true,
+  },
+  {
+    category: "messages",
+    method: "PATCH",
+    path: "/api/chat/bot/messages/{messageId}",
+    operationId: "updateLaravelChatBotMessageStatus",
+    summary: "Cập nhật trạng thái (0 hoặc 1)",
+    note: "Ẩn (status: 0) hoặc khôi phục (status: 1) tin nhắn. Controller: Mess_Controller.php.",
+    isNew: true,
+  },
+  {
+    category: "messages",
+    method: "DELETE",
+    path: "/api/chat/bot/messages/{messageId}",
+    operationId: "deleteLaravelChatBotMessage",
+    summary: "Ẩn mềm tin nhắn (status = 0)",
+    note: "Ẩn mềm tin nhắn bằng cách đặt trạng thái status = 0, không xóa vật lý.",
     isNew: true,
   },
 
@@ -209,7 +320,7 @@ const endpoints: EndpointItem[] = [
 
 export default function LaravelServicePanel() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "workspace" | "manage" | "chat">("home");
+  const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "workspace" | "manage" | "messages" | "chat">("home");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
   const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
@@ -263,6 +374,7 @@ export default function LaravelServicePanel() {
 
   const workspaceCount = endpoints.filter((e) => e.category === "workspace").length;
   const manageCount = endpoints.filter((e) => e.category === "manage").length;
+  const messagesCount = endpoints.filter((e) => e.category === "messages").length;
   const chatCount = endpoints.filter((e) => e.category === "chat").length;
 
   const laravelCategories = [
@@ -287,8 +399,20 @@ export default function LaravelServicePanel() {
       iconBg: "bg-emerald-100 text-emerald-700",
       icon: Users,
       description:
-        "Thống kê tổng quan người dùng và sessions, tìm kiếm phân trang, tra cứu chi tiết user, danh sách phòng chat, khóa hoặc mở trạng thái hoạt động.",
-      highlights: ["GET /manage/overview", "GET /manage/users", "GET /manage/users/{id}", "PATCH /users/{id}"],
+        "Quản lý user, session, phòng chat và lịch sử tin nhắn. Xem tổng quan, tìm kiếm phân trang user, chi tiết user và session, xem phòng của user, xem tin nhắn user trên mọi phòng, tìm kiếm lọc phòng chat toàn hệ thống, xem chi tiết phòng, xem lịch sử tin nhắn phòng, đổi tiêu đề/trạng thái phòng và lưu trữ mềm phòng.",
+      highlights: ["GET /manage/overview", "GET /manage/users", "GET /manage/rooms", "GET /manage/rooms/{id}/messages", "PATCH /rooms/{id}"],
+    },
+    {
+      id: "messages" as const,
+      name: "Quản trị Tin Nhắn (Messages API)",
+      count: messagesCount,
+      badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+      borderHover: "hover:border-purple-300 hover:bg-purple-50/40",
+      iconBg: "bg-purple-100 text-purple-700",
+      icon: MessageSquare,
+      description:
+        "Tìm kiếm, xem và quản lý trạng thái tin nhắn (status = 1 hiển thị, status = 0 ẩn). Lọc theo user_id, room_id, role, status, khoảng ngày; xem lịch sử trong phòng; xem chi tiết tin nhắn; cập nhật trạng thái (0/1); ẩn mềm tin nhắn và cập nhật trạng thái hàng loạt (bulk-status). Xử lý bởi Mess_Controller.php và Mess_History.php.",
+      highlights: ["GET /messages", "GET /messages/rooms/{id}", "PATCH /messages/bulk-status", "PATCH /messages/{id}", "DELETE /messages/{id}"],
     },
     {
       id: "chat" as const,
@@ -327,7 +451,7 @@ export default function LaravelServicePanel() {
             Tài liệu &amp; Danh mục API Laravel
           </h2>
           <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-            Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID), nhóm Quản trị Người dùng Chat Bot (Manage API), và nhóm API Phòng chat Laravel (quản lý session, phòng và lịch sử chat).
+            Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID), nhóm Quản trị Người dùng Chat Bot (Manage API), nhóm Quản trị Tin Nhắn (Messages API), và nhóm API Phòng chat Laravel.
           </p>
         </div>
 
@@ -371,6 +495,16 @@ export default function LaravelServicePanel() {
           >
             <Users className="h-3 w-3" />
             <span>Manage ({manageCount})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter("messages")}
+            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
+              categoryFilter === "messages" ? "bg-white text-purple-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <MessageSquare className="h-3 w-3" />
+            <span>Messages ({messagesCount})</span>
           </button>
           <button
             type="button"

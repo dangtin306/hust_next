@@ -884,3 +884,207 @@ export async function apiFetchChatBotManageUserRooms(
   return res.json();
 }
 
+/**
+ * Chat Bot Messages APIs (Mess_Controller & Mess_History)
+ */
+
+export interface ChatBotMessageItem {
+  id: number;
+  user_id?: string;
+  room?: {
+    id: number;
+    title: string;
+  };
+  id_chat_rooms?: number;
+  role: "user" | "assistant" | "system";
+  content: string;
+  status: number; // 1: active, 0: soft deleted
+  service_id?: string | null;
+  model?: string | null;
+  created_at: string;
+  updated_at?: string;
+  upstream?: {
+    response_id?: string;
+    usage?: {
+      prompt_tokens?: number;
+      input_tokens?: number;
+      completion_tokens?: number;
+      output_tokens?: number;
+      cached_tokens?: number;
+      total_tokens?: number;
+    };
+    http_status?: number;
+    error_message?: string | null;
+    [key: string]: unknown;
+  } | null;
+  usage?: {
+    prompt_tokens?: number;
+    input_tokens?: number;
+    completion_tokens?: number;
+    output_tokens?: number;
+    cached_tokens?: number;
+    total_tokens?: number;
+  } | null;
+}
+
+export interface ChatBotMessagesListResponse {
+  success: boolean;
+  data: ChatBotMessageItem[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+export interface ChatBotRoomMessagesResponse {
+  success: boolean;
+  room?: {
+    id: number;
+    title: string;
+  };
+  data: ChatBotMessageItem[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+export interface ChatBotMessageDetailResponse {
+  success: boolean;
+  data: ChatBotMessageItem;
+}
+
+export async function apiFetchManageMessages(
+  options?: {
+    room_id?: number | string;
+    role?: string;
+    status?: number | string;
+    q?: string;
+    page?: number;
+    per_page?: number;
+    isHust?: boolean;
+  },
+  customBaseUrl?: string,
+): Promise<ChatBotMessagesListResponse> {
+  const base = options?.isHust
+    ? "/next/api/hust/chat/bot/messages"
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.room_id) params.set("room_id", String(options.room_id));
+  if (options?.role && options.role !== "all") params.set("role", options.role);
+  if (options?.status !== undefined && options.status !== "all" && options.status !== "") {
+    params.set("status", String(options.status));
+  }
+  if (options?.q) params.set("q", options.q);
+  if (options?.page) params.set("page", String(options.page));
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+
+  const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function apiFetchManageRoomMessages(
+  roomId: number | string,
+  options?: { page?: number; per_page?: number; isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<ChatBotRoomMessagesResponse> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/messages/rooms/${encodeURIComponent(String(roomId))}`
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages/rooms/${encodeURIComponent(String(roomId))}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.page) params.set("page", String(options.page));
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+
+  const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function apiFetchManageMessageDetail(
+  messageId: number | string,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<ChatBotMessageDetailResponse> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/messages/${encodeURIComponent(String(messageId))}`
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages/${encodeURIComponent(String(messageId))}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function apiUpdateManageMessageStatus(
+  messageId: number | string,
+  status: 0 | 1,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<{ success: boolean; message?: string; data?: any }> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/messages/${encodeURIComponent(String(messageId))}`
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages/${encodeURIComponent(String(messageId))}`;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function apiDeleteManageMessage(
+  messageId: number | string,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<{ success: boolean; message?: string; data?: any }> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/messages/${encodeURIComponent(String(messageId))}`
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages/${encodeURIComponent(String(messageId))}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+

@@ -255,7 +255,7 @@ export default function N8nWorkflowMain() {
   const workflowName =
     graphData?.name ||
     graphData?.workflow?.name ||
-    "Hust Laravel Tracing & Monitor";
+    "Media Tech Laravel Tracing & Monitor";
   const isWorkflowActive =
     graphData?.active ??
     graphData?.workflow?.active ??

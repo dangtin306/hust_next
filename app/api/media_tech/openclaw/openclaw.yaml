@@ -29,6 +29,8 @@ security:
 tags:
   - name: Health
     description: Kiểm tra health của backend
+  - name: Responses
+    description: Endpoint tương thích OpenResponses chính và các nhóm service
   - name: Conversations
     description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
   - name: Model Selection

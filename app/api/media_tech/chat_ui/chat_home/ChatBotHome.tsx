@@ -37,6 +37,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   // Client-side Link routing prefix (Next.js automatically adds basePath /next)
   const linkPrefix = isHust ? "/api/hust" : "/api/mt";
   const chatManageLink = `${linkPrefix}/chat/manage`;
+  const chatMessagesLink = `${linkPrefix}/chat/messages`;
   const chatTestLink = `${linkPrefix}/chat/test`;
   const chatPublicLink = `${linkPrefix}/chat/public`;
   const workspaceLink = `${linkPrefix}/workspace/home`;
@@ -46,6 +47,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   // Display & copy URI (includes basePath /next)
   const displayPrefix = isHust ? "/next/api/hust" : "/next/api/mt";
   const chatManageUrl = `${displayPrefix}/chat/manage`;
+  const chatMessagesUrl = `${displayPrefix}/chat/messages`;
   const chatTestUrl = `${displayPrefix}/chat/test`;
   const chatPublicUrl = `${displayPrefix}/chat/public`;
 
@@ -254,14 +256,25 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
                 <span className="sm:hidden">Share</span>
               </button>
 
-              <Link
-                href={chatManageLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
-              >
-                <span>Mở Quản Lý</span>
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-              </Link>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={chatMessagesLink as unknown as Route}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  <span>Messages</span>
+                </Link>
+
+                <Link
+                  href={chatManageLink as unknown as Route}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
+                >
+                  <span>Mở Quản Lý</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
           </div>
         )}

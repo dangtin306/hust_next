@@ -88,7 +88,7 @@ function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
   };
 
   return (
-    <div className="my-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+    <div className="my-2 rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
       <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-3 py-1.5 text-xs text-slate-500">
         <div className="flex items-center gap-1.5 font-semibold text-slate-700">
           <Layers className="h-3.5 w-3.5 text-emerald-600" />
@@ -255,7 +255,7 @@ export default function MarkdownViewer({
   return (
     <div className="w-full flex flex-col bg-white">
       {/* Sub-toolbar chuyển đổi: Xem định dạng vs Mã nguồn thô */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-1.5 bg-slate-50 border-b border-slate-200/80 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 sm:px-6 py-2 bg-slate-50 border-b border-slate-200/80 text-xs">
         <div className="flex items-center gap-1.5">
           <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 shadow-2xs">
             <button
@@ -335,10 +335,10 @@ export default function MarkdownViewer({
       {/* View Content Area */}
       {viewSubMode === "rendered" ? (
         <div
-          className={`markdown-rendered-view p-4 overflow-y-auto ${maxHeight} text-slate-850 select-text leading-relaxed`}
+          className={`markdown-rendered-view px-5 sm:px-6 pt-3 pb-3.5 overflow-y-auto ${maxHeight} text-slate-850 select-text leading-relaxed`}
         >
           {parsedSections.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-400 italic">
+            <div className="py-6 text-center text-xs text-slate-400 italic">
               (File Markdown rỗng - 0 bytes)
             </div>
           ) : (
@@ -355,7 +355,7 @@ export default function MarkdownViewer({
               return (
                 <div
                   key={`html-${idx}`}
-                  className="markdown-html-chunk mb-3"
+                  className="markdown-html-chunk mb-1.5 last:mb-0"
                   dangerouslySetInnerHTML={{ __html: sec.html }}
                 />
               );
@@ -364,43 +364,55 @@ export default function MarkdownViewer({
 
           {/* Embedded Styles Scoped to .markdown-rendered-view */}
           <style jsx global>{`
+            .markdown-rendered-view > *:first-child,
+            .markdown-rendered-view .markdown-html-chunk:first-child > *:first-child,
+            .markdown-rendered-view h1:first-child,
+            .markdown-rendered-view h2:first-child {
+              margin-top: 0 !important;
+            }
             .markdown-rendered-view h1 {
               font-size: 1.15rem;
               font-weight: 800;
               color: #0f172a;
               border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 0.35rem;
-              margin-top: 1rem;
-              margin-bottom: 0.6rem;
+              padding-bottom: 0.25rem;
+              margin-top: 0.6rem;
+              margin-bottom: 0.35rem;
             }
             .markdown-rendered-view h2 {
-              font-size: 1.02rem;
+              font-size: 1rem;
               font-weight: 700;
               color: #0f172a;
               border-bottom: 1px solid #e2e8f0;
-              padding-bottom: 0.3rem;
-              margin-top: 1rem;
-              margin-bottom: 0.5rem;
+              padding-bottom: 0.2rem;
+              margin-top: 0.65rem;
+              margin-bottom: 0.25rem;
             }
             .markdown-rendered-view h3 {
-              font-size: 0.9rem;
+              font-size: 0.88rem;
               font-weight: 700;
               color: #1e293b;
-              margin-top: 0.85rem;
-              margin-bottom: 0.4rem;
+              margin-top: 0.5rem;
+              margin-bottom: 0.2rem;
             }
             .markdown-rendered-view h4 {
               font-size: 0.82rem;
               font-weight: 700;
               color: #334155;
-              margin-top: 0.75rem;
-              margin-bottom: 0.3rem;
+              margin-top: 0.4rem;
+              margin-bottom: 0.15rem;
             }
             .markdown-rendered-view p {
-              margin: 0.5rem 0;
-              line-height: 1.62;
+              margin: 0.25rem 0 0.35rem 0;
+              line-height: 1.55;
               color: #334155;
               font-size: 0.82rem;
+            }
+            .markdown-rendered-view p:empty {
+              display: none;
+            }
+            .markdown-rendered-view br + br {
+              display: none;
             }
             .markdown-rendered-view strong {
               font-weight: 700;
@@ -409,26 +421,26 @@ export default function MarkdownViewer({
             .markdown-rendered-view ul {
               list-style-type: disc;
               padding-left: 1.25rem;
-              margin: 0.5rem 0;
+              margin: 0.25rem 0 0.35rem 0;
               color: #334155;
               font-size: 0.82rem;
             }
             .markdown-rendered-view ol {
               list-style-type: decimal;
               padding-left: 1.25rem;
-              margin: 0.5rem 0;
+              margin: 0.25rem 0 0.35rem 0;
               color: #334155;
               font-size: 0.82rem;
             }
             .markdown-rendered-view li {
-              margin: 0.25rem 0;
-              line-height: 1.55;
+              margin: 0.15rem 0;
+              line-height: 1.5;
             }
             /* Table Styling - Beautiful, responsive with borders & headers */
             .markdown-rendered-view table {
               width: 100%;
               border-collapse: collapse;
-              margin: 0.85rem 0;
+              margin: 0.5rem 0;
               font-size: 0.78rem;
               border-radius: 0.5rem;
               overflow: hidden;
@@ -438,7 +450,7 @@ export default function MarkdownViewer({
             .markdown-rendered-view th {
               background-color: #f1f5f9;
               border: 1px solid #cbd5e1;
-              padding: 0.55rem 0.75rem;
+              padding: 0.45rem 0.65rem;
               font-weight: 700;
               text-align: left;
               color: #0f172a;
@@ -446,7 +458,7 @@ export default function MarkdownViewer({
             }
             .markdown-rendered-view td {
               border: 1px solid #e2e8f0;
-              padding: 0.5rem 0.75rem;
+              padding: 0.4rem 0.65rem;
               color: #334155;
               vertical-align: top;
               background-color: #ffffff;
@@ -461,8 +473,8 @@ export default function MarkdownViewer({
             .markdown-rendered-view blockquote {
               border-left: 3.5px solid #10b981;
               background-color: #f0fdf4;
-              padding: 0.45rem 0.75rem;
-              margin: 0.65rem 0;
+              padding: 0.35rem 0.65rem;
+              margin: 0.4rem 0;
               border-radius: 0 0.375rem 0.375rem 0;
               color: #065f46;
               font-style: italic;
@@ -482,19 +494,19 @@ export default function MarkdownViewer({
             .markdown-rendered-view pre {
               background-color: #0d1117;
               color: #e6edf3;
-              padding: 0.75rem 1rem;
-              border-radius: 0.65rem;
+              padding: 0.65rem 0.85rem;
+              border-radius: 0.5rem;
               overflow-x: auto;
-              margin: 0.65rem 0;
+              margin: 0.45rem 0;
               border: 1px solid #30363d;
               font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
               font-size: 0.75rem;
-              line-height: 1.5;
+              line-height: 1.45;
             }
             .markdown-rendered-view hr {
               border: 0;
               border-top: 1px solid #e2e8f0;
-              margin: 1rem 0;
+              margin: 0.65rem 0;
             }
           `}</style>
         </div>
@@ -502,7 +514,7 @@ export default function MarkdownViewer({
         /* Raw Markdown View */
         <div className="relative group bg-slate-50/50">
           <pre
-            className={`font-mono text-xs leading-relaxed whitespace-pre-wrap select-text text-slate-800 p-4 ${maxHeight} overflow-y-auto`}
+            className={`font-mono text-xs leading-relaxed whitespace-pre-wrap select-text text-slate-800 px-5 sm:px-6 py-3.5 ${maxHeight} overflow-y-auto`}
           >
             {content ? (
               content.trimEnd()

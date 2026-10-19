@@ -531,7 +531,7 @@ function MarkdownTreeNode({
           style={{ marginLeft: `${depth * 16}px` }}
         >
           {/* Header Toolbar - Compact harmonious styling */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/90 px-3.5 py-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 bg-slate-50/90 px-5 sm:px-6 py-2">
             <div className="flex flex-wrap items-center gap-2">
               {/* Tab Mode Toggle */}
               <div className="inline-flex rounded-lg bg-white p-0.5 border border-slate-200 shadow-2xs">
@@ -694,7 +694,7 @@ function MarkdownTreeNode({
           {!fileState.loading && !fileState.error && fileState.content !== null && (
             fileState.isEditing ? (
               <div className="bg-white">
-                <div className="flex items-center justify-between px-3.5 py-1.5 bg-blue-50/40 border-b border-blue-100 text-xs">
+                <div className="flex items-center justify-between px-5 sm:px-6 py-2 bg-blue-50/40 border-b border-blue-100 text-xs">
                   <div className="flex items-center gap-1.5 truncate max-w-md">
                     <span className="font-semibold text-slate-700">Đang chỉnh sửa:</span>
                     <code className="text-blue-700 font-bold font-mono text-[11px] truncate">
@@ -705,7 +705,7 @@ function MarkdownTreeNode({
                     POST /api/workspaces/content/markdown/edit
                   </span>
                 </div>
-                <div className="p-3 bg-slate-50/30">
+                <div className="px-5 sm:px-6 py-3.5 bg-slate-50/30">
                   <textarea
                     value={fileState.editDraft}
                     onChange={(e) => onChangeDraft(item, e.target.value)}
@@ -714,7 +714,7 @@ function MarkdownTreeNode({
                     placeholder="# Nhập nội dung Markdown tại đây..."
                   />
                 </div>
-                <div className="flex items-center justify-between px-3.5 py-1.5 border-t border-slate-200 bg-slate-50/80 text-xs">
+                <div className="flex items-center justify-between px-5 sm:px-6 py-2 border-t border-slate-200 bg-slate-50/80 text-xs">
                   <span className="text-[11px] text-slate-400 font-mono truncate max-w-xs">
                     id={selectedWsId}&path={effectivePath}
                   </span>
@@ -752,7 +752,7 @@ function MarkdownTreeNode({
                   onSwitchToEdit={() => onToggleEdit(item)}
                 />
 
-                <div className="flex items-center justify-between px-3.5 py-1.5 border-t border-slate-200/70 bg-slate-50/80 text-[11px] text-slate-500 font-mono">
+                <div className="flex items-center justify-between px-5 sm:px-6 py-2 border-t border-slate-200/70 bg-slate-50/80 text-[11px] text-slate-500 font-mono">
                   <span className="truncate max-w-sm" title={effectivePath}>path: {effectivePath}</span>
                   <button
                     type="button"

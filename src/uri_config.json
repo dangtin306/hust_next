@@ -167,6 +167,14 @@
           "source": "/api/hust/chat_manage",
           "destination": "/api/hust_media/media_tech/chat_manage"
         },
+        "chatMessages": {
+          "source": "/api/hust/chat/messages",
+          "destination": "/api/hust_media/media_tech/chat_messages"
+        },
+        "chatMessagesLegacy": {
+          "source": "/api/hust/chat_messages",
+          "destination": "/api/hust_media/media_tech/chat_messages"
+        },
         "chatTest": {
           "source": "/api/hust/chat/test",
           "destination": "/api/hust_media/media_tech/chat_test"
@@ -321,6 +329,14 @@
       "chatManageLegacy": {
         "source": "/api/mt/chat_manage",
         "destination": "/api/media_tech/chat_manage"
+      },
+      "chatMessages": {
+        "source": "/api/mt/chat/messages",
+        "destination": "/api/media_tech/chat_messages"
+      },
+      "chatMessagesLegacy": {
+        "source": "/api/mt/chat_messages",
+        "destination": "/api/media_tech/chat_messages"
       },
       "chatTest": {
         "source": "/api/mt/chat/test",
