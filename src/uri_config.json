@@ -246,6 +246,18 @@
         "giteaTestLegacy": {
           "source": "/api/hust/gitea_test",
           "destination": "/api/hust_media/media_tech/gitea_test"
+        },
+        "mediaHome": {
+          "source": "/api/hust/media/home",
+          "destination": "/api/hust_media/media_tech/media_home"
+        },
+        "mediaRoot": {
+          "source": "/api/hust/media",
+          "destination": "/api/hust_media/media_tech/media_home"
+        },
+        "mediaHeygen": {
+          "source": "/api/hust/media/heygen/:path*",
+          "destination": "/api/media_tech/heygen/:path*"
         }
       },
       "chatProxy": {
@@ -321,6 +333,14 @@
       "heygen": {
         "source": "/api/mt/media/heygen/:path*",
         "destination": "/api/media_tech/heygen/:path*"
+      },
+      "mediaHome": {
+        "source": "/api/mt/media/home",
+        "destination": "/api/media_tech/media_home"
+      },
+      "mediaRoot": {
+        "source": "/api/mt/media",
+        "destination": "/api/media_tech/media_home"
       },
       "apiListHome": {
         "source": "/api/mt/list/home",

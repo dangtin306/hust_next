@@ -48,7 +48,8 @@ export type SwaggerTabKey =
   | "chat_bot"
   | "chat_test"
   | "chat_public"
-  | "heygen";
+  | "heygen"
+  | "media";
 
 const TABS = [
   {
@@ -73,11 +74,11 @@ const TABS = [
     description: "Trung tâm AI Chat Bot (Quản lý, Test & Public)",
   },
   {
-    key: "heygen" as const,
-    label: "HeyGen",
-    href: "/api/mt/media/heygen/home",
+    key: "media" as const,
+    label: "Media",
+    href: "/api/mt/media/home",
     icon: Video,
-    description: "Tạo video MC ảo bằng HeyGen Avatar IV",
+    description: "Trung tâm AI Media & Video Studio (HeyGen, Video & Voice)",
   },
   {
     key: "n8n" as const,
@@ -243,7 +244,9 @@ export default function SwaggerSwitcher({
             (tab.key === "chat_bot" &&
               (active === "chat_bot" || active === "chat_test" || active === "chat_public")) ||
             (tab.key === "git_auto" &&
-              (active === "git_auto" || active === "git_test" || active === "gitea_test"));
+              (active === "git_auto" || active === "git_test" || active === "gitea_test")) ||
+            (tab.key === "media" &&
+              (active === "media" || active === "heygen"));
           const isNavigating = navigatingKey === tab.key;
           return (
             <Link

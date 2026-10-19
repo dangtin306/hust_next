@@ -6,6 +6,7 @@ import {
   Code2,
   BriefcaseBusiness,
   GitBranch,
+  Video,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -44,6 +45,16 @@ const destinations = [
     action: "Mở Chat Bot Hub",
     Icon: Bot,
     tone: "purple",
+  },
+  {
+    label: "Media Studio · MC Ảo",
+    title: "Trung Tâm AI Media & Video",
+    description:
+      "Tạo video MC ảo từ kịch bản, trải nghiệm Live Avatar streaming và các giải pháp media thông minh.",
+    href: "/api/hust/media/home",
+    action: "Mở Media Hub",
+    Icon: Video,
+    tone: "rose",
   },
   {
     label: "Git Auto · 3 Phân Hệ",

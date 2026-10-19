@@ -28,12 +28,12 @@ const destinations = [
     tone: "blue",
   },
   {
-    label: "HeyGen Video",
-    title: "Demo MC ảo",
+    label: "Media Studio · MC Ảo",
+    title: "Trung Tâm AI Media & Video",
     description:
-      "Nhập lời thoại, chọn ảnh/avatar và giọng đọc để tạo video thử nghiệm qua HeyGen API.",
-    href: "/api/mt/media/heygen",
-    action: "Mở demo HeyGen",
+      "Tạo video MC ảo từ kịch bản, trải nghiệm Live Avatar streaming và các giải pháp media thông minh.",
+    href: "/api/mt/media/home",
+    action: "Mở Media Hub",
     Icon: Video,
     tone: "rose",
   },

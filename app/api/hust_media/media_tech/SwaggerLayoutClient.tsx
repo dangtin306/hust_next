@@ -28,6 +28,7 @@ export default function SwaggerLayoutClient({
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
+  const isMedia = pathname.includes("/media") || pathname.includes("/heygen");
   const isWorkspace = pathname.includes("/workspace");
   const isWorkflow =
     pathname.includes("/n8n") || pathname.includes("/workflow");
@@ -37,6 +38,7 @@ export default function SwaggerLayoutClient({
   const isGitHome =
     pathname.includes("/git/home") || pathname.includes("/git_home");
   const isHome =
+    !isMedia &&
     !isWorkspace &&
     !isWorkflow &&
     !isApiListHome &&
@@ -100,9 +102,11 @@ export default function SwaggerLayoutClient({
                           ? "openclaw"
                           : isChatHome || isChatPublic || isChatTest || isChatManage
                             ? "chat_bot"
-                            : isHome
-                              ? "home"
-                              : "api_list"
+                            : isMedia
+                              ? "media"
+                              : isHome
+                                ? "home"
+                                : "api_list"
         }
       />
 
@@ -116,7 +120,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkspace ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
-      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome ? (
+      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome || isMedia ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : (
         <>

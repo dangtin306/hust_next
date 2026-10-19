@@ -17,6 +17,7 @@ import {
   Briefcase,
   Code2,
   GitBranch,
+  Video,
 } from "lucide-react";
 
 const MediaTechChatClient = dynamic(
@@ -43,6 +44,8 @@ export type SwaggerTabKey =
   | "chat_bot"
   | "chat_test"
   | "chat_public"
+  | "media"
+  | "heygen"
   | "workflow"
   | "git_auto"
   | "git_test"
@@ -69,6 +72,13 @@ const TABS = [
     href: "/api/hust/chat/home",
     icon: Bot,
     description: "Hust Media AI Chat Bot (Quản lý, Test & Public)",
+  },
+  {
+    key: "media" as const,
+    label: "Media",
+    href: "/api/hust/media/home",
+    icon: Video,
+    description: "Hust Media AI Studio (HeyGen, Video & Voice)",
   },
   {
     key: "workflow" as const,
@@ -234,7 +244,9 @@ export default function SwaggerSwitcher({
             (tab.key === "chat_bot" &&
               (active === "chat_bot" || active === "chat_test" || active === "chat_public")) ||
             (tab.key === "git_auto" &&
-              (active === "git_auto" || active === "git_test" || active === "gitea_test"));
+              (active === "git_auto" || active === "git_test" || active === "gitea_test")) ||
+            (tab.key === "media" &&
+              (active === "media" || active === "heygen"));
           const isNavigating = navigatingKey === tab.key;
           return (
             <Link
