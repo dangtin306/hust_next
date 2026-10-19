@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Video,
   Loader2,
+  Terminal,
 } from "lucide-react";
 
 const MediaTechChatClient = dynamic(
@@ -41,6 +42,7 @@ export type SwaggerTabKey =
   | "openclaw"
   | "laravel"
   | "n8n"
+  | "workflow"
   | "workspace"
   | "git_auto"
   | "git_test"
@@ -49,7 +51,8 @@ export type SwaggerTabKey =
   | "chat_test"
   | "chat_public"
   | "heygen"
-  | "media";
+  | "media"
+  | "dev";
 
 const TABS = [
   {
@@ -60,11 +63,11 @@ const TABS = [
     description: "Danh sách API: Laravel & OpenClaw",
   },
   {
-    key: "workspace" as const,
-    label: "Workspace",
-    href: "/api/mt/workspace/home",
-    icon: Briefcase,
-    description: "AI Workspace Management",
+    key: "dev" as const,
+    label: "Dev",
+    href: "/api/mt/dev/home",
+    icon: Terminal,
+    description: "Trung tâm Dev Tools: Workspace & Workflow",
   },
   {
     key: "chat_bot" as const,
@@ -78,14 +81,7 @@ const TABS = [
     label: "Media",
     href: "/api/mt/media/home",
     icon: Video,
-    description: "Trung tâm AI Media & Video Studio (HeyGen, Video & Voice)",
-  },
-  {
-    key: "n8n" as const,
-    label: "Workflow",
-    href: "/api/mt/n8n/home",
-    icon: Workflow,
-    description: "n8n Automation Workflows",
+    description: "Trung tâm AI Media & Video Studio (MC Ảo, Video & Voice)",
   },
   {
     key: "git_auto" as const,
@@ -243,10 +239,12 @@ export default function SwaggerSwitcher({
               (active === "api_list" || active === "laravel" || active === "openclaw")) ||
             (tab.key === "chat_bot" &&
               (active === "chat_bot" || active === "chat_test" || active === "chat_public")) ||
-            (tab.key === "git_auto" &&
-              (active === "git_auto" || active === "git_test" || active === "gitea_test")) ||
             (tab.key === "media" &&
-              (active === "media" || active === "heygen"));
+              (active === "media" || active === "heygen")) ||
+            (tab.key === "dev" &&
+              (active === "dev" || active === "workspace" || active === "workflow" || active === "n8n")) ||
+            (tab.key === "git_auto" &&
+              (active === "git_auto" || active === "git_test" || active === "gitea_test"));
           const isNavigating = navigatingKey === tab.key;
           return (
             <Link

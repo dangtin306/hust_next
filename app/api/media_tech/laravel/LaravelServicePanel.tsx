@@ -15,6 +15,8 @@ import {
   Edit3,
   FileCode2,
   Users,
+  Home,
+  ArrowRight,
 } from "lucide-react";
 
 type EndpointItem = {
@@ -207,7 +209,7 @@ const endpoints: EndpointItem[] = [
 
 export default function LaravelServicePanel() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "workspace" | "manage" | "chat">("all");
+  const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "workspace" | "manage" | "chat">("home");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
   const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
@@ -255,11 +257,52 @@ export default function LaravelServicePanel() {
   };
 
   const displayedEndpoints =
-    categoryFilter === "all" ? endpoints : endpoints.filter((e) => e.category === categoryFilter);
+    categoryFilter === "all" || categoryFilter === "home"
+      ? endpoints
+      : endpoints.filter((e) => e.category === categoryFilter);
 
   const workspaceCount = endpoints.filter((e) => e.category === "workspace").length;
   const manageCount = endpoints.filter((e) => e.category === "manage").length;
   const chatCount = endpoints.filter((e) => e.category === "chat").length;
+
+  const laravelCategories = [
+    {
+      id: "workspace" as const,
+      name: "Workspace & Markdown",
+      count: workspaceCount,
+      badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+      borderHover: "hover:border-purple-300 hover:bg-purple-50/40",
+      iconBg: "bg-purple-100 text-purple-700",
+      icon: Briefcase,
+      description:
+        "Quản lý cây danh mục workspace cha - con, sửa thông tin workspace theo ID, đọc/ghi và đồng bộ toàn bộ tài liệu Markdown (.md).",
+      highlights: ["POST /main/data (sửa ID)", "GET /markdown/full", "POST /markdown/edit", "GET /user/data"],
+    },
+    {
+      id: "manage" as const,
+      name: "Quản trị Chat Bot (Manage API)",
+      count: manageCount,
+      badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      borderHover: "hover:border-emerald-300 hover:bg-emerald-50/40",
+      iconBg: "bg-emerald-100 text-emerald-700",
+      icon: Users,
+      description:
+        "Thống kê tổng quan người dùng và sessions, tìm kiếm phân trang, tra cứu chi tiết user, danh sách phòng chat, khóa hoặc mở trạng thái hoạt động.",
+      highlights: ["GET /manage/overview", "GET /manage/users", "GET /manage/users/{id}", "PATCH /users/{id}"],
+    },
+    {
+      id: "chat" as const,
+      name: "Phòng Chat & Lịch Sử (Rooms API)",
+      count: chatCount,
+      badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+      borderHover: "hover:border-blue-300 hover:bg-blue-50/40",
+      iconBg: "bg-blue-100 text-blue-700",
+      icon: MessageSquareText,
+      description:
+        "Tạo và liên kết phòng chat cho session, lấy danh sách phòng, lấy lịch sử tin nhắn và lưu trữ hội thoại giữa người dùng và trợ lý ảo.",
+      highlights: ["POST /rooms", "POST /rooms/list", "POST /messages/list", "POST /messages"],
+    },
+  ];
 
   return createPortal(
     <section className="w-full mb-3.5 rounded-2xl border border-slate-200/80 bg-white/95 p-4 sm:p-5 shadow-xs backdrop-blur-md">
@@ -281,7 +324,7 @@ export default function LaravelServicePanel() {
           </div>
 
           <h2 className="mt-2 text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-            Tài liệu & Danh mục API Laravel
+            Tài liệu &amp; Danh mục API Laravel
           </h2>
           <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-600 sm:text-sm">
             Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID), nhóm Quản trị Người dùng Chat Bot (Manage API), và nhóm API Phòng chat Laravel (quản lý session, phòng và lịch sử chat).
@@ -292,9 +335,19 @@ export default function LaravelServicePanel() {
         <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/90 p-1 text-xs font-bold">
           <button
             type="button"
+            onClick={() => setCategoryFilter("home")}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 transition cursor-pointer ${
+              categoryFilter === "home" ? "bg-white text-blue-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span>Home</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setCategoryFilter("all")}
             className={`rounded-lg px-2.5 py-1 transition cursor-pointer ${
-              categoryFilter === "all" ? "bg-white text-blue-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+              categoryFilter === "all" ? "bg-white text-blue-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Tất cả ({endpoints.length})
@@ -303,7 +356,7 @@ export default function LaravelServicePanel() {
             type="button"
             onClick={() => setCategoryFilter("workspace")}
             className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
-              categoryFilter === "workspace" ? "bg-white text-purple-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+              categoryFilter === "workspace" ? "bg-white text-purple-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Briefcase className="h-3 w-3" />
@@ -313,7 +366,7 @@ export default function LaravelServicePanel() {
             type="button"
             onClick={() => setCategoryFilter("manage")}
             className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
-              categoryFilter === "manage" ? "bg-white text-emerald-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+              categoryFilter === "manage" ? "bg-white text-emerald-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <Users className="h-3 w-3" />
@@ -323,7 +376,7 @@ export default function LaravelServicePanel() {
             type="button"
             onClick={() => setCategoryFilter("chat")}
             className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
-              categoryFilter === "chat" ? "bg-white text-blue-700 shadow-2xs" : "text-slate-600 hover:text-slate-900"
+              categoryFilter === "chat" ? "bg-white text-blue-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <MessageSquareText className="h-3 w-3" />
@@ -334,50 +387,132 @@ export default function LaravelServicePanel() {
 
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
         <div className="rounded-xl border border-slate-200/90 bg-white p-3.5 sm:p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-              <Layers className="h-4 w-4 text-blue-600" />
-              <span>Các endpoint ({displayedEndpoints.length})</span>
-            </h3>
-            <span className="text-[11px] text-slate-400">Bấm endpoint để cuộn tới Swagger</span>
-          </div>
+          {categoryFilter === "home" ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <Home className="h-4 w-4 text-blue-600" />
+                  <span>Danh mục các thể loại API Laravel ({laravelCategories.length} nhóm)</span>
+                </h3>
+                <span className="text-[11px] text-slate-400">Chọn một thể loại để xem các endpoint chi tiết</span>
+              </div>
 
-          <div className="grid gap-2 md:grid-cols-2">
-            {displayedEndpoints.map((endpoint) => (
-              <button
-                key={endpoint.operationId}
-                type="button"
-                onClick={() => scrollToEndpoint(endpoint.operationId)}
-                className="group relative rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
-              >
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span
-                    className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold text-white ${
-                      endpoint.method === "GET"
-                        ? "bg-blue-500"
-                        : endpoint.method === "PATCH"
-                          ? "bg-amber-500"
-                          : "bg-emerald-600"
-                    }`}
+              <div className="grid gap-3 sm:grid-cols-1">
+                {laravelCategories.map((cat) => {
+                  const IconComponent = cat.icon;
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => setCategoryFilter(cat.id)}
+                      className={`group relative rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 sm:p-4 text-left transition-all ${cat.borderHover} hover:shadow-2xs cursor-pointer`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${cat.iconBg} mt-0.5`}>
+                            <IconComponent className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                                {cat.name}
+                              </h4>
+                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cat.badgeBg}`}>
+                                {cat.count} endpoints
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                              {cat.description}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCategoryFilter(cat.id);
+                          }}
+                          className="hidden sm:inline-flex items-center gap-1 shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs group-hover:border-blue-300 group-hover:text-blue-700 transition"
+                        >
+                          <span>Xem API</span>
+                          <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-transform" />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 pt-2.5 border-t border-slate-200/60">
+                        <span className="text-[11px] font-semibold text-slate-400 mr-1">Endpoints tiêu biểu:</span>
+                        {cat.highlights.map((h, i) => (
+                          <span
+                            key={i}
+                            className="rounded bg-white px-1.5 py-0.5 font-mono text-[10px] font-medium text-slate-700 border border-slate-200/80 shadow-2xs"
+                          >
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-blue-600" />
+                  <span>Các endpoint ({displayedEndpoints.length})</span>
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter("home")}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
                   >
-                    {endpoint.method}
-                  </span>
-                  <code className="break-all text-[11px] font-semibold text-slate-800">
-                    {endpoint.path}
-                  </code>
-                  {endpoint.isNew && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 font-sans text-[10px] font-bold">
-                      <Sparkles className="h-2.5 w-2.5" />
-                      Mới
-                    </span>
-                  )}
-                  <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-500 transition-transform group-hover:translate-x-0.5" />
+                    <Home className="h-3 w-3" />
+                    <span>Về Home</span>
+                  </button>
+                  <span className="text-slate-300">|</span>
+                  <span className="text-[11px] text-slate-400">Bấm endpoint để cuộn tới Swagger</span>
                 </div>
-                <p className="mt-1.5 text-xs font-medium text-slate-700">{endpoint.summary}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{endpoint.note}</p>
-              </button>
-            ))}
-          </div>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-2">
+                {displayedEndpoints.map((endpoint) => (
+                  <button
+                    key={endpoint.operationId}
+                    type="button"
+                    onClick={() => scrollToEndpoint(endpoint.operationId)}
+                    className="group relative rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 text-left transition-all hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 cursor-pointer"
+                  >
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`rounded px-1.5 py-0.5 font-mono text-[10px] font-bold text-white ${
+                          endpoint.method === "GET"
+                            ? "bg-blue-500"
+                            : endpoint.method === "PATCH"
+                              ? "bg-amber-500"
+                              : "bg-emerald-600"
+                        }`}
+                      >
+                        {endpoint.method}
+                      </span>
+                      <code className="break-all text-[11px] font-semibold text-slate-800">
+                        {endpoint.path}
+                      </code>
+                      {endpoint.isNew && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 font-sans text-[10px] font-bold">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          Mới
+                        </span>
+                      )}
+                      <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-500 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                    <p className="mt-1.5 text-xs font-medium text-slate-700">{endpoint.summary}</p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{endpoint.note}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <aside className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 sm:p-4">

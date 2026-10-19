@@ -543,7 +543,7 @@ paths:
       summary: Đồng bộ routing workspace (GET)
       description: |
         Đồng bộ workspace con của `workspace-test`. Laravel lấy danh sách từ Node API
-        `GET /openclaw/v2/list` rồi cập nhật bảng `work_space_main`.
+        `GET /openclaw/v2/workspace/list` rồi cập nhật bảng `work_space_main`.
 
         Workspace mẹ không bị sửa; workspace con không bị xóa chỉ vì vắng mặt trong
         danh sách Node. Không cần query parameters hoặc request body.

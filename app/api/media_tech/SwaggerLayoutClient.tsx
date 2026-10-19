@@ -30,6 +30,7 @@ export default function SwaggerLayoutClient({
   const pathname = usePathname() || "";
   const isHeyGen = pathname.includes("/heygen");
   const isMedia = pathname.includes("/media") || isHeyGen;
+  const isDev = pathname.includes("/dev/home") || pathname.includes("/dev_home") || pathname.endsWith("/dev");
   const isWorkspace = pathname.includes("/workspace");
   const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
   const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
@@ -38,6 +39,7 @@ export default function SwaggerLayoutClient({
   const isGitHome =
     pathname.includes("/git/home") || pathname.includes("/git_home");
   const isHome =
+    !isDev &&
     !isMedia &&
     !isHeyGen &&
     !isWorkspace &&
@@ -87,27 +89,25 @@ export default function SwaggerLayoutClient({
         active={
           isHome
             ? "home"
-            : isApiListHome
-              ? "api_list"
-              : isLaravel
-                ? "laravel"
-                : isN8n
-                  ? "n8n"
-                  : isWorkspace
-                    ? "workspace"
-                  : isGitHome || isGitAuto
-                    ? "git_auto"
-                    : isGitTest
-                      ? "git_test"
-                    : isGiteaTest
-                      ? "gitea_test"
-                    : isChatHome || isChatPublic || isChatTest || isChatManage
-                      ? "chat_bot"
-                      : isMedia || isHeyGen
-                        ? "media"
+            : isDev || isWorkspace || isN8n
+              ? "dev"
+              : isGitHome || isGitAuto
+                ? "git_auto"
+                : isGitTest
+                  ? "git_test"
+                  : isGiteaTest
+                    ? "gitea_test"
+                    : isApiListHome
+                      ? "api_list"
+                      : isLaravel
+                        ? "laravel"
                         : isOpenClaw
                           ? "openclaw"
-                          : "api_list"
+                          : isChatHome || isChatPublic || isChatTest || isChatManage
+                            ? "chat_bot"
+                            : isMedia || isHeyGen
+                              ? "media"
+                              : "api_list"
         }
       />
 
@@ -117,7 +117,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 flex-1 min-h-0 flex flex-col px-0 pt-0 pb-0 overflow-hidden [&_.media-chat-root]:h-full [&_.media-chat-root]:max-h-full">
           {children}
         </div>
-      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isChatManage || isApiListHome || isHome || isChatHome || isMedia ? (
+      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isN8n || isWorkspace || isChatPublic || isChatManage || isApiListHome || isHome || isChatHome || isMedia || isDev ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : (
         <>

@@ -29,6 +29,7 @@ export default function SwaggerLayoutClient({
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
   const isMedia = pathname.includes("/media") || pathname.includes("/heygen");
+  const isDev = pathname.includes("/dev/home") || pathname.includes("/dev_home") || pathname.endsWith("/dev");
   const isWorkspace = pathname.includes("/workspace");
   const isWorkflow =
     pathname.includes("/n8n") || pathname.includes("/workflow");
@@ -38,6 +39,7 @@ export default function SwaggerLayoutClient({
   const isGitHome =
     pathname.includes("/git/home") || pathname.includes("/git_home");
   const isHome =
+    !isDev &&
     !isMedia &&
     !isWorkspace &&
     !isWorkflow &&
@@ -84,10 +86,10 @@ export default function SwaggerLayoutClient({
       <SwaggerSwitcher
         className={isChatTest ? "mb-1.5 flex-none" : "mb-2.5"}
         active={
-          isWorkflow
-            ? "workflow"
-            : isWorkspace
-              ? "workspace"
+          isHome
+            ? "home"
+            : isDev || isWorkflow || isWorkspace
+              ? "dev"
               : isGitHome || isGitAuto
                 ? "git_auto"
                 : isGitTest
@@ -104,9 +106,7 @@ export default function SwaggerLayoutClient({
                             ? "chat_bot"
                             : isMedia
                               ? "media"
-                              : isHome
-                                ? "home"
-                                : "api_list"
+                              : "api_list"
         }
       />
 
@@ -120,7 +120,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkspace ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
-      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome || isMedia ? (
+      ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome || isMedia || isDev ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : (
         <>

@@ -29,14 +29,14 @@ security:
 tags:
   - name: Health
     description: Kiểm tra health của backend
-  - name: Responses
-    description: Endpoint tương thích OpenResponses chính và các nhóm service
   - name: Conversations
     description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
   - name: Model Selection
     description: Xem danh sách model, chọn model cho request và reset chat bằng lệnh /reset.
   - name: Workspace
     description: Lấy danh sách workspace.
+  - name: Services
+    description: Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn.
   - name: Text To Image
     description: Tạo hình ảnh thông qua image route của OpenClaw.
   - name: media_text_to_text
@@ -52,6 +52,10 @@ tags:
   - name: media_text_to_speech
     description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
 x-service-categories:
+  services:
+    route: /openclaw/v2/service/list
+    status: implemented
+    description: Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn.
   media_responses:
     route: /openclaw/v1/responses
     status: implemented
@@ -65,7 +69,7 @@ x-service-categories:
     status: implemented
     description: Xem model, chọn model cho request hoặc gửi /reset qua Responses để reset chat.
   workspace:
-    route: /openclaw/v2/list
+    route: /openclaw/v2/workspace/list
     status: documented
     description: Lấy danh sách workspace.
   media_text_to_text:
@@ -459,7 +463,130 @@ paths:
                     created: 0
                     owned_by: google
 
-  /openclaw/v2/list:
+  /openclaw/v2/service/list:
+    get:
+      operationId: listServices
+      tags:
+        - Services
+      summary: Lấy danh mục service
+      description: |
+        Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn. API này chỉ trả danh sách; không thực thi service. Các API thực thi hiện tại vẫn giữ nguyên.
+
+        Client dùng `service_id`, mô tả và endpoint để hiển thị lựa chọn; khi người dùng chọn, gọi API thực thi tương ứng theo request schema hiện có. Nếu gọi endpoint này bằng method khác GET, Node trả `405 method_not_allowed`.
+
+        Danh mục hiện gồm bảy service bạn đã liệt kê; nếu thêm service mới thì cần thêm mục vào catalog của Node.
+
+        **Request:** Không cần query parameter hoặc request body.
+
+        URL production: `https://node_md.hust.media/openclaw/v2/service/list`.
+        Gửi `Accept: application/json`.
+
+        Ví dụ gọi cURL:
+        ```bash
+        curl -X GET "https://node_md.hust.media/openclaw/v2/service/list" \
+          -H "Accept: application/json"
+        ```
+      security: []
+      responses:
+        '200':
+          description: Danh mục service khả dụng
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, data]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [service_id, name, description, method, endpoint, operation_id]
+                      properties:
+                        service_id:
+                          type: string
+                          example: text_to_image
+                        name:
+                          type: string
+                          example: Text To Image
+                        description:
+                          type: string
+                          example: Tạo hình ảnh thông qua image route của OpenClaw.
+                        method:
+                          type: string
+                          example: POST
+                        endpoint:
+                          type: string
+                          example: /openclaw/v1/images/generations
+                        operation_id:
+                          type: string
+                          example: generateImage
+              example:
+                ok: true
+                data:
+                  - service_id: text_to_image
+                    name: Text To Image
+                    description: Tạo hình ảnh thông qua image route của OpenClaw.
+                    method: POST
+                    endpoint: /openclaw/v1/images/generations
+                    operation_id: generateImage
+                  - service_id: media_text_to_text
+                    name: media_text_to_text
+                    description: Hội thoại thông thường thông qua endpoint Responses.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+                  - service_id: media_content_smart
+                    name: media_content_smart
+                    description: Viết nội dung thông minh theo title, description, length và tone.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+                  - service_id: media_spell_check
+                    name: media_spell_check
+                    description: Sửa lỗi chính tả thông qua endpoint Responses.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+                  - service_id: media_script_writing
+                    name: media_script_writing
+                    description: Viết script thông qua endpoint Responses.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+                  - service_id: media_image_to_text
+                    name: media_image_to_text
+                    description: OCR và phân tích hình ảnh thông qua endpoint Responses.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+                  - service_id: media_text_to_speech
+                    name: media_text_to_speech
+                    description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
+                    method: POST
+                    endpoint: /openclaw/v1/responses
+                    operation_id: createResponse
+        '405':
+          description: Method Not Allowed khi gọi method khác GET
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, error]
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+
+  /openclaw/v2/workspace/list:
     get:
       operationId: listWorkspaces
       tags:
@@ -486,7 +613,7 @@ paths:
         sẽ không xuất hiện. HTTP 200 với `data: []` nghĩa là không có skill khớp hoặc không
         tìm thấy workspace cha `workspace-test` trong SQL.
 
-        URL production: `https://node_md.hust.media/openclaw/v2/list`.
+        URL production: `https://node_md.hust.media/openclaw/v2/workspace/list`.
         Gửi `Accept: application/json` và `Authorization: Bearer media_tech`.
 
         Swagger gửi request trực tiếp đến server đang chọn ở phần Servers. Không chuyển request
@@ -494,7 +621,7 @@ paths:
 
         Ví dụ PowerShell:
         ```powershell
-        curl.exe -X GET "https://node_md.hust.media/openclaw/v2/list" `
+        curl.exe -X GET "https://node_md.hust.media/openclaw/v2/workspace/list" `
           -H "Accept: application/json" `
           -H "Authorization: Bearer media_tech"
         ```
@@ -987,7 +1114,7 @@ paths:
         Chọn skill/workspace cho user bằng cách gửi lệnh `/skill {work_space_code}` qua luồng chat OpenClaw.
 
         `work_space_code` phải khớp chính xác mã skill nằm trong `children` của kết quả
-        `GET /openclaw/v2/list`. API trả nội dung phản hồi của OpenClaw để kiểm tra kết quả.
+        `GET /openclaw/v2/workspace/list`. API trả nội dung phản hồi của OpenClaw để kiểm tra kết quả.
         API này không cập nhật SQL hoặc `user_session.json`.
 
         Ví dụ gọi production trực tiếp:
@@ -1013,7 +1140,7 @@ paths:
                 work_space_code:
                   type: string
                   minLength: 1
-                  description: Mã skill chính xác lấy từ `children` trong API `/openclaw/v2/list`.
+                  description: Mã skill chính xác lấy từ `children` trong API `/openclaw/v2/workspace/list`.
                   example: workspace_openclaw_support
             example:
               user_id: 502

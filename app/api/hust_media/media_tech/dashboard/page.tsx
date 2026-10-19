@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   GitBranch,
   Video,
+  Terminal,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -27,14 +28,14 @@ const destinations = [
     tone: "blue",
   },
   {
-    label: "Workspace",
-    title: "Quản trị Workspace",
+    label: "Dev Hub · 2 Khung",
+    title: "Dev: Workspace & Workflow",
     description:
-      "Xem session và quản lý Workspace: tạo, sửa, đổi trạng thái, xóa hoặc đồng bộ routing qua API.",
-    href: "/api/hust/workspace/home",
-    action: "Mở quản trị Workspace",
-    Icon: BriefcaseBusiness,
-    tone: "indigo",
+      "Trung tâm phát triển và vận hành gồm 2 khung: Quản lý Workspace (Sessions, Markdown Viewer) và Sơ đồ Workflow kiến trúc n8n realtime.",
+    href: "/api/hust/dev/home",
+    action: "Mở Dev Hub",
+    Icon: Terminal,
+    tone: "emerald",
   },
   {
     label: "AI Chat Bot · 2 Giao diện",
@@ -73,6 +74,7 @@ const toneClasses: Record<string, string> = {
   violet: "border-violet-200 bg-violet-50 text-violet-700",
   cyan: "border-cyan-200 bg-cyan-50 text-cyan-700",
   sky: "border-sky-200 bg-sky-50 text-sky-700",
+  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
   indigo: "border-indigo-200 bg-indigo-50 text-indigo-700",
   purple: "border-purple-200 bg-purple-50 text-purple-700",
   amber: "border-amber-200 bg-amber-50 text-amber-700",

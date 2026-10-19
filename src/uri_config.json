@@ -258,6 +258,14 @@
         "mediaHeygen": {
           "source": "/api/hust/media/heygen/:path*",
           "destination": "/api/media_tech/heygen/:path*"
+        },
+        "devHome": {
+          "source": "/api/hust/dev/home",
+          "destination": "/api/hust_media/media_tech/dev_home"
+        },
+        "devRoot": {
+          "source": "/api/hust/dev",
+          "destination": "/api/hust_media/media_tech/dev_home"
         }
       },
       "chatProxy": {
@@ -393,6 +401,14 @@
       "workspace": {
         "source": "/api/mt/workspace",
         "destination": "/api/media_tech/workspace"
+      },
+      "devHome": {
+        "source": "/api/mt/dev/home",
+        "destination": "/api/media_tech/dev_home"
+      },
+      "devRoot": {
+        "source": "/api/mt/dev",
+        "destination": "/api/media_tech/dev_home"
       },
       "home": {
         "source": "/api/mt/home",

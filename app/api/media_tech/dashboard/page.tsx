@@ -8,6 +8,7 @@ import {
   Workflow,
   Video,
   Code2,
+  Terminal,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -28,14 +29,14 @@ const destinations = [
     tone: "blue",
   },
   {
-    label: "Media Studio · MC Ảo",
-    title: "Trung Tâm AI Media & Video",
+    label: "Dev Hub · 2 Khung",
+    title: "Dev: Workspace & Workflow",
     description:
-      "Tạo video MC ảo từ kịch bản, trải nghiệm Live Avatar streaming và các giải pháp media thông minh.",
-    href: "/api/mt/media/home",
-    action: "Mở Media Hub",
-    Icon: Video,
-    tone: "rose",
+      "Trung tâm phát triển và vận hành gồm 2 khung: Quản lý Workspace (Sessions, Markdown Viewer) và Sơ đồ Workflow kiến trúc n8n realtime.",
+    href: "/api/mt/dev/home",
+    action: "Mở Dev Hub",
+    Icon: Terminal,
+    tone: "emerald",
   },
   {
     label: "AI Chat Bot · 2 Giao diện",
@@ -48,24 +49,14 @@ const destinations = [
     tone: "purple",
   },
   {
-    label: "Workflow & Maps",
-    title: "Sơ đồ và giám sát luồng",
+    label: "Media Studio · MC Ảo",
+    title: "Trung Tâm AI Media & Video",
     description:
-      "Xem bản đồ kiến trúc tổng quát và sơ đồ realtime của backend Laravel, Node.js cùng luồng sự kiện n8n.",
-    href: "/api/mt/n8n/home",
-    action: "Mở sơ đồ hệ thống",
-    Icon: Workflow,
-    tone: "emerald",
-  },
-  {
-    label: "Workspace",
-    title: "Quản trị Workspace",
-    description:
-      "Xem session và quản lý Workspace: tạo, sửa, đổi trạng thái, xóa hoặc đồng bộ routing qua API.",
-    href: "/api/mt/workspace/home",
-    action: "Mở quản trị Workspace",
-    Icon: BriefcaseBusiness,
-    tone: "indigo",
+      "Tạo video MC ảo từ kịch bản, trải nghiệm Live Avatar streaming và các giải pháp media thông minh.",
+    href: "/api/mt/media/home",
+    action: "Mở Media Hub",
+    Icon: Video,
+    tone: "rose",
   },
   {
     label: "Git Auto · 3 Phân Hệ",

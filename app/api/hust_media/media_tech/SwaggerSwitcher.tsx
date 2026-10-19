@@ -18,6 +18,7 @@ import {
   Code2,
   GitBranch,
   Video,
+  Terminal,
 } from "lucide-react";
 
 const MediaTechChatClient = dynamic(
@@ -47,6 +48,8 @@ export type SwaggerTabKey =
   | "media"
   | "heygen"
   | "workflow"
+  | "n8n"
+  | "dev"
   | "git_auto"
   | "git_test"
   | "gitea_test";
@@ -60,11 +63,11 @@ const TABS = [
     description: "Danh sách API: Laravel & OpenClaw",
   },
   {
-    key: "workspace" as const,
-    label: "Workspace",
-    href: "/api/hust/workspace/home",
-    icon: Briefcase,
-    description: "AI Workspace Management",
+    key: "dev" as const,
+    label: "Dev",
+    href: "/api/hust/dev/home",
+    icon: Terminal,
+    description: "Hust Dev Tools: Workspace & Workflow",
   },
   {
     key: "chat_bot" as const,
@@ -78,14 +81,7 @@ const TABS = [
     label: "Media",
     href: "/api/hust/media/home",
     icon: Video,
-    description: "Hust Media AI Studio (HeyGen, Video & Voice)",
-  },
-  {
-    key: "workflow" as const,
-    label: "Workflow",
-    href: "/api/hust/n8n/home",
-    icon: WorkflowIcon,
-    description: "Sơ đồ Workflow n8n của Hust",
+    description: "Hust Media AI Studio (MC Ảo, Video & Voice)",
   },
   {
     key: "git_auto" as const,
@@ -246,7 +242,9 @@ export default function SwaggerSwitcher({
             (tab.key === "git_auto" &&
               (active === "git_auto" || active === "git_test" || active === "gitea_test")) ||
             (tab.key === "media" &&
-              (active === "media" || active === "heygen"));
+              (active === "media" || active === "heygen")) ||
+            (tab.key === "dev" &&
+              (active === "dev" || active === "workspace" || active === "workflow" || active === "n8n"));
           const isNavigating = navigatingKey === tab.key;
           return (
             <Link
