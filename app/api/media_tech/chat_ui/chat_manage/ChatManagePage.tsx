@@ -25,8 +25,17 @@ import {
   Server,
   X,
   Info,
+  Edit3,
+  ExternalLink,
+  Check,
 } from "lucide-react";
 import ChatMessagesPanel, { RoomOption } from "./ChatMessagesPanel";
+import {
+  apiFetchChatBotManageRooms,
+  apiUpdateChatBotManageRoom,
+  apiArchiveChatBotManageRoom,
+  ChatBotManageRoomItem,
+} from "../api/media_api";
 
 interface ChatManagePageProps {
   isHust?: boolean;
@@ -51,6 +60,12 @@ export interface ManageOverviewData {
   rooms: {
     total: number;
     active: number;
+    archived?: number;
+  };
+  messages?: {
+    total: number;
+    active: number;
+    hidden: number;
   };
 }
 
@@ -97,6 +112,12 @@ const MOCK_OVERVIEW: ManageOverviewData = {
   rooms: {
     total: 18,
     active: 15,
+    archived: 3,
+  },
+  messages: {
+    total: 619,
+    active: 590,
+    hidden: 29,
   },
 };
 
@@ -318,9 +339,17 @@ export default function ChatManagePage({ isHust = false, initialTab = "bot" }: C
   const [inspectUser, setInspectUser] = useState<ManageUserItem | null>(null);
   const [inspectSessions, setInspectSessions] = useState<ManageSessionItem[]>([]);
   const [inspectRooms, setInspectRooms] = useState<ManageRoomItem[]>([]);
-  const [activeModal, setActiveModal] = useState<"sessions" | "rooms" | null>(null);
+  const [activeModal, setActiveModal] = useState<"sessions" | "rooms" | "all_rooms" | null>(null);
   const [isModalLoading, setIsModalLoading] = useState<boolean>(false);
   const [actionSuccessToast, setActionSuccessToast] = useState<string | null>(null);
+
+  // All Rooms (System-wide GET /api/chat/bot/manage/rooms)
+  const [allRooms, setAllRooms] = useState<ChatBotManageRoomItem[]>([]);
+  const [isAllRoomsLoading, setIsAllRoomsLoading] = useState<boolean>(false);
+  const [allRoomsSearch, setAllRoomsSearch] = useState<string>("");
+  const [allRoomsStatusFilter, setAllRoomsStatusFilter] = useState<"all" | "1" | "0">("all");
+  const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
+  const [editingRoomTitle, setEditingRoomTitle] = useState<string>("");
 
   // All combined rooms for Messages management branch
   const allAvailableRooms = useMemo<RoomOption[]>(() => {
@@ -573,6 +602,112 @@ export default function ChatManagePage({ isHust = false, initialTab = "bot" }: C
     }
   };
 
+  // Inspect All Rooms Modal (GET /api/chat/bot/manage/rooms)
+  const handleOpenAllRoomsModal = async (customQ?: string, customStatus?: "all" | "1" | "0") => {
+    setActiveModal("all_rooms");
+    setIsAllRoomsLoading(true);
+    const qVal = customQ !== undefined ? customQ : allRoomsSearch;
+    const statusVal = customStatus !== undefined ? customStatus : allRoomsStatusFilter;
+
+    try {
+      const res = await apiFetchChatBotManageRooms({
+        q: qVal.trim() || undefined,
+        status: statusVal !== "all" ? Number(statusVal) : undefined,
+        isHust,
+      });
+      if (res?.success && Array.isArray(res.data)) {
+        setAllRooms(res.data);
+      } else {
+        throw new Error();
+      }
+    } catch {
+      // Fallback to local mock rooms
+      const list: ChatBotManageRoomItem[] = [];
+      Object.entries(MOCK_ROOMS_MAP).forEach(([uid, rooms]) => {
+        rooms.forEach((r) => {
+          list.push({
+            id: r.id,
+            id_chat_users: r.id_chat_users,
+            user_id: uid,
+            title: r.title,
+            status: r.status,
+            model: r.model,
+            message_count: 5,
+            active_message_count: r.status === 1 ? 5 : 0,
+            hidden_message_count: r.status === 0 ? 5 : 0,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+          });
+        });
+      });
+      let filtered = [...list];
+      if (qVal.trim()) {
+        const qLower = qVal.toLowerCase().trim();
+        filtered = filtered.filter(
+          (r) =>
+            r.title.toLowerCase().includes(qLower) ||
+            r.user_id.toLowerCase().includes(qLower) ||
+            String(r.id).includes(qLower)
+        );
+      }
+      if (statusVal !== "all") {
+        filtered = filtered.filter((r) => String(r.status) === statusVal);
+      }
+      setAllRooms(filtered);
+    } finally {
+      setIsAllRoomsLoading(false);
+    }
+  };
+
+  // Update room title (PATCH /api/chat/bot/manage/rooms/{roomId})
+  const handleUpdateRoomTitle = async (roomId: number, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    try {
+      await apiUpdateChatBotManageRoom(roomId, { title: newTitle.trim() }, { isHust });
+      setAllRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, title: newTitle.trim() } : r))
+      );
+      setActionSuccessToast(`Đã đổi tiêu đề phòng #${roomId} thành: ${newTitle.trim()}`);
+    } catch {
+      setAllRooms((prev) =>
+        prev.map((r) => (r.id === roomId ? { ...r, title: newTitle.trim() } : r))
+      );
+      setActionSuccessToast(`[Xem trước] Đã đổi tiêu đề phòng #${roomId}!`);
+    }
+    setEditingRoomId(null);
+    setTimeout(() => setActionSuccessToast(null), 3000);
+  };
+
+  // Toggle room status / soft archive (DELETE & PATCH /api/chat/bot/manage/rooms/{roomId})
+  const handleToggleRoomStatus = async (room: ChatBotManageRoomItem) => {
+    const newStatus: 0 | 1 = room.status === 1 ? 0 : 1;
+    try {
+      if (newStatus === 0) {
+        await apiArchiveChatBotManageRoom(room.id, { isHust });
+      } else {
+        await apiUpdateChatBotManageRoom(room.id, { status: 1 }, { isHust });
+      }
+      setAllRooms((prev) =>
+        prev.map((r) => (r.id === room.id ? { ...r, status: newStatus } : r))
+      );
+      setActionSuccessToast(
+        newStatus === 0
+          ? `Đã lưu trữ mềm phòng #${room.id} (status = 0)`
+          : `Đã mở lại phòng #${room.id} (status = 1)`
+      );
+    } catch {
+      setAllRooms((prev) =>
+        prev.map((r) => (r.id === room.id ? { ...r, status: newStatus } : r))
+      );
+      setActionSuccessToast(
+        newStatus === 0
+          ? `[Xem trước] Đã lưu trữ mềm phòng #${room.id}`
+          : `[Xem trước] Đã mở lại phòng #${room.id}`
+      );
+    }
+    setTimeout(() => setActionSuccessToast(null), 3000);
+  };
+
   // Filtered users for table
   const displayedUsers = useMemo(() => {
     if (isLiveApi) {
@@ -760,41 +895,66 @@ export default function ChatManagePage({ isHust = false, initialTab = "bot" }: C
                 <MessageSquare className="h-4 w-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-slate-900">
-                {overview.rooms.total}
-              </span>
-              <span className="text-xs text-slate-500">phòng</span>
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  {overview.rooms.total}
+                </span>
+                <span className="text-xs text-slate-500">phòng</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleOpenAllRoomsModal()}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 px-2 py-0.8 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                title="Xem danh sách tất cả phòng chat trên toàn hệ thống (GET /manage/rooms)"
+              >
+                <span>Tất cả phòng</span>
+                <ChevronRight className="h-3 w-3" />
+              </button>
             </div>
-            <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-semibold">
+            <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-semibold flex-wrap">
               <span className="rounded bg-teal-50 text-teal-700 px-1.5 py-0.5 border border-teal-200/80">
-                {overview.rooms.active} phòng mở
+                {overview.rooms.active} mở
               </span>
-              <span className="text-slate-400">
-                • {overview.rooms.total - overview.rooms.active} đã đóng
+              <span className="rounded bg-slate-100 text-slate-600 px-1.5 py-0.5 border border-slate-200/80">
+                {overview.rooms.archived ?? (overview.rooms.total - overview.rooms.active)} lưu trữ
               </span>
             </div>
           </div>
 
-          {/* Card 4: Service Gateway */}
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs hover:border-amber-200 transition">
+          {/* Card 4: Messages */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs hover:border-purple-200 transition">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Dịch Vụ AI Gateway
+                Tin Nhắn Hệ Thống
               </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                <Activity className="h-4 w-4" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                <MessageSquareText className="h-4 w-4" />
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-sm font-bold text-slate-800">
-                Laravel Chat Bot API
-              </span>
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  {overview.messages?.total ?? 619}
+                </span>
+                <span className="text-xs text-slate-500">tin nhắn</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigateTab("messages")}
+                className="text-[11px] font-bold text-purple-700 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 border border-purple-200/80 px-2 py-0.8 rounded-lg transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                title="Chuyển sang nhánh Quản trị Tin Nhắn (Messages)"
+              >
+                <span>Xem tin nhắn</span>
+                <ChevronRight className="h-3 w-3" />
+              </button>
             </div>
-            <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-slate-500 truncate">
-              <Server className="h-3 w-3 text-slate-400 shrink-0" />
-              <span className="font-mono text-[9px] text-slate-600 truncate">
-                {isHust ? "laravel.hust.media" : "laravel_mt.hust.media"}
+            <div className="mt-2.5 flex items-center gap-1.5 text-[10px] font-semibold flex-wrap">
+              <span className="rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5 border border-emerald-200/80">
+                {overview.messages?.active ?? 590} hiển thị
+              </span>
+              <span className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.5 border border-rose-200/80">
+                {overview.messages?.hidden ?? 29} đã ẩn
               </span>
             </div>
           </div>
@@ -1280,6 +1440,9 @@ export default function ChatManagePage({ isHust = false, initialTab = "bot" }: C
             setSearchQuery(uid);
             navigateTab("bot");
           }}
+          onBackToManage={() => {
+            navigateTab("bot");
+          }}
         />
       )}
 
@@ -1463,11 +1626,304 @@ export default function ChatManagePage({ isHust = false, initialTab = "bot" }: C
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end border-t border-slate-100 pt-3">
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const uid = inspectUser.user_id;
+                  setActiveModal(null);
+                  navigateTab("messages", undefined, uid);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 text-xs font-bold transition cursor-pointer shadow-2xs"
+              >
+                <MessageSquareText className="h-3.5 w-3.5" />
+                <span>Xem tất cả tin nhắn của {inspectUser.user_id}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================================= */}
+      {/* MODAL 3: ALL ROOMS INSPECTOR (GET /api/chat/bot/manage/rooms)           */}
+      {/* ======================================================================= */}
+      {activeModal === "all_rooms" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>Phòng Chat Toàn Hệ Thống</span>
+                    <span className="font-mono text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.2 rounded font-normal">
+                      GET /api/chat/bot/manage/rooms
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Tìm kiếm, chỉnh sửa tiêu đề (PATCH), lưu trữ mềm (DELETE) và liên kết trực tiếp sang Quản trị Tin Nhắn (Messages).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Search & Filter Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 text-xs">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm phòng theo tiêu đề, User ID (user_101, guest_308)..."
+                  value={allRoomsSearch}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setAllRoomsSearch(val);
+                    void handleOpenAllRoomsModal(val, allRoomsStatusFilter);
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-white pl-8.5 pr-8 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                />
+                {allRoomsSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllRoomsSearch("");
+                      void handleOpenAllRoomsModal("", allRoomsStatusFilter);
+                    }}
+                    className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[11px] text-slate-400 font-semibold mr-1">Trạng thái:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllRoomsStatusFilter("all");
+                    void handleOpenAllRoomsModal(allRoomsSearch, "all");
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+                    allRoomsStatusFilter === "all"
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllRoomsStatusFilter("1");
+                    void handleOpenAllRoomsModal(allRoomsSearch, "1");
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+                    allRoomsStatusFilter === "1"
+                      ? "bg-emerald-600 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Đang mở (1)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAllRoomsStatusFilter("0");
+                    void handleOpenAllRoomsModal(allRoomsSearch, "0");
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition cursor-pointer ${
+                    allRoomsStatusFilter === "0"
+                      ? "bg-rose-600 text-white shadow-2xs"
+                      : "text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  Lưu trữ (0)
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Rooms List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {isAllRoomsLoading ? (
+                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                  <RefreshCw className="h-5 w-5 animate-spin text-emerald-600" />
+                  <span className="text-xs font-semibold text-slate-600">
+                    Đang tải danh sách phòng toàn hệ thống...
+                  </span>
+                </div>
+              ) : allRooms.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  Không tìm thấy phòng chat nào khớp với bộ lọc.
+                </div>
+              ) : (
+                allRooms.map((room) => {
+                  const isEditing = editingRoomId === room.id;
+
+                  return (
+                    <div
+                      key={room.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-slate-50/60 p-3 hover:border-emerald-300 transition"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-slate-500">
+                            #{room.id}
+                          </span>
+
+                          {isEditing ? (
+                            <div className="flex items-center gap-1.5 flex-1 max-w-sm">
+                              <input
+                                type="text"
+                                value={editingRoomTitle}
+                                onChange={(e) => setEditingRoomTitle(e.target.value)}
+                                className="flex-1 rounded-lg border border-emerald-400 bg-white px-2 py-1 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleUpdateRoomTitle(room.id, editingRoomTitle)}
+                                className="rounded-lg bg-emerald-600 text-white p-1 hover:bg-emerald-700 cursor-pointer shadow-2xs"
+                                title="Lưu tiêu đề mới"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingRoomId(null)}
+                                className="rounded-lg bg-slate-200 text-slate-600 p-1 hover:bg-slate-300 cursor-pointer"
+                                title="Hủy chỉnh sửa"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h4 className="font-bold text-xs text-slate-900 truncate">
+                                {room.title || "Phòng trò chuyện không tiêu đề"}
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingRoomId(room.id);
+                                  setEditingRoomTitle(room.title || "");
+                                }}
+                                className="p-0.5 text-slate-400 hover:text-emerald-700 rounded transition cursor-pointer"
+                                title="Đổi tiêu đề phòng (PATCH /rooms/{roomId})"
+                              >
+                                <Edit3 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Model */}
+                          <span className="rounded bg-indigo-50 border border-indigo-200/80 px-1.5 py-0.2 text-[9px] font-mono text-indigo-700">
+                            {room.model}
+                          </span>
+
+                          {/* Status */}
+                          {room.status === 1 ? (
+                            <span className="rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.2 text-[9px] font-bold border border-emerald-200/80">
+                              Đang mở (1)
+                            </span>
+                          ) : (
+                            <span className="rounded bg-rose-50 text-rose-700 px-1.5 py-0.2 text-[9px] font-bold border border-rose-200/80">
+                              Đã lưu trữ (0)
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Metadata row */}
+                        <div className="flex items-center gap-3 text-[10px] text-slate-500 flex-wrap">
+                          {/* User ID link */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveModal(null);
+                              setSearchQuery(room.user_id);
+                            }}
+                            className="font-mono font-bold text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-0.5 cursor-pointer"
+                            title={`Xem thông tin user ${room.user_id} trong Quản trị`}
+                          >
+                            <span>User: {room.user_id}</span>
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </button>
+
+                          {room.message_count !== undefined && (
+                            <span>{room.message_count} tin nhắn</span>
+                          )}
+                          <span>Cập nhật: {room.updated_at || room.created_at}</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Jump to Messages */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveModal(null);
+                            navigateTab("messages", room.id);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 text-[11px] font-bold text-purple-700 transition cursor-pointer shadow-2xs"
+                          title="Xem toàn bộ tin nhắn trong phòng này (GET /messages/rooms/{roomId})"
+                        >
+                          <MessageSquare className="h-3 w-3" />
+                          <span>Xem tin nhắn</span>
+                        </button>
+
+                        {/* Toggle Archive */}
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleRoomStatus(room)}
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition cursor-pointer shadow-2xs ${
+                            room.status === 1
+                              ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          }`}
+                          title={
+                            room.status === 1
+                              ? "Lưu trữ mềm phòng này (DELETE /rooms/{roomId})"
+                              : "Mở lại phòng này (PATCH /rooms/{roomId})"
+                          }
+                        >
+                          {room.status === 1 ? "Lưu trữ" : "Mở lại"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+              <span className="text-[11px] text-slate-500">
+                Tổng cộng <strong>{allRooms.length}</strong> phòng hội thoại
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-1.5 font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer"
               >
                 Đóng
               </button>

@@ -781,6 +781,12 @@ export interface ChatBotManageOverviewResponse {
     rooms: {
       total: number;
       active: number;
+      archived?: number;
+    };
+    messages?: {
+      total: number;
+      active: number;
+      hidden: number;
     };
   };
 }
@@ -886,6 +892,227 @@ export async function apiFetchChatBotManageUserRooms(
   return res.json();
 }
 
+export interface ChatBotManageRoomItem {
+  id: number;
+  id_chat_users: number;
+  user_id: string;
+  title: string;
+  status: number;
+  model: string;
+  agent?: string | null;
+  message_count?: number;
+  active_message_count?: number;
+  hidden_message_count?: number;
+  last_message_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatBotManageRoomsResponse {
+  success: boolean;
+  data: ChatBotManageRoomItem[];
+  meta: {
+    current_page: number;
+    per_page: number;
+    total: number;
+    last_page: number;
+  };
+}
+
+export interface ChatBotManageRoomDetailResponse {
+  success: boolean;
+  data: ChatBotManageRoomItem & {
+    messages?: {
+      total: number;
+      active: number;
+      hidden: number;
+    };
+  };
+}
+
+/** GET /api/chat/bot/manage/rooms - Tìm kiếm & lọc phòng toàn hệ thống */
+export async function apiFetchChatBotManageRooms(
+  options?: {
+    q?: string;
+    user_id?: string;
+    status?: number | string;
+    created_from?: string;
+    created_to?: string;
+    page?: number;
+    per_page?: number;
+    isHust?: boolean;
+  },
+  customBaseUrl?: string,
+): Promise<ChatBotManageRoomsResponse> {
+  const base = options?.isHust
+    ? "/next/api/hust/chat/bot/manage/rooms"
+    : `${LARAVEL_CHAT_MANAGE_API}/rooms`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.q) params.set("q", options.q);
+  if (options?.user_id) params.set("user_id", options.user_id);
+  if (options?.status !== undefined && options.status !== "all" && options.status !== "") {
+    params.set("status", String(options.status));
+  }
+  if (options?.created_from) params.set("created_from", options.created_from);
+  if (options?.created_to) params.set("created_to", options.created_to);
+  if (options?.page) params.set("page", String(options.page));
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+
+  const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** GET /api/chat/bot/manage/rooms/{roomId} - Chi tiết phòng chat */
+export async function apiFetchChatBotManageRoomDetail(
+  roomId: number | string,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<ChatBotManageRoomDetailResponse> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/manage/rooms/${encodeURIComponent(String(roomId))}`
+    : `${LARAVEL_CHAT_MANAGE_API}/rooms/${encodeURIComponent(String(roomId))}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** PATCH /api/chat/bot/manage/rooms/{roomId} - Đổi tiêu đề hoặc trạng thái phòng */
+export async function apiUpdateChatBotManageRoom(
+  roomId: number | string,
+  data: { status?: 0 | 1; title?: string | null },
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<{ success: boolean; data: any; message?: string }> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/manage/rooms/${encodeURIComponent(String(roomId))}`
+    : `${LARAVEL_CHAT_MANAGE_API}/rooms/${encodeURIComponent(String(roomId))}`;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** DELETE /api/chat/bot/manage/rooms/{roomId} - Lưu trữ mềm phòng */
+export async function apiArchiveChatBotManageRoom(
+  roomId: number | string,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<{ success: boolean; data: any; message?: string }> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/manage/rooms/${encodeURIComponent(String(roomId))}`
+    : `${LARAVEL_CHAT_MANAGE_API}/rooms/${encodeURIComponent(String(roomId))}`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** GET /api/chat/bot/manage/rooms/{roomId}/messages - Xem lịch sử tin nhắn phòng quản lý */
+export async function apiFetchChatBotManageRoomMessages(
+  roomId: number | string,
+  options?: {
+    before_id?: number;
+    per_page?: number;
+    status?: number;
+    isHust?: boolean;
+  },
+  customBaseUrl?: string,
+): Promise<ChatBotRoomMessagesResponse> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/manage/rooms/${encodeURIComponent(String(roomId))}/messages`
+    : `${LARAVEL_CHAT_MANAGE_API}/rooms/${encodeURIComponent(String(roomId))}/messages`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.before_id) params.set("before_id", String(options.before_id));
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+  if (options?.status !== undefined) params.set("status", String(options.status));
+
+  const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** GET /api/chat/bot/manage/users/{userId}/messages - Xem tin nhắn của user trên mọi phòng */
+export async function apiFetchChatBotManageUserMessages(
+  userId: string,
+  options?: {
+    q?: string;
+    room_id?: number;
+    role?: string;
+    status?: number;
+    created_from?: string;
+    created_to?: string;
+    page?: number;
+    per_page?: number;
+    isHust?: boolean;
+  },
+  customBaseUrl?: string,
+): Promise<ChatBotMessagesListResponse> {
+  const base = options?.isHust
+    ? `/next/api/hust/chat/bot/manage/users/${encodeURIComponent(userId)}/messages`
+    : `${LARAVEL_CHAT_MANAGE_API}/users/${encodeURIComponent(userId)}/messages`;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const params = new URLSearchParams();
+  if (options?.q) params.set("q", options.q);
+  if (options?.room_id) params.set("room_id", String(options.room_id));
+  if (options?.role && options.role !== "all") params.set("role", options.role);
+  if (options?.status !== undefined) params.set("status", String(options.status));
+  if (options?.created_from) params.set("created_from", options.created_from);
+  if (options?.created_to) params.set("created_to", options.created_to);
+  if (options?.page) params.set("page", String(options.page));
+  if (options?.per_page) params.set("per_page", String(options.per_page));
+
+  const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 /**
  * Chat Bot Messages APIs (Mess_Controller & Mess_History)
  */
@@ -963,9 +1190,12 @@ export interface ChatBotMessageDetailResponse {
 export async function apiFetchManageMessages(
   options?: {
     room_id?: number | string;
+    user_id?: string;
     role?: string;
     status?: number | string;
     q?: string;
+    created_from?: string;
+    created_to?: string;
     page?: number;
     per_page?: number;
     isHust?: boolean;
@@ -980,11 +1210,14 @@ export async function apiFetchManageMessages(
 
   const params = new URLSearchParams();
   if (options?.room_id) params.set("room_id", String(options.room_id));
+  if (options?.user_id) params.set("user_id", options.user_id);
   if (options?.role && options.role !== "all") params.set("role", options.role);
   if (options?.status !== undefined && options.status !== "all" && options.status !== "") {
     params.set("status", String(options.status));
   }
   if (options?.q) params.set("q", options.q);
+  if (options?.created_from) params.set("created_from", options.created_from);
+  if (options?.created_to) params.set("created_to", options.created_to);
   if (options?.page) params.set("page", String(options.page));
   if (options?.per_page) params.set("per_page", String(options.per_page));
 
@@ -999,7 +1232,13 @@ export async function apiFetchManageMessages(
 
 export async function apiFetchManageRoomMessages(
   roomId: number | string,
-  options?: { page?: number; per_page?: number; isHust?: boolean },
+  options?: {
+    before_id?: number;
+    status?: number | string;
+    page?: number;
+    per_page?: number;
+    isHust?: boolean;
+  },
   customBaseUrl?: string,
 ): Promise<ChatBotRoomMessagesResponse> {
   const base = options?.isHust
@@ -1009,11 +1248,43 @@ export async function apiFetchManageRoomMessages(
   if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
 
   const params = new URLSearchParams();
+  if (options?.before_id) params.set("before_id", String(options.before_id));
+  if (options?.status !== undefined && options.status !== "all" && options.status !== "") {
+    params.set("status", String(options.status));
+  }
   if (options?.page) params.set("page", String(options.page));
   if (options?.per_page) params.set("per_page", String(options.per_page));
 
   const url = `${base}${params.toString() ? `?${params.toString()}` : ""}`;
   const res = await fetch(url, { headers, cache: "no-store" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** PATCH /api/chat/bot/messages/bulk-status - Cập nhật trạng thái nhiều tin nhắn cùng lúc */
+export async function apiBulkUpdateManageMessageStatus(
+  messageIds: number[],
+  status: 0 | 1,
+  options?: { isHust?: boolean },
+  customBaseUrl?: string,
+): Promise<{ success: boolean; data: { message_ids: number[]; status: 0 | 1; matched_count: number }; message?: string }> {
+  const base = options?.isHust
+    ? "/next/api/hust/chat/bot/messages/bulk-status"
+    : `${LARAVEL_CHAT_API.replace(/\/$/, "")}/messages/bulk-status`;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
+
+  const res = await fetch(base, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ message_ids: messageIds, status }),
+  });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new Error(body?.error?.message || body?.message || `HTTP ${res.status}`);

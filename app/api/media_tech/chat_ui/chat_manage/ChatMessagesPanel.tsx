@@ -29,6 +29,8 @@ import {
   Hash,
   Database,
   ExternalLink,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import {
   apiFetchManageMessages,
@@ -36,6 +38,7 @@ import {
   apiFetchManageMessageDetail,
   apiUpdateManageMessageStatus,
   apiDeleteManageMessage,
+  apiBulkUpdateManageMessageStatus,
   ChatBotMessageItem,
 } from "../api/media_api";
 
@@ -57,6 +60,7 @@ interface ChatMessagesPanelProps {
   initialUserId?: string;
   availableRooms?: RoomOption[];
   onSelectUser?: (userId: string) => void;
+  onBackToManage?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +244,7 @@ export default function ChatMessagesPanel({
   initialUserId,
   availableRooms = DEFAULT_ROOMS,
   onSelectUser,
+  onBackToManage,
 }: ChatMessagesPanelProps) {
   // Mode: "all" (System-wide GET /api/chat/bot/messages) vs "room" (GET /api/chat/bot/messages/rooms/{roomId})
   const [viewMode, setViewMode] = useState<"all" | "room">(() => {
@@ -278,6 +283,10 @@ export default function ChatMessagesPanel({
   const [statusFilter, setStatusFilter] = useState<"all" | "1" | "0">("all");
   const [serviceFilter, setServiceFilter] = useState<string>("all");
   const [filterRoomId, setFilterRoomId] = useState<string>("");
+
+  // Bulk Status Update (PATCH /api/chat/bot/messages/bulk-status)
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
+  const [isBulkUpdating, setIsBulkUpdating] = useState<boolean>(false);
 
   // Inspect message detail modal
   const [inspectMessage, setInspectMessage] = useState<ChatBotMessageItem | null>(null);
@@ -565,6 +574,56 @@ export default function ChatMessagesPanel({
     return messages.filter((m) => (m.service_id || "media_text_to_text") === serviceFilter);
   }, [messages, serviceFilter]);
 
+  // Bulk selection computed states
+  const allVisibleIds = useMemo(() => displayMessages.map((m) => m.id), [displayMessages]);
+  const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedMessageIds.includes(id));
+  const isSomeSelected = selectedMessageIds.length > 0;
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedMessageIds([]);
+    } else {
+      setSelectedMessageIds(allVisibleIds);
+    }
+  };
+
+  const toggleSelectMessage = (id: number) => {
+    setSelectedMessageIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Bulk Status Update (PATCH /api/chat/bot/messages/bulk-status)
+  const handleBulkStatusChange = async (targetStatus: 0 | 1) => {
+    if (selectedMessageIds.length === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      await apiBulkUpdateManageMessageStatus(selectedMessageIds, targetStatus, { isHust });
+      setMessages((prev) =>
+        prev.map((m) =>
+          selectedMessageIds.includes(m.id) ? { ...m, status: targetStatus } : m
+        )
+      );
+      showToast(
+        `Đã cập nhật trạng thái cho ${selectedMessageIds.length} tin nhắn (status: ${targetStatus})!`
+      );
+      setSelectedMessageIds([]);
+    } catch {
+      // Fallback optimistic update
+      setMessages((prev) =>
+        prev.map((m) =>
+          selectedMessageIds.includes(m.id) ? { ...m, status: targetStatus } : m
+        )
+      );
+      showToast(
+        `[Xem trước] Đã cập nhật trạng thái cho ${selectedMessageIds.length} tin nhắn (status: ${targetStatus})!`
+      );
+      setSelectedMessageIds([]);
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Toast Notification */}
@@ -574,6 +633,22 @@ export default function ChatMessagesPanel({
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Top Navigation Back to Manage */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => {
+            if (onBackToManage) onBackToManage();
+            else if (onSelectUser) onSelectUser("");
+          }}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-white hover:bg-purple-50 text-purple-700 px-3.5 py-1.5 text-xs font-bold shadow-2xs transition cursor-pointer"
+          title="Quay lại giao diện Quản Trị AI Chat Bot"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>Quay lại Quản trị Chat Bot</span>
+        </button>
+      </div>
 
       {/* ===================================================================== */}
       {/* 1. API DOCUMENTATION & LIVE STATUS BANNER                             */}
@@ -603,12 +678,12 @@ export default function ChatMessagesPanel({
               </div>
               <p className="text-[11px] text-slate-600">
                 Xử lý bởi <code className="font-mono font-bold text-purple-700">Mess_Controller.php</code> và{" "}
-                <code className="font-mono font-bold text-purple-700">Mess_History.php</code>. Hỗ trợ lọc, phân trang, tra cứu phòng, cập nhật trạng thái (0/1) và ẩn mềm tin nhắn.
+                <code className="font-mono font-bold text-purple-700">Mess_History.php</code>. Hỗ trợ lọc theo user_id, phân trang, tra cứu phòng, cập nhật trạng thái (0/1), cập nhật hàng loạt và ẩn mềm tin nhắn.
               </p>
             </div>
           </div>
 
-          {/* 5 Endpoints quick reference badges */}
+          {/* 6 Endpoints quick reference badges */}
           <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono font-bold">
             <span className="rounded-md bg-white/90 border border-purple-200 px-2 py-1 text-purple-700 shadow-2xs">
               GET /messages
@@ -621,6 +696,9 @@ export default function ChatMessagesPanel({
             </span>
             <span className="rounded-md bg-white/90 border border-amber-200 px-2 py-1 text-amber-700 shadow-2xs">
               PATCH /messages/&#123;id&#125;
+            </span>
+            <span className="rounded-md bg-white/90 border border-purple-300 bg-purple-50 px-2 py-1 text-purple-800 shadow-2xs">
+              PATCH /messages/bulk-status
             </span>
             <span className="rounded-md bg-white/90 border border-rose-200 px-2 py-1 text-rose-700 shadow-2xs">
               DELETE /messages/&#123;id&#125;
@@ -767,25 +845,38 @@ export default function ChatMessagesPanel({
 
         {/* Active User Inbox Filter Banner */}
         {searchQuery && (
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-purple-200 bg-purple-50/80 px-3 py-1.5 text-xs text-purple-900 animate-in fade-in">
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-purple-200 bg-purple-50/80 px-3.5 py-2 text-xs text-purple-900 animate-in fade-in">
             <div className="flex items-center gap-2 min-w-0">
               <MessageSquareText className="h-4 w-4 text-purple-600 shrink-0" />
               <span className="truncate">
-                Đang xem toàn bộ tin nhắn / inbox của tài khoản:{" "}
+                Đang lọc tin nhắn / inbox của tài khoản:{" "}
                 <strong className="font-mono text-purple-950 font-extrabold">{searchQuery}</strong>
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput("");
-                setSearchQuery("");
-              }}
-              className="inline-flex items-center gap-1 rounded-md bg-white border border-purple-200 px-2 py-0.5 text-[10px] font-bold text-purple-700 hover:bg-purple-100 cursor-pointer shadow-2xs shrink-0"
-            >
-              <X className="h-3 w-3" />
-              <span>Bỏ lọc</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {onSelectUser && (
+                <button
+                  type="button"
+                  onClick={() => onSelectUser(searchQuery)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1 text-[11px] font-bold cursor-pointer shadow-2xs"
+                  title="Chuyển sang Quản trị Chat Bot để xem và quản lý tài khoản này"
+                >
+                  <User className="h-3 w-3" />
+                  <span>Quản trị User này</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                }}
+                className="inline-flex items-center gap-1 rounded-lg bg-white border border-purple-200 px-2 py-1 text-[11px] font-bold text-purple-700 hover:bg-purple-100 cursor-pointer shadow-2xs"
+              >
+                <X className="h-3 w-3" />
+                <span>Bỏ lọc</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -892,6 +983,59 @@ export default function ChatMessagesPanel({
             )}
           </div>
         </div>
+
+        {/* Select All on Page & Bulk Actions bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-2.5 text-xs">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 font-bold text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={toggleSelectAll}
+                className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+              />
+              <span>Chọn tất cả trang này ({displayMessages.length} tin)</span>
+            </label>
+            {isSomeSelected && (
+              <span className="text-[11px] text-purple-700 font-bold bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full">
+                Đã chọn {selectedMessageIds.length}
+              </span>
+            )}
+          </div>
+
+          {isSomeSelected && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                disabled={isBulkUpdating}
+                onClick={() => void handleBulkStatusChange(0)}
+                className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-2.5 py-1 text-[11px] transition cursor-pointer shadow-2xs disabled:opacity-50"
+                title="Đặt status = 0 cho các tin nhắn đã chọn (PATCH /messages/bulk-status)"
+              >
+                <EyeOff className="h-3 w-3" />
+                <span>Ẩn hàng loạt (status = 0)</span>
+              </button>
+              <button
+                type="button"
+                disabled={isBulkUpdating}
+                onClick={() => void handleBulkStatusChange(1)}
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 text-[11px] transition cursor-pointer shadow-2xs disabled:opacity-50"
+                title="Đặt status = 1 cho các tin nhắn đã chọn (PATCH /messages/bulk-status)"
+              >
+                <Eye className="h-3 w-3" />
+                <span>Hiện hàng loạt (status = 1)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedMessageIds([])}
+                className="inline-flex items-center gap-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-2 py-1 text-[11px] cursor-pointer"
+              >
+                <X className="h-3 w-3" />
+                <span>Bỏ chọn</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ===================================================================== */}
@@ -936,6 +1080,15 @@ export default function ChatMessagesPanel({
                 {/* Message Header Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 text-xs">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* Checkbox for Bulk Selection */}
+                    <input
+                      type="checkbox"
+                      checked={selectedMessageIds.includes(msg.id)}
+                      onChange={() => toggleSelectMessage(msg.id)}
+                      className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0 mr-1"
+                      title="Chọn tin nhắn để thao tác hàng loạt"
+                    />
+
                     {/* Role Avatar Badge */}
                     <div
                       className={`flex h-6 w-6 items-center justify-center rounded-lg text-white shadow-2xs ${
@@ -958,7 +1111,17 @@ export default function ChatMessagesPanel({
 
                     {/* Room Info */}
                     {(msg.room || msg.id_chat_rooms) && (
-                      <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const rid = msg.room?.id || msg.id_chat_rooms!;
+                          setSelectedRoomId(rid);
+                          setInputRoomId(String(rid));
+                          setViewMode("room");
+                        }}
+                        title="Xem toàn bộ lịch sử tin nhắn của phòng này"
+                        className="rounded-md border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 px-2 py-0.5 text-[10px] font-semibold text-slate-600 flex items-center gap-1 cursor-pointer transition"
+                      >
                         <Layers className="h-3 w-3 text-indigo-500" />
                         <span>Phòng #{msg.room?.id || msg.id_chat_rooms}</span>
                         {msg.room?.title && (
@@ -966,14 +1129,21 @@ export default function ChatMessagesPanel({
                             : {msg.room.title}
                           </span>
                         )}
-                      </span>
+                      </button>
                     )}
 
                     {/* User ID */}
                     {msg.user_id && (
-                      <span className="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.2 text-[10px] font-mono text-slate-600">
-                        {msg.user_id}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onSelectUser && onSelectUser(msg.user_id!)}
+                        title={`Quản trị user ${msg.user_id} trong Quản trị Chat Bot`}
+                        className="rounded-md border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 px-1.5 py-0.2 text-[10px] font-mono text-slate-600 flex items-center gap-1 cursor-pointer transition"
+                      >
+                        <User className="h-2.5 w-2.5 text-slate-400" />
+                        <span>{msg.user_id}</span>
+                        <ExternalLink className="h-2 w-2 text-slate-400" />
+                      </button>
                     )}
 
                     {/* Service Badge */}
@@ -1322,6 +1492,59 @@ export default function ChatMessagesPanel({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* 7. FLOATING BULK STATUS ACTIONS TOOLBAR                                */}
+      {/* ===================================================================== */}
+      {selectedMessageIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/95 text-white px-5 py-3 shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-3 text-xs">
+          <div className="flex items-center gap-2 pr-3 border-r border-slate-700 font-bold">
+            <span className="rounded-full bg-purple-500 text-white px-2 py-0.5 text-[10px]">
+              {selectedMessageIds.length}
+            </span>
+            <span>tin nhắn đã chọn</span>
+          </div>
+
+          <button
+            type="button"
+            disabled={isBulkUpdating}
+            onClick={() => void handleBulkStatusChange(0)}
+            className="flex items-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-1.5 transition cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Ẩn tất cả các tin nhắn đã chọn (status: 0)"
+          >
+            {isBulkUpdating ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <EyeOff className="h-3.5 w-3.5" />
+            )}
+            <span>Ẩn đã chọn (status: 0)</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={isBulkUpdating}
+            onClick={() => void handleBulkStatusChange(1)}
+            className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-3 py-1.5 transition cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Hiện lại tất cả các tin nhắn đã chọn (status: 1)"
+          >
+            {isBulkUpdating ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Eye className="h-3.5 w-3.5" />
+            )}
+            <span>Hiện đã chọn (status: 1)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedMessageIds([])}
+            className="text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer ml-1"
+            title="Bỏ chọn tất cả"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
     </div>

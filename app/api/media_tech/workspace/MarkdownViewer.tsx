@@ -32,6 +32,57 @@ function isMermaidCode(text: string, lang?: string): boolean {
 }
 
 /**
+ * Chuẩn hóa mã Mermaid: xử lý dấu ngoặc nhọn, nháy cong, ký tự đặc biệt trong nhãn node
+ */
+function sanitizeMermaidCode(raw: string): string {
+  let cleaned = (raw || "").trim().replace(/[“”]/g, "'");
+  // Bọc dấu nháy kép cho nhãn có ký tự đặc biệt như {userId}, {roomId}, slash bên trong ngoặc vuông [ ... ]
+  cleaned = cleaned.replace(/\[([^"\]\n]*[\{\}\/][^"\]\n]*)\]/g, '["$1"]');
+  return cleaned;
+}
+
+/**
+ * Kiểm tra xem 1 khối code có nên được hiển thị dưới dạng Markdown (bảng, tiêu đề, danh sách) thay vì khối code thô hay không.
+ */
+function shouldParseAsMarkdown(lang: string, code: string): boolean {
+  const normalizedLang = lang.trim().toLowerCase();
+
+  // Đánh dấu rõ ràng là markdown / table
+  if (["markdown", "md", "table", "tables"].includes(normalizedLang)) {
+    return true;
+  }
+
+  // Các ngôn ngữ lập trình thực sự -> giữ nguyên dạng code block
+  const codeLanguages = new Set([
+    "javascript", "js", "typescript", "ts", "jsx", "tsx",
+    "python", "py", "php", "sql", "bash", "sh", "zsh", "shell",
+    "json", "yaml", "yml", "xml", "css", "scss", "sass", "less",
+    "html", "c", "cpp", "csharp", "cs", "java", "kotlin", "kt",
+    "go", "golang", "rust", "rs", "ruby", "rb", "dockerfile", "makefile"
+  ]);
+
+  if (codeLanguages.has(normalizedLang)) {
+    return false;
+  }
+
+  // Nếu không chỉ định ngôn ngữ hoặc là text, kiểm tra xem có bảng Markdown (|---|) hoặc tiêu đề (##) không
+  const hasMarkdownTable = /(?:^|\n)\s*\|[^\n]+\|\s*\n\s*\|(?:\s*:?-+:?\s*\|)+\s*(?:\n\s*\|[^\n]+\|\s*)+/.test(code);
+  const hasMarkdownHeadings = /(?:^|\n)\s*#{1,6}\s+\S+/.test(code);
+
+  return hasMarkdownTable || (hasMarkdownHeadings && code.includes("\n"));
+}
+
+/**
+ * Bọc các bảng <table> trong wrapper có overflow-x-auto để tương thích mọi kích thước màn hình
+ */
+function enhanceHtmlTables(html: string): string {
+  return html.replace(
+    /(?:<div class="[^"]*markdown-table-wrapper[^"]*">)?\s*(<table>[\s\S]*?<\/table>)\s*(?:<\/div>)?/gi,
+    '<div class="markdown-table-wrapper my-3 overflow-x-auto rounded-lg border border-slate-200/90 shadow-2xs bg-white">$1</div>'
+  );
+}
+
+/**
  * Component render 1 sơ đồ Mermaid đơn lẻ
  */
 function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
@@ -41,6 +92,7 @@ function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+  const [zoom, setZoom] = useState<number>(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,10 +107,50 @@ function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
           securityLevel: "loose",
           theme: "default",
           fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+          themeVariables: {
+            fontSize: "12px",
+            fontFamily: "ui-sans-serif, system-ui, -apple-system, sans-serif",
+          },
+          sequence: {
+            useMaxWidth: true,
+            diagramMarginX: 10,
+            diagramMarginY: 10,
+            actorFontSize: 12,
+            actorFontFamily: "ui-sans-serif, system-ui, sans-serif",
+            actorMargin: 26,
+            width: 110,
+            height: 38,
+            boxMargin: 8,
+            boxTextMargin: 4,
+            noteFontSize: 11,
+            noteMargin: 8,
+            messageFontSize: 12,
+            messageMargin: 24,
+            wrap: true,
+            mirrorActors: false,
+            bottomMarginAdj: 1,
+          },
+          flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true,
+            curve: "basis",
+            nodeSpacing: 30,
+            rankSpacing: 30,
+            padding: 10,
+          },
         });
 
         const safeId = `mermaid-box-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}-${index}`;
-        const result = await mermaid.render(safeId, code.trim());
+        // Dọn dẹp DOM tạm thời nếu còn sót từ lần render trước
+        if (typeof document !== "undefined") {
+          const stale1 = document.getElementById(safeId);
+          if (stale1) stale1.remove();
+          const stale2 = document.getElementById(`d${safeId}`);
+          if (stale2) stale2.remove();
+        }
+
+        const cleanedCode = sanitizeMermaidCode(code);
+        const result = await mermaid.render(safeId, cleanedCode);
         if (!cancelled) {
           setSvgContent(result.svg);
           setLoading(false);
@@ -88,33 +180,63 @@ function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
   };
 
   return (
-    <div className="my-2 rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
-      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-3 py-1.5 text-xs text-slate-500">
+    <div className="my-2.5 rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between border-b border-slate-100 bg-slate-50/90 px-3 py-1.5 text-xs text-slate-500 gap-1.5">
         <div className="flex items-center gap-1.5 font-semibold text-slate-700">
           <Layers className="h-3.5 w-3.5 text-emerald-600" />
           <span>Sơ đồ cấu trúc (Mermaid)</span>
         </div>
-        <button
-          type="button"
-          onClick={handleCopyCode}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-200/70 transition cursor-pointer"
-          title="Sao chép mã Mermaid"
-        >
-          {copied ? (
-            <>
-              <Check className="h-3 w-3 text-emerald-600" />
-              <span className="text-emerald-700 font-semibold">Đã chép</span>
-            </>
-          ) : (
-            <>
-              <Copy className="h-3 w-3 text-slate-500" />
-              <span>Chép mã sơ đồ</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Zoom controls */}
+          <div className="inline-flex items-center rounded-md border border-slate-200 bg-white shadow-2xs p-0.5 text-[10px]">
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.max(0.6, Number((z - 0.15).toFixed(2))))}
+              className="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition cursor-pointer font-bold"
+              title="Thu nhỏ sơ đồ"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="px-1.5 py-0.5 rounded text-slate-700 hover:bg-slate-100 transition cursor-pointer font-semibold font-mono"
+              title="Khôi phục kích thước vừa vặn (100%)"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.min(1.8, Number((z + 0.15).toFixed(2))))}
+              className="px-1.5 py-0.5 rounded text-slate-600 hover:bg-slate-100 transition cursor-pointer font-bold"
+              title="Phóng to sơ đồ"
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCopyCode}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-200/70 transition cursor-pointer"
+            title="Sao chép mã Mermaid"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3 text-emerald-600" />
+                <span className="text-emerald-700 font-semibold">Đã chép</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3 text-slate-500" />
+                <span>Chép mã sơ đồ</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      <div className="p-3 overflow-x-auto flex items-center justify-center min-h-[120px]">
+      <div className="p-3 sm:p-4 overflow-x-auto flex items-center justify-center min-h-[110px] bg-slate-50/30">
         {loading && (
           <div className="flex items-center gap-2 text-xs text-slate-500 py-4">
             <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
@@ -137,7 +259,11 @@ function MermaidDiagramItem({ code, index }: { code: string; index: number }) {
         {!loading && !error && svgContent && (
           <div
             ref={containerRef}
-            className="w-full flex justify-center [&_svg]:max-w-full [&_svg]:h-auto"
+            className="w-full flex justify-center items-center transition-transform duration-150 [&_svg]:max-w-full [&_svg]:h-auto [&_svg]:mx-auto [&_svg]:block"
+            style={{
+              transform: zoom !== 1 ? `scale(${zoom})` : undefined,
+              transformOrigin: "center top",
+            }}
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
         )}
@@ -158,7 +284,7 @@ export default function MarkdownViewer({
   const [viewSubMode, setViewSubMode] = useState<"rendered" | "raw">("rendered");
   const [copiedRaw, setCopiedRaw] = useState<boolean>(false);
 
-  // Tách nội dung thành các phần: Markdown thông thường vs Khối Mermaid
+  // Tách nội dung thành các phần: Markdown thông thường vs Khối Mermaid vs Bảng/Markdown trong fences
   const parsedSections = useMemo(() => {
     if (!content || !content.trim()) return [];
 
@@ -167,8 +293,8 @@ export default function MarkdownViewer({
       return [{ type: "mermaid" as const, code: content.trim(), index: 0 }];
     }
 
-    // Tách các khối ```mermaid ... ```
-    const regex = /```(?:mermaid|flowchart|graph|sequenceDiagram|classDiagram|stateDiagram|erDiagram)?\s*\n([\s\S]*?)```/gi;
+    // Tách các khối ```mermaid ... ``` hoặc ~~~mermaid ... ~~~
+    const regex = /(?:`{3,}|~{3,})([a-zA-Z0-9_-]*)[^\n]*\r?\n([\s\S]*?)\r?\n\s*(?:`{3,}|~{3,})/g;
     const sections: Array<
       | { type: "html"; html: string }
       | { type: "mermaid"; code: string; index: number }
@@ -188,26 +314,26 @@ export default function MarkdownViewer({
 
     while ((match = regex.exec(content)) !== null) {
       const fullMatch = match[0];
-      const codeInside = match[1];
+      const lang = match[1] || "";
+      const codeInside = match[2];
       const matchStart = match.index;
 
       // Phần Markdown trước khối code
       if (matchStart > lastIndex) {
         const textBefore = content.slice(lastIndex, matchStart);
         if (textBefore.trim()) {
-          const html = marked.parse(textBefore, {
+          const parsed = marked.parse(textBefore, {
             renderer,
             gfm: true,
             breaks: true,
           }) as string;
-          sections.push({ type: "html", html });
+          sections.push({ type: "html", html: enhanceHtmlTables(parsed) });
         }
       }
 
       // Kiểm tra xem khối code này có phải là Mermaid không
-      const firstLine = fullMatch.split("\n")[0].toLowerCase();
       const isMermaid =
-        firstLine.includes("mermaid") || isMermaidCode(codeInside);
+        lang.toLowerCase().includes("mermaid") || isMermaidCode(codeInside, lang);
 
       if (isMermaid) {
         sections.push({
@@ -215,14 +341,22 @@ export default function MarkdownViewer({
           code: codeInside,
           index: mermaidCounter++,
         });
-      } else {
-        // Code block thông thường
-        const html = marked.parse(fullMatch, {
+      } else if (shouldParseAsMarkdown(lang, codeInside)) {
+        // Khối markdown chứa bảng hoặc tiêu đề -> render trực quan dạng Markdown/Table
+        const parsed = marked.parse(codeInside, {
           renderer,
           gfm: true,
           breaks: true,
         }) as string;
-        sections.push({ type: "html", html });
+        sections.push({ type: "html", html: enhanceHtmlTables(parsed) });
+      } else {
+        // Code block thông thường
+        const parsed = marked.parse(fullMatch, {
+          renderer,
+          gfm: true,
+          breaks: true,
+        }) as string;
+        sections.push({ type: "html", html: enhanceHtmlTables(parsed) });
       }
 
       lastIndex = matchStart + fullMatch.length;
@@ -232,12 +366,12 @@ export default function MarkdownViewer({
     if (lastIndex < content.length) {
       const remainingText = content.slice(lastIndex);
       if (remainingText.trim()) {
-        const html = marked.parse(remainingText, {
+        const parsed = marked.parse(remainingText, {
           renderer,
           gfm: true,
           breaks: true,
         }) as string;
-        sections.push({ type: "html", html });
+        sections.push({ type: "html", html: enhanceHtmlTables(parsed) });
       }
     }
 
@@ -437,6 +571,10 @@ export default function MarkdownViewer({
               line-height: 1.5;
             }
             /* Table Styling - Beautiful, responsive with borders & headers */
+            .markdown-rendered-view .markdown-table-wrapper {
+              margin: 0.6rem 0;
+              max-width: 100%;
+            }
             .markdown-rendered-view table {
               width: 100%;
               border-collapse: collapse;
