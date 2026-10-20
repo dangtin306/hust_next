@@ -46,8 +46,6 @@ export default function SwaggerClient({
 }: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const defaultServerUrl = getInitialServerUrl(spec);
-  const [serverUrl, setServerUrl] = useState(defaultServerUrl);
-  const [isReady, setIsReady] = useState(false);
 
   const isHustMode =
     isHust ||
@@ -67,6 +65,22 @@ export default function SwaggerClient({
         serverStorageKey === SERVER_URL_STORAGE_KEY)
   );
 
+  const [serverUrl, setServerUrl] = useState(() => {
+    if (typeof document !== "undefined" && hasChatBotApiConfigCookie(isHustMode)) {
+      const activeConfig = getChatBotApiConfig(isHustMode);
+      const targetFromCookie = isLaravelKey
+        ? activeConfig.backend_laravel
+        : isOpenClawKey
+        ? activeConfig.backend_node
+        : "";
+      if (targetFromCookie && targetFromCookie.trim()) {
+        return targetFromCookie.trim().replace(/\/$/, "");
+      }
+    }
+    return defaultServerUrl;
+  });
+  const [isReady, setIsReady] = useState(false);
+
   useEffect(() => {
     containerRef.current?.classList.toggle("swagger-ui-server-only", serverOnly);
   }, [serverOnly, isReady]);
@@ -84,16 +98,18 @@ export default function SwaggerClient({
 
       if (targetFromCookie) {
         const cleanCookieUrl = targetFromCookie.trim().replace(/\/$/, "");
-        if (cleanCookieUrl && cleanCookieUrl !== serverUrl) {
-          setIsReady(false);
-          setServerUrl(cleanCookieUrl);
+        if (cleanCookieUrl) {
+          if (cleanCookieUrl !== serverUrl) {
+            setIsReady(false);
+            setServerUrl(cleanCookieUrl);
+          }
           return;
         }
       }
     }
 
     // 2. Fallback sang localStorage nếu chưa có cookie
-    const rawSavedServer = window.localStorage.getItem(serverStorageKey);
+    const rawSavedServer = typeof window !== "undefined" ? window.localStorage.getItem(serverStorageKey) : null;
     let savedServerUrl = "";
 
     try {
