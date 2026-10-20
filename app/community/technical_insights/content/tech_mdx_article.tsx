@@ -37,18 +37,35 @@ const cssPropertyToReact = (property: string) =>
     ? property
     : property.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
 
+const voidMdxElements = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "param",
+  "source",
+  "track",
+  "wbr",
+]);
+
 const normalizeMdxFragment = (source: string) =>
   source
     .replace(/<!doctype\b[^>]*>/gi, "")
     .replace(/<head\b[^>]*>[\s\S]*?<\/head\s*>/gi, "")
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "")
-    .replace(/<meta\b[^>]*\/?>/gi, "")
+    .replace(/<\/?meta\b[^>]*\/?>/gi, "")
     .replace(/<title\b[^>]*>[\s\S]*?<\/title\s*>/gi, "")
     .replace(/<\/?(?:html|body|article)\b[^>]*>/gi, "")
     .replace(/<br\s*\/?>/gi, "<br />")
-    .replace(/<([A-Za-z][\w:-]*)(\s[^<>]*?)?\/?>/g, (tag) =>
-      tag.replace(/\sstyle=(["'])([\s\S]*?)\1/i, (_match, _quote: string, css: string) => {
+    .replace(/<\/(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)\s*>/gi, "")
+    .replace(/<([A-Za-z][\w:-]*)(\s[^<>]*?)?\/?>/g, (tag, tagName: string) => {
+      const normalizedTag = tag.replace(/\sstyle=(["'])([\s\S]*?)\1/i, (_match, _quote: string, css: string) => {
         const declarations = css
           .split(";")
           .map((declaration) => {
@@ -61,8 +78,14 @@ const normalizeMdxFragment = (source: string) =>
           .filter((declaration): declaration is string => declaration !== null);
 
         return declarations.length > 0 ? ` style={{${declarations.join(",")}}}` : "";
-      }),
-    );
+      });
+
+      if (voidMdxElements.has(tagName.toLowerCase()) && !normalizedTag.endsWith("/>")) {
+        return `${normalizedTag.slice(0, -1).trimEnd()} />`;
+      }
+
+      return normalizedTag;
+    });
 
 const normalizeMdxSource = (source: string) =>
   source
