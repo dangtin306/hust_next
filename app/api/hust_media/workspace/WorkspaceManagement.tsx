@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Briefcase,
   Layers,
@@ -973,20 +973,64 @@ function WorkspaceCardItem({
 }
 
 
+export type WorkspaceProjectValue = "hust" | "media_tech";
+
+const WORKSPACE_LARAVEL_BASES: Record<WorkspaceProjectValue, string> = {
+  hust: "https://laravel.hust.media",
+  media_tech: "https://laravel_mt.hust.media",
+};
+
+function requestWorkspaceApi(
+  project: WorkspaceProjectValue | undefined,
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+): Promise<Response> {
+  const targetBase = project ? WORKSPACE_LARAVEL_BASES[project] : undefined;
+  let requestInput = input;
+
+  if (targetBase && typeof input === "string") {
+    requestInput = input.replace(
+      /^https:\/\/(?:laravel|laravel_mt)\.hust\.media(?=\/)/,
+      targetBase,
+    );
+  }
+
+  const headers = new Headers(init.headers);
+  if (targetBase && typeof requestInput === "string" && requestInput.startsWith("/")) {
+    headers.set("x-laravel-target", targetBase);
+    headers.set("x-laravel-target-strict", "true");
+  }
+
+  return fetch(requestInput, { ...init, headers });
+}
+
+function getWorkspaceProjectLabel(project: WorkspaceProjectValue): string {
+  return project === "hust" ? "Hust" : "Media Tech";
+}
+
 export interface WorkspaceManagementProps {
+  value?: WorkspaceProjectValue;
+  embedded?: boolean;
   initialTab?: "workspaces" | "markdown" | "sessions" | "user-workspaces";
 }
 
 export default function WorkspaceManagement({
+  value,
+  embedded,
   initialTab = "workspaces",
 }: WorkspaceManagementProps = {}) {
+  const project = value ?? "hust";
+  const projectRef = useRef<WorkspaceProjectValue | undefined>(value);
+  projectRef.current = value;
+  const isEmbedded = embedded ?? value !== undefined;
+
   // Navigation tab: 'workspaces' | 'markdown' | 'sessions' | 'user-workspaces'
   const [activeTab, setActiveTab] = useState<"workspaces" | "markdown" | "sessions" | "user-workspaces">(initialTab);
 
   const navigateTab = useCallback(
     (tab: "workspaces" | "markdown" | "sessions" | "user-workspaces") => {
       setActiveTab(tab);
-      if (typeof window !== "undefined") {
+      if (!isEmbedded && typeof window !== "undefined") {
         const targetUri =
           tab === "markdown"
             ? "/next/api/hust/workspace/markdown"
@@ -996,7 +1040,7 @@ export default function WorkspaceManagement({
         }
       }
     },
-    []
+    [isEmbedded]
   );
 
   useEffect(() => {
@@ -1007,7 +1051,7 @@ export default function WorkspaceManagement({
 
   useEffect(() => {
     const handlePopState = () => {
-      if (typeof window === "undefined") return;
+      if (isEmbedded || typeof window === "undefined") return;
       const path = window.location.pathname;
       if (path.includes("/markdown")) {
         setActiveTab("markdown");
@@ -1017,10 +1061,10 @@ export default function WorkspaceManagement({
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [isEmbedded]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (!isEmbedded && typeof window !== "undefined") {
       const path = window.location.pathname;
       if (path.includes("/markdown")) {
         setActiveTab("markdown");
@@ -1028,7 +1072,7 @@ export default function WorkspaceManagement({
         setActiveTab("workspaces");
       }
     }
-  }, []);
+  }, [isEmbedded]);
 
   // --- Markdown State (API /api/workspaces/main/markdown?id={id}) ---
   const [selectedMarkdownWsId, setSelectedMarkdownWsId] = useState<number | null>(null);
@@ -1157,7 +1201,7 @@ export default function WorkspaceManagement({
 
       let json: { data?: unknown; meta?: PaginationMeta };
       try {
-        const res = await fetch(`/next/api/hust/workspaces/main/data?${queryParams.toString()}`, {
+        const res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/main/data?${queryParams.toString()}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
@@ -1169,7 +1213,7 @@ export default function WorkspaceManagement({
         json = await res.json();
       } catch {
         // Fallback trực tiếp tới API Laravel https://laravel.hust.media/api/workspaces/main/data
-        const directRes = await fetch(`https://laravel.hust.media/api/workspaces/main/data?${queryParams.toString()}`, {
+        const directRes = await requestWorkspaceApi(projectRef.current, `https://laravel.hust.media/api/workspaces/main/data?${queryParams.toString()}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
@@ -1243,7 +1287,7 @@ export default function WorkspaceManagement({
       }));
 
       try {
-        let res = await fetch(
+        let res = await requestWorkspaceApi(projectRef.current,
           `/next/api/hust/workspaces/content/markdown/get?id=${targetWsId}&path=${encodeURIComponent(targetPath)}`,
           {
             method: "GET",
@@ -1252,7 +1296,7 @@ export default function WorkspaceManagement({
           }
         );
         if (!res.ok) {
-          res = await fetch(
+          res = await requestWorkspaceApi(projectRef.current,
             `/next/api/hust/workspaces/content/markdown?id=${targetWsId}&path=${encodeURIComponent(targetPath)}`,
             {
               method: "GET",
@@ -1262,7 +1306,7 @@ export default function WorkspaceManagement({
           );
         }
         if (!res.ok) {
-          res = await fetch(
+          res = await requestWorkspaceApi(projectRef.current,
             `https://laravel.hust.media/api/workspaces/content/markdown/get?id=${targetWsId}&path=${encodeURIComponent(targetPath)}`,
             {
               method: "GET",
@@ -1452,7 +1496,7 @@ export default function WorkspaceManagement({
 
       try {
         const encodedPath = encodeURIComponent(fileKey);
-        let res = await fetch(
+        let res = await requestWorkspaceApi(projectRef.current,
           `/next/api/hust/workspaces/content/markdown/edit?id=${targetWsId}&path=${encodedPath}`,
           {
             method: "POST",
@@ -1464,7 +1508,7 @@ export default function WorkspaceManagement({
           }
         );
         if (!res.ok) {
-          res = await fetch(
+          res = await requestWorkspaceApi(projectRef.current,
             `https://laravel.hust.media/api/workspaces/content/markdown/edit?id=${targetWsId}&path=${encodedPath}`,
             {
               method: "POST",
@@ -1521,13 +1565,13 @@ export default function WorkspaceManagement({
           // Parent workspace: Aggregate full markdown tree from all of its children
           const childFetches = await Promise.allSettled(
             parentWs.children.map(async (child) => {
-              let res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
+              let res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
                 method: "GET",
                 headers: { Accept: "application/json" },
                 cache: "no-store",
               });
               if (!res.ok) {
-                res = await fetch(
+                res = await requestWorkspaceApi(projectRef.current,
                   `https://laravel.hust.media/api/workspaces/main/markdown?id=${child.id}`,
                   {
                     method: "GET",
@@ -1584,14 +1628,14 @@ export default function WorkspaceManagement({
         }
 
         // Child workspace: fetch directly from API
-        let res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${id}`, {
+        let res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/main/markdown?id=${id}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
         });
         if (!res.ok) {
           // Fallback trực tiếp Laravel MT API
-          res = await fetch(`https://laravel.hust.media/api/workspaces/main/markdown?id=${id}`, {
+          res = await requestWorkspaceApi(projectRef.current, `https://laravel.hust.media/api/workspaces/main/markdown?id=${id}`, {
             method: "GET",
             headers: { Accept: "application/json" },
             cache: "no-store",
@@ -1640,13 +1684,13 @@ export default function WorkspaceManagement({
           // Parent workspace: Aggregate full markdown tree + content from all child workspaces in parallel
           const childFetches = await Promise.allSettled(
             parentWs.children.map(async (child) => {
-              let res = await fetch(`/next/api/hust/workspaces/content/markdown/full?id=${child.id}`, {
+              let res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/content/markdown/full?id=${child.id}`, {
                 method: "GET",
                 headers: { Accept: "application/json" },
                 cache: "no-store",
               });
               if (!res.ok) {
-                res = await fetch(
+                res = await requestWorkspaceApi(projectRef.current,
                   `https://laravel.hust.media/api/workspaces/content/markdown/full?id=${child.id}`,
                   {
                     method: "GET",
@@ -1655,18 +1699,9 @@ export default function WorkspaceManagement({
                   }
                 );
               }
+
               if (!res.ok) {
-                res = await fetch(
-                  `https://laravel_mt.hust.media/api/workspaces/content/markdown/full?id=${child.id}`,
-                  {
-                    method: "GET",
-                    headers: { Accept: "application/json" },
-                    cache: "no-store",
-                  }
-                );
-              }
-              if (!res.ok) {
-                res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
+                res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/main/markdown?id=${child.id}`, {
                   method: "GET",
                   headers: { Accept: "application/json" },
                   cache: "no-store",
@@ -1718,13 +1753,13 @@ export default function WorkspaceManagement({
         }
 
         // Child workspace: fetch directly from full API
-        let res = await fetch(`/next/api/hust/workspaces/content/markdown/full?id=${id}`, {
+        let res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/content/markdown/full?id=${id}`, {
           method: "GET",
           headers: { Accept: "application/json" },
           cache: "no-store",
         });
         if (!res.ok) {
-          res = await fetch(
+          res = await requestWorkspaceApi(projectRef.current,
             `https://laravel.hust.media/api/workspaces/content/markdown/full?id=${id}`,
             {
               method: "GET",
@@ -1733,18 +1768,9 @@ export default function WorkspaceManagement({
             }
           );
         }
+
         if (!res.ok) {
-          res = await fetch(
-            `https://laravel_mt.hust.media/api/workspaces/content/markdown/full?id=${id}`,
-            {
-              method: "GET",
-              headers: { Accept: "application/json" },
-              cache: "no-store",
-            }
-          );
-        }
-        if (!res.ok) {
-          res = await fetch(`/next/api/hust/workspaces/main/markdown?id=${id}`, {
+          res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/main/markdown?id=${id}`, {
             method: "GET",
             headers: { Accept: "application/json" },
             cache: "no-store",
@@ -1842,7 +1868,7 @@ export default function WorkspaceManagement({
       if (sessionStatusFilter !== "all") queryParams.set("status", sessionStatusFilter);
       queryParams.set("per_page", "50");
 
-      const res = await fetch(`/next/api/hust/workspaces/workspace-sessions?${queryParams.toString()}`, {
+      const res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/workspace-sessions?${queryParams.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -1875,7 +1901,7 @@ export default function WorkspaceManagement({
     setUserWorkspacesError(null);
     try {
       const query = new URLSearchParams({ user_id: normalizedUserId });
-      const res = await fetch(`/next/api/hust/workspaces/user/data?${query.toString()}`, {
+      const res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/user/data?${query.toString()}`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -1898,7 +1924,7 @@ export default function WorkspaceManagement({
     setRoutingSyncing(true);
     setRoutingSyncError(null);
     try {
-      const res = await fetch("/next/api/hust/workspaces/routing/update", {
+      const res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/routing/update", {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -1922,7 +1948,7 @@ export default function WorkspaceManagement({
     setViewingWorkspaceSessions(workspace);
     setSpecificWsLoading(true);
     try {
-      const res = await fetch(`/next/api/hust/workspaces/${workspace.id}/sessions`, {
+      const res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/${workspace.id}/sessions`, {
         method: "GET",
         headers: { Accept: "application/json" },
         cache: "no-store",
@@ -2015,7 +2041,7 @@ export default function WorkspaceManagement({
 
         // Gọi API edit: POST /api/workspaces/main/data
         try {
-          res = await fetch("/next/api/hust/workspaces/main/data", {
+          res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/main/data", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2024,7 +2050,7 @@ export default function WorkspaceManagement({
             body: JSON.stringify(payload),
           });
           if (!res.ok) {
-            res = await fetch("/next/api/hust/workspaces/main/edit", {
+            res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/main/edit", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -2036,7 +2062,7 @@ export default function WorkspaceManagement({
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
         } catch {
           // Fallback gọi trực tiếp tới Laravel API
-          res = await fetch("https://laravel.hust.media/api/workspaces/main/data", {
+          res = await requestWorkspaceApi(projectRef.current, "https://laravel.hust.media/api/workspaces/main/data", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2048,7 +2074,7 @@ export default function WorkspaceManagement({
       } else {
         // Tạo mới: POST /api/workspaces
         try {
-          res = await fetch("/next/api/hust/workspaces/workspaces", {
+          res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/workspaces", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2058,7 +2084,7 @@ export default function WorkspaceManagement({
           });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
         } catch {
-          res = await fetch("https://laravel.hust.media/api/workspaces", {
+          res = await requestWorkspaceApi(projectRef.current, "https://laravel.hust.media/api/workspaces", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2100,7 +2126,7 @@ export default function WorkspaceManagement({
     try {
       let res;
       try {
-        res = await fetch("/next/api/hust/workspaces/main/data", {
+        res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/main/data", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2109,7 +2135,7 @@ export default function WorkspaceManagement({
           body: JSON.stringify({ id: ws.id, status: nextStatus }),
         });
         if (!res.ok) {
-          res = await fetch("/next/api/hust/workspaces/main/edit", {
+          res = await requestWorkspaceApi(projectRef.current, "/next/api/hust/workspaces/main/edit", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -2120,7 +2146,7 @@ export default function WorkspaceManagement({
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch {
-        res = await fetch("https://laravel.hust.media/api/workspaces/main/data", {
+        res = await requestWorkspaceApi(projectRef.current, "https://laravel.hust.media/api/workspaces/main/data", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2150,7 +2176,7 @@ export default function WorkspaceManagement({
     }
 
     try {
-      const res = await fetch(`/next/api/hust/workspaces/${ws.id}`, {
+      const res = await requestWorkspaceApi(projectRef.current, `/next/api/hust/workspaces/${ws.id}`, {
         method: "DELETE",
         headers: { Accept: "application/json" },
       });
@@ -2205,7 +2231,7 @@ export default function WorkspaceManagement({
   const isInitialWorkspaceLoad = wsLoading && workspaces.length === 0;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 pb-16 font-sans">
+    <div className={`${isEmbedded ? "w-full min-w-0" : "mx-auto max-w-7xl"} space-y-5 pb-16 font-sans">
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-purple-200 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl backdrop-blur-md animate-in slide-in-from-bottom-3 duration-200">
@@ -2232,6 +2258,11 @@ export default function WorkspaceManagement({
                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                   work_space_main
                 </span>
+                {isEmbedded && (
+                  <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                    {getWorkspaceProjectLabel(project)}
+                  </span>
+                )}
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                 Hiển thị và quản lý trực tiếp theo định dạng API JSON: mã code, slug, tên workspace, mô tả và số session liên kết.
@@ -2241,6 +2272,7 @@ export default function WorkspaceManagement({
 
           <div className="flex flex-wrap items-center gap-2">
             <a
+              hidden={isEmbedded}
               href="/next/api/hust/list/laravel"
               className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs font-bold text-blue-700 shadow-xs transition hover:bg-blue-100 hover:border-blue-300 active:scale-95 cursor-pointer"
               title="Quay về trang Danh mục API & Swagger Laravel"

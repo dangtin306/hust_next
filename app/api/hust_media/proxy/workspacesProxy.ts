@@ -13,6 +13,7 @@ async function proxy(
 ) {
   const { path } = await context.params;
   const customTarget = request.headers.get("x-laravel-target");
+  const strictTarget = request.headers.get("x-laravel-target-strict") === "true";
 
   let cookieLaravel: string | undefined;
   const cookieVal =
@@ -79,7 +80,7 @@ async function proxy(
       });
     } catch (fetchErr) {
       const defaultBase = normalizeLaravelApiBaseUrl(HUST_LARAVEL_BASE);
-      if (customTarget && upstreamBase !== defaultBase) {
+      if (!strictTarget && customTarget && upstreamBase !== defaultBase) {
         const fallbackUrl = `${defaultBase}/${subPath}${search}`;
         try {
           upstream = await fetch(fallbackUrl, {
