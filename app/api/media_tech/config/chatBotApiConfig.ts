@@ -14,6 +14,15 @@ export function getChatBotApiCookieName(isHust = false): string {
 
 export const DEFAULT_PRESETS = {
   mt: {
+    company: {
+      id: "company",
+      label: "Server Công Ty (192.168.0.189)",
+      description: "Chạy trên máy chủ nội bộ công ty cổng 8817 / 8818",
+      config: {
+        backend_laravel: "http://192.168.0.189:8817",
+        backend_node: "http://192.168.0.189:8818",
+      },
+    },
     production: {
       id: "production",
       label: "Production Cloud (Media Tech)",
@@ -120,12 +129,14 @@ export function hasChatBotApiConfigCookie(isHust = false): boolean {
 }
 
 /**
- * Đọc cấu hình hiện tại từ cookie, hoặc trả về cấu hình mặc định (Production).
+ * Đọc cấu hình hiện tại từ cookie, hoặc trả về cấu hình mặc định:
+ * - MT: Server Công Ty (192.168.0.189)
+ * - Hust: Production Cloud
  */
 export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
   const fallback = isHust
     ? DEFAULT_PRESETS.hust.production.config
-    : DEFAULT_PRESETS.mt.production.config;
+    : DEFAULT_PRESETS.mt.company.config;
 
   if (typeof document === "undefined") return fallback;
 

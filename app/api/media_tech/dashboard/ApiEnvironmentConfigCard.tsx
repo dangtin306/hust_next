@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   Server,
+  Building2,
   Check,
   Copy,
   Settings,
@@ -10,9 +11,7 @@ import {
   Laptop,
   Cloud,
   X,
-  ExternalLink,
   RotateCcw,
-  AlertCircle,
   CheckCircle2,
   Sliders,
 } from "lucide-react";
@@ -32,7 +31,6 @@ type Props = {
 };
 
 export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
-  const presets = isHust ? DEFAULT_PRESETS.hust : DEFAULT_PRESETS.mt;
   const cookieName = getChatBotApiCookieName(isHust);
 
   const [mounted, setMounted] = useState(false);
@@ -79,16 +77,29 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
     }, 3200);
   };
 
-  const handleApplyPreset = (target: "production" | "localhost") => {
-    const presetConfig = presets[target].config;
+  const handleApplyPreset = (target: "company" | "production" | "localhost") => {
+    let presetConfig: ChatBotApiConfig;
+    let label = "";
+
+    if (!isHust && target === "company") {
+      presetConfig = DEFAULT_PRESETS.mt.company.config;
+      label = DEFAULT_PRESETS.mt.company.label;
+    } else if (target === "production") {
+      presetConfig = isHust
+        ? DEFAULT_PRESETS.hust.production.config
+        : DEFAULT_PRESETS.mt.production.config;
+      label = "Production Cloud";
+    } else {
+      presetConfig = isHust
+        ? DEFAULT_PRESETS.hust.localhost.config
+        : DEFAULT_PRESETS.mt.localhost.config;
+      label = "Localhost Dev";
+    }
+
     saveChatBotApiConfig(presetConfig, isHust);
     setIsModalOpen(false);
     setIsCustomMode(false);
-    showToast(
-      `Đã chuyển sang môi trường ${
-        target === "production" ? "Production Cloud" : "Localhost Dev"
-      }!`
-    );
+    showToast(`Đã chuyển sang môi trường ${label}!`);
   };
 
   const handleSaveCustom = (e: React.FormEvent) => {
@@ -97,10 +108,13 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
       alert("Vui lòng nhập đầy đủ cả URL Backend Laravel và Backend Node.js");
       return;
     }
-    saveChatBotApiConfig({
-      backend_laravel: customLaravel.trim(),
-      backend_node: customNode.trim(),
-    }, isHust);
+    saveChatBotApiConfig(
+      {
+        backend_laravel: customLaravel.trim(),
+        backend_node: customNode.trim(),
+      },
+      isHust
+    );
     setIsModalOpen(false);
     setIsCustomMode(false);
     showToast("Đã lưu cấu hình API tùy chỉnh thành công!");
@@ -125,16 +139,29 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
     }
   };
 
-  // Determine current active preset label
+  // Check matching presets
+  const isCompanyMatch =
+    !isHust &&
+    config.backend_laravel === DEFAULT_PRESETS.mt.company.config.backend_laravel &&
+    config.backend_node === DEFAULT_PRESETS.mt.company.config.backend_node;
+
+  const prodConfig = isHust
+    ? DEFAULT_PRESETS.hust.production.config
+    : DEFAULT_PRESETS.mt.production.config;
   const isProductionMatch =
-    config.backend_laravel === presets.production.config.backend_laravel &&
-    config.backend_node === presets.production.config.backend_node;
+    config.backend_laravel === prodConfig.backend_laravel &&
+    config.backend_node === prodConfig.backend_node;
 
+  const localConfig = isHust
+    ? DEFAULT_PRESETS.hust.localhost.config
+    : DEFAULT_PRESETS.mt.localhost.config;
   const isLocalhostMatch =
-    config.backend_laravel === presets.localhost.config.backend_laravel &&
-    config.backend_node === presets.localhost.config.backend_node;
+    config.backend_laravel === localConfig.backend_laravel &&
+    config.backend_node === localConfig.backend_node;
 
-  const currentEnvLabel = isProductionMatch
+  const currentEnvLabel = isCompanyMatch
+    ? "Server Công Ty (189)"
+    : isProductionMatch
     ? "Production Cloud"
     : isLocalhostMatch
     ? "Localhost Dev"
@@ -158,7 +185,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
         </div>
       )}
 
-      {/* CASE 1: Chưa có cookie url_api_chat_bot -> Hiện khung lựa chọn nổi bật */}
+      {/* CASE 1: Chưa có cookie -> Hiện khung lựa chọn nổi bật */}
       {!isConfigured ? (
         <section
           aria-label="Cấu hình API kết nối ban đầu"
@@ -192,37 +219,92 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
           </div>
 
           {/* Cards Lựa chọn nhanh */}
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {/* Card Production */}
+          <div
+            className={`mt-5 grid gap-4 ${
+              !isHust ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2"
+            }`}
+          >
+            {/* Card 1: Server Công Ty (CHỈ CÓ TRÊN MEDIA TECH) */}
+            {!isHust && (
+              <div className="flex flex-col justify-between rounded-xl border-2 border-indigo-300 bg-white p-4 shadow-xs transition hover:border-indigo-500 hover:shadow-md relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
+                  Ưu tiên
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                      <Building2 className="h-3.5 w-3.5" />
+                      Server Công Ty (Khuyên dùng)
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-800">
+                    {DEFAULT_PRESETS.mt.company.label}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {DEFAULT_PRESETS.mt.company.description}
+                  </p>
+
+                  <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-2.5 text-xs font-mono">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Laravel:</span>
+                      <span className="font-semibold text-indigo-700 truncate max-w-[210px]">
+                        {DEFAULT_PRESETS.mt.company.config.backend_laravel}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Node Gateway:</span>
+                      <span className="font-semibold text-indigo-700 truncate max-w-[210px]">
+                        {DEFAULT_PRESETS.mt.company.config.backend_node}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset("company")}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-[0.98]"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Chọn Server Công Ty (1-Click)
+                </button>
+              </div>
+            )}
+
+            {/* Card Production Cloud */}
             <div className="flex flex-col justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-xs transition hover:border-blue-400 hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                     <Cloud className="h-3.5 w-3.5" />
-                    Production Cloud (Khuyên dùng)
+                    Production Cloud {isHust ? "(Khuyên dùng)" : ""}
                   </span>
                   <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                     Sẵn sàng
                   </span>
                 </div>
                 <h3 className="mt-2 text-sm font-semibold text-slate-800">
-                  {presets.production.label}
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.production.label
+                    : DEFAULT_PRESETS.mt.production.label}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500">
-                  {presets.production.description}
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.production.description
+                    : DEFAULT_PRESETS.mt.production.description}
                 </p>
 
                 <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-2.5 text-xs font-mono">
                   <div className="flex items-center justify-between text-slate-600">
                     <span className="text-slate-400">Laravel:</span>
-                    <span className="font-medium text-blue-700 truncate max-w-[240px]">
-                      {presets.production.config.backend_laravel}
+                    <span className="font-medium text-blue-700 truncate max-w-[210px]">
+                      {prodConfig.backend_laravel}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span className="text-slate-400">Node Gateway:</span>
-                    <span className="font-medium text-indigo-700 truncate max-w-[240px]">
-                      {presets.production.config.backend_node}
+                    <span className="font-medium text-indigo-700 truncate max-w-[210px]">
+                      {prodConfig.backend_node}
                     </span>
                   </div>
                 </div>
@@ -233,7 +315,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 onClick={() => handleApplyPreset("production")}
                 className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
               >
-                <Sparkles className="h-4 w-4" />
+                <Cloud className="h-4 w-4" />
                 Chọn Production Cloud (1-Click)
               </button>
             </div>
@@ -251,23 +333,27 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   </span>
                 </div>
                 <h3 className="mt-2 text-sm font-semibold text-slate-800">
-                  {presets.localhost.label}
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.localhost.label
+                    : DEFAULT_PRESETS.mt.localhost.label}
                 </h3>
                 <p className="mt-1 text-xs text-slate-500">
-                  {presets.localhost.description}
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.localhost.description
+                    : DEFAULT_PRESETS.mt.localhost.description}
                 </p>
 
                 <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-2.5 text-xs font-mono">
                   <div className="flex items-center justify-between text-slate-600">
                     <span className="text-slate-400">Laravel:</span>
-                    <span className="font-medium text-emerald-700 truncate max-w-[240px]">
-                      {presets.localhost.config.backend_laravel}
+                    <span className="font-medium text-emerald-700 truncate max-w-[210px]">
+                      {localConfig.backend_laravel}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-slate-600">
                     <span className="text-slate-400">Node Gateway:</span>
-                    <span className="font-medium text-teal-700 truncate max-w-[240px]">
-                      {presets.localhost.config.backend_node}
+                    <span className="font-medium text-teal-700 truncate max-w-[210px]">
+                      {localConfig.backend_node}
                     </span>
                   </div>
                 </div>
@@ -307,7 +393,11 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                     type="url"
                     value={customLaravel}
                     onChange={(e) => setCustomLaravel(e.target.value)}
-                    placeholder="https://laravel_mt.hust.media hoặc http://127.0.0.1:8000"
+                    placeholder={
+                      !isHust
+                        ? "http://192.168.0.189:8817 hoặc https://laravel_mt.hust.media"
+                        : "https://laravel.hust.media hoặc http://127.0.0.1:8000"
+                    }
                     required
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
@@ -320,7 +410,11 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                     type="url"
                     value={customNode}
                     onChange={(e) => setCustomNode(e.target.value)}
-                    placeholder="https://node_md.hust.media hoặc http://localhost:2999"
+                    placeholder={
+                      !isHust
+                        ? "http://192.168.0.189:8818 hoặc https://node_md.hust.media"
+                        : "https://node_md.hust.media hoặc http://localhost:2999"
+                    }
                     required
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
@@ -356,14 +450,18 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 </span>
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold shadow-2xs ${
-                    isProductionMatch
+                    isCompanyMatch
+                      ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
+                      : isProductionMatch
                       ? "bg-blue-100 text-blue-800 border border-blue-200"
                       : isLocalhostMatch
                       ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                       : "bg-purple-100 text-purple-800 border border-purple-200"
                   }`}
                 >
-                  {isProductionMatch ? (
+                  {isCompanyMatch ? (
+                    <Building2 className="h-3 w-3" />
+                  ) : isProductionMatch ? (
                     <Cloud className="h-3 w-3" />
                   ) : isLocalhostMatch ? (
                     <Laptop className="h-3 w-3" />
@@ -424,18 +522,20 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Quick 1-click toggle */}
-              {isProductionMatch ? (
+              {/* Quick toggle chips */}
+              {!isHust && !isCompanyMatch && (
                 <button
                   type="button"
-                  onClick={() => handleApplyPreset("localhost")}
-                  className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98]"
-                  title="Chuyển ngay sang Localhost Dev"
+                  onClick={() => handleApplyPreset("company")}
+                  className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:scale-[0.98]"
+                  title="Chuyển ngay sang Server Công Ty (189)"
                 >
-                  <Laptop className="h-3.5 w-3.5" />
-                  Đổi sang Localhost
+                  <Building2 className="h-3.5 w-3.5" />
+                  Đổi sang Server Công Ty
                 </button>
-              ) : isLocalhostMatch ? (
+              )}
+
+              {!isProductionMatch && (
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("production")}
@@ -445,7 +545,19 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   <Cloud className="h-3.5 w-3.5" />
                   Đổi sang Production
                 </button>
-              ) : null}
+              )}
+
+              {!isLocalhostMatch && (
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset("localhost")}
+                  className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98]"
+                  title="Chuyển ngay sang Localhost Dev"
+                >
+                  <Laptop className="h-3.5 w-3.5" />
+                  Đổi sang Localhost
+                </button>
+              )}
 
               {/* Edit / Config Modal Button */}
               <button
@@ -502,7 +614,39 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
             </p>
 
             {/* Presets in Modal */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div
+              className={`mt-4 grid gap-3 ${
+                !isHust ? "sm:grid-cols-3" : "sm:grid-cols-2"
+              }`}
+            >
+              {/* Option 1: Server Công Ty (CHỈ MEDIA TECH) */}
+              {!isHust && (
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset("company")}
+                  className={`flex flex-col text-left rounded-xl border p-3.5 transition ${
+                    isCompanyMatch
+                      ? "border-indigo-500 bg-indigo-50/70 ring-1 ring-indigo-500"
+                      : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-800">
+                      🏢 Server Công Ty (189)
+                    </span>
+                    {isCompanyMatch && (
+                      <Check className="h-4 w-4 text-indigo-600" />
+                    )}
+                  </div>
+                  <span className="mt-1 text-[11px] text-slate-500">
+                    Nội bộ 8817 / 8818
+                  </span>
+                  <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
+                    192.168.0.189
+                  </span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => handleApplyPreset("production")}
@@ -521,10 +665,12 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   )}
                 </div>
                 <span className="mt-1 text-[11px] text-slate-500">
-                  {presets.production.description}
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.production.description
+                    : DEFAULT_PRESETS.mt.production.description}
                 </span>
                 <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
-                  Laravel: {presets.production.config.backend_laravel}
+                  {prodConfig.backend_laravel}
                 </span>
               </button>
 
@@ -546,10 +692,10 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   )}
                 </div>
                 <span className="mt-1 text-[11px] text-slate-500">
-                  {presets.localhost.description}
+                  Cá nhân nội bộ
                 </span>
                 <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
-                  Laravel: {presets.localhost.config.backend_laravel}
+                  {localConfig.backend_laravel}
                 </span>
               </button>
             </div>
