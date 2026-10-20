@@ -113,7 +113,7 @@ export type WorkspaceMarkdownData = {
   id: number;
   workspace_name: string;
   work_space_code: string;
-  parent_workspace_code?: string;
+  parent_workspace_code?: string | null;
   relative_path: string;
   markdown_count: number;
   tree: MarkdownTreeItem[];
@@ -2278,7 +2278,7 @@ export default function WorkspaceManagement({
             {activeTab === "workspaces" && (
               <button
                 type="button"
-                onClick={handleOpenCreateModal}
+                onClick={() => handleOpenCreateModal()}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-purple-500/20 transition hover:from-purple-700 hover:to-indigo-700 active:scale-95 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
@@ -2610,7 +2610,7 @@ export default function WorkspaceManagement({
                     {!wsError && (
                       <button
                         type="button"
-                        onClick={handleOpenCreateModal}
+                        onClick={() => handleOpenCreateModal()}
                         className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-purple-700 transition cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
