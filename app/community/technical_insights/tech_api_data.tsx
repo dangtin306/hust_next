@@ -219,7 +219,6 @@ const getCategoryPosts = async (
 ) => {
   if (!category) return [] as TechnicalInsightRelatedPost[];
 
-  
   try {
     const response = await fetch(
       "https://hust.media/api/content/get_content.php",
