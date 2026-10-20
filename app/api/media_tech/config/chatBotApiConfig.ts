@@ -134,8 +134,15 @@ export function hasChatBotApiConfigCookie(isHust = false): boolean {
  * - Hust: IP Public Dev (laravel.hust.media)
  */
 export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
+  const isSpecialDomain =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "118.70.169.219" ||
+      window.location.host.includes("118.70.169.219"));
+
   const fallback = isHust
-    ? DEFAULT_PRESETS.hust.production.config
+    ? isSpecialDomain
+      ? DEFAULT_PRESETS.mt.company.config
+      : DEFAULT_PRESETS.hust.production.config
     : DEFAULT_PRESETS.mt.company.config;
 
   if (typeof document === "undefined") return fallback;

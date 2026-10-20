@@ -18,6 +18,7 @@ import {
   Users,
   Home,
   ArrowRight,
+  Workflow,
 } from "lucide-react";
 
 type EndpointItem = {
@@ -323,7 +324,7 @@ export default function LaravelServicePanel() {
   const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "workspace" | "manage" | "messages" | "chat">("home");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
-  const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
+  const diagramPath = isHust ? "/next/api/hust/n8n/laravel" : "/next/api/mt/n8n/laravel";
 
   useEffect(() => {
     const ensurePanelSlot = () => {
@@ -438,11 +439,11 @@ export default function LaravelServicePanel() {
               <span>Laravel REST API {isHust ? "(Hust)" : "(Media Tech)"}</span>
             </div>
             <a
-              href={workspacePath}
-              className="inline-flex items-center gap-1 rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition cursor-pointer"
+              href={diagramPath}
+              className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
             >
-              <Briefcase className="h-3 w-3" />
-              <span>Mở Quản trị Workspace</span>
+              <Workflow className="h-3 w-3" />
+              <span>Mở sơ đồ cấu trúc</span>
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
           </div>

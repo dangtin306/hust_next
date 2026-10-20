@@ -15,6 +15,7 @@ import {
   Terminal,
   Home,
   ArrowRight,
+  Workflow,
 } from "lucide-react";
 
 export type ServiceCategory = {
@@ -211,7 +212,7 @@ export default function ServiceCategoryPanel({ hidden = false }: ServiceCategory
   const isHust = pathname.includes("/api/hust");
 
   const chatPath = isHust ? "/next/api/hust/chat/home" : "/next/api/mt/chat/home";
-  const workspacePath = isHust ? "/next/api/hust/workspace/home" : "/next/api/mt/workspace/home";
+  const diagramPath = isHust ? "/next/api/hust/n8n/laravel" : "/next/api/mt/n8n/node_js";
   const devPath = isHust ? "/next/api/hust/dev/home" : "/next/api/mt/dev/home";
 
   const getDisplayPath = (relPath: string) => (isHust ? relPath : `/openclaw${relPath}`);
@@ -413,11 +414,11 @@ export default function ServiceCategoryPanel({ hidden = false }: ServiceCategory
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
             <a
-              href={workspacePath}
-              className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-bold text-blue-700 hover:bg-blue-100 transition cursor-pointer"
+              href={diagramPath}
+              className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
             >
-              <Briefcase className="h-3 w-3" />
-              <span>Mở Quản trị Workspace</span>
+              <Workflow className="h-3 w-3" />
+              <span>Mở sơ đồ cấu trúc</span>
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
             <a

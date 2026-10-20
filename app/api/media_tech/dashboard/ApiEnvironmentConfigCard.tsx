@@ -33,6 +33,11 @@ type Props = {
 export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const cookieName = getChatBotApiCookieName(isHust);
 
+  const isSpecialDomain =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "118.70.169.219" ||
+      window.location.host.includes("118.70.169.219"));
+
   const [mounted, setMounted] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
   const [config, setConfig] = useState<ChatBotApiConfig>(() =>
@@ -81,7 +86,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
     let presetConfig: ChatBotApiConfig;
     let label = "";
 
-    if (!isHust && target === "company") {
+    if ((!isHust || isSpecialDomain) && target === "company") {
       presetConfig = DEFAULT_PRESETS.mt.company.config;
       label = DEFAULT_PRESETS.mt.company.label;
     } else if (target === "production") {
@@ -141,7 +146,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
   // Check matching presets
   const isCompanyMatch =
-    !isHust &&
+    (!isHust || isSpecialDomain) &&
     config.backend_laravel === DEFAULT_PRESETS.mt.company.config.backend_laravel &&
     config.backend_node === DEFAULT_PRESETS.mt.company.config.backend_node;
 
@@ -221,11 +226,15 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
           {/* Cards Lựa chọn nhanh */}
           <div
             className={`mt-5 grid gap-4 ${
-              !isHust ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-2"
+              isSpecialDomain
+                ? "md:grid-cols-2"
+                : !isHust
+                ? "md:grid-cols-2 lg:grid-cols-3"
+                : "md:grid-cols-2"
             }`}
           >
-            {/* Card 1: Server Công Ty (CHỈ CÓ TRÊN MEDIA TECH) */}
-            {!isHust && (
+            {/* Card 1: Server Công Ty (CHỈ CÓ TRÊN MEDIA TECH HOẶC DOMAIN 118.70.169.219) */}
+            {(!isHust || isSpecialDomain) && (
               <div className="flex flex-col justify-between rounded-xl border-2 border-indigo-300 bg-white p-4 shadow-xs transition hover:border-indigo-500 hover:shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">
                   Ưu tiên
@@ -271,54 +280,56 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
               </div>
             )}
 
-            {/* Card Production Cloud */}
-            <div className="flex flex-col justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-xs transition hover:border-blue-400 hover:shadow-md">
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                    <Cloud className="h-3.5 w-3.5" />
-                    IP Public Dev {isHust ? "(Khuyên dùng)" : ""}
-                  </span>
-                  <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    Sẵn sàng
-                  </span>
-                </div>
-                <h3 className="mt-2 text-sm font-semibold text-slate-800">
-                  {isHust
-                    ? DEFAULT_PRESETS.hust.production.label
-                    : DEFAULT_PRESETS.mt.production.label}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  {isHust
-                    ? DEFAULT_PRESETS.hust.production.description
-                    : DEFAULT_PRESETS.mt.production.description}
-                </p>
+            {/* Card Production Cloud (ẨN KHI Ở DOMAIN 118.70.169.219) */}
+            {!isSpecialDomain && (
+              <div className="flex flex-col justify-between rounded-xl border border-blue-200 bg-white p-4 shadow-xs transition hover:border-blue-400 hover:shadow-md">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                      <Cloud className="h-3.5 w-3.5" />
+                      IP Public Dev {isHust ? "(Khuyên dùng)" : ""}
+                    </span>
+                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      Sẵn sàng
+                    </span>
+                  </div>
+                  <h3 className="mt-2 text-sm font-semibold text-slate-800">
+                    {isHust
+                      ? DEFAULT_PRESETS.hust.production.label
+                      : DEFAULT_PRESETS.mt.production.label}
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {isHust
+                      ? DEFAULT_PRESETS.hust.production.description
+                      : DEFAULT_PRESETS.mt.production.description}
+                  </p>
 
-                <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-2.5 text-xs font-mono">
-                  <div className="flex items-center justify-between text-slate-600">
-                    <span className="text-slate-400">Laravel:</span>
-                    <span className="font-medium text-blue-700 truncate max-w-[210px]">
-                      {prodConfig.backend_laravel}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-600">
-                    <span className="text-slate-400">Node Gateway:</span>
-                    <span className="font-medium text-indigo-700 truncate max-w-[210px]">
-                      {prodConfig.backend_node}
-                    </span>
+                  <div className="mt-3 space-y-1.5 rounded-lg bg-slate-50 p-2.5 text-xs font-mono">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Laravel:</span>
+                      <span className="font-medium text-blue-700 truncate max-w-[210px]">
+                        {prodConfig.backend_laravel}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400">Node Gateway:</span>
+                      <span className="font-medium text-indigo-700 truncate max-w-[210px]">
+                        {prodConfig.backend_node}
+                      </span>
+                    </div>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset("production")}
+                  className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
+                >
+                  <Cloud className="h-4 w-4" />
+                  Chọn IP Public Dev (1-Click)
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => handleApplyPreset("production")}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
-              >
-                <Cloud className="h-4 w-4" />
-                Chọn IP Public Dev (1-Click)
-              </button>
-            </div>
+            )}
 
             {/* Card Localhost */}
             <div className="flex flex-col justify-between rounded-xl border border-emerald-200 bg-white p-4 shadow-xs transition hover:border-emerald-400 hover:shadow-md">
@@ -579,11 +590,15 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
             {/* Presets in Modal */}
             <div
               className={`mt-4 grid gap-3 ${
-                !isHust ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                isSpecialDomain
+                  ? "sm:grid-cols-2"
+                  : !isHust
+                  ? "sm:grid-cols-3"
+                  : "sm:grid-cols-2"
               }`}
             >
-              {/* Option 1: Server Công Ty (CHỈ MEDIA TECH) */}
-              {!isHust && (
+              {/* Option 1: Server Công Ty (CHỈ MEDIA TECH HOẶC DOMAIN 118.70.169.219) */}
+              {(!isHust || isSpecialDomain) && (
                 <button
                   type="button"
                   onClick={() => handleApplyPreset("company")}
@@ -610,32 +625,35 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => handleApplyPreset("production")}
-                className={`flex flex-col text-left rounded-xl border p-3.5 transition ${
-                  isProductionMatch
-                    ? "border-blue-500 bg-blue-50/70 ring-1 ring-blue-500"
-                    : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-800">
-                    🌐 IP Public Dev
+              {/* Option 2: IP Public Dev (ẨN KHI Ở DOMAIN 118.70.169.219) */}
+              {!isSpecialDomain && (
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset("production")}
+                  className={`flex flex-col text-left rounded-xl border p-3.5 transition ${
+                    isProductionMatch
+                      ? "border-blue-500 bg-blue-50/70 ring-1 ring-blue-500"
+                      : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-blue-800">
+                      🌐 IP Public Dev
+                    </span>
+                    {isProductionMatch && (
+                      <Check className="h-4 w-4 text-blue-600" />
+                    )}
+                  </div>
+                  <span className="mt-1 text-[11px] text-slate-500">
+                    {isHust
+                      ? DEFAULT_PRESETS.hust.production.description
+                      : DEFAULT_PRESETS.mt.production.description}
                   </span>
-                  {isProductionMatch && (
-                    <Check className="h-4 w-4 text-blue-600" />
-                  )}
-                </div>
-                <span className="mt-1 text-[11px] text-slate-500">
-                  {isHust
-                    ? DEFAULT_PRESETS.hust.production.description
-                    : DEFAULT_PRESETS.mt.production.description}
-                </span>
-                <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
-                  {prodConfig.backend_laravel}
-                </span>
-              </button>
+                  <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
+                    {prodConfig.backend_laravel}
+                  </span>
+                </button>
+              )}
 
               <button
                 type="button"
