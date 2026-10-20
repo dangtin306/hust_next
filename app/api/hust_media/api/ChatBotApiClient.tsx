@@ -92,26 +92,35 @@ function FormattedBubbleContent({ text }: { text: string }) {
     setTimeout(() => setCopiedCodeIndex(null), 2000);
   };
 
+  const rawText = (text || "").trim();
+  if (!rawText) return null;
+
   // Split by markdown code fences
-  const parts = text.split(/(```[\s\S]*?```)/g);
+  const parts = rawText.split(/(```[\s\S]*?```)/g);
 
   return (
-    <div className="space-y-2 text-sm leading-relaxed sm:text-[15px]">
+    <div className="space-y-1.5 text-sm leading-relaxed sm:text-[15px]">
       {parts.map((part, index) => {
-        if (part.startsWith("```") && part.endsWith("```")) {
-          const lines = part.slice(3, -3).trim().split("\n");
-          let language = "text";
-          let codeContent = part.slice(3, -3).trim();
+        if (!part) return null;
 
-          if (lines.length > 0 && lines[0].trim().match(/^[a-zA-Z0-9_-]+$/)) {
-            language = lines[0].trim();
-            codeContent = lines.slice(1).join("\n");
+        if (part.startsWith("```") && part.endsWith("```")) {
+          const raw = part.slice(3, -3);
+          const firstNewline = raw.indexOf("\n");
+          let language = "text";
+          let codeContent = raw.trim();
+
+          if (firstNewline !== -1) {
+            const firstLine = raw.slice(0, firstNewline).trim();
+            if (firstLine && /^[a-zA-Z0-9_#-]+$/.test(firstLine)) {
+              language = firstLine;
+              codeContent = raw.slice(firstNewline + 1).replace(/^\n+|\n+$/g, "");
+            }
           }
 
           return (
             <div
               key={index}
-              className="my-2.5 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 text-slate-100 shadow-md"
+              className="my-1.5 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 text-slate-100 shadow-md"
             >
               <div className="flex items-center justify-between border-b border-slate-800 bg-slate-800/80 px-3 py-1.5 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5 font-mono">
@@ -141,14 +150,37 @@ function FormattedBubbleContent({ text }: { text: string }) {
           );
         }
 
-        // Normal paragraph formatting with bold support
+        // Clean up redundant outer newlines between blocks
+        const trimmedPart = part.replace(/^\n+/, "").replace(/\n+$/, "");
+        if (!trimmedPart) return null;
+
+        // Normalize 3+ newlines to max 2 newlines (single paragraph gap)
+        const normalized = trimmedPart.replace(/\n{3,}/g, "\n\n");
+        const lines = normalized.split("\n");
+
+        let prevWasEmpty = false;
+
         return (
           <div key={index} className="whitespace-pre-wrap break-words">
-            {part.split("\n").map((line, lIdx) => {
+            {lines.map((line, lIdx) => {
+              const isEmpty = line.trim() === "";
+              if (isEmpty) {
+                if (prevWasEmpty) return null;
+                prevWasEmpty = true;
+                return (
+                  <span
+                    key={lIdx}
+                    className="block h-2 sm:h-2.5"
+                    aria-hidden="true"
+                  />
+                );
+              }
+              prevWasEmpty = false;
+
               // Simple bold parse
               const boldParts = line.split(/(\*\*.*?\*\*)/g);
               return (
-                <span key={lIdx} className="block min-h-[1.2em]">
+                <span key={lIdx} className="block">
                   {boldParts.map((sub, sIdx) => {
                     if (sub.startsWith("**") && sub.endsWith("**")) {
                       return (

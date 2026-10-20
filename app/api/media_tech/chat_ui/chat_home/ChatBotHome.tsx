@@ -31,10 +31,12 @@ interface ChatBotHomeProps {
 
 export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   const router = useRouter();
-  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "manage" | "test" | "public">("all");
 
-  // Client-side Link routing prefix (Next.js automatically adds basePath /next)
+  // Canonical Link routing variables (Next.js automatically adds basePath /next when using <Link>)
   const linkPrefix = isHust ? "/api/hust" : "/api/mt";
   const chatManageLink = `${linkPrefix}/chat/manage`;
   const chatMessagesLink = `${linkPrefix}/chat/messages`;
@@ -44,22 +46,44 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   const apiListLink = `${linkPrefix}/list/home`;
   const workflowLink = isHust ? `${linkPrefix}/workflow` : `${linkPrefix}/n8n/home`;
 
-  // Display & copy URI (includes basePath /next)
-  const displayPrefix = isHust ? "/next/api/hust" : "/next/api/mt";
-  const chatManageUrl = `${displayPrefix}/chat/manage`;
-  const chatMessagesUrl = `${displayPrefix}/chat/messages`;
-  const chatTestUrl = `${displayPrefix}/chat/test`;
-  const chatPublicUrl = `${displayPrefix}/chat/public`;
+  // Single source of truth: derive display path (with /next basePath) from the Link variable
+  const getDisplayPath = (link: string) => (link.startsWith("/next") ? link : `/next${link}`);
+
+  // Derive absolute URL (with origin) from the Link variable for reliable sharing
+  const getFullUrl = (link: string) => {
+    const path = getDisplayPath(link);
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  };
 
   const brandName = isHust ? "Hust Media AI" : "Media Tech AI";
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (link: string, key: string, label: string) => {
+    const fullUrl = getFullUrl(link);
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(text);
-      setCopiedText(text);
-      setTimeout(() => setCopiedText(null), 2000);
+      void navigator.clipboard.writeText(fullUrl);
+      setCopiedKey(key);
+      setToastMessage(fullUrl);
+
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = setTimeout(() => {
+        setCopiedKey(null);
+        setToastMessage(null);
+      }, 2500);
     }
   };
+
+  React.useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full max-w-7xl xl:max-w-[1400px] mx-auto space-y-4 sm:space-y-4.5 pb-8">
@@ -190,18 +214,22 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
               <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-xs">
                 <span className="text-[11px] text-slate-500 font-medium shrink-0">Đường dẫn:</span>
                 <code className="font-mono text-[11px] text-indigo-700 font-semibold truncate flex-1">
-                  {chatManageUrl}
+                  {getDisplayPath(chatManageLink)}
                 </code>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCopy(chatManageUrl);
+                    handleCopy(chatManageLink, "manage", "Quản Trị Chat Bot");
                   }}
-                  className="flex items-center gap-1 rounded-md border border-slate-200/90 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 px-2 py-0.5 text-slate-500 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium"
+                  className={`flex items-center gap-1 rounded-md border px-2 py-0.5 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium ${
+                    copiedKey === "manage"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold"
+                      : "border-slate-200/90 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-500"
+                  }`}
                   title="Sao chép URI"
                 >
-                  {copiedText === chatManageUrl ? (
+                  {copiedKey === "manage" ? (
                     <>
                       <Check className="h-3 w-3 text-emerald-600" />
                       <span className="font-bold text-emerald-600">Đã chép</span>
@@ -247,13 +275,27 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopy(typeof window !== "undefined" ? `${window.location.origin}${chatManageUrl}` : chatManageUrl);
+                  handleCopy(chatManageLink, "manage", "Quản Trị Chat Bot");
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 transition-all cursor-pointer shadow-2xs"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  copiedKey === "manage"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold shadow-emerald-500/10"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                }`}
+                title="Sao chép toàn bộ liên kết để chia sẻ"
               >
-                <Share2 className="h-3.5 w-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Sao chép Link</span>
-                <span className="sm:hidden">Share</span>
+                {copiedKey === "manage" ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Đã chép Link!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="hidden sm:inline">Sao chép Link</span>
+                    <span className="sm:hidden">Share</span>
+                  </>
+                )}
               </button>
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -326,18 +368,22 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
               <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-xs">
                 <span className="text-[11px] text-slate-500 font-medium shrink-0">Đường dẫn:</span>
                 <code className="font-mono text-[11px] text-blue-700 font-semibold truncate flex-1">
-                  {chatTestUrl}
+                  {getDisplayPath(chatTestLink)}
                 </code>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCopy(chatTestUrl);
+                    handleCopy(chatTestLink, "test", "Chat Test");
                   }}
-                  className="flex items-center gap-1 rounded-md border border-slate-200/90 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 px-2 py-0.5 text-slate-500 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium"
+                  className={`flex items-center gap-1 rounded-md border px-2 py-0.5 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium ${
+                    copiedKey === "test"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold"
+                      : "border-slate-200/90 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 text-slate-500"
+                  }`}
                   title="Sao chép URI"
                 >
-                  {copiedText === chatTestUrl ? (
+                  {copiedKey === "test" ? (
                     <>
                       <Check className="h-3 w-3 text-emerald-600" />
                       <span className="font-bold text-emerald-600">Đã chép</span>
@@ -383,13 +429,27 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopy(typeof window !== "undefined" ? `${window.location.origin}${chatTestUrl}` : chatTestUrl);
+                  handleCopy(chatTestLink, "test", "Chat Test");
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 transition-all cursor-pointer shadow-2xs"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  copiedKey === "test"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold shadow-emerald-500/10"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                }`}
+                title="Sao chép toàn bộ liên kết để chia sẻ"
               >
-                <Share2 className="h-3.5 w-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Sao chép Link</span>
-                <span className="sm:hidden">Share</span>
+                {copiedKey === "test" ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Đã chép Link!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="hidden sm:inline">Sao chép Link</span>
+                    <span className="sm:hidden">Share</span>
+                  </>
+                )}
               </button>
 
               <Link
@@ -451,18 +511,22 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
               <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 text-xs">
                 <span className="text-[11px] text-slate-500 font-medium shrink-0">Đường dẫn:</span>
                 <code className="font-mono text-[11px] text-emerald-700 font-semibold truncate flex-1">
-                  {chatPublicUrl}
+                  {getDisplayPath(chatPublicLink)}
                 </code>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCopy(chatPublicUrl);
+                    handleCopy(chatPublicLink, "public", "Chat Public");
                   }}
-                  className="flex items-center gap-1 rounded-md border border-slate-200/90 bg-white hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 px-2 py-0.5 text-slate-500 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium"
+                  className={`flex items-center gap-1 rounded-md border px-2 py-0.5 transition cursor-pointer shrink-0 shadow-2xs text-[10px] font-medium ${
+                    copiedKey === "public"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold"
+                      : "border-slate-200/90 bg-white hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-slate-500"
+                  }`}
                   title="Sao chép URI"
                 >
-                  {copiedText === chatPublicUrl ? (
+                  {copiedKey === "public" ? (
                     <>
                       <Check className="h-3 w-3 text-emerald-600" />
                       <span className="font-bold text-emerald-600">Đã chép</span>
@@ -508,13 +572,27 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopy(typeof window !== "undefined" ? `${window.location.origin}${chatPublicUrl}` : chatPublicUrl);
+                  handleCopy(chatPublicLink, "public", "Chat Public");
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 transition-all cursor-pointer shadow-2xs"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  copiedKey === "public"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold shadow-emerald-500/10"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                }`}
+                title="Sao chép toàn bộ liên kết để chia sẻ"
               >
-                <Share2 className="h-3.5 w-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Sao chép Link</span>
-                <span className="sm:hidden">Share</span>
+                {copiedKey === "public" ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Đã chép Link!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="hidden sm:inline">Sao chép Link</span>
+                    <span className="sm:hidden">Share</span>
+                  </>
+                )}
               </button>
 
               <Link
@@ -575,6 +653,35 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* FLOATING TOAST NOTIFICATION (Khi sao chép link thành công)                 */}
+      {/* ========================================================================= */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-200/90 bg-white px-4 py-3 text-slate-800 shadow-[0_10px_30px_rgba(16,185,129,0.2)] backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 max-w-[90vw] sm:max-w-md"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xs">
+            <Check className="h-4.5 w-4.5 stroke-[2.5]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-emerald-700">Đã sao chép link thành công!</p>
+            <p className="font-mono text-[11px] text-slate-600 truncate mt-0.5 select-all">
+              {toastMessage}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-1 text-slate-400 hover:text-slate-600 text-xs px-1.5 py-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

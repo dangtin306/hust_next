@@ -51,10 +51,11 @@ export function FormattedMessageContent({
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const parts = text.split(/(```[\s\S]*?```)/g);
+  const rawText = (text || "").trim();
+  if (!rawText) return null;
 
   if (serviceId === "media_spell_check") {
-    const corrections = parseSpellCorrections(text);
+    const corrections = parseSpellCorrections(rawText);
     if (corrections) {
       return (
         <div className="w-full min-w-0 space-y-3">
@@ -89,23 +90,31 @@ export function FormattedMessageContent({
     }
   }
 
-  return (
-    <div className="space-y-2 text-sm leading-relaxed sm:text-[15px]">
-      {parts.map((part, index) => {
-        if (part.startsWith("```") && part.endsWith("```")) {
-          const lines = part.slice(3, -3).trim().split("\n");
-          let language = "code";
-          let codeContent = part.slice(3, -3).trim();
+  const parts = rawText.split(/(```[\s\S]*?```)/g);
 
-          if (lines.length > 0 && lines[0].trim().match(/^[a-zA-Z0-9_-]+$/)) {
-            language = lines[0].trim();
-            codeContent = lines.slice(1).join("\n");
+  return (
+    <div className="space-y-1.5 text-sm leading-relaxed sm:text-[15px]">
+      {parts.map((part, index) => {
+        if (!part) return null;
+
+        if (part.startsWith("```") && part.endsWith("```")) {
+          const raw = part.slice(3, -3);
+          const firstNewline = raw.indexOf("\n");
+          let language = "code";
+          let codeContent = raw.trim();
+
+          if (firstNewline !== -1) {
+            const firstLine = raw.slice(0, firstNewline).trim();
+            if (firstLine && /^[a-zA-Z0-9_#-]+$/.test(firstLine)) {
+              language = firstLine;
+              codeContent = raw.slice(firstNewline + 1).replace(/^\n+|\n+$/g, "");
+            }
           }
 
           return (
             <div
               key={index}
-              className="my-2.5 overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1117] text-slate-100 shadow-md"
+              className="my-1.5 overflow-hidden rounded-xl border border-slate-800/80 bg-[#0d1117] text-slate-100 shadow-md"
             >
               <div className="flex items-center justify-between border-b border-slate-800/80 bg-[#161b22] px-3.5 py-1.5 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5 font-mono text-[11px] font-semibold tracking-wide text-purple-300">
@@ -135,12 +144,36 @@ export function FormattedMessageContent({
           );
         }
 
+        // Clean up redundant outer newlines between blocks
+        const trimmedPart = part.replace(/^\n+/, "").replace(/\n+$/, "");
+        if (!trimmedPart) return null;
+
+        // Normalize 3+ newlines to max 2 newlines (single paragraph gap)
+        const normalized = trimmedPart.replace(/\n{3,}/g, "\n\n");
+        const lines = normalized.split("\n");
+
+        let prevWasEmpty = false;
+
         return (
           <div key={index} className="whitespace-pre-wrap break-words leading-relaxed">
-            {part.split("\n").map((line, lIdx) => {
+            {lines.map((line, lIdx) => {
+              const isEmpty = line.trim() === "";
+              if (isEmpty) {
+                if (prevWasEmpty) return null;
+                prevWasEmpty = true;
+                return (
+                  <span
+                    key={lIdx}
+                    className="block h-2 sm:h-2.5"
+                    aria-hidden="true"
+                  />
+                );
+              }
+              prevWasEmpty = false;
+
               const boldParts = line.split(/(\*\*.*?\*\*)/g);
               return (
-                <span key={lIdx} className="block min-h-[1.25em]">
+                <span key={lIdx} className="block">
                   {boldParts.map((sub, sIdx) => {
                     if (sub.startsWith("**") && sub.endsWith("**")) {
                       return (
@@ -1259,7 +1292,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
                             )}
                           </>
                         ) : (
-                          <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                          <div className="whitespace-pre-wrap break-words">{msg.text.trim()}</div>
                         )}
                       </div>
 
