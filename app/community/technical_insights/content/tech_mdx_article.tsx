@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MDXRemote } from "next-mdx-remote/rsc";
+import { compileMDX } from "next-mdx-remote/rsc";
 import { type CSSProperties, type ReactNode } from "react";
 import { DocsMdxPre } from "@/app/community/docs/[slug]/DocsCodeBlock";
 
@@ -31,6 +31,57 @@ const slugifyHeading = (input: string) =>
 
 const escapeMdxPlaceholders = (source: string) =>
   source.replace(/<([A-Z][A-Z0-9_]+)>/g, "&lt;$1&gt;");
+
+const cssPropertyToReact = (property: string) =>
+  property.startsWith("--")
+    ? property
+    : property.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase());
+
+const normalizeMdxFragment = (source: string) =>
+  source
+    .replace(/<!doctype\b[^>]*>/gi, "")
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head\s*>/gi, "")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, "")
+    .replace(/<meta\b[^>]*\/?>/gi, "")
+    .replace(/<title\b[^>]*>[\s\S]*?<\/title\s*>/gi, "")
+    .replace(/<\/?(?:html|body|article)\b[^>]*>/gi, "")
+    .replace(/<br\s*\/?>/gi, "<br />")
+    .replace(/<([A-Za-z][\w:-]*)(\s[^<>]*?)?\/?>/g, (tag) =>
+      tag.replace(/\sstyle=(["'])([\s\S]*?)\1/i, (_match, _quote: string, css: string) => {
+        const declarations = css
+          .split(";")
+          .map((declaration) => {
+            const separator = declaration.indexOf(":");
+            if (separator < 1) return null;
+            const property = cssPropertyToReact(declaration.slice(0, separator).trim());
+            const value = declaration.slice(separator + 1).trim();
+            return property && value ? `${JSON.stringify(property)}:${JSON.stringify(value)}` : null;
+          })
+          .filter((declaration): declaration is string => declaration !== null);
+
+        return declarations.length > 0 ? ` style={{${declarations.join(",")}}}` : "";
+      }),
+    );
+
+const normalizeMdxSource = (source: string) =>
+  source
+    .split(/(```[\s\S]*?(?:```|$))/g)
+    .map((part) => (part.startsWith("```") ? part : normalizeMdxFragment(part)))
+    .join("");
+
+const plainTextFallback = (source: string) =>
+  source
+    .replace(/```[^\n]*\n([\s\S]*?)```/g, "$1")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|li|h[1-6]|section|article)\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s?/gm, "")
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, "• ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
 export type TechClosingNotes = { readerValue: string; conclusion: string } | null;
 
@@ -92,10 +143,28 @@ const mdxComponents: Record<string, any> = {
   ),
 };
 
-export default function TechMdxArticle({ source }: { source: string }) {
+export default async function TechMdxArticle({ source, uri }: { source: string; uri: string }) {
+  const normalizedSource = normalizeMdxSource(source);
+  let content: ReactNode;
+
+  try {
+    ({ content } = await compileMDX({
+      source: escapeMdxPlaceholders(normalizedSource),
+      components: mdxComponents,
+    }));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.warn(`[technical_insights] MDX compilation failed for "${uri}"; showing plain text fallback. ${reason}`);
+    content = (
+      <div className="whitespace-pre-wrap break-words text-slate-700">
+        {plainTextFallback(normalizedSource)}
+      </div>
+    );
+  }
+
   return (
     <div className="prose max-w-none prose-headings:text-slate-900 prose-p:text-[15px] prose-p:leading-[1.62] prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-[15px] prose-li:leading-[1.62] prose-li:text-slate-700 prose-a:text-blue-700 prose-h2:text-[1.28rem] prose-h3:text-[1.06rem] prose-h2:mt-5 prose-h2:mb-2 prose-h3:mt-5 prose-h3:mb-2 prose-hr:my-2 prose-pre:my-1.5 prose-pre:py-0.5 prose-pre:px-3 prose-img:my-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-code:text-[12px] prose-code:text-pink-700 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none [&>*:last-child]:!mb-0 [&>h2:first-of-type]:!mt-0 [&>h2]:lg:pl-2 [&>h2~p]:lg:pl-2 [&>h2~ul]:lg:pl-2 [&>h2~ol]:lg:pl-2 [&>h2~pre]:lg:pl-2 [&>h2~hr]:lg:pl-2 [&>h2~div]:lg:pl-2">
-      <MDXRemote source={escapeMdxPlaceholders(source)} components={mdxComponents} />
+      {content}
     </div>
   );
 }

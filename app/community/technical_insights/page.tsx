@@ -77,5 +77,5 @@ export default async function TechnicalInsightPage({ searchParams }: PageProps) 
   if (!post) notFound();
 
   const { mainSource, closingNotes } = splitClosingNotes(post.mdxSource);
-  return <TechHome initialPost={post} initialLang={lang} mdxArticle={<TechMdxArticle source={mainSource} />} closingNotes={closingNotes} />;
+  return <TechHome initialPost={post} initialLang={lang} mdxArticle={<TechMdxArticle source={mainSource} uri={post.uri} />} closingNotes={closingNotes} />;
 }
