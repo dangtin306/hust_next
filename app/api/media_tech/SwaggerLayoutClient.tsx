@@ -29,7 +29,8 @@ export default function SwaggerLayoutClient({
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
   const isHeyGen = pathname.includes("/heygen");
-  const isMedia = pathname.includes("/media") || isHeyGen;
+  const isMediaRoute = /(?:^|\/)(?:media|media_home|media_ui)(?:\/|$)/.test(pathname);
+  const isMedia = isMediaRoute || isHeyGen;
   const isDev = pathname.includes("/dev/home") || pathname.includes("/dev_home") || pathname.endsWith("/dev");
   const isWorkspace = pathname.includes("/workspace");
   const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
