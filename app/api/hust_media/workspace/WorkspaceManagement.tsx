@@ -2231,7 +2231,7 @@ export default function WorkspaceManagement({
   const isInitialWorkspaceLoad = wsLoading && workspaces.length === 0;
 
   return (
-    <div className={`${isEmbedded ? "w-full min-w-0" : "mx-auto max-w-7xl"} space-y-5 pb-16 font-sans">
+    <div className={`${isEmbedded ? "w-full min-w-0" : "mx-auto max-w-7xl"} space-y-5 pb-16 font-sans`}>
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-2xl border border-purple-200 bg-white/95 px-4 py-3 text-sm font-semibold text-slate-800 shadow-xl backdrop-blur-md animate-in slide-in-from-bottom-3 duration-200">
