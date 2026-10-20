@@ -378,16 +378,19 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ImageGenerationRequest'
-            example:
-              user_id: 69
-              model: openai/gpt-image-2
-              prompt: Một con mèo bên biển
-              n: 1
-              size: 1024x1024
-              aspectRatio: 1:1
-              quality: medium
-              style: Hoạt hình
-              tone: vui tươi
+            examples:
+              textToImage:
+                summary: Tạo ảnh từ mô tả
+                value:
+                  user_id: 69
+                  model: openai/gpt-image-2
+                  prompt: Một con mèo bên biển
+                  n: 1
+                  size: 1024x1024
+                  aspectRatio: 1:1
+                  quality: medium
+                  style: Hoạt hình
+                  tone: vui tươi
       responses:
         '200':
           description: Image response hoàn tất
