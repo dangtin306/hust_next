@@ -288,6 +288,10 @@
         "source": "/api/openclaw/:path*",
         "destination": "/api/media_tech/openclaw/gateway/:path*"
       },
+      "workspaceMainData": {
+        "source": "/api/workspaces/main/data",
+        "destination": "/api/media_tech/workspaces/main/data"
+      },
       "workspaces": {
         "source": "/api/workspaces/:path*",
         "destination": "/api/media_tech/workspaces/:path*"
