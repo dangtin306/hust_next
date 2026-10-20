@@ -422,6 +422,14 @@
         "source": "/api/mt/workspace",
         "destination": "/api/media_tech/workspace"
       },
+      "workspacesMainData": {
+        "source": "/api/mt/workspaces/main/data",
+        "destination": "/api/media_tech/workspaces/main/data"
+      },
+      "workspaces": {
+        "source": "/api/mt/workspaces/:path*",
+        "destination": "/api/media_tech/workspaces/:path*"
+      },
       "devHome": {
         "source": "/api/mt/dev/home",
         "destination": "/api/media_tech/dev_home"
