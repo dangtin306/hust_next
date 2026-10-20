@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import "swagger-ui-dist/swagger-ui.css";
+import {
+  CHAT_BOT_API_CHANGE_EVENT,
+  getChatBotApiConfig,
+  hasChatBotApiConfigCookie,
+  type ChatBotApiConfig,
+} from "./config/chatBotApiConfig";
 
 type SwaggerClientProps = {
   spec: Record<string, unknown>;
@@ -11,6 +17,7 @@ type SwaggerClientProps = {
   className?: string;
   compact?: boolean;
   serverStorageKey?: string;
+  isHust?: boolean;
 };
 
 export const OPENCLAW_SERVER_URL_STORAGE_KEY = "openclaw_main_swagger_server_url_v2";
@@ -35,17 +42,57 @@ export default function SwaggerClient({
   className = "",
   compact = false,
   serverStorageKey = SERVER_URL_STORAGE_KEY,
+  isHust = false,
 }: SwaggerClientProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const defaultServerUrl = getInitialServerUrl(spec);
   const [serverUrl, setServerUrl] = useState(defaultServerUrl);
   const [isReady, setIsReady] = useState(false);
 
+  const isHustMode =
+    isHust ||
+    (typeof window !== "undefined" && window.location.pathname.includes("/hust"));
+
+  const isLaravelKey = Boolean(
+    serverStorageKey &&
+      (/laravel/i.test(serverStorageKey) ||
+        serverStorageKey === "laravel_swagger_server_url_v2" ||
+        serverStorageKey === "hust_laravel_server_url_v1")
+  );
+
+  const isOpenClawKey = Boolean(
+    serverStorageKey &&
+      (/openclaw/i.test(serverStorageKey) ||
+        serverStorageKey === OPENCLAW_SERVER_URL_STORAGE_KEY ||
+        serverStorageKey === SERVER_URL_STORAGE_KEY)
+  );
+
   useEffect(() => {
     containerRef.current?.classList.toggle("swagger-ui-server-only", serverOnly);
   }, [serverOnly, isReady]);
 
+  // Load server URL prioritizing the centralized url_api_chat_bot cookie
   useEffect(() => {
+    // 1. Kiểm tra cookie url_api_chat_bot trước
+    if (typeof document !== "undefined" && hasChatBotApiConfigCookie()) {
+      const activeConfig = getChatBotApiConfig(isHustMode);
+      const targetFromCookie = isLaravelKey
+        ? activeConfig.backend_laravel
+        : isOpenClawKey
+        ? activeConfig.backend_node
+        : "";
+
+      if (targetFromCookie) {
+        const cleanCookieUrl = targetFromCookie.trim().replace(/\/$/, "");
+        if (cleanCookieUrl && cleanCookieUrl !== serverUrl) {
+          setIsReady(false);
+          setServerUrl(cleanCookieUrl);
+          return;
+        }
+      }
+    }
+
+    // 2. Fallback sang localStorage nếu chưa có cookie
     const rawSavedServer = window.localStorage.getItem(serverStorageKey);
     let savedServerUrl = "";
 
@@ -74,8 +121,44 @@ export default function SwaggerClient({
       setIsReady(false);
       setServerUrl(nextServerUrl);
     }
-  }, [defaultServerUrl, serverStorageKey, serverUrl]);
+  }, [
+    defaultServerUrl,
+    isHustMode,
+    isLaravelKey,
+    isOpenClawKey,
+    serverStorageKey,
+    serverUrl,
+  ]);
 
+  // Lắng nghe sự kiện đổi cấu hình API tập trung từ Home (url-api-chat-bot-change)
+  useEffect(() => {
+    const handleGlobalConfigChange = (event: Event) => {
+      const detail = (event as CustomEvent<ChatBotApiConfig | null>).detail;
+      if (!detail) return;
+      const nextUrl = isLaravelKey
+        ? detail.backend_laravel?.trim().replace(/\/$/, "")
+        : isOpenClawKey
+        ? detail.backend_node?.trim().replace(/\/$/, "")
+        : "";
+
+      if (nextUrl && nextUrl !== serverUrl) {
+        setIsReady(false);
+        setServerUrl(nextUrl);
+      }
+    };
+
+    window.addEventListener(
+      CHAT_BOT_API_CHANGE_EVENT,
+      handleGlobalConfigChange
+    );
+    return () =>
+      window.removeEventListener(
+        CHAT_BOT_API_CHANGE_EVENT,
+        handleGlobalConfigChange
+      );
+  }, [isLaravelKey, isOpenClawKey, serverUrl]);
+
+  // Hỗ trợ sự kiện cũ nếu còn phát sinh
   useEffect(() => {
     const handleServerUrlChange = (event: Event) => {
       const detail = (event as CustomEvent<{ key?: string; url?: string }>).detail;
@@ -87,7 +170,8 @@ export default function SwaggerClient({
     };
 
     window.addEventListener(SERVER_URL_CHANGE_EVENT, handleServerUrlChange);
-    return () => window.removeEventListener(SERVER_URL_CHANGE_EVENT, handleServerUrlChange);
+    return () =>
+      window.removeEventListener(SERVER_URL_CHANGE_EVENT, handleServerUrlChange);
   }, [serverStorageKey]);
 
   useEffect(() => {
@@ -114,7 +198,7 @@ export default function SwaggerClient({
         servers: [
           {
             url: serverUrl,
-            description: "Configured OpenClaw Codex gateway",
+            description: "Configured API Gateway",
           },
         ],
       };
@@ -129,108 +213,60 @@ export default function SwaggerClient({
         displayRequestDuration: true,
         onComplete: () => {
           if (spec.components && typeof spec.components === "object") {
-            ui?.preauthorizeApiKey?.("BearerAuth", "media_tech");
+            ui?.preauthorizeApiKey?.("BearerAuth", isHustMode ? "hust_media" : "media_tech");
           }
         },
       });
 
-      const installApiUrlEditor = (serverControls: Element | null) => {
+      // Hiển thị huy hiệu liên kết điều chỉnh server tại Home (thay cho popover sửa cục bộ)
+      const installServerHomeBadge = (serverControls: Element | null) => {
         if (!(serverControls instanceof HTMLElement)) return;
-        if (serverControls.querySelector(".openclaw-api-url-editor")) return;
+        if (serverControls.querySelector(".swagger-server-home-link")) return;
 
         serverControls.style.position = "relative";
-        serverControls.style.zIndex = "1000";
-        serverControls.style.overflow = "visible";
         serverControls.style.display = "flex";
-        serverControls.style.alignItems = "flex-end";
+        serverControls.style.alignItems = "center";
         serverControls.style.justifyContent = "space-between";
-        serverControls.style.gap = "24px";
+        serverControls.style.gap = "16px";
         serverControls.style.boxSizing = "border-box";
         serverControls.style.width = "100%";
-        serverControls.style.paddingRight = "28px";
+        serverControls.style.paddingRight = "16px";
 
-        const editor = document.createElement("div");
-        editor.className = "openclaw-api-url-editor";
-        editor.style.position = "relative";
-        editor.style.zIndex = "1001";
-        editor.style.flexShrink = "0";
-        editor.style.marginRight = "4px";
+        const badgeWrapper = document.createElement("div");
+        badgeWrapper.className = "swagger-server-home-link";
+        badgeWrapper.style.display = "flex";
+        badgeWrapper.style.alignItems = "center";
+        badgeWrapper.style.gap = "8px";
+        badgeWrapper.style.flexShrink = "0";
 
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "btn authorize__btn";
-        button.textContent = "Edit API URL";
+        const homeLink = document.createElement("a");
+        homeLink.href = isHustMode ? "/next/api/hust/home" : "/next/api/mt/home";
+        homeLink.innerHTML = "⚙️ Đổi server tại Home";
+        homeLink.title =
+          "Cấu hình máy chủ chung qua cookie url_api_chat_bot tại Trang chủ";
+        homeLink.style.display = "inline-flex";
+        homeLink.style.alignItems = "center";
+        homeLink.style.gap = "4px";
+        homeLink.style.padding = "5px 12px";
+        homeLink.style.fontSize = "12px";
+        homeLink.style.fontWeight = "600";
+        homeLink.style.color = "#1d4ed8";
+        homeLink.style.backgroundColor = "#eff6ff";
+        homeLink.style.border = "1px solid #bfdbfe";
+        homeLink.style.borderRadius = "8px";
+        homeLink.style.textDecoration = "none";
+        homeLink.style.cursor = "pointer";
+        homeLink.style.transition = "all 0.15s ease";
 
-        const popover = document.createElement("div");
-        popover.hidden = true;
-        popover.style.position = "absolute";
-        popover.style.right = "0";
-        popover.style.top = "calc(100% + 8px)";
-        popover.style.zIndex = "1002";
-        popover.style.width = "360px";
-        popover.style.padding = "16px";
-        popover.style.background = "#fff";
-        popover.style.border = "1px solid #d8dee9";
-        popover.style.borderRadius = "4px";
-        popover.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.16)";
-
-        const label = document.createElement("label");
-        label.textContent = "API URL";
-        label.style.display = "block";
-        label.style.fontWeight = "600";
-        label.style.marginBottom = "8px";
-
-        const input = document.createElement("input");
-        input.type = "url";
-        input.value = serverUrl;
-        input.placeholder = "http://127.0.0.1:8818";
-        input.style.width = "100%";
-        input.style.padding = "8px 10px";
-        input.style.border = "1px solid #aaa";
-        input.style.borderRadius = "3px";
-        input.style.fontFamily = "monospace";
-
-        const applyButton = document.createElement("button");
-        applyButton.type = "button";
-        applyButton.className = "btn authorize__btn";
-        applyButton.textContent = "Apply";
-        applyButton.style.marginTop = "10px";
-
-        const apply = () => {
-          const nextUrl = input.value.trim().replace(/\/$/, "");
-          if (!nextUrl) return;
-          const currentUrl = serverUrl.trim().replace(/\/$/, "");
-          if (nextUrl === currentUrl) {
-            popover.hidden = true;
-            return;
-          }
-          window.localStorage.setItem(
-            serverStorageKey,
-            JSON.stringify({ url: nextUrl, savedAt: Date.now() }),
-          );
-          window.dispatchEvent(
-            new CustomEvent(SERVER_URL_CHANGE_EVENT, {
-              detail: { key: serverStorageKey, url: nextUrl },
-            }),
-          );
-          popover.hidden = true;
-          setIsReady(false);
-          setServerUrl(nextUrl);
+        homeLink.onmouseenter = () => {
+          homeLink.style.backgroundColor = "#dbeafe";
+        };
+        homeLink.onmouseleave = () => {
+          homeLink.style.backgroundColor = "#eff6ff";
         };
 
-        button.addEventListener("click", () => {
-          popover.hidden = !popover.hidden;
-          if (!popover.hidden) input.focus();
-        });
-        applyButton.addEventListener("click", apply);
-        input.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") apply();
-        });
-
-        label.appendChild(input);
-        popover.append(label, applyButton);
-        editor.append(button, popover);
-        serverControls.appendChild(editor);
+        badgeWrapper.appendChild(homeLink);
+        serverControls.appendChild(badgeWrapper);
       };
 
       const moveServerControlsToTop = () => {
@@ -256,7 +292,7 @@ export default function SwaggerClient({
         if (swaggerRoot && serverControls && swaggerRoot.firstElementChild !== serverControls) {
           swaggerRoot.prepend(serverControls);
         }
-        installApiUrlEditor(serverControls ?? null);
+        installServerHomeBadge(serverControls ?? null);
 
         if (hideEmptySpecNotice && swaggerRoot) {
           const hideNotice = () => {
@@ -275,7 +311,6 @@ export default function SwaggerClient({
           hideNotice();
           window.requestAnimationFrame(hideNotice);
         }
-
       };
 
       moveServerControlsToTop();
@@ -342,7 +377,7 @@ export default function SwaggerClient({
       disposed = true;
       ui?.destroy?.();
     };
-  }, [compact, hideEmptySpecNotice, serverStorageKey, serverUrl, spec]);
+  }, [compact, hideEmptySpecNotice, isHustMode, serverStorageKey, serverUrl, spec]);
 
   return (
     <>

@@ -1,5 +1,6 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
+import ApiEnvironmentConfigCard from "./ApiEnvironmentConfigCard";
 import {
   ArrowUpRight,
   Bot,
@@ -96,6 +97,9 @@ export default function SwaggerHomePage() {
           Chọn tài liệu API để xem hoặc thử endpoint, hoặc mở giao diện chat của Hust Media.
         </p>
       </header>
+
+      {/* Cấu hình môi trường API tập trung qua cookie url_api_chat_bot */}
+      <ApiEnvironmentConfigCard isHust={true} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {destinations.map(({ label, title, description, href, action, Icon, tone }) => (

@@ -15,7 +15,29 @@ async function proxy(
 ) {
   const { path } = await context.params;
   const customTarget = request.headers.get("x-laravel-target");
-  const upstreamBase = normalizeLaravelApiBaseUrl(customTarget || LARAVEL_BASE);
+
+  let cookieLaravel: string | undefined;
+  const cookieVal = request.cookies.get("url_api_chat_bot")?.value;
+  if (cookieVal) {
+    try {
+      const decoded = cookieVal.startsWith("%") ? decodeURIComponent(cookieVal) : cookieVal;
+      const parsed = JSON.parse(decoded);
+      if (parsed?.backend_laravel && typeof parsed.backend_laravel === "string") {
+        cookieLaravel = parsed.backend_laravel;
+      }
+    } catch {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(cookieVal));
+        if (parsed?.backend_laravel && typeof parsed.backend_laravel === "string") {
+          cookieLaravel = parsed.backend_laravel;
+        }
+      } catch {}
+    }
+  }
+
+  const upstreamBase = normalizeLaravelApiBaseUrl(
+    customTarget || cookieLaravel || LARAVEL_BASE
+  );
   const search = request.nextUrl.search;
 
   const subPath =

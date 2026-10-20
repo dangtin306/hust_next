@@ -17,15 +17,50 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   } catch {}
   let joinedPath = path.join("/");
 
+  const customTarget = request.headers.get("x-openclaw-target");
+
+  // Read url_api_chat_bot cookie
+  let cookieLaravel: string | undefined;
+  let cookieNode: string | undefined;
+  const cookieVal = request.cookies.get("url_api_chat_bot")?.value;
+  if (cookieVal) {
+    try {
+      const decoded = cookieVal.startsWith("%") ? decodeURIComponent(cookieVal) : cookieVal;
+      const parsed = JSON.parse(decoded);
+      if (parsed?.backend_laravel && typeof parsed.backend_laravel === "string") {
+        cookieLaravel = parsed.backend_laravel;
+      }
+      if (parsed?.backend_node && typeof parsed.backend_node === "string") {
+        cookieNode = parsed.backend_node;
+      }
+    } catch {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(cookieVal));
+        if (parsed?.backend_laravel && typeof parsed.backend_laravel === "string") {
+          cookieLaravel = parsed.backend_laravel;
+        }
+        if (parsed?.backend_node && typeof parsed.backend_node === "string") {
+          cookieNode = parsed.backend_node;
+        }
+      } catch {}
+    }
+  }
+
   const isChatBot =
     joinedPath.startsWith("chat/bot") ||
     joinedPath.startsWith("chat_bot") ||
     Boolean(request.headers.get("x-chat-bot-session")) ||
-    request.headers.get("x-openclaw-target")?.includes("laravel_mt.hust.media");
+    Boolean(customTarget && (customTarget.includes("laravel") || customTarget.includes("chat/bot")));
+
+  const effectiveLaravelChatBase = cookieLaravel
+    ? `${cookieLaravel.replace(/\/+$/, "")}/api/chat/bot`
+    : LARAVEL_CHAT_BASE;
+
+  const effectiveDefaultUpstream = cookieNode || DEFAULT_UPSTREAM;
 
   let upstreamBase =
-    request.headers.get("x-openclaw-target") ||
-    (isChatBot ? LARAVEL_CHAT_BASE : DEFAULT_UPSTREAM);
+    customTarget ||
+    (isChatBot ? effectiveLaravelChatBase : effectiveDefaultUpstream);
   upstreamBase = isChatBot
     ? upstreamBase.replace(/\/+$/, "")
     : normalizeOpenClawBaseUrl(upstreamBase);
