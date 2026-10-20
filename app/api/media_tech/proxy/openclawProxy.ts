@@ -19,10 +19,12 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
 
   const customTarget = request.headers.get("x-openclaw-target");
 
-  // Read url_api_chat_bot cookie
+  // Read url_api_chat_bot_mt cookie
   let cookieLaravel: string | undefined;
   let cookieNode: string | undefined;
-  const cookieVal = request.cookies.get("url_api_chat_bot")?.value;
+  const cookieVal =
+    request.cookies.get("url_api_chat_bot_mt")?.value ||
+    request.cookies.get("url_api_chat_bot")?.value;
   if (cookieVal) {
     try {
       const decoded = cookieVal.startsWith("%") ? decodeURIComponent(cookieVal) : cookieVal;

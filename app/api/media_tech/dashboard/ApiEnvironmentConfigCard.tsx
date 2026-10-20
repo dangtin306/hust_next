@@ -17,10 +17,10 @@ import {
   Sliders,
 } from "lucide-react";
 import {
-  CHAT_BOT_API_COOKIE_NAME,
   CHAT_BOT_API_CHANGE_EVENT,
   DEFAULT_PRESETS,
   type ChatBotApiConfig,
+  getChatBotApiCookieName,
   getChatBotApiConfig,
   hasChatBotApiConfigCookie,
   saveChatBotApiConfig,
@@ -33,6 +33,7 @@ type Props = {
 
 export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const presets = isHust ? DEFAULT_PRESETS.hust : DEFAULT_PRESETS.mt;
+  const cookieName = getChatBotApiCookieName(isHust);
 
   const [mounted, setMounted] = useState(false);
   const [isConfigured, setIsConfigured] = useState(false);
@@ -49,7 +50,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const refreshState = () => {
-    const hasCookie = hasChatBotApiConfigCookie();
+    const hasCookie = hasChatBotApiConfigCookie(isHust);
     setIsConfigured(hasCookie);
     const active = getChatBotApiConfig(isHust);
     setConfig(active);
@@ -80,7 +81,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
   const handleApplyPreset = (target: "production" | "localhost") => {
     const presetConfig = presets[target].config;
-    saveChatBotApiConfig(presetConfig);
+    saveChatBotApiConfig(presetConfig, isHust);
     setIsModalOpen(false);
     setIsCustomMode(false);
     showToast(
@@ -99,7 +100,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
     saveChatBotApiConfig({
       backend_laravel: customLaravel.trim(),
       backend_node: customNode.trim(),
-    });
+    }, isHust);
     setIsModalOpen(false);
     setIsCustomMode(false);
     showToast("Đã lưu cấu hình API tùy chỉnh thành công!");
@@ -108,10 +109,10 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const handleClear = () => {
     if (
       confirm(
-        "Bạn có chắc muốn xóa cookie cấu hình API (url_api_chat_bot)? Trang sẽ quay về trạng thái chưa thiết lập."
+        `Bạn có chắc muốn xóa cookie cấu hình API (${cookieName})? Trang sẽ quay về trạng thái chưa thiết lập.`
       )
     ) {
-      clearChatBotApiConfig();
+      clearChatBotApiConfig(isHust);
       showToast("Đã xóa cookie cấu hình API.");
     }
   };
@@ -182,7 +183,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   <strong>Swagger</strong>, <strong>AI Chat Bot</strong> và{" "}
                   <strong>API Gateway</strong> qua cookie{" "}
                   <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-blue-700">
-                    {CHAT_BOT_API_COOKIE_NAME}
+                    {cookieName}
                   </code>
                   .
                 </p>
@@ -373,7 +374,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 </span>
 
                 <span className="text-[11px] text-slate-500 font-mono">
-                  (Cookie: <code>{CHAT_BOT_API_COOKIE_NAME}</code>)
+                  (Cookie: <code>{cookieName}</code>)
                 </span>
               </div>
 
@@ -496,7 +497,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
             <p className="mt-3 text-xs text-slate-500">
               Chọn một trong các preset có sẵn hoặc nhập URL cụ thể. Giá trị sẽ được lưu
-              vào cookie <code className="text-blue-600">{CHAT_BOT_API_COOKIE_NAME}</code>{" "}
+              vào cookie <code className="text-blue-600">{cookieName}</code>{" "}
               và tự động áp dụng cho Swagger, AI Chat và Proxy.
             </p>
 

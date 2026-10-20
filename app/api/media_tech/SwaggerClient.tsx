@@ -73,8 +73,8 @@ export default function SwaggerClient({
 
   // Load server URL prioritizing the centralized url_api_chat_bot cookie
   useEffect(() => {
-    // 1. Kiểm tra cookie url_api_chat_bot trước
-    if (typeof document !== "undefined" && hasChatBotApiConfigCookie()) {
+    // 1. Kiểm tra cookie url_api_chat_bot_mt / url_api_chat_bot_hust trước
+    if (typeof document !== "undefined" && hasChatBotApiConfigCookie(isHustMode)) {
       const activeConfig = getChatBotApiConfig(isHustMode);
       const targetFromCookie = isLaravelKey
         ? activeConfig.backend_laravel

@@ -1,10 +1,16 @@
-export const CHAT_BOT_API_COOKIE_NAME = "url_api_chat_bot";
+export const CHAT_BOT_API_COOKIE_NAME_MT = "url_api_chat_bot_mt";
+export const CHAT_BOT_API_COOKIE_NAME_HUST = "url_api_chat_bot_hust";
+export const CHAT_BOT_API_COOKIE_NAME = "url_api_chat_bot"; // legacy / fallback
 export const CHAT_BOT_API_CHANGE_EVENT = "url-api-chat-bot-change";
 
 export type ChatBotApiConfig = {
   backend_laravel: string;
   backend_node: string;
 };
+
+export function getChatBotApiCookieName(isHust = false): string {
+  return isHust ? CHAT_BOT_API_COOKIE_NAME_HUST : CHAT_BOT_API_COOKIE_NAME_MT;
+}
 
 export const DEFAULT_PRESETS = {
   mt: {
@@ -100,13 +106,15 @@ export function parseChatBotApiConfigString(
 }
 
 /**
- * Kiểm tra xem người dùng đã thiết lập cookie `url_api_chat_bot` hay chưa.
+ * Kiểm tra xem người dùng đã thiết lập cookie URL API hay chưa (url_api_chat_bot_mt hoặc url_api_chat_bot_hust).
  */
-export function hasChatBotApiConfigCookie(): boolean {
+export function hasChatBotApiConfigCookie(isHust = false): boolean {
   if (typeof document === "undefined") return false;
-  const match = document.cookie.match(
-    new RegExp(`(?:^|;\\s*)${CHAT_BOT_API_COOKIE_NAME}=([^;]+)`)
-  );
+  const targetCookieName = getChatBotApiCookieName(isHust);
+  const match =
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${targetCookieName}=([^;]+)`)) ||
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${CHAT_BOT_API_COOKIE_NAME}=([^;]+)`));
+
   if (!match) return false;
   return Boolean(parseChatBotApiConfigString(match[1]));
 }
@@ -121,9 +129,11 @@ export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
 
   if (typeof document === "undefined") return fallback;
 
-  const match = document.cookie.match(
-    new RegExp(`(?:^|;\\s*)${CHAT_BOT_API_COOKIE_NAME}=([^;]+)`)
-  );
+  const targetCookieName = getChatBotApiCookieName(isHust);
+  const match =
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${targetCookieName}=([^;]+)`)) ||
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${CHAT_BOT_API_COOKIE_NAME}=([^;]+)`));
+
   if (match) {
     const parsed = parseChatBotApiConfigString(match[1]);
     if (parsed) {
@@ -137,29 +147,32 @@ export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
 }
 
 /**
- * Lưu cấu hình vào cookie `url_api_chat_bot` và phát event đồng bộ toàn trang.
+ * Lưu cấu hình vào cookie (url_api_chat_bot_mt hoặc url_api_chat_bot_hust) và phát event đồng bộ.
  */
-export function saveChatBotApiConfig(config: ChatBotApiConfig): void {
+export function saveChatBotApiConfig(config: ChatBotApiConfig, isHust = false): void {
   if (typeof document === "undefined") return;
+  const targetCookieName = getChatBotApiCookieName(isHust);
   const cleanConfig: ChatBotApiConfig = {
     backend_laravel: config.backend_laravel.trim().replace(/\/+$/, ""),
     backend_node: config.backend_node.trim().replace(/\/+$/, ""),
   };
   const jsonStr = JSON.stringify(cleanConfig);
-  document.cookie = `${CHAT_BOT_API_COOKIE_NAME}=${encodeURIComponent(
+  document.cookie = `${targetCookieName}=${encodeURIComponent(
     jsonStr
   )}; path=/; max-age=31536000; SameSite=Lax`;
 
   window.dispatchEvent(
-    new CustomEvent(CHAT_BOT_API_CHANGE_EVENT, { detail: cleanConfig })
+    new CustomEvent(CHAT_BOT_API_CHANGE_EVENT, { detail: { ...cleanConfig, isHust } })
   );
 }
 
 /**
- * Xóa cookie `url_api_chat_bot` để người dùng có thể cấu hình lại từ đầu.
+ * Xóa cookie để người dùng có thể cấu hình lại từ đầu.
  */
-export function clearChatBotApiConfig(): void {
+export function clearChatBotApiConfig(isHust = false): void {
   if (typeof document === "undefined") return;
+  const targetCookieName = getChatBotApiCookieName(isHust);
+  document.cookie = `${targetCookieName}=; path=/; max-age=0; SameSite=Lax`;
   document.cookie = `${CHAT_BOT_API_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
   window.dispatchEvent(
     new CustomEvent(CHAT_BOT_API_CHANGE_EVENT, { detail: null })

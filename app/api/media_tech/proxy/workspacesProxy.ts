@@ -17,7 +17,9 @@ async function proxy(
   const customTarget = request.headers.get("x-laravel-target");
 
   let cookieLaravel: string | undefined;
-  const cookieVal = request.cookies.get("url_api_chat_bot")?.value;
+  const cookieVal =
+    request.cookies.get("url_api_chat_bot_mt")?.value ||
+    request.cookies.get("url_api_chat_bot")?.value;
   if (cookieVal) {
     try {
       const decoded = cookieVal.startsWith("%") ? decodeURIComponent(cookieVal) : cookieVal;
