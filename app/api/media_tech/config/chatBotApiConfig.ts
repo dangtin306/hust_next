@@ -25,8 +25,8 @@ export const DEFAULT_PRESETS = {
     },
     production: {
       id: "production",
-      label: "Production Cloud (Media Tech)",
-      description: "Hệ thống máy chủ chính thức MT trên cloud",
+      label: "IP Public Dev (Media Tech)",
+      description: "Chạy trên IP public dev",
       config: {
         backend_laravel: "https://laravel_mt.hust.media",
         backend_node: "https://node_md.hust.media",
@@ -34,7 +34,7 @@ export const DEFAULT_PRESETS = {
     },
     localhost: {
       id: "localhost",
-      label: "Localhost Dev",
+      label: "IP Local Dev (Localhost)",
       description: "Môi trường lập trình nội bộ máy cá nhân",
       config: {
         backend_laravel: "http://127.0.0.1:8000",
@@ -45,8 +45,8 @@ export const DEFAULT_PRESETS = {
   hust: {
     production: {
       id: "production",
-      label: "Production Cloud (Hust Media)",
-      description: "Hệ thống máy chủ chính thức Hust trên cloud",
+      label: "IP Public Dev (Hust Media)",
+      description: "Chạy trên IP public dev",
       config: {
         backend_laravel: "https://laravel.hust.media",
         backend_node: "https://node_md.hust.media",
@@ -54,7 +54,7 @@ export const DEFAULT_PRESETS = {
     },
     localhost: {
       id: "localhost",
-      label: "Localhost Dev",
+      label: "IP Local Dev (Localhost)",
       description: "Môi trường lập trình nội bộ máy cá nhân",
       config: {
         backend_laravel: "http://127.0.0.1:8000",
@@ -131,7 +131,7 @@ export function hasChatBotApiConfigCookie(isHust = false): boolean {
 /**
  * Đọc cấu hình hiện tại từ cookie, hoặc trả về cấu hình mặc định:
  * - MT: Server Công Ty (192.168.0.189)
- * - Hust: Production Cloud
+ * - Hust: IP Public Dev (laravel.hust.media)
  */
 export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
   const fallback = isHust

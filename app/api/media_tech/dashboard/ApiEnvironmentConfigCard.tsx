@@ -88,12 +88,12 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
       presetConfig = isHust
         ? DEFAULT_PRESETS.hust.production.config
         : DEFAULT_PRESETS.mt.production.config;
-      label = "Production Cloud";
+      label = "IP Public Dev";
     } else {
       presetConfig = isHust
         ? DEFAULT_PRESETS.hust.localhost.config
         : DEFAULT_PRESETS.mt.localhost.config;
-      label = "Localhost Dev";
+      label = "IP Local Dev";
     }
 
     saveChatBotApiConfig(presetConfig, isHust);
@@ -162,9 +162,9 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const currentEnvLabel = isCompanyMatch
     ? "Server Công Ty (189)"
     : isProductionMatch
-    ? "Production Cloud"
+    ? "IP Public Dev"
     : isLocalhostMatch
-    ? "Localhost Dev"
+    ? "IP Local Dev"
     : "Tùy Chỉnh (Custom)";
 
   if (!mounted) {
@@ -277,7 +277,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                     <Cloud className="h-3.5 w-3.5" />
-                    Production Cloud {isHust ? "(Khuyên dùng)" : ""}
+                    IP Public Dev {isHust ? "(Khuyên dùng)" : ""}
                   </span>
                   <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                     Sẵn sàng
@@ -316,7 +316,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
               >
                 <Cloud className="h-4 w-4" />
-                Chọn Production Cloud (1-Click)
+                Chọn IP Public Dev (1-Click)
               </button>
             </div>
 
@@ -326,7 +326,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                     <Laptop className="h-3.5 w-3.5" />
-                    Localhost Dev
+                    IP Local Dev
                   </span>
                   <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
                     Dev cá nhân
@@ -365,7 +365,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                 className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
               >
                 <Laptop className="h-4 w-4" />
-                Chọn Localhost Dev (1-Click)
+                Chọn IP Local Dev (1-Click)
               </button>
             </div>
           </div>
@@ -522,43 +522,6 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
             {/* Right: Actions */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Quick toggle chips */}
-              {!isHust && !isCompanyMatch && (
-                <button
-                  type="button"
-                  onClick={() => handleApplyPreset("company")}
-                  className="inline-flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 active:scale-[0.98]"
-                  title="Chuyển ngay sang Server Công Ty (189)"
-                >
-                  <Building2 className="h-3.5 w-3.5" />
-                  Đổi sang Server Công Ty
-                </button>
-              )}
-
-              {!isProductionMatch && (
-                <button
-                  type="button"
-                  onClick={() => handleApplyPreset("production")}
-                  className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 active:scale-[0.98]"
-                  title="Chuyển ngay sang Production Cloud"
-                >
-                  <Cloud className="h-3.5 w-3.5" />
-                  Đổi sang Production
-                </button>
-              )}
-
-              {!isLocalhostMatch && (
-                <button
-                  type="button"
-                  onClick={() => handleApplyPreset("localhost")}
-                  className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 active:scale-[0.98]"
-                  title="Chuyển ngay sang Localhost Dev"
-                >
-                  <Laptop className="h-3.5 w-3.5" />
-                  Đổi sang Localhost
-                </button>
-              )}
-
               {/* Edit / Config Modal Button */}
               <button
                 type="button"
@@ -567,7 +530,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   setCustomNode(config.backend_node);
                   setIsModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-blue-400 hover:text-blue-600 hover:bg-slate-50 active:scale-[0.98]"
               >
                 <Settings className="h-3.5 w-3.5 text-slate-500" />
                 Đổi server / môi trường
@@ -658,7 +621,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-blue-800">
-                    🚀 Production Cloud
+                    🌐 IP Public Dev
                   </span>
                   {isProductionMatch && (
                     <Check className="h-4 w-4 text-blue-600" />
@@ -685,14 +648,16 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-emerald-800">
-                    💻 Localhost Dev
+                    💻 IP Local Dev
                   </span>
                   {isLocalhostMatch && (
                     <Check className="h-4 w-4 text-emerald-600" />
                   )}
                 </div>
                 <span className="mt-1 text-[11px] text-slate-500">
-                  Cá nhân nội bộ
+                  {isHust
+                    ? DEFAULT_PRESETS.hust.localhost.description
+                    : DEFAULT_PRESETS.mt.localhost.description}
                 </span>
                 <span className="mt-2 text-[10px] font-mono text-slate-600 truncate">
                   {localConfig.backend_laravel}
