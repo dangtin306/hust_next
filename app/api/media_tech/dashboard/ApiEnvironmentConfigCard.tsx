@@ -19,7 +19,6 @@ import {
   CHAT_BOT_API_CHANGE_EVENT,
   DEFAULT_PRESETS,
   type ChatBotApiConfig,
-  getChatBotApiCookieName,
   getChatBotApiConfig,
   hasChatBotApiConfigCookie,
   saveChatBotApiConfig,
@@ -31,8 +30,6 @@ type Props = {
 };
 
 export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
-  const cookieName = getChatBotApiCookieName(isHust);
-
   const isSpecialDomain =
     typeof window !== "undefined" &&
     (window.location.hostname === "118.70.169.219" ||
@@ -128,11 +125,11 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
   const handleClear = () => {
     if (
       confirm(
-        `Bạn có chắc muốn xóa cookie cấu hình API (${cookieName})? Trang sẽ quay về trạng thái chưa thiết lập.`
+        "Bạn có chắc muốn đặt lại cấu hình máy chủ về mặc định? Trang sẽ quay về trạng thái ban đầu."
       )
     ) {
       clearChatBotApiConfig(isHust);
-      showToast("Đã xóa cookie cấu hình API.");
+      showToast("Đã đặt lại cấu hình máy chủ về mặc định.");
     }
   };
 
@@ -207,17 +204,13 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                     Cấu Hình Môi Trường API Hệ Thống
                   </h2>
                   <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
-                    Chưa thiết lập cookie
+                    Chưa thiết lập môi trường
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-600 sm:text-sm">
                   Chọn môi trường máy chủ để kết nối tập trung cho toàn bộ{" "}
                   <strong>Swagger</strong>, <strong>AI Chat Bot</strong> và{" "}
-                  <strong>API Gateway</strong> qua cookie{" "}
-                  <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-blue-700">
-                    {cookieName}
-                  </code>
-                  .
+                  <strong>API Gateway</strong>.
                 </p>
               </div>
             </div>
@@ -481,10 +474,6 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   )}
                   {currentEnvLabel}
                 </span>
-
-                <span className="text-[11px] text-slate-500 font-mono">
-                  (Cookie: <code>{cookieName}</code>)
-                </span>
               </div>
 
               {/* Endpoint badges */}
@@ -532,7 +521,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
             </div>
 
             {/* Right: Actions */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               {/* Edit / Config Modal Button */}
               <button
                 type="button"
@@ -541,20 +530,21 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                   setCustomNode(config.backend_node);
                   setIsModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-blue-400 hover:text-blue-600 hover:bg-slate-50 active:scale-[0.98]"
+                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 hover:shadow-md hover:shadow-blue-500/35 transition-all duration-200 active:scale-[0.97] cursor-pointer"
               >
-                <Settings className="h-3.5 w-3.5 text-slate-500" />
-                Đổi server / môi trường
+                <Settings className="h-4 w-4 text-blue-100 group-hover:rotate-45 transition-transform duration-300" />
+                <span>Đổi Server / Môi trường</span>
               </button>
 
               {/* Reset button */}
               <button
                 type="button"
                 onClick={handleClear}
-                title="Xóa cấu hình cookie hiện tại"
-                className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1.5 text-xs text-slate-400 shadow-2xs transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                title="Đặt lại cấu hình máy chủ về mặc định"
+                className="group inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-2xs hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 transition-all duration-200 active:scale-[0.97] cursor-pointer"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5 text-slate-400 group-hover:text-rose-600 group-hover:-rotate-90 transition-transform duration-300" />
+                <span>Đặt lại</span>
               </button>
             </div>
           </div>
@@ -582,9 +572,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
             </div>
 
             <p className="mt-3 text-xs text-slate-500">
-              Chọn một trong các preset có sẵn hoặc nhập URL cụ thể. Giá trị sẽ được lưu
-              vào cookie <code className="text-blue-600">{cookieName}</code>{" "}
-              và tự động áp dụng cho Swagger, AI Chat và Proxy.
+              Chọn một trong các preset có sẵn hoặc nhập URL cụ thể để tự động áp dụng cho Swagger, AI Chat và Proxy.
             </p>
 
             {/* Presets in Modal */}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
@@ -30,26 +30,54 @@ interface MediaHomePageProps {
 
 export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
   const router = useRouter();
-  const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "heygen" | "voice" | "image">("all");
 
   const linkPrefix = isHust ? "/api/hust" : "/api/mt";
-  const displayPrefix = isHust ? "/next/api/hust" : "/next/api/mt";
 
   const heygenHomeLink = `${linkPrefix}/media/heygen/home`;
   const heygenVideoLink = `${linkPrefix}/media/heygen/video`;
   const heygenLiveLink = `${linkPrefix}/media/heygen/live`;
 
-  const heygenHomeUrl = `${displayPrefix}/media/heygen/home`;
+  const getDisplayPath = (link: string) => (link.startsWith("/next") ? link : `/next${link}`);
+
+  // Derive absolute URL (with origin) from the link for reliable sharing
+  const getFullUrl = (link: string) => {
+    const path = getDisplayPath(link);
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}${path}`;
+    }
+    return path;
+  };
+
   const brandName = isHust ? "Hust Media AI" : "Media Tech AI";
 
-  const handleCopy = (text: string) => {
+  const handleCopy = (link: string, key: string, label: string) => {
+    const fullUrl = getFullUrl(link);
     if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(text);
-      setCopiedText(text);
-      setTimeout(() => setCopiedText(null), 2000);
+      void navigator.clipboard.writeText(fullUrl);
+      setCopiedKey(key);
+      setToastMessage(fullUrl);
+
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = setTimeout(() => {
+        setCopiedKey(null);
+        setToastMessage(null);
+      }, 2500);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="w-full max-w-7xl xl:max-w-[1400px] mx-auto space-y-4 sm:space-y-4.5 pb-8">
@@ -221,14 +249,19 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopy(typeof window !== "undefined" ? `${window.location.origin}${heygenHomeUrl}` : heygenHomeUrl);
+                  handleCopy(heygenHomeLink, "heygen", "HeyGen Studio");
                 }}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 sm:py-2 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-100/80 transition-all cursor-pointer shadow-2xs"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  copiedKey === "heygen"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold shadow-emerald-500/10"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                }`}
+                title="Sao chép toàn bộ liên kết để chia sẻ"
               >
-                {copiedText === heygenHomeUrl ? (
+                {copiedKey === "heygen" ? (
                   <>
                     <Check className="h-3.5 w-3.5 text-emerald-600" />
-                    <span className="text-emerald-700 font-bold">Đã chép</span>
+                    <span className="text-emerald-700 font-bold">Đã chép Link!</span>
                   </>
                 ) : (
                   <>
@@ -397,6 +430,35 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
           </div>
         )}
       </div>
+
+      {/* ========================================================================= */}
+      {/* FLOATING TOAST NOTIFICATION (Khi sao chép link thành công)                 */}
+      {/* ========================================================================= */}
+      {toastMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-emerald-200/90 bg-white px-4 py-3 text-slate-800 shadow-[0_10px_30px_rgba(16,185,129,0.2)] backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-4 max-w-[90vw] sm:max-w-md"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xs">
+            <Check className="h-4.5 w-4.5 stroke-[2.5]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-emerald-700">Đã sao chép link thành công!</p>
+            <p className="font-mono text-[11px] text-slate-600 truncate mt-0.5 select-all">
+              {toastMessage}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-1 text-slate-400 hover:text-slate-600 text-xs px-1.5 py-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
