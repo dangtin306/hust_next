@@ -36,6 +36,11 @@ import { alert_error, alert_success } from "../../../../AppContext.js";
 import CronEdit from "./cron_edit.jsx";
 import CronRun from "./cron_run.jsx";
 
+const normalizeCronType = (value) => {
+  const type = String(value || "").trim().toLowerCase();
+  return type === "url" ? "api_get" : type;
+};
+
 const CronServerAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -264,7 +269,9 @@ const CronServerAdmin = () => {
             {
               topic_key: sourceCron.topic_key || "",
               topic_name: sourceCron.topic_name || "",
-              services_cron: [{ ...nextCron, cron_delete: false }],
+              services_cron: [
+                { ...nextCron, cron_tyoe: normalizeCronType(nextCron.cron_tyoe), cron_delete: false },
+              ],
             },
           ],
         },
@@ -299,7 +306,10 @@ const CronServerAdmin = () => {
   const handleCreateCron = async (nextCron, sourceCron = createCron) => {
     if (!sourceCron) return false;
 
-    const service = { ...nextCron };
+    const service = {
+      ...nextCron,
+      cron_tyoe: normalizeCronType(nextCron.cron_tyoe),
+    };
     const intervalSeconds = service.interval_seconds;
     const timeoutSeconds = service.cron_timeout_seconds;
     delete service.category_key;
@@ -1032,7 +1042,7 @@ const CronServerAdmin = () => {
                                     const typeColor =
                                       job?.cron_tyoe === "powershell"
                                         ? "bg-sky-50 text-sky-700 border-sky-200"
-                                        : job?.cron_tyoe === "url"
+                                        : normalizeCronType(job?.cron_tyoe) === "api_get"
                                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                         : "bg-purple-50 text-purple-700 border-purple-200";
 

@@ -17,6 +17,21 @@ import {
   FolderTree,
 } from "lucide-react";
 
+const resolveCronType = (cron = {}) => {
+  const type = String(cron?.cron_tyoe || cron?.type_cron || "")
+    .trim()
+    .toLowerCase();
+  if (type === "url") return "api_get";
+  if (type) return type;
+  if (String(cron?.command_cron || "").trim()) return "powershell";
+  if (String(cron?.url_cron || "").trim()) return "api_get";
+  const task = String(cron?.task_cron || "").trim();
+  if (task === "increment_counter" || task.startsWith("increment_counter_")) {
+    return "internal";
+  }
+  return "";
+};
+
 const Cron_edit = ({
   showedit,
   setshowedit,
@@ -45,6 +60,7 @@ const Cron_edit = ({
     const initialCron = Object.fromEntries(
       Object.entries(selectedCron).filter(([key]) => !selectorFields.has(key))
     );
+    initialCron.cron_tyoe = resolveCronType(initialCron);
     setItemCronEdit(initialCron);
   }, [selectedCron]);
 
@@ -77,6 +93,19 @@ const Cron_edit = ({
     }));
   };
 
+  const handleTypeChange = (type) => {
+    setItemCronEdit((prev) => {
+      const next = { ...prev, cron_tyoe: type };
+      if (type === "api_get") next.command_cron = "";
+      if (type === "powershell") next.url_cron = "";
+      if (type === "internal") {
+        next.url_cron = "";
+        next.command_cron = "";
+      }
+      return next;
+    });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setNutxuly(1);
@@ -85,7 +114,7 @@ const Cron_edit = ({
       if (isDelete) {
         await onDelete?.();
       } else {
-        await onSave?.(itemCronEdit);
+        await onSave?.({ ...itemCronEdit, cron_tyoe: resolveCronType(itemCronEdit) });
       }
     } finally {
       setNutxuly(0);
@@ -268,6 +297,8 @@ const Cron_edit = ({
                     <input
                       type="number"
                       step="any"
+                      min="0.001"
+                      required={!isDelete}
                       placeholder="VD: 60"
                       value={itemCronEdit?.interval_seconds ?? ""}
                       onChange={(e) => hamcancode("interval_seconds", e.target.value)}
@@ -296,13 +327,14 @@ const Cron_edit = ({
                   </label>
                   <select
                     value={itemCronEdit?.cron_tyoe || ""}
-                    onChange={(e) => hamcancode("cron_tyoe", e.target.value)}
+                    onChange={(e) => handleTypeChange(e.target.value)}
+                    required={isCreate}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition"
                   >
-                    <option value="">Tự chọn / Mặc định</option>
+                    <option value="">{isCreate ? "Chọn loại cron" : "Tự nhận diện từ nguồn"}</option>
                     <option value="internal">internal (Nội bộ)</option>
                     <option value="powershell">powershell (CLI/Script)</option>
-                    <option value="url">url (HTTP Request)</option>
+                    <option value="api_get">api_get (HTTP GET)</option>
                   </select>
                 </div>
               </div>
@@ -315,8 +347,9 @@ const Cron_edit = ({
                     <span>Đường dẫn gọi URL (url_cron)</span>
                   </label>
                   <input
-                    type="text"
+                    type="url"
                     placeholder="VD: https://api.domain.com/webhook/cron"
+                    required={!isDelete && itemCronEdit?.cron_tyoe === "api_get"}
                     value={itemCronEdit?.url_cron || ""}
                     onChange={(e) => hamcancode("url_cron", e.target.value)}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:outline-hidden focus:ring-2 focus:ring-emerald-100 transition"
@@ -331,6 +364,7 @@ const Cron_edit = ({
                   <input
                     type="text"
                     placeholder="VD: python D:\server\check.py"
+                    required={!isDelete && itemCronEdit?.cron_tyoe === "powershell"}
                     value={itemCronEdit?.command_cron || ""}
                     onChange={(e) => hamcancode("command_cron", e.target.value)}
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono text-slate-800 placeholder-slate-400 focus:border-sky-500 focus:outline-hidden focus:ring-2 focus:ring-sky-100 transition"
