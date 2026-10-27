@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import WorkspaceManagement from "@/app/api/hust_media/workspace/WorkspaceManagement";
 
 type AdminLink = {
   to?: string;
@@ -152,6 +153,7 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
   const [reloading, setReloading] = useState(false);
   const [error, setError] = useState("");
+  const [showWorkspace, setShowWorkspace] = useState(false);
 
   const load = useCallback(async (force = false) => {
     const cacheKey = `${HOME_CACHE_KEY}_${readCookie("apikey") || "guest"}`;
@@ -217,7 +219,19 @@ export default function AdminHomePage() {
   return (
     <main className="min-h-[calc(100vh-5rem)] px-3 py-2 text-slate-800 sm:px-5">
       <section className="mx-auto max-w-6xl">
-        {stats && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowWorkspace((current) => !current)}
+            aria-expanded={showWorkspace}
+            aria-controls="admin-workspace-panel"
+            className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 transition hover:border-purple-300 hover:bg-purple-100 sm:text-sm"
+          >
+            {showWorkspace ? "Quay lại quản trị" : "Hiện Workspace"}
+          </button>
+        </div>
+
+        {!showWorkspace && stats && (
           <div className="mb-3 rounded-md bg-purple-100/60 p-2 shadow-md">
             <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 sm:gap-2">
               <Stat label="👪 Total family members ❤️" value={formatNumber(stats.users_total)} color="purple" />
@@ -229,74 +243,85 @@ export default function AdminHomePage() {
           </div>
         )}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-md sm:p-6">
-          <div className="mb-4 flex justify-end">
-            <button
-              type="button"
-              onClick={() => void load(true)}
-              disabled={loading || reloading}
-              className="rounded-lg bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
-            >
-              {reloading ? "Reloading..." : "Reload"}
-            </button>
-          </div>
-          {loading ? (
-            <p className="text-center text-lg">Please wait a moment 😊 ...</p>
-          ) : error ? (
-            <p className="text-center text-lg text-red-500">{error}</p>
-          ) : categories.length ? (
-            <div className="space-y-6">
-              {categories.map((category, categoryIndex) => (
-                <section key={`${category.category_code || "category"}-${categoryIndex}`}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenCategory((current) => current === categoryIndex ? null : categoryIndex)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                    aria-expanded={openCategory === categoryIndex}
-                  >
-                    <span className="h-7 w-1 rounded-full bg-blue-500" aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-base font-semibold text-slate-800 sm:text-lg">
-                        {category.category_name || "Quản trị hệ thống"}
-                      </h2>
-                      {category.category_code && (
-                        <p className="text-xs text-slate-400">{category.category_code}</p>
-                      )}
-                    </div>
-                    <span className={`text-xl text-slate-400 transition-transform ${openCategory === categoryIndex ? "rotate-180" : ""}`} aria-hidden="true">
-                     ⌄
-                    </span>
-                  </button>
-                  {openCategory === categoryIndex && (
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {category.services?.length ? (
-                        <ServiceList services={category.services} />
-                      ) : (
-                        (category.links || []).map((link, linkIndex) => (
-                          <a
-                            key={`${link.to || "admin-link"}-${linkIndex}`}
-                            href={resolveHref(link.to || "#")}
-                            className="group flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-                          >
-                            <span className="text-left text-sm font-medium leading-5 sm:text-base">
-                              {link.text || "Untitled"}
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400 transition group-hover:text-blue-500">
-                              {typeof link.level_manage === "number" && `L${link.level_manage}`}
-                              <span className="text-lg" aria-hidden="true">→</span>
-                            </span>
-                          </a>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </section>
-              ))}
+        {!showWorkspace && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-md sm:p-6">
+            <div className="mb-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void load(true)}
+                disabled={loading || reloading}
+                className="rounded-lg bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-70 sm:text-sm"
+              >
+                {reloading ? "Reloading..." : "Reload"}
+              </button>
             </div>
-          ) : (
-            <p className="text-center text-lg text-red-500">Bạn không phải quản lý app</p>
-          )}
-        </div>
+            {loading ? (
+              <p className="text-center text-lg">Please wait a moment 😊 ...</p>
+            ) : error ? (
+              <p className="text-center text-lg text-red-500">{error}</p>
+            ) : categories.length ? (
+              <div className="space-y-6">
+                {categories.map((category, categoryIndex) => (
+                  <section key={`${category.category_code || "category"}-${categoryIndex}`}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenCategory((current) => current === categoryIndex ? null : categoryIndex)}
+                      className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                      aria-expanded={openCategory === categoryIndex}
+                    >
+                      <span className="h-7 w-1 rounded-full bg-blue-500" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-base font-semibold text-slate-800 sm:text-lg">
+                          {category.category_name || "Quản trị hệ thống"}
+                        </h2>
+                        {category.category_code && (
+                          <p className="text-xs text-slate-400">{category.category_code}</p>
+                        )}
+                      </div>
+                      <span className={`text-xl text-slate-400 transition-transform ${openCategory === categoryIndex ? "rotate-180" : ""}`} aria-hidden="true">
+                        ⌄
+                      </span>
+                    </button>
+                    {openCategory === categoryIndex && (
+                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {category.services?.length ? (
+                          <ServiceList services={category.services} />
+                        ) : (
+                          (category.links || []).map((link, linkIndex) => (
+                            <a
+                              key={`${link.to || "admin-link"}-${linkIndex}`}
+                              href={resolveHref(link.to || "#")}
+                              className="group flex min-h-14 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+                            >
+                              <span className="text-left text-sm font-medium leading-5 sm:text-base">
+                                {link.text || "Untitled"}
+                              </span>
+                              <span className="flex shrink-0 items-center gap-1 text-xs text-slate-400 transition group-hover:text-blue-500">
+                                {typeof link.level_manage === "number" && `L${link.level_manage}`}
+                                <span className="text-lg" aria-hidden="true">→</span>
+                              </span>
+                            </a>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-lg text-red-500">Bạn không phải quản lý app</p>
+            )}
+          </div>
+        )}
+
+        {showWorkspace && (
+          <section
+            id="admin-workspace-panel"
+            className="mt-4 rounded-2xl border border-purple-200 bg-white/90 p-3 shadow-md sm:p-5"
+          >
+            <WorkspaceManagement value="hust" embedded />
+          </section>
+        )}
       </section>
     </main>
   );
