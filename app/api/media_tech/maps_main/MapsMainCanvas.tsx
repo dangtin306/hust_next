@@ -36,15 +36,33 @@ import {
   Sparkles,
   Copy,
   Check,
-  Layers,
 } from "lucide-react";
 
-// ==========================================
-// CONFIG API DOMAIN MẸ
-// ==========================================
-const BASE_DOMAIN = "https://node_md.hust.media";
-const MAPS_MAIN_GRAPH_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/graph`;
-const MAPS_MAIN_FILE_URL = `${BASE_DOMAIN}/openclaw/workflow/maps_main/file`;
+type MapsProject = "media_tech" | "hust";
+type VaultNodeData = {
+  label?: string;
+  category?: string;
+  badge?: string;
+  math?: string;
+  description?: string;
+  files?: string[];
+  path?: string;
+  displayPath?: string;
+};
+type PipelineNodeData = {
+  icon?: string;
+  label?: string;
+  badge?: string;
+  description?: string;
+  subtext?: string;
+};
+type SectionLabelData = { icon?: string; title?: string; subtitle?: string };
+
+function mapsMainApiUrl(resource: "graph" | "file", project: MapsProject, filePath?: string): string {
+  const query = new URLSearchParams({ project });
+  if (filePath) query.set("path", filePath);
+  return `/next/api/media_tech/n8n/maps_main/${resource}?${query.toString()}`;
+}
 
 function toDisplayText(value: unknown): string {
   if (typeof value === "string") return value;
@@ -62,8 +80,353 @@ function toDisplayText(value: unknown): string {
 // HÀM TỰ ĐỘNG CĂN CHỈNH ĐỒ THỊ THEO CHUẨN .MD (AUTO-LAYOUT ENGINE)
 // Tự sửa, tự căn giữa, cân đối tuyệt đối cho bất kỳ số lượng workspace nào
 // ==========================================
-export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes: Node[]; edges: Edge[] } {
+function autoLayoutHustTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes: Node[]; edges: Edge[] } {
+  const workspaceNodes = rawNodes
+    .filter((node) => node.data?.category === "workspace")
+    .sort((a, b) => String(a.data?.label || a.id).localeCompare(String(b.data?.label || b.id)));
+  const workspaceIds = new Set(workspaceNodes.map((node) => node.id));
+  const rootNode = rawNodes.find((node) => node.id === "vault-agents-md");
+  const headerNode = rawNodes.find((node) => node.id === "header-tier1");
+  const headerPipeline = rawNodes.find((node) => node.id === "header-tier2");
+  const pipelineNodes = rawNodes.filter((node) => node.type === "pipelineNode" || node.id.startsWith("pipe-"));
+  const fileNodes = rawNodes.filter((node) => node.data?.category === "file" || node.id.startsWith("vault-file-"));
+  const parentByFile = new Map<string, string>();
+
+  for (const edge of rawEdges) {
+    if (workspaceIds.has(edge.source)) parentByFile.set(edge.target, edge.source);
+  }
+
+  const filesByWorkspace = new Map<string, Node[]>();
+  workspaceNodes.forEach((node) => filesByWorkspace.set(node.id, []));
+  const rootFiles: Node[] = [];
+  for (const node of fileNodes) {
+    const parentId = parentByFile.get(node.id);
+    if (parentId && filesByWorkspace.has(parentId)) filesByWorkspace.get(parentId)!.push(node);
+    else rootFiles.push(node);
+  }
+
+  const columnsFor = (count: number) => (count >= 12 ? 3 : count >= 4 ? 2 : 1);
+  const cardWidth = 260;
+  const fileGapX = 24;
+  const groupGap = 60;
+  const groupWidths = workspaceNodes.map((workspace) => {
+    const columnCount = columnsFor(filesByWorkspace.get(workspace.id)?.length || 0);
+    return columnCount * cardWidth + (columnCount - 1) * fileGapX;
+  });
+  const groupsPerRow = 3;
+  const workspaceRows = Array.from({ length: Math.ceil(workspaceNodes.length / groupsPerRow) }, (_, rowIndex) =>
+    workspaceNodes.slice(rowIndex * groupsPerRow, (rowIndex + 1) * groupsPerRow),
+  );
+  const rowWidths = workspaceRows.map((row) =>
+    row.reduce((sum, workspace) => sum + groupWidths[workspaceNodes.indexOf(workspace)], 0) + Math.max(row.length - 1, 0) * groupGap,
+  );
+  const totalWidth = Math.max(...rowWidths, 0);
+  const positionedNodes: Node[] = [];
+
+  if (headerNode) positionedNodes.push({ ...headerNode, position: { x: -180, y: -70 } });
+  if (rootNode) positionedNodes.push({ ...rootNode, position: { x: -cardWidth / 2, y: 45 } });
+
+  const rootFileGap = 24;
+  const rootFilesWidth = rootFiles.length * cardWidth + Math.max(rootFiles.length - 1, 0) * rootFileGap;
+  const rootFilesStartX = -rootFilesWidth / 2;
+  rootFiles.forEach((node, index) => {
+    positionedNodes.push({
+      ...node,
+      data: {
+        ...node.data,
+        label: String(node.data?.label || node.id).split("/").pop(),
+        displayPath: node.data?.path,
+      },
+      position: { x: rootFilesStartX + index * (cardWidth + rootFileGap), y: 230 },
+    });
+  });
+
+  let workspaceY = 420;
+  const fileRowGap = 96;
+
+  workspaceRows.forEach((rowWorkspaces, rowIndex) => {
+    const rowWidth = rowWidths[rowIndex];
+    let groupX = -rowWidth / 2;
+    let maxFileRows = 0;
+
+    rowWorkspaces.forEach((workspace) => {
+      const workspaceIndex = workspaceNodes.indexOf(workspace);
+      const workspaceFiles = (filesByWorkspace.get(workspace.id) || []).sort((a, b) =>
+        String(a.data?.path || a.data?.label || a.id).localeCompare(String(b.data?.path || b.data?.label || b.id)),
+      );
+      const columnCount = columnsFor(workspaceFiles.length);
+      const groupWidth = groupWidths[workspaceIndex];
+      const workspaceX = groupX + (groupWidth - cardWidth) / 2;
+      const fileStartY = workspaceY + 180;
+      maxFileRows = Math.max(maxFileRows, Math.ceil(workspaceFiles.length / columnCount));
+
+      positionedNodes.push({ ...workspace, position: { x: workspaceX, y: workspaceY } });
+
+      workspaceFiles.forEach((file, index) => {
+        const column = index % columnCount;
+        const fileRow = Math.floor(index / columnCount);
+        const fullPath = String(file.data?.path || "");
+        const workspaceName = String(workspace.data?.label || "");
+        const normalizedPath = fullPath.replace(/^\/+/, "");
+        const workspacePrefix = `${workspaceName}/`;
+        const displayPath = normalizedPath.startsWith(workspacePrefix)
+          ? normalizedPath.slice(workspacePrefix.length)
+          : normalizedPath;
+        positionedNodes.push({
+          ...file,
+          data: {
+            ...file.data,
+            label: String(file.data?.label || fullPath).split("/").pop(),
+            displayPath: displayPath || fullPath,
+          },
+          position: {
+            x: groupX + column * (cardWidth + fileGapX),
+            y: fileStartY + fileRow * fileRowGap,
+          },
+        });
+      });
+
+      groupX += groupWidth + groupGap;
+    });
+
+    workspaceY += 300 + maxFileRows * fileRowGap;
+  });
+
+  const otherNodes = rawNodes.filter((node) =>
+    node !== rootNode && node !== headerNode && node !== headerPipeline &&
+    !workspaceIds.has(node.id) && !fileNodes.some((file) => file.id === node.id) &&
+    !pipelineNodes.some((pipeline) => pipeline.id === node.id),
+  );
+  otherNodes.forEach((node, index) => {
+    positionedNodes.push({ ...node, position: { x: -cardWidth / 2, y: workspaceY + index * fileRowGap } });
+  });
+
+  if (headerPipeline) positionedNodes.push({ ...headerPipeline, position: { x: totalWidth / 2 + 120, y: -70 } });
+  pipelineNodes.forEach((node, index) => {
+    positionedNodes.push({ ...node, position: { x: totalWidth / 2 + 120, y: 50 + index * 130 } });
+  });
+
+  const updatedEdges = rawEdges.map((edge) => {
+    const isWorkspaceFileEdge = workspaceIds.has(edge.source);
+    return {
+      ...edge,
+      animated: false,
+      type: "smoothstep",
+      sourceHandle: "source-bottom",
+      targetHandle: "target-top",
+      style: isWorkspaceFileEdge
+        ? { stroke: "#10b981", strokeWidth: 1.5, opacity: 0.65 }
+        : { stroke: "#a855f7", strokeWidth: 1.8, opacity: 0.75 },
+    };
+  });
+
+  return { nodes: positionedNodes, edges: updatedEdges };
+}
+
+function autoLayoutMediaTechTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes: Node[]; edges: Edge[] } {
+  const preferredOrder = ["workspace_backend", "workspace_media", "workspace_tech", "workspace_openclaw"];
+  const pipelineOrder = ["pipe-webhook", "pipe-resolver", "pipe-openclaw", "pipe-media-tools", "pipe-sse-broadcast"];
+  const workspaceNodes = rawNodes
+    .filter((node) => node.data?.category === "workspace" || node.id.startsWith("vault-ws-"))
+    .sort((a, b) => {
+      const nameA = String(a.data?.label || a.id);
+      const nameB = String(b.data?.label || b.id);
+      const indexA = preferredOrder.indexOf(nameA);
+      const indexB = preferredOrder.indexOf(nameB);
+      if (indexA !== -1 || indexB !== -1) {
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        if (indexA !== indexB) return indexA - indexB;
+      }
+      return nameA.localeCompare(nameB);
+    });
+  const workspaceIds = new Set(workspaceNodes.map((node) => node.id));
+  const agentNode = rawNodes.find((node) => node.id === "vault-agents-md");
+  const soulNode = rawNodes.find((node) => node.id === "vault-soul-md");
+  const identityNode = rawNodes.find((node) => node.id === "vault-identity-md");
+  const headerTier1 = rawNodes.find((node) => node.id === "header-tier1");
+  const headerTier2 = rawNodes.find((node) => node.id === "header-tier2");
+  const pipelineNodes = rawNodes
+    .filter((node) => node.type === "pipelineNode" || node.id.startsWith("pipe-"))
+    .sort((a, b) => {
+      const indexA = pipelineOrder.indexOf(a.id);
+      const indexB = pipelineOrder.indexOf(b.id);
+      return (indexA === -1 ? pipelineOrder.length : indexA) - (indexB === -1 ? pipelineOrder.length : indexB) || a.id.localeCompare(b.id);
+    });
+  const childNodes = rawNodes.filter((node) =>
+    node.data?.category === "session" || node.data?.category === "file" ||
+    node.id.startsWith("vault-chat-") || node.id.startsWith("vault-file-"),
+  );
+  const parentByChild = new Map<string, string>();
+  rawEdges.forEach((edge) => {
+    if (workspaceIds.has(edge.source)) parentByChild.set(edge.target, edge.source);
+  });
+
+  const childrenByWorkspace = new Map<string, Node[]>();
+  workspaceNodes.forEach((workspace) => childrenByWorkspace.set(workspace.id, []));
+  const rootFiles: Node[] = [];
+  childNodes.forEach((node) => {
+    const parentId = parentByChild.get(node.id);
+    if (parentId && childrenByWorkspace.has(parentId)) childrenByWorkspace.get(parentId)!.push(node);
+    else rootFiles.push(node);
+  });
+
+  const cardWidth = 260;
+  const childGapX = 24;
+  const groupGap = 60;
+  const childRowGap = 120;
+  const columnsFor = (count: number) => (count >= 12 ? 3 : count >= 4 ? 2 : 1);
+  const groupWidths = workspaceNodes.map((workspace) => {
+    const columns = columnsFor(childrenByWorkspace.get(workspace.id)?.length || 0);
+    return columns * cardWidth + (columns - 1) * childGapX;
+  });
+  const groupsPerRow = 4;
+  const workspaceRows = Array.from({ length: Math.ceil(workspaceNodes.length / groupsPerRow) }, (_, index) =>
+    workspaceNodes.slice(index * groupsPerRow, (index + 1) * groupsPerRow),
+  );
+  const rowWidths = workspaceRows.map((row) =>
+    row.reduce((sum, workspace) => sum + groupWidths[workspaceNodes.indexOf(workspace)], 0) + Math.max(row.length - 1, 0) * groupGap,
+  );
+  const maxRowWidth = Math.max(...rowWidths, cardWidth);
+  const positionedNodes: Node[] = [];
+
+  if (headerTier1) positionedNodes.push({ ...headerTier1, position: { x: -180, y: -70 } });
+  if (agentNode) positionedNodes.push({ ...agentNode, position: { x: -cardWidth / 2, y: 55 } });
+  if (soulNode) positionedNodes.push({ ...soulNode, position: { x: -cardWidth * 1.5 - 50, y: 55 } });
+  if (identityNode) positionedNodes.push({ ...identityNode, position: { x: cardWidth / 2 + 55, y: 55 } });
+
+  const rootColumns = columnsFor(rootFiles.length);
+  const rootRows = Math.ceil(rootFiles.length / rootColumns);
+  const rootWidth = rootColumns * cardWidth + (rootColumns - 1) * childGapX;
+  rootFiles.forEach((node, index) => {
+    const fullPath = String(node.data?.path || "");
+    positionedNodes.push({
+      ...node,
+      data: {
+        ...node.data,
+        label: node.data?.category === "file"
+          ? String(node.data?.label || fullPath).split("/").pop()
+          : node.data?.label,
+        displayPath: fullPath,
+      },
+      position: {
+        x: -rootWidth / 2 + (index % rootColumns) * (cardWidth + childGapX),
+        y: 230 + Math.floor(index / rootColumns) * childRowGap,
+      },
+    });
+  });
+
+  let workspaceY = 350 + rootRows * childRowGap;
+  workspaceRows.forEach((rowWorkspaces, rowIndex) => {
+    const rowWidth = rowWidths[rowIndex];
+    let groupX = -rowWidth / 2;
+    let maxChildRows = 0;
+
+    rowWorkspaces.forEach((workspace) => {
+      const workspaceIndex = workspaceNodes.indexOf(workspace);
+      const children = (childrenByWorkspace.get(workspace.id) || []).sort((a, b) =>
+        String(a.data?.path || a.data?.label || a.id).localeCompare(String(b.data?.path || b.data?.label || b.id)),
+      );
+      const columns = columnsFor(children.length);
+      const groupWidth = groupWidths[workspaceIndex];
+      const childStartY = workspaceY + 185;
+      maxChildRows = Math.max(maxChildRows, Math.ceil(children.length / columns));
+      positionedNodes.push({
+        ...workspace,
+        position: { x: groupX + (groupWidth - cardWidth) / 2, y: workspaceY },
+      });
+
+      children.forEach((node, index) => {
+        const fullPath = String(node.data?.path || "");
+        const workspaceName = String(workspace.data?.label || "");
+        const normalizedPath = fullPath.replace(/^\/+/, "");
+        const workspacePrefix = `${workspaceName}/`;
+        const displayPath = normalizedPath.startsWith(workspacePrefix)
+          ? normalizedPath.slice(workspacePrefix.length)
+          : normalizedPath;
+        positionedNodes.push({
+          ...node,
+          data: {
+            ...node.data,
+            label: node.data?.category === "file"
+              ? String(node.data?.label || fullPath).split("/").pop()
+              : node.data?.label,
+            displayPath: displayPath || fullPath,
+          },
+          position: {
+            x: groupX + (index % columns) * (cardWidth + childGapX),
+            y: childStartY + Math.floor(index / columns) * childRowGap,
+          },
+        });
+      });
+
+      groupX += groupWidth + groupGap;
+    });
+
+    workspaceY += 315 + maxChildRows * childRowGap;
+  });
+
+  const otherNodes = rawNodes.filter((node) =>
+    node !== agentNode && node !== soulNode && node !== identityNode && node !== headerTier1 && node !== headerTier2 &&
+    !workspaceIds.has(node.id) && !childNodes.some((child) => child.id === node.id) &&
+    !pipelineNodes.some((pipeline) => pipeline.id === node.id),
+  );
+  otherNodes.forEach((node, index) => {
+    positionedNodes.push({ ...node, position: { x: -cardWidth / 2, y: workspaceY + index * childRowGap } });
+  });
+
+  const pipelineX = maxRowWidth / 2 + 180;
+  if (headerTier2) positionedNodes.push({ ...headerTier2, position: { x: pipelineX - 45, y: -70 } });
+  pipelineNodes.forEach((node, index) => {
+    positionedNodes.push({ ...node, position: { x: pipelineX, y: 55 + index * 130 } });
+  });
+
+  const updatedEdges = rawEdges.map((edge) => {
+    const isBridge = edge.id.includes("bridge") || (edge.source.startsWith("pipe-") && edge.target.startsWith("vault-"));
+    if (isBridge) {
+      const color = edge.id.includes("sse") ? "#06b6d4" : "#f59e0b";
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: "source-left",
+        targetHandle: "target-right",
+        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14, color },
+        style: { stroke: color, strokeDasharray: "5 5", strokeWidth: 2 },
+      };
+    }
+    if (edge.source === "vault-agents-md" && (edge.target === "vault-soul-md" || edge.target === "vault-identity-md")) {
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: edge.target === "vault-soul-md" ? "source-left" : "source-right",
+        targetHandle: edge.target === "vault-soul-md" ? "target-right" : "target-left",
+        style: { stroke: "#a855f7", strokeDasharray: "4 4", strokeWidth: 2 },
+      };
+    }
+    if (workspaceIds.has(edge.source)) {
+      return {
+        ...edge,
+        type: "smoothstep",
+        sourceHandle: "source-bottom",
+        targetHandle: "target-top",
+        style: { stroke: "#10b981", strokeWidth: 1.6, opacity: 0.7 },
+      };
+    }
+    if (edge.source.startsWith("pipe-")) {
+      return { ...edge, type: "smoothstep", sourceHandle: "source-bottom", targetHandle: "target-top", style: { stroke: "#6366f1", strokeWidth: 2 } };
+    }
+    return { ...edge, type: "smoothstep", sourceHandle: "source-bottom", targetHandle: "target-top", style: { stroke: "#a855f7", strokeWidth: 1.8 } };
+  });
+
+  return { nodes: positionedNodes, edges: updatedEdges };
+}
+
+export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[], project?: MapsProject): { nodes: Node[]; edges: Edge[] } {
   if (!rawNodes || rawNodes.length === 0) return { nodes: [], edges: [] };
+  if (project === "hust" || rawNodes.some((node) => String(node.data?.label || node.id).startsWith("workspace_hust_"))) {
+    return autoLayoutHustTopology(rawNodes, rawEdges);
+  }
+  if (project === "media_tech") return autoLayoutMediaTechTopology(rawNodes, rawEdges);
 
   // 1. Phân loại các node
   const workspaceNodes: Node[] = [];
@@ -330,8 +693,9 @@ export function autoLayoutTopology(rawNodes: Node[], rawEdges: Edge[]): { nodes:
 // CUSTOM NODE COMPONENTS
 // ==========================================
 
-function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
+function VaultNode({ data, selected }: { data: VaultNodeData; selected?: boolean }) {
   const isSelected = selected;
+  const isMarkdownFile = data.category === "file";
   const bgClass =
     data.category === "agent"
       ? "border-purple-500/80 bg-purple-950/40 text-purple-200"
@@ -352,7 +716,7 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
 
   return (
     <div
-      className={`w-[260px] rounded-xl border p-3.5 shadow-xl backdrop-blur-md transition-all duration-200 relative ${bgClass} ${
+      className={`w-[260px] rounded-xl border ${isMarkdownFile ? "p-2.5" : "p-3.5"} shadow-xl backdrop-blur-md transition-all duration-200 relative ${bgClass} ${
         isSelected ? "ring-2 ring-purple-400 shadow-purple-500/30 shadow-2xl scale-[1.02]" : "hover:border-slate-400"
       }`}
     >
@@ -384,7 +748,7 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
         </span>
       </div>
 
-      {data.description && (
+      {data.description && !isMarkdownFile && (
         <p className="mt-1.5 text-[11px] leading-relaxed text-slate-300 line-clamp-2">
           {data.description}
         </p>
@@ -397,20 +761,32 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
             <FileCode className="h-3 w-3" />
             <span>Tài liệu .md ({data.files.length}):</span>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {data.files.map((fileName: string) => (
-              <span
-                key={fileName}
-                className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 border border-emerald-500/30"
-              >
-                📄 {fileName}
-              </span>
-            ))}
-          </div>
+          {data.files.length <= 3 ? (
+            <div className="flex flex-wrap gap-1">
+              {data.files.map((fileName: string) => (
+                <span
+                  key={fileName}
+                  className="inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 border border-emerald-500/30"
+                >
+                  📄 {fileName}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[10px] leading-4 text-emerald-200/80">
+              {data.files.length} tệp Markdown được liệt kê thành các thẻ bên dưới.
+            </p>
+          )}
         </div>
       )}
 
-      {data.path && (
+      {isMarkdownFile && data.path && (
+        <div title={data.path} className="mt-1.5 text-[10px] font-mono text-slate-400 truncate bg-black/40 px-2 py-1 rounded border border-white/5">
+          {data.displayPath || data.path}
+        </div>
+      )}
+
+      {data.path && !isMarkdownFile && (
         <div className="mt-2 text-[10px] font-mono text-slate-400 truncate bg-black/40 px-2 py-1 rounded border border-white/5">
           {data.path}
         </div>
@@ -419,7 +795,7 @@ function VaultNode({ data, selected }: { data: any; selected?: boolean }) {
   );
 }
 
-function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
+function PipelineNode({ data, selected }: { data: PipelineNodeData; selected?: boolean }) {
   const isSelected = selected;
   return (
     <div
@@ -469,7 +845,7 @@ function PipelineNode({ data, selected }: { data: any; selected?: boolean }) {
   );
 }
 
-function SectionLabelNode({ data }: { data: any }) {
+function SectionLabelNode({ data }: { data: SectionLabelData }) {
   return (
     <div className="w-[360px] rounded-2xl border border-white/10 bg-black/60 p-3.5 shadow-2xl backdrop-blur-xl text-center">
       <div className="flex items-center justify-center gap-2 text-xs font-bold tracking-wider uppercase text-white">
@@ -492,89 +868,54 @@ const nodeTypes = {
 };
 
 // ==========================================
-// FALLBACK DATA DỰ PHÒNG CHUẨN
-// ==========================================
-const INITIAL_FALLBACK_NODES: Node[] = [
-  {
-    id: "header-tier1",
-    type: "sectionLabelNode",
-    position: { x: 475, y: -60 },
-    data: {
-      title: "TẦNG 1: Markdown Knowledge Vault",
-      subtitle: "Không gian tri thức toán học K(c) gồm 4 domain workspaces trong OpenClaw",
-      icon: "vault",
-    },
-    selectable: false,
-  },
-  {
-    id: "header-tier2",
-    type: "sectionLabelNode",
-    position: { x: 1355, y: -60 },
-    data: {
-      title: "TẦNG 2: n8n Execution Engine",
-      subtitle: "Pipeline thực thi động 5 node nạp động file .md qua Dynamic Path Resolution",
-      icon: "pipeline",
-    },
-    selectable: false,
-  },
-  {
-    id: "vault-agents-md",
-    type: "vaultNode",
-    position: { x: 525, y: 60 },
-    data: {
-      label: "AGENTS.md",
-      category: "agent",
-      badge: "Global f_A",
-      math: "f_A(A)",
-      description: "Định nghĩa vai trò toàn cục, triết lý vận hành & toán tử hợp Monoid.",
-      path: "/workspace_maps_main/AGENTS.md",
-    },
-  },
-];
-
-const INITIAL_FALLBACK_EDGES: Edge[] = [];
-
-// ==========================================
 // FLOW INNER COMPONENT (HỖ TRỢ FITVIEW & CONTROLS)
 // ==========================================
-function MapsMainCanvasInner() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_FALLBACK_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_FALLBACK_EDGES);
+function MapsMainCanvasInner({ project }: { project: MapsProject }) {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [activeFilter, setActiveFilter] = useState<"all" | "vault" | "pipeline">("all");
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [lastSyncTime, setLastSyncTime] = useState<string>("");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const { fitView } = useReactFlow();
 
   // Load dữ liệu từ domain mẹ và tự động căn chỉnh
   const loadGraphFromDomain = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
-      const res = await fetch(MAPS_MAIN_GRAPH_URL, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetch(mapsMainApiUrl("graph", project), { cache: "no-store" });
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        throw new Error(errorBody?.error || `HTTP ${res.status}`);
+      }
       const json = await res.json();
+      if (json.ok === false) throw new Error(json.error || "Graph API returned an error");
 
       const rawNodes: Node[] = json.data?.nodes || json.graph?.nodes || json.nodes || [];
       const rawEdges: Edge[] = json.data?.edges || json.graph?.edges || json.edges || [];
+      const workspaceCount = rawNodes.filter((node) => node.data?.category === "workspace").length;
+      if (workspaceCount === 0) throw new Error("Graph API chưa trả workspace nào.");
 
-      if (rawNodes.length > 0) {
-        const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(rawNodes, rawEdges);
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-        setLastSyncTime(new Date().toLocaleTimeString());
+      const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(rawNodes, rawEdges, project);
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
 
-        setTimeout(() => {
-          fitView({ padding: 0.18, duration: 400 });
-        }, 100);
-      }
+      setTimeout(() => {
+        fitView({ padding: 0.18, duration: 400 });
+      }, 100);
     } catch (err) {
-      console.warn("Could not load from parent domain, applying fallback:", err);
+      const message = err instanceof Error ? err.message : "Không xác định được lỗi tải sơ đồ.";
+      console.error("Could not load Maps Main graph:", err);
+      setNodes([]);
+      setEdges([]);
+      setLoadError(message);
     } finally {
       setIsLoading(false);
     }
-  }, [setNodes, setEdges, fitView]);
+  }, [project, setNodes, setEdges, fitView]);
 
   useEffect(() => {
     loadGraphFromDomain();
@@ -582,16 +923,16 @@ function MapsMainCanvasInner() {
 
   // Nút người dùng click để tự động căn giữa lại toàn bộ sơ đồ
   const handleReAlign = useCallback(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(nodes, edges);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = autoLayoutTopology(nodes, edges, project);
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
     setTimeout(() => {
       fitView({ padding: 0.18, duration: 400 });
     }, 50);
-  }, [nodes, edges, setNodes, setEdges, fitView]);
+  }, [nodes, edges, project, setNodes, setEdges, fitView]);
 
   // Khi click vào node, load nội dung file .md trực tiếp từ API domain mẹ
-  const onNodeClick = useCallback(async (_: any, node: Node) => {
+  const onNodeClick = useCallback(async (_: React.MouseEvent, node: Node) => {
     if (node.type === "sectionLabelNode") return;
     setSelectedNode(node);
     setFileContent(null);
@@ -600,7 +941,7 @@ function MapsMainCanvasInner() {
     const relativePath = node.data?.path as string | undefined;
     if (relativePath) {
       try {
-        const url = `${MAPS_MAIN_FILE_URL}?path=${encodeURIComponent(relativePath)}`;
+        const url = mapsMainApiUrl("file", project, relativePath);
         const res = await fetch(url, { cache: "no-store" });
         if (res.ok) {
           const json = await res.json();
@@ -615,7 +956,7 @@ function MapsMainCanvasInner() {
       }
     }
     setFileContent((node.data?.content as string) || null);
-  }, []);
+  }, [project]);
 
   const handleCopyContent = useCallback(() => {
     if (!fileContent) return;
@@ -662,13 +1003,13 @@ function MapsMainCanvasInner() {
           </div>
           <div>
             <h1 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
-              Bản đồ Tổng thể Tri thức & Thực thi (Maps Main)
+              Bản đồ Workspace n8n
               <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/30">
                 Auto-Align Live
               </span>
             </h1>
             <p className="text-[11px] text-slate-400 font-mono flex items-center gap-2">
-              <span>Domain: <strong className="text-indigo-400">node_md.hust.media</strong></span>
+              <span>Backend: <strong className="text-indigo-400">{project === "hust" ? "Hust · Node.js 2999" : "Media Tech · Node.js 8818"}</strong></span>
               <span>&bull;</span>
               <span>{stats.wsCount} Workspaces</span>
               <span>&bull;</span>
@@ -702,7 +1043,7 @@ function MapsMainCanvasInner() {
             >
               Tri thức (.md)
             </button>
-            <button
+            {stats.pipeCount > 0 && <button
               onClick={() => setActiveFilter("pipeline")}
               className={`rounded-md px-2.5 py-1 transition-colors ${
                 activeFilter === "pipeline"
@@ -711,7 +1052,7 @@ function MapsMainCanvasInner() {
               }`}
             >
               Pipeline n8n
-            </button>
+            </button>}
           </div>
 
           {/* NÚT TỰ CĂN CHỈNH */}
@@ -770,6 +1111,31 @@ function MapsMainCanvasInner() {
           maskColor="rgba(15, 23, 42, 0.7)"
         />
       </ReactFlow>
+
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/80 p-6 pt-16">
+          <div className="max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center shadow-xl">
+            {isLoading ? (
+              <>
+                <RefreshCw className="mx-auto h-6 w-6 animate-spin text-indigo-400" />
+                <h2 className="mt-3 text-base font-semibold text-white">Đang tải sơ đồ workspace</h2>
+              </>
+            ) : (
+              <>
+                <Info className="mx-auto h-6 w-6 text-amber-400" />
+                <h2 className="mt-3 text-base font-semibold text-white">Chưa tải được sơ đồ</h2>
+                <p className="mt-2 break-words text-sm text-slate-300">{loadError || "API chưa trả dữ liệu workspace."}</p>
+                <button
+                  onClick={loadGraphFromDomain}
+                  className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+                >
+                  Thử tải lại
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* INSPECTOR DRAWER ĐỌC NỘI DUNG FILE .MD */}
       {selectedNode && (
@@ -843,7 +1209,7 @@ function MapsMainCanvasInner() {
                   </pre>
                 ) : (
                   <div className="text-[11px] italic text-slate-500 bg-slate-950/50 p-2 rounded border border-slate-800">
-                    Đang nạp nội dung file từ API domain mẹ...
+                    Đang nạp nội dung file từ backend...
                   </div>
                 )}
               </div>
@@ -864,10 +1230,10 @@ function MapsMainCanvasInner() {
   );
 }
 
-export default function MapsMainCanvas() {
+export default function MapsMainCanvas({ project = "media_tech" }: { project?: MapsProject }) {
   return (
     <ReactFlowProvider>
-      <MapsMainCanvasInner />
+      <MapsMainCanvasInner project={project} />
     </ReactFlowProvider>
   );
 }

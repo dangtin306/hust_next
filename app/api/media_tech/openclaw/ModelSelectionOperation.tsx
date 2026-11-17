@@ -21,7 +21,7 @@ const modelSelectionSpec = {
         operationId: "createResponseWithSelectedModel",
         tags: ["Model Selection"],
         summary: "Chuyển model cho request",
-        description: "Chọn model từ danh sách rồi gửi model đó trong request Responses.",
+        description: "Chọn một id trong GET /openclaw/v1/models rồi gửi id đó trong trường model. Id không hợp lệ trả 400 model_not_found.",
         requestBody: {
           required: true,
           content: {
@@ -39,7 +39,7 @@ const modelSelectionSpec = {
             description: "Response hoàn tất theo định dạng Responses API",
             content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
           },
-          "400": { description: "Request không hợp lệ" },
+          "400": { description: "Model không hợp lệ (model_not_found) hoặc request sai định dạng" },
         },
       },
     },

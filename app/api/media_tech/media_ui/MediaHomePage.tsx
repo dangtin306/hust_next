@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
+  handleHomeNavigationLink,
+  HomeNavigationToast,
+  useHomeNavigationToast,
+} from "@/app/api/hust_media/media_tech/HomeNavigationToast";
+import {
   Video,
   Sparkles,
   ArrowRight,
@@ -30,6 +35,7 @@ interface MediaHomePageProps {
 
 export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
   const router = useRouter();
+  const { pendingNavigation, showNavigationLoading } = useHomeNavigationToast();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -166,7 +172,10 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "heygen") && (
           <div
-            onClick={() => router.push(heygenHomeLink as Route)}
+            onClick={() => {
+              showNavigationLoading("MC Ảo");
+              router.push(heygenHomeLink as Route);
+            }}
             title="Nhấp để mở Studio MC Ảo"
             className="group flex flex-col justify-between rounded-2xl border border-purple-200/90 bg-white shadow-2xs transition-all hover:border-purple-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -228,14 +237,14 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
               <div className="flex items-center gap-2 pt-1">
                 <Link
                   href={heygenVideoLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(event) => handleHomeNavigationLink(event, "Video MC ảo", showNavigationLoading)}
                   className="flex-1 text-center rounded-lg border border-purple-200 bg-purple-50/70 hover:bg-purple-100 px-2.5 py-1.5 text-[11px] font-bold text-purple-700 transition"
                 >
                   Tạo Video
                 </Link>
                 <Link
                   href={heygenLiveLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(event) => handleHomeNavigationLink(event, "Live Avatar", showNavigationLoading)}
                   className="flex-1 text-center rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 transition"
                 >
                   Live Avatar
@@ -274,7 +283,7 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
 
               <Link
                 href={heygenHomeLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "MC Ảo", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-700 via-indigo-600 to-violet-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở MC Ảo</span>
@@ -459,6 +468,7 @@ export default function MediaHomePage({ isHust = false }: MediaHomePageProps) {
           </button>
         </div>
       )}
+      <HomeNavigationToast label={pendingNavigation} />
     </div>
   );
 }

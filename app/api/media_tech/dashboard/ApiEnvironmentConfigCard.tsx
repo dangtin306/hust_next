@@ -27,9 +27,10 @@ import {
 
 type Props = {
   isHust?: boolean;
+  compact?: boolean;
 };
 
-export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
+export default function ApiEnvironmentConfigCard({ isHust = false, compact = false }: Props) {
   const isSpecialDomain =
     typeof window !== "undefined" &&
     (window.location.hostname === "118.70.169.219" ||
@@ -171,14 +172,14 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
 
   if (!mounted) {
     return (
-      <div className="mb-6 rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 text-xs text-slate-400 animate-pulse">
+      <div className={`${compact ? "" : "mb-6"} rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 text-xs text-slate-400 animate-pulse`}>
         Đang kiểm tra cấu hình kết nối API hệ thống...
       </div>
     );
   }
 
   return (
-    <div className="mb-6 relative">
+    <div className={`${compact ? "" : "mb-6"} relative`}>
       {/* Toast alert */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg transition-all animate-bounce">
@@ -417,7 +418,7 @@ export default function ApiEnvironmentConfigCard({ isHust = false }: Props) {
                     placeholder={
                       !isHust
                         ? "http://192.168.0.189:8818 hoặc https://node_md.hust.media"
-                        : "https://node_md.hust.media hoặc http://localhost:2999"
+                        : "https://node_js.hust.media hoặc http://localhost:2999"
                     }
                     required
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

@@ -6,6 +6,8 @@ export const CHAT_BOT_API_CHANGE_EVENT = "url-api-chat-bot-change";
 export type ChatBotApiConfig = {
   backend_laravel: string;
   backend_node: string;
+  // Host Qwen relay, cùng kiểu với backend_node. Đường dẫn API nằm trong code: /qwen/v1/chat/completions, /qwen/v1/models. Tùy chọn để tương thích cấu hình cũ.
+  backend_qwen?: string;
 };
 
 export function getChatBotApiCookieName(isHust = false): string {
@@ -21,6 +23,7 @@ export const DEFAULT_PRESETS = {
       config: {
         backend_laravel: "http://192.168.0.189:8817",
         backend_node: "http://192.168.0.189:8818",
+        backend_qwen: "http://192.168.0.189:8818",
       },
     },
     production: {
@@ -30,6 +33,7 @@ export const DEFAULT_PRESETS = {
       config: {
         backend_laravel: "https://laravel_mt.hust.media",
         backend_node: "https://node_md.hust.media",
+        backend_qwen: "http://118.70.169.219:8818",
       },
     },
     localhost: {
@@ -39,6 +43,7 @@ export const DEFAULT_PRESETS = {
       config: {
         backend_laravel: "http://127.0.0.1:8000",
         backend_node: "http://localhost:2999",
+        backend_qwen: "http://118.70.169.219:8818",
       },
     },
   },
@@ -49,7 +54,8 @@ export const DEFAULT_PRESETS = {
       description: "Chạy trên IP public dev",
       config: {
         backend_laravel: "https://laravel.hust.media",
-        backend_node: "https://node_md.hust.media",
+        backend_node: "https://node_js.hust.media",
+        backend_qwen: "http://118.70.169.219:8818",
       },
     },
     localhost: {
@@ -59,6 +65,7 @@ export const DEFAULT_PRESETS = {
       config: {
         backend_laravel: "http://127.0.0.1:8000",
         backend_node: "http://localhost:2999",
+        backend_qwen: "http://118.70.169.219:8818",
       },
     },
   },
@@ -88,8 +95,12 @@ export function parseChatBotApiConfigString(
         typeof parsed.backend_node === "string"
           ? parsed.backend_node.trim()
           : "";
+      const qwen =
+        typeof parsed.backend_qwen === "string"
+          ? parsed.backend_qwen.trim()
+          : "";
       if (laravel || node) {
-        return { backend_laravel: laravel, backend_node: node };
+        return { backend_laravel: laravel, backend_node: node, backend_qwen: qwen };
       }
     }
   } catch {
@@ -104,8 +115,12 @@ export function parseChatBotApiConfigString(
           typeof parsed.backend_node === "string"
             ? parsed.backend_node.trim()
             : "";
+        const qwen =
+          typeof parsed.backend_qwen === "string"
+            ? parsed.backend_qwen.trim()
+            : "";
         if (laravel || node) {
-          return { backend_laravel: laravel, backend_node: node };
+          return { backend_laravel: laravel, backend_node: node, backend_qwen: qwen };
         }
       }
     } catch {}
@@ -158,10 +173,32 @@ export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
       return {
         backend_laravel: parsed.backend_laravel || fallback.backend_laravel,
         backend_node: parsed.backend_node || fallback.backend_node,
+        backend_qwen: parsed.backend_qwen || fallback.backend_qwen,
       };
     }
   }
   return fallback;
+}
+
+/**
+ * Chỉ đọc URL đã lưu trong cookie môi trường, KHÔNG dùng preset mặc định.
+ * Chuỗi rỗng nghĩa là chưa có cookie: proxy tự chọn theo cấu hình server.
+ * Chat dùng hàm này để hiển thị và gửi đúng URL mà proxy sẽ gọi.
+ */
+export function getStoredChatBotApiTargets(isHust = false): {
+  backend_node: string;
+  backend_laravel: string;
+} {
+  if (typeof document === "undefined") return { backend_node: "", backend_laravel: "" };
+  const targetCookieName = getChatBotApiCookieName(isHust);
+  const match =
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${targetCookieName}=([^;]+)`)) ||
+    document.cookie.match(new RegExp(`(?:^|;\\s*)${CHAT_BOT_API_COOKIE_NAME}=([^;]+)`));
+  const parsed = match ? parseChatBotApiConfigString(match[1]) : null;
+  return {
+    backend_node: parsed?.backend_node || "",
+    backend_laravel: parsed?.backend_laravel || "",
+  };
 }
 
 /**
@@ -170,9 +207,11 @@ export function getChatBotApiConfig(isHust = false): ChatBotApiConfig {
 export function saveChatBotApiConfig(config: ChatBotApiConfig, isHust = false): void {
   if (typeof document === "undefined") return;
   const targetCookieName = getChatBotApiCookieName(isHust);
+  const currentQwen = config.backend_qwen ?? getChatBotApiConfig(isHust).backend_qwen ?? "";
   const cleanConfig: ChatBotApiConfig = {
     backend_laravel: config.backend_laravel.trim().replace(/\/+$/, ""),
     backend_node: config.backend_node.trim().replace(/\/+$/, ""),
+    backend_qwen: currentQwen.trim().replace(/\/+$/, ""),
   };
   const jsonStr = JSON.stringify(cleanConfig);
   document.cookie = `${targetCookieName}=${encodeURIComponent(

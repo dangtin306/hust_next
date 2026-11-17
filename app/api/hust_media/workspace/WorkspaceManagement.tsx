@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
+import type { Route } from "next";
 import {
   Briefcase,
   Layers,
@@ -33,8 +35,12 @@ import {
   Sparkles,
   Folder,
   Save,
+  Link2,
+  HardDrive,
+  Bot,
 } from "lucide-react";
 import MarkdownViewer from "@/app/api/media_tech/workspace/MarkdownViewer";
+import { copyText } from "@/app/api/media_tech/workspace/copyText";
 
 export type WorkspaceRecord = {
   id: number;
@@ -43,6 +49,8 @@ export type WorkspaceRecord = {
   work_space_code: string;
   parent_workspace_code?: string | null;
   slug: string;
+  relative_path?: string;
+  full_path?: string;
   description: string | null;
   status: "active" | "archived";
   is_selectable?: boolean;
@@ -53,6 +61,21 @@ export type WorkspaceRecord = {
   created_at: string;
   updated_at: string;
 };
+
+type WorkspaceTab = "workspaces" | "markdown" | "sessions" | "user-workspaces";
+
+function getWorkspaceTabFromPath(path: string): WorkspaceTab | null {
+  const scopedMatch = path.match(/\/agent\/[^/]+\/workspace(?:\/([^/]+))?\/?$/);
+  if (scopedMatch) {
+    const section = scopedMatch[1];
+    return section && ["markdown", "sessions", "user-workspaces"].includes(section)
+      ? (section as WorkspaceTab)
+      : "workspaces";
+  }
+  if (path.includes("/markdown")) return "markdown";
+  if (path.includes("/home") || path.endsWith("/workspace")) return "workspaces";
+  return null;
+}
 
 export type WorkspaceSessionRecord = {
   id: number;
@@ -99,13 +122,21 @@ export type MarkdownTreeItem = {
   workspace_id?: number;
   content?: string;
   size_bytes?: number;
+  abs_path?: string;
 };
 
-function attachWorkspaceId(item: MarkdownTreeItem, wsId: number): MarkdownTreeItem {
+// Ghép đường dẫn tuyệt đối của workspace với đường dẫn tương đối của file, giữ đúng dấu phân cách của máy chủ.
+function joinAbsPath(root: string, relative: string): string {
+  const sep = root.includes("\\") ? "\\" : "/";
+  return `${root.replace(/[\\/]+$/, "")}${sep}${relative.replace(/\//g, sep)}`;
+}
+
+function attachWorkspaceId(item: MarkdownTreeItem, wsId: number, wsRoot?: string): MarkdownTreeItem {
   return {
     ...item,
     workspace_id: wsId,
-    children: item.children ? item.children.map((child) => attachWorkspaceId(child, wsId)) : undefined,
+    abs_path: wsRoot ? joinAbsPath(wsRoot, item.path) : undefined,
+    children: item.children ? item.children.map((child) => attachWorkspaceId(child, wsId, wsRoot)) : undefined,
   };
 }
 
@@ -115,6 +146,7 @@ export type WorkspaceMarkdownData = {
   work_space_code: string;
   parent_workspace_code?: string;
   relative_path: string;
+  full_path?: string;
   markdown_count: number;
   tree: MarkdownTreeItem[];
 };
@@ -344,6 +376,18 @@ function filterWorkspaceTree(
   return result;
 }
 
+function filterWorkspaceTreeByCodes(nodes: WorkspaceRecord[], codes: Set<string>): WorkspaceRecord[] {
+  const filterNode = (node: WorkspaceRecord): WorkspaceRecord | null => {
+    const children = (node.children || [])
+      .map(filterNode)
+      .filter((child): child is WorkspaceRecord => child !== null);
+    if (!codes.has(node.work_space_code) && children.length === 0) return null;
+    return { ...node, children, children_count: children.length };
+  };
+
+  return nodes.map(filterNode).filter((node): node is WorkspaceRecord => node !== null);
+}
+
 export type InlineFileState = {
   isOpen: boolean;
   isEditing: boolean;
@@ -399,6 +443,7 @@ type MarkdownTreeNodeProps = {
   onRefreshFile: (item: MarkdownTreeItem) => void;
   onCopyPath: (key: string, text: string, label?: string) => void;
   copiedKey: string | null;
+  workspaceRoot?: string;
 };
 
 function MarkdownTreeNode({
@@ -415,9 +460,12 @@ function MarkdownTreeNode({
   onRefreshFile,
   onCopyPath,
   copiedKey,
+  workspaceRoot,
 }: MarkdownTreeNodeProps) {
   const isDirectory = item.type === "directory";
   const effectivePath = item.full_path || item.path;
+  const absPath = item.abs_path || (workspaceRoot ? joinAbsPath(workspaceRoot, item.path) : undefined);
+  const absCopyKey = `md-abs-${effectivePath}`;
   const copyKey = `md-path-${effectivePath}`;
   const fileKey = effectivePath;
   const fileState = openFiles[fileKey];
@@ -472,15 +520,20 @@ function MarkdownTreeNode({
             <>
               <button
                 type="button"
+                disabled={Boolean(fileState?.loading)}
                 onClick={() => onToggleView(item)}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer ${
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition cursor-pointer disabled:cursor-wait disabled:opacity-70 ${
                   isExpandedInView
                     ? "bg-emerald-600 text-white shadow-xs hover:bg-emerald-700"
                     : "bg-emerald-50 border border-emerald-300 text-emerald-800 hover:bg-emerald-100"
                 }`}
                 title={isExpandedInView ? "Thu gọn file này" : "Xem nội dung file Markdown (.md)"}
               >
-                <Eye className="h-3 w-3" />
+                {fileState?.loading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Eye className="h-3 w-3" />
+                )}
                 <span>{isExpandedInView ? "Thu gọn" : "Xem file"}</span>
               </button>
 
@@ -507,16 +560,32 @@ function MarkdownTreeNode({
           <button
             type="button"
             onClick={() => onCopyPath(copyKey, effectivePath, "đường dẫn file")}
-            className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition cursor-pointer"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition cursor-pointer"
             title={item.full_path ? `Sao chép full_path: ${item.full_path}` : "Sao chép đường dẫn file"}
+            aria-label="Sao chép đường dẫn"
           >
             {copiedKey === copyKey ? (
-              <Check className="h-3 w-3 text-emerald-600" />
+              <Check className="h-3.5 w-3.5 text-emerald-600" />
             ) : (
-              <Copy className="h-3 w-3" />
+              <Link2 className="h-3.5 w-3.5" />
             )}
-            <span className="hidden sm:inline">Copy</span>
           </button>
+
+          {absPath && (
+            <button
+              type="button"
+              onClick={() => onCopyPath(absCopyKey, absPath, "đường dẫn đầy đủ (full path)")}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:text-amber-700 hover:bg-slate-100 transition cursor-pointer"
+              title={`Sao chép full path: ${absPath}`}
+              aria-label="Sao chép full path"
+            >
+              {copiedKey === absCopyKey ? (
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+              ) : (
+                <HardDrive className="h-3.5 w-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -748,7 +817,7 @@ function MarkdownTreeNode({
                 <MarkdownViewer
                   content={fileState.content ?? ""}
                   filePath={effectivePath}
-                  maxHeight="max-h-[460px]"
+                  maxHeight="max-h-none"
                   onSwitchToEdit={() => onToggleEdit(item)}
                 />
 
@@ -787,12 +856,22 @@ function MarkdownTreeNode({
               onRefreshFile={onRefreshFile}
               onCopyPath={onCopyPath}
               copiedKey={copiedKey}
+              workspaceRoot={workspaceRoot}
             />
           ))}
         </div>
       )}
     </div>
   );
+}
+
+// Đường dẫn thư mục workspace: ưu tiên relative_path do API trả về; nếu thiếu thì ghép theo cấu trúc OpenClaw (vd workspace-chat_bot/workspace_hust_dev).
+function getWorkspacePath(
+  ws: { work_space_code: string; parent_workspace_code?: string | null; relative_path?: string },
+  isChild: boolean,
+): string {
+  if (ws.relative_path) return ws.relative_path;
+  return isChild && ws.parent_workspace_code ? `${ws.parent_workspace_code}/${ws.work_space_code}` : ws.work_space_code;
 }
 
 type WorkspaceCardItemProps = {
@@ -874,10 +953,41 @@ function WorkspaceCardItem({
                   </button>
                 </div>
 
+                <div className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/80 px-1.5 py-0.2 rounded-md">
+                  <Folder className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                  <span className="truncate max-w-[170px]" title={getWorkspacePath(ws, isChild)}>{getWorkspacePath(ws, isChild)}</span>
+                  <button
+                    type="button"
+                    onClick={() => onCopy(`path-${ws.id}`, getWorkspacePath(ws, isChild), "đường dẫn workspace")}
+                    className="text-slate-400 hover:text-slate-700 transition cursor-pointer shrink-0"
+                    title="Sao chép đường dẫn workspace"
+                  >
+                    {copiedKey === `path-${ws.id}` ? (
+                      <Check className="h-2.5 w-2.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-2.5 w-2.5" />
+                    )}
+                  </button>
+                  {ws.full_path && (
+                    <button
+                      type="button"
+                      onClick={() => onCopy(`full-${ws.id}`, ws.full_path as string, "đường dẫn đầy đủ (full path)")}
+                      className="text-slate-400 hover:text-slate-700 transition cursor-pointer shrink-0"
+                      title={`Sao chép full path: ${ws.full_path}`}
+                    >
+                      {copiedKey === `full-${ws.id}` ? (
+                        <Check className="h-2.5 w-2.5 text-emerald-600" />
+                      ) : (
+                        <HardDrive className="h-2.5 w-2.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+
                 {ws.agent_code && (
                   <span
                     className="font-mono text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-200/80 px-1.5 py-0.2 rounded-md"
-                    title="Mã Agent"
+                    title="Mã Agent trong bản ghi Laravel"
                   >
                     agent: {ws.agent_code}
                   </span>
@@ -1012,12 +1122,14 @@ export interface WorkspaceManagementProps {
   value?: WorkspaceProjectValue;
   embedded?: boolean;
   initialTab?: "workspaces" | "markdown" | "sessions" | "user-workspaces";
+  initialAgentCode?: string;
 }
 
 export default function WorkspaceManagement({
   value,
   embedded,
   initialTab = "workspaces",
+  initialAgentCode,
 }: WorkspaceManagementProps = {}) {
   const project = value ?? "hust";
   const projectRef = useRef<WorkspaceProjectValue | undefined>(value);
@@ -1027,12 +1139,18 @@ export default function WorkspaceManagement({
   // Navigation tab: 'workspaces' | 'markdown' | 'sessions' | 'user-workspaces'
   const [activeTab, setActiveTab] = useState<"workspaces" | "markdown" | "sessions" | "user-workspaces">(initialTab);
 
+  // Agent scope must be initialized before callbacks that use it.
+  const [agentFilter, setAgentFilter] = useState<string | null>(initialAgentCode?.trim() || null);
+  const [agentWorkspaceCodes, setAgentWorkspaceCodes] = useState<string[] | null>(null);
+  const [agentFilterError, setAgentFilterError] = useState<string | null>(null);
+
   const navigateTab = useCallback(
     (tab: "workspaces" | "markdown" | "sessions" | "user-workspaces") => {
       setActiveTab(tab);
       if (!isEmbedded && typeof window !== "undefined") {
-        const targetUri =
-          tab === "markdown"
+        const targetUri = agentFilter
+          ? `/next/api/hust/agent/${encodeURIComponent(agentFilter)}/workspace${tab === "workspaces" ? "" : `/${tab}`}`
+          : tab === "markdown"
             ? "/next/api/hust/workspace/markdown"
             : "/next/api/hust/workspace/home";
         if (window.location.pathname !== targetUri) {
@@ -1040,7 +1158,7 @@ export default function WorkspaceManagement({
         }
       }
     },
-    [isEmbedded]
+    [agentFilter, isEmbedded]
   );
 
   useEffect(() => {
@@ -1052,12 +1170,8 @@ export default function WorkspaceManagement({
   useEffect(() => {
     const handlePopState = () => {
       if (isEmbedded || typeof window === "undefined") return;
-      const path = window.location.pathname;
-      if (path.includes("/markdown")) {
-        setActiveTab("markdown");
-      } else if (path.includes("/home") || path.includes("/workspace")) {
-        setActiveTab("workspaces");
-      }
+      const tab = getWorkspaceTabFromPath(window.location.pathname);
+      if (tab) setActiveTab(tab);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -1065,12 +1179,8 @@ export default function WorkspaceManagement({
 
   useEffect(() => {
     if (!isEmbedded && typeof window !== "undefined") {
-      const path = window.location.pathname;
-      if (path.includes("/markdown")) {
-        setActiveTab("markdown");
-      } else if (path.includes("/home")) {
-        setActiveTab("workspaces");
-      }
+      const tab = getWorkspaceTabFromPath(window.location.pathname);
+      if (tab) setActiveTab(tab);
     }
   }, [isEmbedded]);
 
@@ -1097,6 +1207,53 @@ export default function WorkspaceManagement({
   const [wsSearch, setWsSearch] = useState<string>("");
   const [wsStatusFilter, setWsStatusFilter] = useState<"all" | "active" | "archived">("all");
   const [wsPage, setWsPage] = useState(1);
+
+  useEffect(() => {
+    if (isEmbedded || typeof window === "undefined") return;
+    const readAgent = () => {
+      const scopedMatch = window.location.pathname.match(/\/agent\/([^/]+)\/workspace(?:\/|$)/);
+      const routeAgent = scopedMatch?.[1] ? decodeURIComponent(scopedMatch[1]).trim() : null;
+      const legacyQueryAgent = new URLSearchParams(window.location.search).get("agent")?.trim() || null;
+      setAgentFilter(routeAgent || legacyQueryAgent);
+    };
+    readAgent();
+    window.addEventListener("popstate", readAgent);
+    return () => window.removeEventListener("popstate", readAgent);
+  }, [initialAgentCode, isEmbedded]);
+
+  useEffect(() => {
+    setAgentWorkspaceCodes(null);
+    setAgentFilterError(null);
+    if (!agentFilter) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/next/api/hust/agent/data", { cache: "no-store" });
+        const json = await response.json().catch(() => null);
+        if (!response.ok || !Array.isArray(json?.agents)) {
+          throw new Error(json?.message || `HTTP ${response.status}`);
+        }
+        const agent = (json.agents as { agent_code: string; workspaces: string[] }[]).find(
+          (item) => item.agent_code === agentFilter,
+        );
+        if (cancelled) return;
+        if (!agent) {
+          setAgentFilterError(`Không tìm thấy agent "${agentFilter}".`);
+          setAgentWorkspaceCodes([]);
+          return;
+        }
+        setAgentWorkspaceCodes(agent.workspaces);
+      } catch (err) {
+        if (!cancelled) {
+          setAgentFilterError(err instanceof Error ? err.message : "Không tải được danh sách agent.");
+          setAgentWorkspaceCodes(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentFilter]);
 
   const toggleCollapseParent = useCallback((id: number) => {
     setCollapsedParentIds((prev) => {
@@ -1166,8 +1323,12 @@ export default function WorkspaceManagement({
     }, 2800);
   };
 
-  const handleCopy = (key: string, text: string, label: string = "nội dung") => {
-    navigator.clipboard?.writeText(text);
+  const handleCopy = async (key: string, text: string, label: string = "nội dung") => {
+    const copied = await copyText(text);
+    if (!copied) {
+      showToast(`Không sao chép được ${label}, hãy chép thủ công.`);
+      return;
+    }
     setCopiedKey(key);
     showToast(`Đã sao chép ${label}!`);
     setTimeout(() => setCopiedKey(null), 1800);
@@ -1240,7 +1401,7 @@ export default function WorkspaceManagement({
     } finally {
       setWsLoading(false);
     }
-  }, [wsPage]);
+  }, [agentFilter, wsPage]);
 
   // --- Load Workspace Markdown File Content (API /api/workspaces/content/markdown/get?id={id}&path={path}) ---
   const loadFileContent = useCallback(
@@ -1602,7 +1763,8 @@ export default function WorkspaceManagement({
                 path: child.work_space_code,
                 full_path: data.relative_path || `${parentWs.work_space_code}/${child.work_space_code}`,
                 workspace_id: child.id,
-                children: childItems.map((t) => attachWorkspaceId(t, child.id)),
+                abs_path: data.full_path,
+                children: childItems.map((t) => attachWorkspaceId(t, child.id, data.full_path)),
               });
             }
           }
@@ -1724,7 +1886,7 @@ export default function WorkspaceManagement({
               const { child, data } = result.value;
               totalMarkdownCount += data.markdown_count || 0;
               const childItems = Array.isArray(data.tree) ? data.tree : [];
-              const attachedChildItems = childItems.map((t) => attachWorkspaceId(t, child.id));
+              const attachedChildItems = childItems.map((t) => attachWorkspaceId(t, child.id, data.full_path));
               combinedTree.push({
                 type: "directory",
                 name: `${child.workspace_name || child.work_space_code}`,
@@ -1837,24 +1999,31 @@ export default function WorkspaceManagement({
     return Object.values(openFiles).filter((f) => f.isOpen).length;
   }, [openFiles]);
 
+  const agentScopedWorkspaceTree = useMemo(() => {
+    if (!agentFilter) return workspacesTree;
+    if (!agentWorkspaceCodes) return [];
+    return filterWorkspaceTreeByCodes(workspacesTree, new Set(agentWorkspaceCodes));
+  }, [agentFilter, agentWorkspaceCodes, workspacesTree]);
+
   const eligibleMarkdownWorkspaces = useMemo(() => {
     return workspaces.filter((w) => {
       const isParent = (w.children_count && w.children_count > 0) || w.is_selectable === false;
-      return !isParent;
+      const belongsToAgent = !agentFilter || Boolean(agentWorkspaceCodes?.includes(w.work_space_code));
+      return !isParent && belongsToAgent;
     });
-  }, [workspaces]);
+  }, [workspaces, agentFilter, agentWorkspaceCodes]);
 
   const markdownParentGroups = useMemo(() => {
-    return workspacesTree.filter(
+    return agentScopedWorkspaceTree.filter(
       (w) => (w.children && w.children.length > 0) || w.is_selectable === false
     );
-  }, [workspacesTree]);
+  }, [agentScopedWorkspaceTree]);
 
   const markdownStandaloneWorkspaces = useMemo(() => {
-    return workspacesTree.filter(
+    return agentScopedWorkspaceTree.filter(
       (w) => (!w.children || w.children.length === 0) && w.is_selectable !== false
     );
-  }, [workspacesTree]);
+  }, [agentScopedWorkspaceTree]);
 
   // --- 2. Fetch Sessions from Laravel API (work_space_session) ---
   const fetchSessions = useCallback(async () => {
@@ -2208,27 +2377,54 @@ export default function WorkspaceManagement({
   });
 
   const filteredTree = useMemo(() => {
-    return filterWorkspaceTree(workspacesTree, wsSearch, wsStatusFilter);
-  }, [workspacesTree, wsSearch, wsStatusFilter]);
+    return filterWorkspaceTree(agentScopedWorkspaceTree, wsSearch, wsStatusFilter);
+  }, [agentScopedWorkspaceTree, wsSearch, wsStatusFilter]);
+
+  const agentWorkspaceRecords = useMemo(() => {
+    if (!agentFilter || !agentWorkspaceCodes) return [];
+    const assignedCodes = new Set(agentWorkspaceCodes);
+    const parentCodes = new Set(
+      workspaces.map((workspace) => workspace.parent_workspace_code).filter((code): code is string => Boolean(code)),
+    );
+    return workspaces.filter(
+      (workspace) =>
+        assignedCodes.has(workspace.work_space_code) &&
+        !parentCodes.has(workspace.work_space_code) &&
+        workspace.is_selectable !== false,
+    );
+  }, [agentFilter, agentWorkspaceCodes, workspaces]);
+
+  const visibleAgentWorkspaces = useMemo(() => {
+    if (!agentFilter) return [];
+    const visibleIds = new Set(filteredWorkspaces.map((workspace) => workspace.id));
+    return agentWorkspaceRecords.filter((workspace) => visibleIds.has(workspace.id));
+  }, [agentFilter, agentWorkspaceRecords, filteredWorkspaces]);
+
+  const workspaceDisplayRows = agentFilter ? visibleAgentWorkspaces : filteredTree;
 
   const parentGroups = useMemo(() => {
+    if (agentFilter) return [];
     return filteredTree.filter(
       (w) => (w.children && w.children.length > 0) || w.is_selectable === false
     );
-  }, [filteredTree]);
+  }, [agentFilter, filteredTree]);
 
   const standaloneWorkspaces = useMemo(() => {
+    if (agentFilter) return visibleAgentWorkspaces;
     return filteredTree.filter(
       (w) => (!w.children || w.children.length === 0) && w.is_selectable !== false
     );
-  }, [filteredTree]);
+  }, [agentFilter, filteredTree, visibleAgentWorkspaces]);
 
   // --- Statistics strictly from Real Data ---
-  const totalWorkspaces = workspaces.length;
-  const activeWorkspacesCount = workspaces.filter((w) => w.status === "active").length;
-  const archivedWorkspacesCount = workspaces.filter((w) => w.status === "archived").length;
+  const statisticsWorkspaces = agentFilter ? agentWorkspaceRecords : workspaces;
+  const totalWorkspaces = statisticsWorkspaces.length;
+  const activeWorkspacesCount = statisticsWorkspaces.filter((w) => w.status === "active").length;
+  const archivedWorkspacesCount = statisticsWorkspaces.filter((w) => w.status === "archived").length;
+  const visibleWorkspaceCount = agentFilter ? visibleAgentWorkspaces.length : filteredWorkspaces.length;
   const totalSessionsCount = sessionMeta?.total ?? sessions.length;
-  const isInitialWorkspaceLoad = wsLoading && workspaces.length === 0;
+  const isInitialWorkspaceLoad =
+    (wsLoading && workspaces.length === 0) || Boolean(agentFilter && agentWorkspaceCodes === null && !agentFilterError);
 
   return (
     <div className={`${isEmbedded ? "w-full min-w-0" : "mx-auto max-w-7xl"} space-y-5 pb-16 font-sans`}>
@@ -2241,15 +2437,15 @@ export default function WorkspaceManagement({
       )}
 
       {/* Main Glassmorphism Header */}
-      <div className="rounded-3xl border border-white/70 bg-white/90 p-5 sm:p-7 shadow-sm backdrop-blur-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 text-white shadow-lg shadow-purple-500/25 shrink-0">
-              <Briefcase className="h-6 w-6 sm:h-7 sm:w-7" />
+      <div className="rounded-3xl border border-white/70 bg-white/90 p-4 sm:p-5 shadow-sm backdrop-blur-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-blue-500 text-white shadow-lg shadow-purple-500/25 shrink-0">
+              <Briefcase className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                <h1 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight">
                   Quản trị Không Gian Làm Việc (Workspace)
                 </h1>
                 <span className="rounded-full border border-purple-200 bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-700">
@@ -2264,7 +2460,7 @@ export default function WorkspaceManagement({
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Hiển thị và quản lý trực tiếp theo định dạng API JSON: mã code, slug, tên workspace, mô tả và số session liên kết.
               </p>
             </div>
@@ -2309,7 +2505,8 @@ export default function WorkspaceManagement({
                       ? fetchSessions
                       : fetchUserWorkspaces
               }
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer"
+              disabled={wsLoading || markdownLoading || sessionLoading || userWorkspacesLoading}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 cursor-pointer disabled:cursor-wait disabled:opacity-60"
               title="Tải lại dữ liệu mới nhất từ máy chủ"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${wsLoading || markdownLoading || sessionLoading || userWorkspacesLoading ? "animate-spin text-purple-600" : ""}`} />
@@ -2351,46 +2548,46 @@ export default function WorkspaceManagement({
             Đang tải danh sách Workspace và các workspace con…
           </div>
         )}
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3 sm:p-3.5">
             <div className="flex items-center justify-between text-slate-500">
               <span className="text-xs font-semibold">Tổng Workspace</span>
               <Layers className="h-4 w-4 text-purple-600" />
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-800">
+            <div className="mt-1.5 text-xl font-black text-slate-800">
               {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-purple-100" /> : totalWorkspaces}
             </div>
             <div className="text-[11px] text-slate-400 mt-0.5">Workspace cha + con trên trang</div>
           </div>
 
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3.5 sm:p-4">
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 sm:p-3.5">
             <div className="flex items-center justify-between text-emerald-700">
               <span className="text-xs font-semibold">Đang hoạt động</span>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
-            <div className="mt-2 text-2xl font-black text-emerald-800">
+            <div className="mt-1.5 text-xl font-black text-emerald-800">
               {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-emerald-100" /> : activeWorkspacesCount}
             </div>
             <div className="text-[11px] text-emerald-600/80 mt-0.5">status: &quot;active&quot;</div>
           </div>
 
-          <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5 sm:p-4">
+          <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-3 sm:p-3.5">
             <div className="flex items-center justify-between text-amber-700">
               <span className="text-xs font-semibold">Đã lưu trữ</span>
               <Archive className="h-4 w-4 text-amber-600" />
             </div>
-            <div className="mt-2 text-2xl font-black text-amber-800">
+            <div className="mt-1.5 text-xl font-black text-amber-800">
               {isInitialWorkspaceLoad ? <span className="inline-block h-8 w-12 animate-pulse rounded-md bg-amber-100" /> : archivedWorkspacesCount}
             </div>
             <div className="text-[11px] text-amber-600/80 mt-0.5">status: &quot;archived&quot;</div>
           </div>
 
-          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3.5 sm:p-4">
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3 sm:p-3.5">
             <div className="flex items-center justify-between text-indigo-700">
               <span className="text-xs font-semibold">Tổng Sessions</span>
               <Radio className="h-4 w-4 text-indigo-600" />
             </div>
-            <div className="mt-2 text-2xl font-black text-indigo-800">
+            <div className="mt-1.5 text-xl font-black text-indigo-800">
               {sessionLoading ? "..." : totalSessionsCount}
             </div>
             <div className="text-[11px] text-indigo-600/80 mt-0.5">
@@ -2400,7 +2597,7 @@ export default function WorkspaceManagement({
         </div>
 
         {/* Tab & View Mode Switcher */}
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200">
+        <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-slate-200">
           <div className="flex">
             <a
               href="/next/api/hust/workspace/home"
@@ -2408,7 +2605,7 @@ export default function WorkspaceManagement({
                 e.preventDefault();
                 navigateTab("workspaces");
               }}
-              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 activeTab === "workspaces"
                   ? "border-purple-600 text-purple-700 bg-purple-50/40 rounded-t-xl"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -2431,7 +2628,7 @@ export default function WorkspaceManagement({
                 e.preventDefault();
                 navigateTab("markdown");
               }}
-              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 activeTab === "markdown"
                   ? "border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-xl"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -2451,10 +2648,10 @@ export default function WorkspaceManagement({
             <button
               type="button"
               onClick={() => {
-                setActiveTab("user-workspaces");
+                navigateTab("user-workspaces");
                 void fetchUserWorkspaces();
               }}
-              className={`flex items-center gap-2 border-b-2 px-5 py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
+              className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-xs sm:text-sm font-bold transition cursor-pointer ${
                 activeTab === "user-workspaces"
                   ? "border-blue-600 text-blue-700 bg-blue-50/40 rounded-t-xl"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
@@ -2538,6 +2735,34 @@ export default function WorkspaceManagement({
               >
                 Thử lại
               </button>
+            </div>
+          )}
+
+          {/* Đang lọc theo agent (từ trang Quản lý Agent) */}
+          {agentFilter && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-teal-200 bg-teal-50/80 px-4 py-2.5 text-xs text-teal-900 shadow-xs">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <Bot className="h-4 w-4 shrink-0 text-teal-600" />
+                <span>
+                  Đang xem workspace của agent <strong className="font-mono">{agentFilter}</strong>
+                  {agentWorkspaceCodes ? ` (${agentWorkspaceRecords.length} workspace)` : agentFilterError ? "" : " (đang tải…)"}
+                </span>
+                {agentFilterError && <span className="font-semibold text-rose-600">{agentFilterError}</span>}
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={"/api/hust/agent/home" as unknown as Route}
+                  className="font-semibold text-teal-700 transition hover:text-teal-900"
+                >
+                  Danh sách agent
+                </Link>
+                <Link
+                  href={"/api/hust/workspace/home" as unknown as Route}
+                  className="rounded-lg border border-teal-300 bg-white px-2.5 py-1 font-bold text-teal-800 shadow-2xs transition hover:bg-teal-100"
+                >
+                  Hướng dẫn Workspace
+                </Link>
+              </div>
             </div>
           )}
 
@@ -2647,7 +2872,7 @@ export default function WorkspaceManagement({
                     </div>
                   ))}
                 </div>
-              ) : filteredTree.length === 0 ? (
+              ) : workspaceDisplayRows.length === 0 ? (
                 <div className="col-span-full rounded-3xl border border-white/80 bg-white/95 p-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto">
                     <Briefcase className="h-10 w-10 text-slate-300" />
@@ -2766,6 +2991,36 @@ export default function WorkspaceManagement({
                                         )}
                                       </button>
                                     </div>
+                                    <div className="inline-flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-lg truncate max-w-[260px]">
+                                      <Folder className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                                      <span className="truncate" title={getWorkspacePath(parentWs, false)}>path: {getWorkspacePath(parentWs, false)}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`path-${parentWs.id}`, getWorkspacePath(parentWs, false), "đường dẫn workspace")}
+                                        className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
+                                        title="Sao chép đường dẫn workspace"
+                                      >
+                                        {copiedKey === `path-${parentWs.id}` ? (
+                                          <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-2.5 w-2.5" />
+                                        )}
+                                      </button>
+                                      {parentWs.full_path && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopy(`full-${parentWs.id}`, parentWs.full_path as string, "đường dẫn đầy đủ (full path)")}
+                                          className="text-slate-400 hover:text-slate-700 transition ml-0.5 cursor-pointer shrink-0"
+                                          title={`Sao chép full path: ${parentWs.full_path}`}
+                                        >
+                                          {copiedKey === `full-${parentWs.id}` ? (
+                                            <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                          ) : (
+                                            <HardDrive className="h-2.5 w-2.5" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -2815,10 +3070,15 @@ export default function WorkspaceManagement({
                                 <button
                                   type="button"
                                   onClick={() => handleViewMarkdown(parentWs)}
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer shadow-xs active:scale-95"
+                                  disabled={markdownLoading}
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition cursor-pointer disabled:cursor-wait disabled:opacity-60 shadow-xs active:scale-95"
                                   title="Xem toàn bộ cấu trúc file Markdown (.md) của cả nhóm mẹ"
                                 >
-                                  <Eye className="h-3.5 w-3.5" />
+                                  {markdownLoading && selectedMarkdownWsId === parentWs.id ? (
+                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Eye className="h-3.5 w-3.5" />
+                                  )}
                                 </button>
 
                                 {/* Edit */}
@@ -2987,7 +3247,7 @@ export default function WorkspaceManagement({
                           ))}
                         </tr>
                       ))
-                    ) : filteredTree.length === 0 ? (
+                    ) : workspaceDisplayRows.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-12 text-center text-slate-400">
                           <div className="flex flex-col items-center justify-center space-y-2">
@@ -3002,7 +3262,7 @@ export default function WorkspaceManagement({
                         </td>
                       </tr>
                     ) : (
-                      filteredTree.map((rootWs) => {
+                      workspaceDisplayRows.map((rootWs) => {
                         const hasChildren = rootWs.children && rootWs.children.length > 0;
                         const isCollapsed = collapsedParentIds.has(rootWs.id);
 
@@ -3085,6 +3345,36 @@ export default function WorkspaceManagement({
                                         <Copy className="h-2.5 w-2.5" />
                                       )}
                                     </button>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+                                    <Folder className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                                    <span className="truncate max-w-[220px]" title={getWorkspacePath(rootWs, false)}>path: {getWorkspacePath(rootWs, false)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopy(`path-${rootWs.id}`, getWorkspacePath(rootWs, false), "đường dẫn workspace")}
+                                      className="text-slate-400 hover:text-purple-600 transition cursor-pointer shrink-0"
+                                      title="Sao chép đường dẫn workspace"
+                                    >
+                                      {copiedKey === `path-${rootWs.id}` ? (
+                                        <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="h-2.5 w-2.5" />
+                                      )}
+                                    </button>
+                                    {rootWs.full_path && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`full-${rootWs.id}`, rootWs.full_path as string, "đường dẫn đầy đủ (full path)")}
+                                        className="text-slate-400 hover:text-purple-600 transition cursor-pointer shrink-0"
+                                        title={`Sao chép full path: ${rootWs.full_path}`}
+                                      >
+                                        {copiedKey === `full-${rootWs.id}` ? (
+                                          <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                        ) : (
+                                          <HardDrive className="h-2.5 w-2.5" />
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               </td>
@@ -3261,6 +3551,36 @@ export default function WorkspaceManagement({
                                         )}
                                       </button>
                                     </div>
+                                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+                                      <Folder className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                                      <span className="truncate max-w-[220px]" title={getWorkspacePath(childWs, true)}>path: {getWorkspacePath(childWs, true)}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopy(`path-${childWs.id}`, getWorkspacePath(childWs, true), "đường dẫn workspace")}
+                                        className="text-slate-400 hover:text-purple-600 transition cursor-pointer shrink-0"
+                                        title="Sao chép đường dẫn workspace"
+                                      >
+                                        {copiedKey === `path-${childWs.id}` ? (
+                                          <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="h-2.5 w-2.5" />
+                                        )}
+                                      </button>
+                                      {childWs.full_path && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleCopy(`full-${childWs.id}`, childWs.full_path as string, "đường dẫn đầy đủ (full path)")}
+                                          className="text-slate-400 hover:text-purple-600 transition cursor-pointer shrink-0"
+                                          title={`Sao chép full path: ${childWs.full_path}`}
+                                        >
+                                          {copiedKey === `full-${childWs.id}` ? (
+                                            <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                          ) : (
+                                            <HardDrive className="h-2.5 w-2.5" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
 
@@ -3343,10 +3663,15 @@ export default function WorkspaceManagement({
                                     <button
                                       type="button"
                                       onClick={() => handleViewMarkdown(childWs)}
-                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/90 text-emerald-700 transition hover:bg-emerald-100 hover:border-emerald-300 cursor-pointer shadow-2xs active:scale-95"
+                                      disabled={markdownLoading}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50/90 text-emerald-700 transition hover:bg-emerald-100 hover:border-emerald-300 cursor-pointer disabled:cursor-wait disabled:opacity-60 shadow-2xs active:scale-95"
                                       title="Xem cấu trúc file Markdown (.md)"
                                     >
-                                      <Eye className="h-3.5 w-3.5" />
+                                      {markdownLoading && selectedMarkdownWsId === childWs.id ? (
+                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Eye className="h-3.5 w-3.5" />
+                                      )}
                                     </button>
                                     <button
                                       type="button"
@@ -3383,7 +3708,7 @@ export default function WorkspaceManagement({
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-xs text-slate-600 backdrop-blur-md shadow-2xs">
               <div className="flex items-center gap-2">
                 <span>
-                  Đang hiển thị <strong className="text-purple-700">{filteredWorkspaces.length}</strong> / <strong className="text-slate-800">{totalWorkspaces}</strong> workspace cha và con trên trang này
+                  Đang hiển thị <strong className="text-purple-700">{visibleWorkspaceCount}</strong> / <strong className="text-slate-800">{totalWorkspaces}</strong> {agentFilter ? "workspace được gán cho agent này" : "workspace cha và con trên trang này"}
                 </span>
                 <span className="text-slate-300">|</span>
                 <span className="text-slate-400">Trang {wsMeta.current_page} / {wsMeta.last_page}</span>
@@ -4099,6 +4424,7 @@ export default function WorkspaceManagement({
                           onRefreshFile={(it) => void loadFileContent(it, false)}
                           onCopyPath={handleCopy}
                           copiedKey={copiedKey}
+                          workspaceRoot={markdownData.full_path}
                         />
                       ))}
                     </div>

@@ -151,6 +151,10 @@
           "source": "/api/hust/openclaw",
           "destination": "/api/hust_media/media_tech/openclaw"
         },
+        "agentsList": {
+          "source": "/api/hust/list/agents",
+          "destination": "/api/hust_media/media_tech/agents"
+        },
         "chatHome": {
           "source": "/api/hust/chat/home",
           "destination": "/api/hust_media/media_tech/chat_home"
@@ -196,12 +200,16 @@
           "destination": "/api/hust_media/api"
         },
         "workflow": {
-          "source": "/api/hust/workflow",
+          "source": "/api/hust/workflow/home",
           "destination": "/api/hust_media/workflow"
         },
         "workflowLaravel": {
           "source": "/api/hust/workflow/laravel",
           "destination": "/api/hust_media/workflow/laravel"
+        },
+        "workflowMapsMain": {
+          "source": "/api/hust/workflow/maps_main",
+          "destination": "/api/media_tech/maps_main?project=hust"
         },
         "n8n": {
           "source": "/api/hust/n8n/home",
@@ -210,6 +218,30 @@
         "n8nLaravel": {
           "source": "/api/hust/n8n/laravel",
           "destination": "/api/hust_media/n8n/laravel"
+        },
+        "agentHome": {
+          "source": "/api/hust/agent/home",
+          "destination": "/api/hust_media/agent/home"
+        },
+        "agentData": {
+          "source": "/api/hust/agent/data",
+          "destination": "/api/hust_media/agent/data"
+        },
+        "agentWorkspaceSection": {
+          "source": "/api/hust/agent/:agentCode/workspace/:section",
+          "destination": "/api/hust_media/agent/:agentCode/workspace/:section"
+        },
+        "agentWorkspace": {
+          "source": "/api/hust/agent/:agentCode/workspace",
+          "destination": "/api/hust_media/agent/:agentCode/workspace"
+        },
+        "agentDetail": {
+          "source": "/api/hust/agent/:agentCode",
+          "destination": "/api/hust_media/agent/:agentCode"
+        },
+        "agent": {
+          "source": "/api/hust/agent",
+          "destination": "/api/hust_media/agent"
         },
         "workspaceHome": {
           "source": "/api/hust/workspace/home",
@@ -386,6 +418,10 @@
         "source": "/api/mt/openclaw",
         "destination": "/api/media_tech/openclaw"
       },
+      "agentsList": {
+        "source": "/api/mt/list/agents",
+        "destination": "/api/media_tech/agents"
+      },
       "laravelList": {
         "source": "/api/mt/list/laravel",
         "destination": "/api/media_tech/laravel"
@@ -395,7 +431,7 @@
         "destination": "/api/media_tech/laravel"
       },
       "n8n": {
-        "source": "/api/mt/n8n/home",
+        "source": "/api/mt/workflow/home",
         "destination": "/api/media_tech/n8n/home"
       },
       "n8nNodeJs": {
@@ -409,6 +445,22 @@
       "n8nLaravel": {
         "source": "/api/mt/n8n/laravel",
         "destination": "/api/media_tech/n8n/laravel"
+      },
+      "agentHome": {
+        "source": "/api/mt/agent/home",
+        "destination": "/api/media_tech/agent/home"
+      },
+      "agentWorkspaceSection": {
+        "source": "/api/mt/agent/:agentCode/workspace/:section",
+        "destination": "/api/media_tech/agent/:agentCode/workspace/:section"
+      },
+      "agentWorkspace": {
+        "source": "/api/mt/agent/:agentCode/workspace",
+        "destination": "/api/media_tech/agent/:agentCode/workspace"
+      },
+      "agentDetail": {
+        "source": "/api/mt/agent/:agentCode",
+        "destination": "/api/media_tech/agent/:agentCode"
       },
       "workspaceHome": {
         "source": "/api/mt/workspace/home",
@@ -473,6 +525,48 @@
       "giteaTestLegacy": {
         "source": "/api/mt/gitea_test",
         "destination": "/api/media_tech/gitea_test"
+      }
+    },
+    "mapsCity": {
+      "hustHome": {
+        "source": "/api/hust/maps_main/home",
+        "destination": "/api/hust_media/maps_main/home"
+      },
+      "hustView": {
+        "source": "/api/hust/maps_main/view/:path*",
+        "destination": "http://127.0.0.1:8827/:path*"
+      },
+      "mtHome": {
+        "source": "/api/mt/maps_main/home",
+        "destination": "/api/media_tech/maps_main/home"
+      },
+      "mtView": {
+        "source": "/api/mt/maps_main/view/:path*",
+        "destination": "http://127.0.0.1:8828/:path*"
+      },
+      "hustMap": {
+        "source": "/api/hust/maps_main/map",
+        "destination": "/api/hust_media/maps_main/map"
+      },
+      "hustFiles": {
+        "source": "/api/hust/maps_main/files/:file",
+        "destination": "/api/hust_media/maps_main/files/:file"
+      },
+      "mtMap": {
+        "source": "/api/mt/maps_main/map",
+        "destination": "/api/media_tech/maps_main/map"
+      },
+      "mtFiles": {
+        "source": "/api/mt/maps_main/files/:file",
+        "destination": "/api/media_tech/maps_main/files/:file"
+      },
+      "mtRead": {
+        "source": "/api/mt/maps_main/read/:file",
+        "destination": "/api/media_tech/maps_main/read/:file"
+      },
+      "hustRead": {
+        "source": "/api/hust/maps_main/read/:file",
+        "destination": "/api/hust_media/maps_main/read/:file"
       }
     }
   },

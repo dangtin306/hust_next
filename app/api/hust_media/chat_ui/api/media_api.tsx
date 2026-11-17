@@ -15,8 +15,23 @@ export const LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT =
   "/next/api/hust/workspaces/routing/update";
 export const OPENCLAW_CHAT_COMPLETIONS_ENDPOINT = "/next/api/hust/openclaw/v1/chat/completions";
 export const OPENCLAW_RESPONSES_ENDPOINT = "/next/api/hust/openclaw/v1/responses";
+export const OPENCLAW_MODELS_ENDPOINT = "/next/api/hust/openclaw/v1/models";
 export const OPENCLAW_IMAGE_GENERATIONS_ENDPOINT = "/next/api/hust/openclaw/v1/images/generations";
 export const WORKSPACES_MAIN_DATA_ENDPOINT = "/next/api/hust/workspaces/main/data";
+
+const CHAT_API_REQUEST_TIMEOUT_MS = 17_000;
+const WORKSPACE_SELECT_TIMEOUT_MS = 80_000;
+
+function fetchChatApi(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = CHAT_API_REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  return fetch(input, {
+    ...init,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
 
 export type WorkspaceOption = {
   id: number | string;
@@ -32,55 +47,80 @@ export type WorkspaceOption = {
   children?: WorkspaceOption[];
 };
 
-let workspacesRequestInFlight: Promise<WorkspaceOption[]> | null = null;
+function flattenWorkspaceRows(records: unknown[]): WorkspaceOption[] {
+  const flattened: WorkspaceOption[] = [];
+  const visit = (value: unknown, inheritedAgentCode?: string) => {
+    if (!value || typeof value !== "object") return;
+    const row = value as WorkspaceOption;
+    const ownAgentCode = typeof row.agent_code === "string" ? row.agent_code.trim() : "";
+    const agentCode = ownAgentCode || inheritedAgentCode;
+    flattened.push(agentCode ? { ...row, agent_code: agentCode } : row);
+    if (Array.isArray(row.children)) {
+      row.children.forEach((child) => visit(child, agentCode));
+    }
+  };
+  records.forEach((record) => visit(record));
+  return flattened;
+}
 
-/** Load the available workspaces for the chat-mode selector. */
-export function apiFetchWorkspaces(customBaseUrl?: string): Promise<WorkspaceOption[]> {
+/** Load selectable workspaces, optionally scoped to one OpenClaw agent. */
+export async function apiFetchWorkspaces(
+  customBaseUrl?: string,
+  agentCode?: string,
+): Promise<WorkspaceOption[]> {
   const headers: Record<string, string> = { Accept: "application/json" };
   if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
 
-  const request = fetch(WORKSPACES_MAIN_DATA_ENDPOINT, {
-    method: "GET",
-    cache: "no-store",
-    headers,
-  }).then(async (response) => {
-    if (!response.ok) throw new Error(`Workspace API trả về HTTP ${response.status}`);
-    const body = await response.json();
-    if (!Array.isArray(body?.data)) return [];
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetchChatApi(WORKSPACES_MAIN_DATA_ENDPOINT, {
+        method: "GET",
+        cache: "no-store",
+        headers,
+      });
+      if (!response.ok) {
+        const error = new Error("Workspace API trả về HTTP " + response.status);
+        if (response.status < 500 || attempt === 1) throw error;
+        lastError = error;
+      } else {
+        const body = await response.json();
+        const records = Array.isArray(body?.data)
+          ? body.data
+          : Array.isArray(body?.data?.data)
+            ? body.data.data
+            : Array.isArray(body?.workspaces)
+              ? body.workspaces
+              : null;
+        if (!records) throw new Error("Laravel trả về danh sách workspace không hợp lệ.");
 
-    const rows: WorkspaceOption[] = (body.data as unknown[]).filter(
-      (item: unknown): item is WorkspaceOption => Boolean(item) && typeof item === "object",
-    );
-    const hasTreeShape = rows.some((item) => Array.isArray(item.children));
-    const parentCodes = new Set(
-      rows
-        .map((item: WorkspaceOption) => item.parent_workspace_code)
-        .filter((code: unknown): code is string => typeof code === "string"),
-    );
-    const selectableRows = hasTreeShape
-      ? rows.flatMap((item: WorkspaceOption) => (Array.isArray(item.children) ? item.children : []))
-      : rows.filter(
-          (item: WorkspaceOption) =>
-            item.is_selectable !== false &&
-            typeof item.work_space_code === "string" &&
-            !parentCodes.has(item.work_space_code),
+        const flattenedRows = flattenWorkspaceRows(records);
+        const parentCodes = new Set(
+          flattenedRows
+            .map((item) => item.parent_workspace_code)
+            .filter((code): code is string => typeof code === "string"),
         );
+        const requestedAgent = agentCode?.trim();
 
-    return selectableRows.filter(
-      (item) =>
-        Boolean(item) &&
-        typeof item.workspace_name === "string" &&
-        typeof item.work_space_code === "string" &&
-        item.is_selectable !== false &&
-        (item.status == null || item.status === "active"),
-    );
-  });
-
-  workspacesRequestInFlight = request;
-  void request.finally(() => {
-    if (workspacesRequestInFlight === request) workspacesRequestInFlight = null;
-  }).catch(() => undefined);
-  return request;
+        return flattenedRows.filter(
+          (item) =>
+            typeof item.workspace_name === "string" &&
+            typeof item.work_space_code === "string" &&
+            item.is_selectable !== false &&
+            !(Array.isArray(item.children) && item.children.length > 0) &&
+            !parentCodes.has(item.work_space_code) &&
+            (!requestedAgent || item.agent_code === requestedAgent) &&
+            (item.status == null || item.status === "active"),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+      const isClientError = error instanceof Error && /HTTP 4[0-9][0-9]/.test(error.message);
+      if (attempt === 1 || isClientError) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+  }
+  throw lastError instanceof Error ? lastError : new Error("Không tải được danh sách workspace.");
 }
 
 /** Read a user's workspace list and selected-workspace flag from OpenClaw. */
@@ -97,7 +137,7 @@ export async function apiFetchUserWorkspaces(
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(
+  const response = await fetchChatApi(
     `${OPENCLAW_USER_WORKSPACES_ENDPOINT}?user_id=${encodeURIComponent(String(numericUserId))}`,
     { method: "GET", cache: "no-store", headers },
   );
@@ -137,7 +177,7 @@ export async function apiUpdateWorkspaceRouting(customBaseUrl?: string): Promise
   if (customBaseUrl) {
     reqHeaders["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT, {
+  const response = await fetchChatApi(LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT, {
     method: "GET",
     headers: reqHeaders,
     cache: "no-store",
@@ -317,7 +357,7 @@ export async function apiEnsureLaravelRoom({
     headers["x-laravel-target"] = customBaseUrl;
   }
 
-  const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+  const response = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
     method: "POST",
     credentials: "omit",
     cache: "no-store",
@@ -349,7 +389,7 @@ export async function apiEnsureLaravelRoom({
     ) {
       clearLaravelChatSession();
       // Retry without chat_bot_session in payload so Laravel issues a fresh room & session
-      const retryResponse = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+      const retryResponse = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
         method: "POST",
         credentials: "omit",
         cache: "no-store",
@@ -501,7 +541,7 @@ export async function apiCreateConversation({
     bodyPayload.user_id = Number.isInteger(num) ? num : userId;
   }
 
-  const res = await fetch(OPENCLAW_CONVERSATIONS_ENDPOINT, {
+  const res = await fetchChatApi(OPENCLAW_CONVERSATIONS_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify(bodyPayload),
@@ -549,7 +589,7 @@ export async function apiCreateWorkspaceSession({
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(OPENCLAW_WORKSPACE_NEW_ENDPOINT, {
+  const response = await fetchChatApi(OPENCLAW_WORKSPACE_NEW_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify({ user_id: numericUserId }),
@@ -589,11 +629,11 @@ export async function apiSelectWorkspace({
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(OPENCLAW_WORKSPACE_SELECT_ENDPOINT, {
+  const response = await fetchChatApi(OPENCLAW_WORKSPACE_SELECT_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify({ user_id: Number(userId), work_space_code: workSpaceCode }),
-  });
+  }, WORKSPACE_SELECT_TIMEOUT_MS);
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.ok !== true || !body?.data) {
     const errorCode = typeof body?.error === "string" ? body.error : `HTTP ${response.status}`;
@@ -618,7 +658,7 @@ export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/list`, {
+  const response = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/list`, {
     method: "POST",
     credentials: "include",
     cache: "no-store",
@@ -669,7 +709,7 @@ export async function apiFetchRoomMessages(
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(
+  const response = await fetchChatApi(
     `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(String(roomId))}/messages/list`,
     {
       method: "POST",

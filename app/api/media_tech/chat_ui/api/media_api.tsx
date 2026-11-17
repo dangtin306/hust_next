@@ -15,8 +15,23 @@ export const LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT =
   "/next/api/workspaces/routing/update";
 export const OPENCLAW_CHAT_COMPLETIONS_ENDPOINT = "/next/api/openclaw/v1/chat/completions";
 export const OPENCLAW_RESPONSES_ENDPOINT = "/next/api/openclaw/v1/responses";
+export const OPENCLAW_MODELS_ENDPOINT = "/next/api/openclaw/v1/models";
 export const OPENCLAW_IMAGE_GENERATIONS_ENDPOINT = "/next/api/openclaw/v1/images/generations";
 export const WORKSPACES_MAIN_DATA_ENDPOINT = "/next/api/workspaces/main/data";
+
+const CHAT_API_REQUEST_TIMEOUT_MS = 17_000;
+const WORKSPACE_SELECT_TIMEOUT_MS = 80_000;
+
+function fetchChatApi(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = CHAT_API_REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  return fetch(input, {
+    ...init,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
 
 export type WorkspaceOption = {
   id: number | string;
@@ -39,7 +54,7 @@ export function apiFetchWorkspaces(customBaseUrl?: string): Promise<WorkspaceOpt
   const headers: Record<string, string> = { Accept: "application/json" };
   if (customBaseUrl) headers["x-laravel-target"] = customBaseUrl;
 
-  const request = fetch(WORKSPACES_MAIN_DATA_ENDPOINT, {
+  const request = fetchChatApi(WORKSPACES_MAIN_DATA_ENDPOINT, {
     method: "GET",
     cache: "no-store",
     headers,
@@ -97,7 +112,7 @@ export async function apiFetchUserWorkspaces(
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(
+  const response = await fetchChatApi(
     `${OPENCLAW_USER_WORKSPACES_ENDPOINT}?user_id=${encodeURIComponent(String(numericUserId))}`,
     { method: "GET", cache: "no-store", headers },
   );
@@ -137,7 +152,7 @@ export async function apiUpdateWorkspaceRouting(customBaseUrl?: string): Promise
   if (customBaseUrl) {
     reqHeaders["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT, {
+  const response = await fetchChatApi(LARAVEL_WORKSPACE_ROUTING_UPDATE_ENDPOINT, {
     method: "GET",
     headers: reqHeaders,
     cache: "no-store",
@@ -315,7 +330,7 @@ export async function apiEnsureLaravelRoom({
     headers["x-laravel-target"] = customBaseUrl;
   }
 
-  const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+  const response = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
     method: "POST",
     credentials: "omit",
     cache: "no-store",
@@ -347,7 +362,7 @@ export async function apiEnsureLaravelRoom({
     ) {
       clearLaravelChatSession();
       // Retry without chat_bot_session in payload so Laravel issues a fresh room & session
-      const retryResponse = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
+      const retryResponse = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms`, {
         method: "POST",
         credentials: "omit",
         cache: "no-store",
@@ -499,7 +514,7 @@ export async function apiCreateConversation({
     bodyPayload.user_id = Number.isInteger(num) ? num : userId;
   }
 
-  const res = await fetch(OPENCLAW_CONVERSATIONS_ENDPOINT, {
+  const res = await fetchChatApi(OPENCLAW_CONVERSATIONS_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify(bodyPayload),
@@ -547,7 +562,7 @@ export async function apiCreateWorkspaceSession({
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(OPENCLAW_WORKSPACE_NEW_ENDPOINT, {
+  const response = await fetchChatApi(OPENCLAW_WORKSPACE_NEW_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify({ user_id: numericUserId }),
@@ -587,11 +602,11 @@ export async function apiSelectWorkspace({
   };
   if (targetUrl) headers["x-openclaw-target"] = targetUrl;
 
-  const response = await fetch(OPENCLAW_WORKSPACE_SELECT_ENDPOINT, {
+  const response = await fetchChatApi(OPENCLAW_WORKSPACE_SELECT_ENDPOINT, {
     method: "POST",
     headers,
     body: JSON.stringify({ user_id: Number(userId), work_space_code: workSpaceCode }),
-  });
+  }, WORKSPACE_SELECT_TIMEOUT_MS);
   const body = await response.json().catch(() => null);
   if (!response.ok || body?.ok !== true || !body?.data) {
     const errorCode = typeof body?.error === "string" ? body.error : `HTTP ${response.status}`;
@@ -616,7 +631,7 @@ export async function apiFetchLaravelRooms(page = 1, perPage = 30, customBaseUrl
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/list`, {
+  const response = await fetchChatApi(`${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/list`, {
     method: "POST",
     credentials: "include",
     cache: "no-store",
@@ -667,7 +682,7 @@ export async function apiFetchRoomMessages(
   if (customBaseUrl) {
     headers["x-laravel-target"] = customBaseUrl;
   }
-  const response = await fetch(
+  const response = await fetchChatApi(
     `${LARAVEL_CHAT_API.replace(/\/$/, "")}/rooms/${encodeURIComponent(String(roomId))}/messages/list`,
     {
       method: "POST",

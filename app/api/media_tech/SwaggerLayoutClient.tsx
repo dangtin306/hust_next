@@ -18,6 +18,7 @@ type SwaggerLayoutClientProps = {
   spec: Record<string, unknown>;
   laravelSpec: Record<string, unknown>;
   homeSpec: Record<string, unknown>;
+  agentsSpec: Record<string, unknown>;
   categories: Array<[string, ServiceCategory]>;
 };
 
@@ -25,6 +26,7 @@ export default function SwaggerLayoutClient({
   children,
   spec,
   laravelSpec,
+  agentsSpec,
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
@@ -33,7 +35,7 @@ export default function SwaggerLayoutClient({
   const isMedia = isMediaRoute || isHeyGen;
   const isDev = pathname.includes("/dev/home") || pathname.includes("/dev_home") || pathname.endsWith("/dev");
   const isWorkspace = pathname.includes("/workspace");
-  const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main");
+  const isN8n = pathname.includes("/n8n") || pathname.includes("/maps_main") || pathname.includes("/workflow");
   const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
   const isChatHome =
     pathname.includes("/chat/home") || pathname.includes("/chat_home");
@@ -51,6 +53,7 @@ export default function SwaggerLayoutClient({
     (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
+  const isAgents = pathname.includes("/list/agents");
   const isGitAuto = !isGitHome && (pathname.includes("/git_auto") || pathname.includes("/git/auto"));
   const isGitTest = !isGitHome && (pathname.includes("/git_test") || pathname.includes("/git/test"));
   const isGiteaTest =
@@ -68,6 +71,7 @@ export default function SwaggerLayoutClient({
     !isChatHome &&
     (pathname.includes("/chat_public") || pathname.includes("/chat/public"));
   const isChatTest =
+    !isWorkspace &&
     !isChatHome &&
     (pathname.includes("/chat_test") ||
       pathname.includes("/chat/test") ||
@@ -127,20 +131,22 @@ export default function SwaggerLayoutClient({
         <>
           {isLaravel ? (
             <LaravelServicePanel />
-          ) : (
+          ) : isAgents ? null : (
             <ServiceCategoryPanel categories={categories} />
           )}
           <SwaggerClient
-            spec={isLaravel ? laravelSpec : spec}
+            spec={isLaravel ? laravelSpec : isAgents ? agentsSpec : spec}
             serverStorageKey={
               isLaravel
                 ? "laravel_swagger_server_url_v2"
-                : isOpenClaw
-                  ? OPENCLAW_SERVER_URL_STORAGE_KEY
-                  : undefined
+                : isAgents
+                  ? "media_tech_multi_agents_server_url_v1"
+                  : isOpenClaw
+                    ? OPENCLAW_SERVER_URL_STORAGE_KEY
+                    : undefined
             }
           />
-          {!isLaravel ? (
+          {!isLaravel && !isAgents ? (
             <>
               <ConversationResponseOperation />
               <SecondResponseOperation />

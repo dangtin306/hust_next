@@ -20,16 +20,35 @@ const modelSelectionSpec = {
       post: {
         operationId: "createResponseWithSelectedModel",
         tags: ["Model Selection"],
-        summary: "Chuyển model cho request",
-        description: "Chọn model từ danh sách rồi gửi model đó trong request Responses.",
+        summary: "Dùng model đã chọn cho lượt chat",
+        description: "GET /openclaw/v1/models chỉ lấy danh sách. Chọn model không gửi request riêng; gửi ID trong trường model cùng tin nhắn tại đây để gateway chuyển model của phiên trước khi trả lời. Các ID hiện có gồm gpt-5.6-luna, gemini-3.7-flash và qwen_v1. ID không hợp lệ trả 400 model_not_found.",
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: { type: "object", additionalProperties: true },
-              example: {
-                model: "gpt-5.6-luna",
-                input: [{ role: "user", content: "Xin chào" }],
+              examples: {
+                openai: {
+                  summary: "GPT 5.6 Luna",
+                  value: {
+                    model: "gpt-5.6-luna",
+                    input: [{ role: "user", content: "Xin chào" }],
+                  },
+                },
+                google: {
+                  summary: "Gemini 3.7 Flash",
+                  value: {
+                    model: "gemini-3.7-flash",
+                    input: [{ role: "user", content: "Xin chào" }],
+                  },
+                },
+                local: {
+                  summary: "Qwen v1",
+                  value: {
+                    model: "qwen_v1",
+                    input: [{ role: "user", content: "Xin chào" }],
+                  },
+                },
               },
             },
           },
@@ -39,7 +58,7 @@ const modelSelectionSpec = {
             description: "Response hoàn tất theo định dạng Responses API",
             content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
           },
-          "400": { description: "Request không hợp lệ" },
+          "400": { description: "Model không hợp lệ (model_not_found) hoặc request sai định dạng" },
         },
       },
     },

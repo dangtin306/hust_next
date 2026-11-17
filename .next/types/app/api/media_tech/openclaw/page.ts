@@ -1,4 +1,4 @@
-// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/api/media_tech/openclaw/page.tsx
+// File: C:\hustmedia5\hust_next\app\api\media_tech\openclaw\page.tsx
 import * as entry from '../../../../../../app/api/media_tech/openclaw/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

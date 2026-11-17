@@ -25,6 +25,41 @@ const SERVER_URL_STORAGE_KEY = "openclaw_swagger_server_url";
 const SERVER_URL_TTL_MS = 12 * 60 * 60 * 1000;
 const SERVER_URL_CHANGE_EVENT = "swagger-server-url-change";
 
+// Swagger không gửi giá trị mặc định của tham số (agent, Authorization) khi người dùng không gõ lại.
+// Interceptor này lấy các giá trị đó từ spec và điền cho endpoint MCP (/multi/agents/{agent}/mcp).
+const MCP_PATH = "/multi/agents/{agent}/mcp";
+const getMcpDefaults = (spec: Record<string, unknown>) => {
+  const defaults: Record<string, string> = {};
+  const paths = spec.paths as Record<string, Record<string, { parameters?: Array<Record<string, unknown>> }>> | undefined;
+  const params = paths?.[MCP_PATH]?.post?.parameters ?? [];
+  for (const param of params) {
+    const schema = (param.schema ?? {}) as Record<string, unknown>;
+    const value = schema.default ?? schema.example;
+    if (typeof param.name === "string" && (typeof value === "string" || typeof value === "number")) {
+      defaults[param.name] = String(value);
+    }
+  }
+  return defaults;
+};
+
+const applyMcpDefaults = (
+  request: { url: string; headers: Record<string, string> },
+  defaults: Record<string, string>,
+) => {
+  if (!request.url.includes("/multi/agents/") || !request.url.includes("/mcp")) return request;
+  if (defaults.agent) {
+    request.url = request.url.replace(/%7Bagent%7D|\{agent\}/g, encodeURIComponent(defaults.agent));
+  }
+  const headers: Record<string, string> = { ...(request.headers || {}) };
+  const hasAuth = Object.keys(headers).some((key) => key.toLowerCase() === "authorization");
+  if (!hasAuth && defaults.Authorization) headers.Authorization = defaults.Authorization;
+  // MCP trả 406 nếu thiếu text/event-stream trong Accept; Swagger chỉ gửi application/json nên ghi đè ở đây.
+  delete headers.accept;
+  headers.Accept = "application/json, text/event-stream";
+  request.headers = headers;
+  return request;
+};
+
 const getInitialServerUrl = (spec: Record<string, unknown>) => {
   const servers = spec.servers;
   if (!Array.isArray(servers)) return "";
@@ -60,7 +95,7 @@ export default function SwaggerClient({
 
   const isOpenClawKey = Boolean(
     serverStorageKey &&
-      (/openclaw/i.test(serverStorageKey) ||
+      (/openclaw|multi_agents/i.test(serverStorageKey) ||
         serverStorageKey === OPENCLAW_SERVER_URL_STORAGE_KEY ||
         serverStorageKey === SERVER_URL_STORAGE_KEY)
   );
@@ -219,12 +254,14 @@ export default function SwaggerClient({
         ],
       };
 
+      const mcpDefaults = getMcpDefaults(spec);
       ui = SwaggerUIBundle({
         domNode: containerRef.current,
         spec: activeSpec,
         deepLinking: true,
         layout: "BaseLayout",
         persistAuthorization: true,
+        requestInterceptor: (request: { url: string; headers: Record<string, string> }) => applyMcpDefaults(request, mcpDefaults),
         tryItOutEnabled: true,
         displayRequestDuration: true,
         onComplete: () => {

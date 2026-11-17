@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import type { Route } from "next";
+import { NavigationToastLink } from "@/app/api/hust_media/media_tech/HomeNavigationToast";
 import { ArrowRight, Check, Mic2, Play, Radio, Sparkles, Video } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -32,8 +33,9 @@ export default function HeyGenHomePage() {
       </header>
 
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.8fr)]">
-        <Link
-          href="/api/mt/media/heygen/video"
+        <NavigationToastLink
+          href={"/api/mt/media/heygen/video" as Route}
+          label="Video MC ảo"
           className="group relative isolate overflow-hidden rounded-[28px] border border-white/90 bg-gradient-to-br from-white via-white to-indigo-50/90 p-5 shadow-[0_18px_55px_-32px_rgba(49,46,129,0.35)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-30px_rgba(49,46,129,0.42)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:p-7 lg:p-8"
         >
           <div className="pointer-events-none absolute -right-16 -top-24 -z-10 h-64 w-64 rounded-full bg-violet-200/40 blur-3xl" />
@@ -114,10 +116,11 @@ export default function HeyGenHomePage() {
               </div>
             </div>
           </div>
-        </Link>
+        </NavigationToastLink>
 
-        <Link
-          href="/api/mt/media/heygen/live"
+        <NavigationToastLink
+          href={"/api/mt/media/heygen/live" as Route}
+          label="Live Avatar"
           className="group relative flex flex-col overflow-hidden rounded-[28px] border border-white/90 bg-white/75 p-5 shadow-[0_18px_55px_-35px_rgba(15,118,110,0.35)] backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_24px_60px_-32px_rgba(15,118,110,0.42)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 sm:p-6 lg:p-7"
         >
           <div className="flex items-start justify-between gap-3">
@@ -152,7 +155,7 @@ export default function HeyGenHomePage() {
             Mở Live Avatar
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </span>
-        </Link>
+        </NavigationToastLink>
       </div>
     </main>
   );

@@ -92,8 +92,8 @@ export default function ChatPublicLauncher() {
                 isDrawer
                 onClose={() => setIsChatOpen(false)}
                 className="h-full max-h-full"
-                targetUrl="https://node_js.hust.media/openclaw"
-                laravelUrl="https://laravel.hust.media"
+                targetUrl=""
+                laravelUrl=""
                 sessionKey="agent:test"
                 storageKey="hust_api_chat_public_conv_id"
                 model="gpt-5.6-luna"

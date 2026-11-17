@@ -1,4 +1,4 @@
-// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/info/seo_media/page.tsx
+// File: C:\hustmedia5\hust_next\app\info\seo_media\page.tsx
 import * as entry from '../../../../../app/info/seo_media/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

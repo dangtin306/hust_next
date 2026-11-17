@@ -106,10 +106,10 @@ const openclawEndpoints: EndpointItem[] = [
   {
     category: "workspace",
     method: "GET",
-    path: "/v2/workspace/list",
+    path: "/v2/workspace/list?agent_code={agent_code}",
     operationId: "listWorkspaces",
     summary: "Lấy danh sách Workspace",
-    note: "Lấy workspace cha workspace-test từ SQL và danh mục skill do OpenClaw nhận diện.",
+    note: "Lấy workspace theo agent_code; OpenClaw chỉ quét skill của agent đó rồi gắn vào workspace cha từ SQL.",
     isNew: true,
   },
   {
@@ -380,7 +380,7 @@ export default function ServiceCategoryPanel({ hidden = false }: ServiceCategory
       icon: Briefcase,
       description:
         "Tra cứu danh mục workspace cha - con từ cơ sở dữ liệu, xem workspace của user, tạo workspace mới và kích hoạt kỹ năng (/skill) cho phiên làm việc.",
-      highlights: ["GET /v2/workspace/list (Mới)", "GET /v2/workspace/user", "POST /v2/workspace/new", "POST /v2/workspace/select"],
+      highlights: ["GET /v2/workspace/list?agent_code=...", "GET /v2/workspace/user", "POST /v2/workspace/new", "POST /v2/workspace/select"],
     },
     {
       id: "services" as const,
@@ -687,7 +687,7 @@ export default function ServiceCategoryPanel({ hidden = false }: ServiceCategory
               <Briefcase className="h-4 w-4 text-purple-600" /> Quản trị Workspace &amp; Kích hoạt Skill
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              Lấy danh sách qua <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">GET {getDisplayPath("/v2/workspace/list")}</code>.
+              Lấy danh sách theo agent qua <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">GET {getDisplayPath("/v2/workspace/list?agent_code=chat_bot")}</code>. API tổng hợp cũ vẫn có tại <code className="font-mono">GET /openclaw/v2/list</code>.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               Kích hoạt workspace cho user bằng <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">POST {getDisplayPath("/v2/workspace/select")}</code> với body <code className="font-mono">{"{\"user_id\": 502, \"work_space_code\": \"...\"}"}</code>.

@@ -10,11 +10,8 @@ import {
   KeyRound,
   MessageSquareText,
   MessageSquare,
-  Briefcase,
   ExternalLink,
   Sparkles,
-  Edit3,
-  FileCode2,
   Users,
   Home,
   ArrowRight,
@@ -22,7 +19,7 @@ import {
 } from "lucide-react";
 
 type EndpointItem = {
-  category: "workspace" | "manage" | "messages" | "chat";
+  category: "manage" | "messages" | "chat";
   method: "GET" | "POST" | "PATCH" | "DELETE";
   path: string;
   operationId: string;
@@ -32,77 +29,6 @@ type EndpointItem = {
 };
 
 const endpoints: EndpointItem[] = [
-  // Nhóm Workspace API
-  {
-    category: "workspace",
-    method: "POST",
-    path: "/api/workspaces/main/data",
-    operationId: "updateLaravelMainWorkspace",
-    summary: "Sửa một workspace (POST main/data)",
-    note: "Sửa tên, mô tả, trạng thái (active/archived), mã code, slug, parent_workspace_code theo ID.",
-    isNew: true,
-  },
-  {
-    category: "workspace",
-    method: "POST",
-    path: "/api/workspaces/content/markdown/edit",
-    operationId: "updateWorkspaceMarkdownContentEdit",
-    summary: "Ghi nội dung mới vào file .md (POST edit)",
-    note: "Sửa nội dung file .md theo id và path (query string), gửi JSON body { content }.",
-    isNew: true,
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/content/markdown/get",
-    operationId: "getWorkspaceMarkdownContentGet",
-    summary: "Đọc nội dung file Markdown (GET get)",
-    note: "Đọc nội dung file .md theo id workspace và path (full_path tương đối từ root).",
-    isNew: true,
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/content/markdown/full",
-    operationId: "getWorkspaceMarkdownContentFull",
-    summary: "Lấy toàn bộ Markdown workspace (GET full)",
-    note: "Frontend lấy cây thư mục và nội dung tất cả file .md trong workspace con chỉ bằng 1 request theo id.",
-    isNew: true,
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/main/markdown",
-    operationId: "getWorkspaceMainMarkdown",
-    summary: "Xem cấu trúc Markdown workspace",
-    note: "Trả về cây thư mục và danh sách file .md của workspace con theo id.",
-    isNew: true,
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/main/data",
-    operationId: "listLaravelMainWorkspaces",
-    summary: "Lấy cây phân cấp workspace",
-    note: "Trả về toàn bộ danh mục workspace cha - con dạng lồng nhau kèm sessions và meta.",
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/user/data",
-    operationId: "listUserWorkspaces",
-    summary: "Lấy workspace của user",
-    note: "Lấy các workspace có session active của user theo user_id.",
-  },
-  {
-    category: "workspace",
-    method: "GET",
-    path: "/api/workspaces/routing/update",
-    operationId: "getWorkspaceRoutingUpdate",
-    summary: "Đồng bộ routing workspace",
-    note: "Đồng bộ bảng routing định tuyến OpenClaw và hệ thống.",
-  },
-
   // Nhóm Chat Bot Manage API (11 endpoints)
   {
     category: "manage",
@@ -321,7 +247,7 @@ const endpoints: EndpointItem[] = [
 
 export default function LaravelServicePanel() {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "workspace" | "manage" | "messages" | "chat">("home");
+  const [categoryFilter, setCategoryFilter] = useState<"home" | "all" | "manage" | "messages" | "chat">("home");
   const pathname = usePathname() || "";
   const isHust = pathname.includes("/api/hust");
   const diagramPath = isHust ? "/next/api/hust/n8n/laravel" : "/next/api/mt/n8n/laravel";
@@ -373,24 +299,11 @@ export default function LaravelServicePanel() {
       ? endpoints
       : endpoints.filter((e) => e.category === categoryFilter);
 
-  const workspaceCount = endpoints.filter((e) => e.category === "workspace").length;
   const manageCount = endpoints.filter((e) => e.category === "manage").length;
   const messagesCount = endpoints.filter((e) => e.category === "messages").length;
   const chatCount = endpoints.filter((e) => e.category === "chat").length;
 
   const laravelCategories = [
-    {
-      id: "workspace" as const,
-      name: "Workspace & Markdown",
-      count: workspaceCount,
-      badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
-      borderHover: "hover:border-purple-300 hover:bg-purple-50/40",
-      iconBg: "bg-purple-100 text-purple-700",
-      icon: Briefcase,
-      description:
-        "Quản lý cây danh mục workspace cha - con, sửa thông tin workspace theo ID, đọc/ghi và đồng bộ toàn bộ tài liệu Markdown (.md).",
-      highlights: ["POST /main/data (sửa ID)", "GET /markdown/full", "POST /markdown/edit", "GET /user/data"],
-    },
     {
       id: "manage" as const,
       name: "Quản trị Chat Bot (Manage API)",
@@ -452,7 +365,7 @@ export default function LaravelServicePanel() {
             Tài liệu &amp; Danh mục API Laravel
           </h2>
           <p className="mt-1 max-w-4xl text-xs leading-relaxed text-slate-600 sm:text-sm">
-            Bao gồm nhóm API Quản trị Không gian làm việc (Workspace CRUD, sửa workspace theo ID), nhóm Quản trị Người dùng Chat Bot (Manage API), nhóm Quản trị Tin Nhắn (Messages API), và nhóm API Phòng chat Laravel.
+            nhóm Quản trị Người dùng Chat Bot (Manage API), nhóm Quản trị Tin Nhắn (Messages API), và nhóm API Phòng chat Laravel.
           </p>
         </div>
 
@@ -476,16 +389,6 @@ export default function LaravelServicePanel() {
             }`}
           >
             Tất cả ({endpoints.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setCategoryFilter("workspace")}
-            className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition cursor-pointer ${
-              categoryFilter === "workspace" ? "bg-white text-purple-700 shadow-2xs font-bold" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Briefcase className="h-3 w-3" />
-            <span>Workspace ({workspaceCount})</span>
           </button>
           <button
             type="button"
@@ -651,33 +554,6 @@ export default function LaravelServicePanel() {
         </div>
 
         <aside className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5 sm:p-4">
-          <div>
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <Edit3 className="h-4 w-4 text-purple-600" /> API Edit Workspace
-            </h3>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              Endpoint <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">POST /api/workspaces/main/edit</code> nhận trường <code className="font-mono text-purple-800 font-bold">id</code> và các trường cần sửa: <code className="font-mono">workspace_name</code>, <code className="font-mono">agent_code</code>, <code className="font-mono">work_space_code</code>, <code className="font-mono">parent_workspace_code</code>, <code className="font-mono">slug</code>, <code className="font-mono">status</code>, <code className="font-mono">description</code>.
-            </p>
-          </div>
-
-          <div className="border-t border-blue-100 pt-3">
-            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <FileCode2 className="h-4 w-4 text-emerald-600" /> Bộ API Xem, Lấy Toàn Bộ và Sửa Markdown Workspace
-            </h3>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              1. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/full?id={"{id}"}</code>: Lấy cây thư mục kèm toàn bộ nội dung của tất cả file <code className="font-mono font-bold text-slate-800">.md</code> trong workspace con chỉ bằng 1 request duy nhất (trả về trường <code className="font-mono">content</code> ở từng node file, không cần gọi lẻ từng file).
-            </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              2. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/main/markdown?id={"{id}"}</code>: Trả về cây thư mục (<code className="font-mono font-semibold">tree</code> có <code className="font-mono">full_path</code>) và số lượng (<code className="font-mono font-semibold">markdown_count</code>) file <code className="font-mono font-bold text-slate-800">.md</code> của workspace con (chỉ metadata, không có content).
-            </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              3. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">GET /api/workspaces/content/markdown/get?id={"{id}"}&path={"{full_path}"}</code>: Đọc toàn bộ nội dung của một file <code className="font-mono font-bold text-slate-800">.md</code> lẻ với đường dẫn tương đối từ workspace root (<code className="font-mono">path</code>).
-            </p>
-            <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              4. <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-emerald-700">POST /api/workspaces/content/markdown/edit?id={"{id}"}&path={"{full_path}"}</code>: Ghi nội dung mới vào file <code className="font-mono font-bold text-slate-800">.md</code> đã có qua JSON body <code className="font-mono">{"{\"content\": \"...\"}"}</code>. Trả về <code className="font-mono font-semibold">bytes_written</code>.
-            </p>
-          </div>
-
           <div className="border-t border-blue-100 pt-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
               <Users className="h-4 w-4 text-emerald-600" /> Quản lý Người dùng Chat Bot (Manage API)

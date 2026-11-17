@@ -11,10 +11,15 @@
       ]
     },
     "/api/hust_media/media_tech/openclaw/gateway/[...path]": {},
+    "/api/hust/chat/[...path]": {},
     "/api/hust/openclaw/[...path]": {},
+    "/api/hust/workspaces-proxy/[...path]": {},
+    "/api/hust/workspaces/[...path]": {},
     "/api/media_tech/node-activity/events": {},
     "/api/media_tech/node-activity/health": {},
     "/api/media_tech/openclaw/gateway/[...path]": {},
-    "/api/media_tech/workspaces-proxy/[...path]": {}
+    "/api/media_tech/workspaces-proxy/[...path]": {},
+    "/api/media_tech/workspaces/[...path]": {},
+    "/api/workspaces/[...path]": {}
   }
 }

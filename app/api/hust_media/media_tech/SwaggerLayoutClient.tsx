@@ -18,6 +18,7 @@ type SwaggerLayoutClientProps = {
   spec: Record<string, unknown>;
   laravelSpec: Record<string, unknown>;
   homeSpec: Record<string, unknown>;
+  agentsSpec: Record<string, unknown>;
   categories: Array<[string, ServiceCategory]>;
 };
 
@@ -25,14 +26,16 @@ export default function SwaggerLayoutClient({
   children,
   spec,
   laravelSpec,
+  agentsSpec,
   categories,
 }: SwaggerLayoutClientProps) {
   const pathname = usePathname() || "";
   const isMedia = pathname.includes("/media") || pathname.includes("/heygen");
   const isDev = pathname.includes("/dev/home") || pathname.includes("/dev_home") || pathname.endsWith("/dev");
   const isWorkspace = pathname.includes("/workspace");
+  const isAgentHome = pathname.includes("/agent/home") || pathname.endsWith("/agent");
   const isWorkflow =
-    pathname.includes("/n8n") || pathname.includes("/workflow");
+    pathname.includes("/n8n") || pathname.includes("/workflow") || pathname.includes("/maps_main");
   const isApiListHome = pathname.includes("/list/home") || pathname.endsWith("/list");
   const isChatHome =
     pathname.includes("/chat/home") || pathname.includes("/chat_home");
@@ -42,6 +45,7 @@ export default function SwaggerLayoutClient({
     !isDev &&
     !isMedia &&
     !isWorkspace &&
+    !isAgentHome &&
     !isWorkflow &&
     !isApiListHome &&
     !isChatHome &&
@@ -49,6 +53,7 @@ export default function SwaggerLayoutClient({
     (pathname.includes("/home") || pathname.includes("/dashboard"));
   const isLaravel = pathname.includes("/laravel") && !pathname.includes("/n8n");
   const isOpenClaw = pathname.includes("/openclaw");
+  const isAgents = pathname.includes("/list/agents");
   const isGitAuto = !isGitHome && (pathname.includes("/git_auto") || pathname.includes("/git/auto"));
   const isGitTest = !isGitHome && (pathname.includes("/git_test") || pathname.includes("/git/test"));
   const isGiteaTest =
@@ -66,6 +71,7 @@ export default function SwaggerLayoutClient({
     !isChatHome &&
     (pathname.includes("/chat_public") || pathname.includes("/chat/public"));
   const isChatTest =
+    !isWorkspace &&
     !isChatHome &&
     (pathname.includes("/chat_test") ||
       pathname.includes("/chat/test") ||
@@ -91,7 +97,7 @@ export default function SwaggerLayoutClient({
         active={
           isHome
             ? "home"
-            : isDev || isWorkflow || isWorkspace
+            : isDev || isWorkflow || isWorkspace || isAgentHome
               ? "dev"
               : isGitHome || isGitAuto
                 ? "git_auto"
@@ -121,7 +127,7 @@ export default function SwaggerLayoutClient({
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isWorkflow ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
-      ) : isWorkspace ? (
+      ) : isWorkspace || isAgentHome ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
       ) : isGitHome || isGitAuto || isGitTest || isGiteaTest || isApiListHome || isHome || isChatHome || isMedia || isDev ? (
         <div className="w-full min-w-0 px-0 pb-10 pt-3">{children}</div>
@@ -129,20 +135,22 @@ export default function SwaggerLayoutClient({
         <>
           {isLaravel ? (
             <LaravelServicePanel />
-          ) : (
+          ) : isAgents ? null : (
             <ServiceCategoryPanel categories={categories} />
           )}
           <SwaggerClient
-            spec={isLaravel ? laravelSpec : spec}
+            spec={isLaravel ? laravelSpec : isAgents ? agentsSpec : spec}
             serverStorageKey={
               isLaravel
                 ? "hust_laravel_server_url_v1"
-                : isOpenClaw
-                  ? OPENCLAW_SERVER_URL_STORAGE_KEY
-                  : undefined
+                : isAgents
+                  ? "hust_multi_agents_server_url_v1"
+                  : isOpenClaw
+                    ? OPENCLAW_SERVER_URL_STORAGE_KEY
+                    : undefined
             }
           />
-          {!isLaravel ? (
+          {!isLaravel && !isAgents ? (
             <>
               <ConversationResponseOperation />
               <SecondResponseOperation />

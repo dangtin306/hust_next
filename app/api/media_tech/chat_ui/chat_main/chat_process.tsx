@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   OPENCLAW_CHAT_COMPLETIONS_ENDPOINT,
   OPENCLAW_RESPONSES_ENDPOINT,
+  OPENCLAW_MODELS_ENDPOINT,
   OPENCLAW_IMAGE_GENERATIONS_ENDPOINT,
   getLaravelChatSession,
   rememberLaravelChatSession,
@@ -25,6 +26,10 @@ import {
   fetchInitialChatMessages,
   fetchInitialChatRooms,
 } from "../main/InitialChatLoader";
+import {
+  CHAT_BOT_API_CHANGE_EVENT,
+  getStoredChatBotApiTargets,
+} from "../../config/chatBotApiConfig";
 
 export * from "../api/media_api";
 
@@ -399,6 +404,11 @@ function isLikelyDeadLocalUrl(url: string | null | undefined): boolean {
   return url.includes("192.168.0.189");
 }
 
+// Laravel mặc định cũ từng bị lưu thành "tùy chỉnh": bỏ qua để chat theo môi trường.
+const LEGACY_HARDCODED_LARAVEL_URL = "https://laravel_mt.hust.media";
+
+// Chỉ lưu giá trị do người dùng nhập. Không ghi URL mặc định vào cookie/sessionStorage,
+// để khi đổi môi trường thì chat vẫn theo môi trường mới.
 function getSavedApiUrl(
   storageKey: string | undefined,
   cookieName: string,
@@ -410,28 +420,32 @@ function getSavedApiUrl(
   if (storageKey === CHAT_TEST_STORAGE_KEY) {
     const cookieValue = readCookie(cookieName)?.trim();
     if (cookieValue) {
-      if (isLikelyDeadLocalUrl(cookieValue)) {
-        writeCookie(cookieName, defaultUrl);
+      if (isLikelyDeadLocalUrl(cookieValue) || cookieValue === LEGACY_HARDCODED_LARAVEL_URL) {
+        writeCookie(cookieName, "");
         return defaultUrl;
       }
       return cookieValue;
     }
 
-    // Migrate any previously saved sessionStorage value into a durable cookie.
+    // Migrate giá trị tùy chỉnh cũ trong sessionStorage sang cookie bền.
     const legacyValue = window.sessionStorage?.getItem(legacyStorageName)?.trim();
     if (legacyValue && isLikelyDeadLocalUrl(legacyValue)) {
       window.sessionStorage?.removeItem(legacyStorageName);
-      writeCookie(cookieName, defaultUrl);
       return defaultUrl;
     }
-    const value = legacyValue || defaultUrl;
-    writeCookie(cookieName, value);
-    return value;
+    if (legacyValue && legacyValue !== LEGACY_HARDCODED_LARAVEL_URL) {
+      writeCookie(cookieName, legacyValue);
+      return legacyValue;
+    }
+    return defaultUrl;
   }
 
   const sessionVal = window.sessionStorage?.getItem(legacyStorageName)?.trim();
   if (sessionVal && isLikelyDeadLocalUrl(sessionVal)) {
     window.sessionStorage?.removeItem(legacyStorageName);
+    return defaultUrl;
+  }
+  if (sessionVal === LEGACY_HARDCODED_LARAVEL_URL) {
     return defaultUrl;
   }
   return sessionVal || defaultUrl;
@@ -451,11 +465,111 @@ export function useMediaChatProcess({
   showWelcomeMessage = true,
   serviceDescriptions = {},
 }: MediaTechChatClientProps = {}) {
-  const defaultNodeUrl = targetUrl || "https://node_md.hust.media/openclaw";
-  const defaultLaravelUrl = propLaravelUrl || "https://laravel_mt.hust.media";
+  // Mặc định lấy từ cookie môi trường (url_api_chat_bot_mt). Đọc sau khi mount để không lệch SSR.
+  // Proxy đọc đúng cookie này, nên URL hiển thị và URL được gọi luôn giống nhau.
+  const [envBackend, setEnvBackend] = useState<{ backend_node: string; backend_laravel: string }>({
+    backend_node: "",
+    backend_laravel: "",
+  });
+  useEffect(() => {
+    const refresh = () => {
+      const next = getStoredChatBotApiTargets(false);
+      setEnvBackend((prev) =>
+        prev.backend_node === next.backend_node && prev.backend_laravel === next.backend_laravel
+          ? prev
+          : next,
+      );
+    };
+    refresh();
+    window.addEventListener(CHAT_BOT_API_CHANGE_EVENT, refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(CHAT_BOT_API_CHANGE_EVENT, refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+  const defaultNodeUrl = targetUrl || envBackend.backend_node;
+  const defaultLaravelUrl = propLaravelUrl || envBackend.backend_laravel;
 
   const [activeNodeUrl, setActiveNodeUrl] = useState<string>(defaultNodeUrl);
   const [activeLaravelUrl, setActiveLaravelUrl] = useState<string>(defaultLaravelUrl);
+  // Model theo kiểu OpenAI: người dùng chọn trong danh sách lấy từ GET /v1/models của gateway.
+  const [selectedModel, setSelectedModel] = useState<string>(propModel);
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; owned_by?: string }>>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(true);
+  const [modelListError, setModelListError] = useState<string | null>(null);
+  const [modelsReloadKey, setModelsReloadKey] = useState(0);
+  const modelPreferenceKey = `openclaw-model:${propStorageKey || CHAT_TEST_STORAGE_KEY}:${propSessionKey || agent || "default"}`;
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const modelTimeoutId = window.setTimeout(() => controller.abort(), 12_000);
+    setIsLoadingModels(true);
+    setModelListError(null);
+    const headers: Record<string, string> = {};
+    if (activeNodeUrl) headers["x-openclaw-target"] = activeNodeUrl;
+    fetch(OPENCLAW_MODELS_ENDPOINT, {
+      cache: "no-store",
+      signal: controller.signal,
+      headers,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((body: { data?: Array<{ id?: unknown; owned_by?: unknown }> }) => {
+        if (cancelled) return;
+        const seenModelIds = new Set<string>();
+        const list = (Array.isArray(body?.data) ? body.data : []).flatMap((model) => {
+          const id = typeof model?.id === "string" ? model.id.trim() : "";
+          if (!id || seenModelIds.has(id)) return [];
+          seenModelIds.add(id);
+          return [{
+            id,
+            owned_by: typeof model.owned_by === "string" ? model.owned_by : undefined,
+          }];
+        });
+        if (list.length === 0) {
+          throw new Error("API chưa trả về model nào.");
+        }
+        let savedModel = "";
+        try {
+          savedModel = window.localStorage.getItem(modelPreferenceKey) || "";
+        } catch {}
+        setModelListError(null);
+        setAvailableModels(list);
+        setSelectedModel((current) => {
+          const preferred = savedModel || current;
+          return list.some((model) => model.id === preferred) ? preferred : list[0].id;
+        });
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setModelListError(
+            controller.signal.aborted
+              ? "API danh sách model quá thời gian chờ."
+              : error instanceof Error
+                ? error.message
+                : "Không tải được danh sách model.",
+          );
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(modelTimeoutId);
+        if (!cancelled) setIsLoadingModels(false);
+      });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(modelTimeoutId);
+      controller.abort();
+    };
+  }, [activeNodeUrl, modelPreferenceKey, modelsReloadKey]);
+  useEffect(() => {
+    if (!selectedModel || !availableModels.some((model) => model.id === selectedModel)) return;
+    try {
+      window.localStorage.setItem(modelPreferenceKey, selectedModel);
+    } catch {}
+  }, [availableModels, modelPreferenceKey, selectedModel]);
   const activeNodeUrlRef = useRef<string>(defaultNodeUrl);
   activeNodeUrlRef.current = activeNodeUrl;
   const activeLaravelUrlRef = useRef<string>(defaultLaravelUrl);
@@ -558,7 +672,7 @@ export function useMediaChatProcess({
 
   const targetAgent = agent || (effectiveSessionKey.includes("chat_bot") ? "chat_bot" : "test");
   const openClawUrl = `https://oc.hust.media/md_1/chat/${targetAgent}/user_${encodeURIComponent(String(userId || ""))}`;
-  const activeModel = propModel;
+  const activeModel = selectedModel;
 
   const ensureLaravelRoom = (
     upstreamConversationId: string,
@@ -727,6 +841,24 @@ export function useMediaChatProcess({
 
   useEffect(() => {
     let cancelled = false;
+    const initializationTimeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setIsLoadingWorkspaces(false);
+      setRestoreProgress(100);
+      setRestoreStatus("Khởi tạo chat đã quá thời gian chờ.");
+      setIsRestoringChat(false);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `chat-restore-timeout-${Date.now()}`,
+          sender: "bot",
+          text: "Khôi phục chat mất quá nhiều thời gian. Bạn vẫn có thể thử gửi tin nhắn hoặc tải lại trang.",
+          time: "Hệ thống",
+          isError: true,
+        },
+      ]);
+    }, 45_000);
     const initializeChat = async () => {
       let retryCount = 0;
       const maxRetries = 2;
@@ -836,7 +968,7 @@ export function useMediaChatProcess({
               );
               setActiveLaravelUrl(defaultLaravelUrl);
               activeLaravelUrlRef.current = defaultLaravelUrl;
-              writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, defaultLaravelUrl);
+              writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, "");
               try {
                 window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
               } catch {}
@@ -1169,9 +1301,33 @@ export function useMediaChatProcess({
       }
     };
 
-    void initializeChat();
+    void initializeChat()
+      .catch((error) => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "Lỗi không xác định.";
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: `chat-restore-error-${Date.now()}`,
+            sender: "bot",
+            text: `Không thể khởi tạo phiên chat: ${message}`,
+            time: "Hệ thống",
+            isError: true,
+          },
+        ]);
+      })
+      .finally(() => {
+        window.clearTimeout(initializationTimeoutId);
+        if (!cancelled) {
+          setIsLoadingWorkspaces(false);
+          setRestoreProgress(100);
+          setRestoreStatus("Sẵn sàng");
+          setIsRestoringChat(false);
+        }
+      });
     return () => {
       cancelled = true;
+      window.clearTimeout(initializationTimeoutId);
     };
   }, [activeStorageKey, initialMessages]);
 
@@ -1327,8 +1483,9 @@ export function useMediaChatProcess({
     setIsApiConfigModalOpen(false);
     if (typeof window !== "undefined" && propStorageKey) {
       if (propStorageKey === CHAT_TEST_STORAGE_KEY) {
-        writeCookie(CHAT_TEST_NODE_URL_COOKIE, cleanNode);
-        writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, cleanLaravel);
+        // Bằng mặc định (theo môi trường) thì không lưu thành tùy chỉnh.
+        writeCookie(CHAT_TEST_NODE_URL_COOKIE, cleanNode === defaultNodeUrl ? "" : cleanNode);
+        writeCookie(CHAT_TEST_LARAVEL_URL_COOKIE, cleanLaravel === defaultLaravelUrl ? "" : cleanLaravel);
         window.sessionStorage?.removeItem(`custom_api_node_${propStorageKey}`);
         window.sessionStorage?.removeItem(`custom_api_laravel_${propStorageKey}`);
       } else if (cleanNode === defaultNodeUrl) {
@@ -1879,6 +2036,16 @@ export function useMediaChatProcess({
   return {
     messages,
     setMessages,
+    availableModels,
+    selectedModel,
+    setSelectedModel,
+    isLoadingModels,
+    modelListError,
+    handleReloadModels: () => {
+      setIsLoadingModels(true);
+      setModelListError(null);
+      setModelsReloadKey((key) => key + 1);
+    },
     input,
     setInput,
     workspaces,

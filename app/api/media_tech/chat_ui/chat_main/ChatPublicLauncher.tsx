@@ -92,7 +92,7 @@ export default function ChatPublicLauncher() {
                 isDrawer
                 onClose={() => setIsChatOpen(false)}
                 className="h-full max-h-full"
-                targetUrl="https://node_md.hust.media/openclaw"
+                targetUrl=""
                 sessionKey="agent:test"
                 storageKey="chat_public_conv_id"
                 model="gpt-5.6-luna"

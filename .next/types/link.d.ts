@@ -35,23 +35,58 @@ declare namespace __next_route_internal_types__ {
     | `/`
     | `/api/hust_media`
     | `/api/hust_media/api`
+    | `/api/hust_media/media_tech/chat_home`
+    | `/api/hust_media/media_tech/chat_manage`
+    | `/api/hust_media/media_tech/chat_messages`
     | `/api/hust_media/media_tech/chat_public`
     | `/api/hust_media/media_tech/chat_test`
     | `/api/hust_media/media_tech/dashboard`
+    | `/api/hust_media/media_tech/dev/home`
+    | `/api/hust_media/media_tech/dev_home`
+    | `/api/hust_media/media_tech/git_auto`
+    | `/api/hust_media/media_tech/git_home`
+    | `/api/hust_media/media_tech/git_test`
+    | `/api/hust_media/media_tech/gitea_test`
     | `/api/hust_media/media_tech/laravel`
+    | `/api/hust_media/media_tech/list`
+    | `/api/hust_media/media_tech/list/home`
+    | `/api/hust_media/media_tech/media/home`
+    | `/api/hust_media/media_tech/media_home`
     | `/api/hust_media/media_tech/openclaw`
+    | `/api/hust_media/n8n`
+    | `/api/hust_media/n8n/home`
+    | `/api/hust_media/n8n/laravel`
     | `/api/hust_media/workflow`
     | `/api/hust_media/workflow/laravel`
+    | `/api/hust_media/workspace`
+    | `/api/hust_media/workspace/home`
+    | `/api/hust_media/workspace/markdown`
     | `/api/media_tech`
+    | `/api/media_tech/chat_home`
+    | `/api/media_tech/chat_manage`
+    | `/api/media_tech/chat_messages`
     | `/api/media_tech/chat_public`
     | `/api/media_tech/chat_test`
     | `/api/media_tech/dashboard`
+    | `/api/media_tech/dev/home`
+    | `/api/media_tech/dev_home`
     | `/api/media_tech/git_auto`
+    | `/api/media_tech/git_home`
     | `/api/media_tech/git_test`
     | `/api/media_tech/gitea_test`
+    | `/api/media_tech/heygen`
+    | `/api/media_tech/heygen/home`
+    | `/api/media_tech/heygen/live`
+    | `/api/media_tech/heygen/session`
+    | `/api/media_tech/heygen/video`
     | `/api/media_tech/laravel`
+    | `/api/media_tech/list`
+    | `/api/media_tech/list/home`
     | `/api/media_tech/maps_main`
+    | `/api/media_tech/media/home`
+    | `/api/media_tech/media_home`
     | `/api/media_tech/n8n`
+    | `/api/media_tech/n8n/home`
     | `/api/media_tech/n8n/laravel`
     | `/api/media_tech/n8n/maps_main`
     | `/api/media_tech/n8n/node_js`
@@ -61,6 +96,8 @@ declare namespace __next_route_internal_types__ {
     | `/api/media_tech/sidebar-menu`
     | `/api/media_tech/sidebar-menu/clear`
     | `/api/media_tech/workspace`
+    | `/api/media_tech/workspace/home`
+    | `/api/media_tech/workspace/markdown`
     | `/api/resources/services-info`
     | `/api/test1234`
     | `/community/clear_silde_bar`
@@ -71,29 +108,84 @@ declare namespace __next_route_internal_types__ {
     | `/info/seo_media`
     | `/info/terms_service`
     | `/next/api/hust/api_test`
+    | `/next/api/hust/chat`
+    | `/next/api/hust/chat/home`
+    | `/next/api/hust/chat/manage`
+    | `/next/api/hust/chat/messages`
+    | `/next/api/hust/chat/public`
+    | `/next/api/hust/chat/test`
+    | `/next/api/hust/chat_manage`
+    | `/next/api/hust/chat_messages`
     | `/next/api/hust/chat_public`
     | `/next/api/hust/chat_test`
+    | `/next/api/hust/dev`
+    | `/next/api/hust/dev/home`
+    | `/next/api/hust/git`
+    | `/next/api/hust/git/auto`
+    | `/next/api/hust/git/gitea`
+    | `/next/api/hust/git/home`
+    | `/next/api/hust/git/test`
+    | `/next/api/hust/git_auto`
+    | `/next/api/hust/git_test`
+    | `/next/api/hust/gitea_test`
     | `/next/api/hust/home`
     | `/next/api/hust/laravel`
+    | `/next/api/hust/list`
+    | `/next/api/hust/list/home`
+    | `/next/api/hust/list/laravel`
+    | `/next/api/hust/list/openclaw`
+    | `/next/api/hust/media`
+    | `/next/api/hust/media/home`
+    | `/next/api/hust/n8n/home`
+    | `/next/api/hust/n8n/laravel`
     | `/next/api/hust/openclaw`
-    | `/next/api/hust/workflow`
+    | `/next/api/hust/workflow/home`
     | `/next/api/hust/workflow/laravel`
+    | `/next/api/hust/workflow/maps_main`
+    | `/next/api/hust/workspace`
+    | `/next/api/hust/workspace/home`
+    | `/next/api/hust/workspace/markdown`
     | `/next/api/mt`
+    | `/next/api/mt/chat`
+    | `/next/api/mt/chat/home`
+    | `/next/api/mt/chat/manage`
+    | `/next/api/mt/chat/messages`
+    | `/next/api/mt/chat/public`
+    | `/next/api/mt/chat/test`
+    | `/next/api/mt/chat_manage`
+    | `/next/api/mt/chat_messages`
     | `/next/api/mt/chat_public`
     | `/next/api/mt/chat_test`
+    | `/next/api/mt/dev`
+    | `/next/api/mt/dev/home`
+    | `/next/api/mt/git`
+    | `/next/api/mt/git/auto`
+    | `/next/api/mt/git/gitea`
+    | `/next/api/mt/git/home`
+    | `/next/api/mt/git/test`
     | `/next/api/mt/git_auto`
     | `/next/api/mt/git_test`
     | `/next/api/mt/gitea_test`
     | `/next/api/mt/home`
     | `/next/api/mt/laravel`
-    | `/next/api/mt/n8n`
+    | `/next/api/mt/list`
+    | `/next/api/mt/list/home`
+    | `/next/api/mt/list/laravel`
+    | `/next/api/mt/list/openclaw`
+    | `/next/api/mt/media`
+    | `/next/api/mt/media/home`
     | `/next/api/mt/n8n/laravel`
     | `/next/api/mt/n8n/maps_main`
     | `/next/api/mt/n8n/node_js`
     | `/next/api/mt/openclaw`
+    | `/next/api/mt/workflow/home`
     | `/next/api/mt/workspace`
+    | `/next/api/mt/workspace/home`
+    | `/next/api/mt/workspace/markdown`
+    | `/next/api/mt/workspaces/main/data`
     | `/next/api/sidebar-menu`
     | `/next/api/sidebar-menu/clear`
+    | `/next/api/workspaces/main/data`
     | `/next/clear_silde_bar`
     | `/next/community/history/home`
     | `/next/convert_national_market`
@@ -112,7 +204,6 @@ declare namespace __next_route_internal_types__ {
     | `/next/shop/history/home`
     | `/next/support`
     | `/shop/ai`
-    | `/shop/ai/chat_bot/media_tech`
     | `/shop/hustadmin/home`
     | `/shop/hustadmin/orders`
     | `/shop/hustadmin/port_cron/net_ports`
@@ -123,22 +214,32 @@ declare namespace __next_route_internal_types__ {
     | `/tabs_nav/tabs_nav.json`
   type DynamicRoutes<T extends string = string> = 
     | `/api/features-image/${CatchAllSlug<T>}`
+    | `/api/hust/chat/${CatchAllSlug<T>}`
     | `/api/hust/openclaw/${CatchAllSlug<T>}`
+    | `/api/hust/workspaces-proxy/${CatchAllSlug<T>}`
+    | `/api/hust/workspaces/${CatchAllSlug<T>}`
     | `/api/hust_media/media_tech/chat/${CatchAllSlug<T>}`
     | `/api/hust_media/media_tech/openclaw/gateway/${CatchAllSlug<T>}`
     | `/api/media_tech/chat/${CatchAllSlug<T>}`
     | `/api/media_tech/gitea/${CatchAllSlug<T>}`
+    | `/api/media_tech/heygen/backend/${CatchAllSlug<T>}`
     | `/api/media_tech/openclaw/gateway/${CatchAllSlug<T>}`
     | `/api/media_tech/workspaces-proxy/${CatchAllSlug<T>}`
+    | `/api/media_tech/workspaces/${CatchAllSlug<T>}`
+    | `/api/workspaces/${CatchAllSlug<T>}`
     | `/community/docs/${SafeSlug<T>}`
     | `/community/services/${SafeSlug<T>}`
     | `/next/accounts/product/play/${SafeSlug<T>}`
     | `/next/api/chat/${OptionalCatchAllSlug<T>}`
     | `/next/api/gitea/${OptionalCatchAllSlug<T>}`
+    | `/next/api/hust/media/heygen/${OptionalCatchAllSlug<T>}`
     | `/next/api/maps/${OptionalCatchAllSlug<T>}`
+    | `/next/api/mt/media/heygen/${OptionalCatchAllSlug<T>}`
+    | `/next/api/mt/workspaces/${OptionalCatchAllSlug<T>}`
     | `/next/api/node-activity/${OptionalCatchAllSlug<T>}`
     | `/next/api/openclaw/${OptionalCatchAllSlug<T>}`
     | `/next/api/workspaces-proxy/${OptionalCatchAllSlug<T>}`
+    | `/next/api/workspaces/${OptionalCatchAllSlug<T>}`
     | `/next/check/${OptionalCatchAllSlug<T>}`
     | `/next/check/${SafeSlug<T>}`
     | `/next/docs/${OptionalCatchAllSlug<T>}`

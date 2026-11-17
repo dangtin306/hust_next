@@ -2,15 +2,20 @@ import type { Metadata } from "next";
 import MapsMainCanvas from "./MapsMainCanvas";
 
 export const metadata: Metadata = {
-  title: "Bản đồ Tổng thể Tri thức & Thực thi (Maps Main) | Hust Media",
+  title: "Bản đồ Workspace n8n | Hust Media",
   description:
-    "Sơ đồ tổng thể 2 tầng: Cây tri thức Markdown OpenClaw kết hợp Pipeline n8n thực thi qua Dynamic Path Resolution.",
+    "Bản đồ workspace, cây tri thức Markdown OpenClaw và pipeline n8n thực thi cho Hust và Media Tech.",
 };
 
-export default function MapsMainPage() {
+export default async function MapsMainPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const { project } = await searchParams;
   return (
     <main className="w-full min-h-screen bg-slate-950 p-2 sm:p-4">
-      <MapsMainCanvas />
+      <MapsMainCanvas project={project === "hust" ? "hust" : "media_tech"} />
     </main>
   );
 }

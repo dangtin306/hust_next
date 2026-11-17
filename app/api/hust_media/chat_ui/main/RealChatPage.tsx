@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { readFile } from "fs/promises";
 import path from "path";
 import { parse } from "yaml";
-import MediaTechChatClient from "./media_main";
+import ChatTestAgentPicker from "./ChatTestAgentPicker";
 
 export const metadata: Metadata = {
   title: "Hust AI Assistant | Chat Test",
@@ -43,11 +43,10 @@ export default async function RealChatPage({
         className || "h-[calc(100vh-52px)] h-[calc(100dvh-52px)] max-h-[calc(100dvh-52px)]"
       }`}
     >
-      <MediaTechChatClient
+      <ChatTestAgentPicker
         className="h-full max-h-full"
-        targetUrl="https://node_js.hust.media/openclaw"
-        laravelUrl="https://laravel.hust.media"
-        sessionKey="agent:test:user_502"
+        targetUrl=""
+        laravelUrl=""
         storageKey="hust_api_chat_test_conv_id"
         model="gpt-5.6-luna"
         useResponsesApi={true}

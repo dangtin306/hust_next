@@ -1,17 +1,14 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import SwaggerSwitcher from "@/app/api/hust_media/media_tech/SwaggerSwitcher";
-import {
-  Bot,
-  FileCode2,
-  Workflow,
-  ArrowRight,
-} from "lucide-react";
+import { NavigationToastLink } from "@/app/api/hust_media/media_tech/HomeNavigationToast";
+import KnowledgeFrame from "@/app/api/media_tech/maps_main/home/KnowledgeFrame";
+import DiagramCard from "@/app/api/media_tech/n8n/DiagramCard";
+import { Workflow } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "AI Workflow & Swagger Hub | Hust AI Assistant",
+  title: "Sơ đồ Workflow | Hust AI Assistant",
   description:
-    "Trung tâm điều khiển tài liệu API, Workflow và công cụ kiểm thử AI Dự án 2 - Hust Media.",
+    "Sơ đồ realtime Laravel n8n và các luồng workflow của Hust Media.",
 };
 
 export default function WorkflowHomePage() {
@@ -33,90 +30,33 @@ export default function WorkflowHomePage() {
               </span>
             </div>
             <h1 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
-              Chọn tài liệu &amp; công cụ bạn muốn xem
+              Sơ đồ Laravel n8n
             </h1>
             <p className="mt-1 text-sm text-slate-600 sm:text-base">
-              Home giới thiệu trung tâm các công cụ kiểm thử AI, giao diện Chatbot và quy trình Workflow AI Dự án 2. Chọn một khung bên dưới để bắt đầu.
+              Sơ đồ realtime theo dõi luồng telemetry, heartbeat và tương tác giữa Laravel backend với n8n workflow.
             </p>
           </div>
         </div>
 
-        {/* Featured Project 2 Quick Action Cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+        {/* Workflow diagram: khung Knowledge đứng đầu, cùng vị trí với bên Media Tech */}
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <KnowledgeFrame product="hust" />
           {/* Card: Laravel n8n */}
-          <Link
+          <NavigationToastLink
             href={"/api/hust/n8n/laravel" as unknown as Route}
-            className="group relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
+            label="Sơ đồ Laravel n8n"
+            className="group block h-full rounded-2xl focus:outline-none"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm shadow-emerald-500/20">
-                <Workflow className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                Workflow Sơ đồ
-              </span>
-            </div>
-            <h2 className="mt-3 text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-              Sơ đồ Laravel n8n
-            </h2>
-            <p className="mt-1.5 text-sm text-slate-600">
-              Sơ đồ realtime giám sát luồng telemetry, heartbeat và tương tác giữa Laravel backend và n8n workflow qua WebSocket.
-            </p>
-            <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
-              <span>Mở sơ đồ Laravel n8n</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
-
-          {/* Card: Chat Bot Hub */}
-          <Link
-            href={"/api/hust/chat/home" as unknown as Route}
-            className="group relative overflow-hidden rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/70 to-indigo-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-500/20">
-                <Bot className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                AI Chat Bot
-              </span>
-            </div>
-            <h2 className="mt-3 text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-              AI Chat Bot (Hust AI Assistant)
-            </h2>
-            <p className="mt-1.5 text-sm text-slate-600">
-              Trải nghiệm trò chuyện trực tiếp cùng trợ lý AI của Hust Media: Chat Test kiểm thử và Chat Public người dùng.
-            </p>
-            <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-blue-600">
-              <span>Mở AI Chat Bot Hub</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
-
-          {/* Card: API Test & Swagger */}
-          <Link
-            href={"/api/hust/api_test" as unknown as Route}
-            className="group relative overflow-hidden rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50/70 to-pink-50/70 p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-400 hover:shadow-md"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600 text-white shadow-sm shadow-purple-500/20">
-                <FileCode2 className="h-5 w-5" />
-              </div>
-              <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700">
-                Tài liệu &amp; Test
-              </span>
-            </div>
-            <h2 className="mt-3 text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
-              API Test &amp; Swagger Embed
-            </h2>
-            <p className="mt-1.5 text-sm text-slate-600">
-              Tài liệu Swagger nhúng tương tác và bộ test trực tiếp các endpoint OpenClaw Production API của Hust Media.
-            </p>
-            <div className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-purple-600">
-              <span>Khám phá API &amp; Swagger</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </div>
-          </Link>
+            <DiagramCard
+              icon={<Workflow className="h-5 w-5" aria-hidden="true" />}
+              title="Sơ đồ Laravel n8n"
+              subtitle="Telemetry, heartbeat và WebSocket"
+              badge="Laravel backend"
+              description="Sơ đồ realtime giám sát luồng telemetry, heartbeat và tương tác giữa Laravel backend và n8n workflow qua WebSocket."
+              features={["Luồng telemetry", "Heartbeat", "Tương tác n8n qua WebSocket"]}
+              actionLabel="Mở sơ đồ Laravel n8n"
+            />
+          </NavigationToastLink>
         </div>
       </section>
     </main>

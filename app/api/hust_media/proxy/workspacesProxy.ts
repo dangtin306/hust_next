@@ -76,7 +76,7 @@ async function proxy(
         headers: requestHeaders,
         body,
         cache: "no-store",
-        signal: AbortSignal.timeout(customTarget ? 3000 : 15000),
+        signal: AbortSignal.timeout(15000),
       });
     } catch (fetchErr) {
       const defaultBase = normalizeLaravelApiBaseUrl(HUST_LARAVEL_BASE);

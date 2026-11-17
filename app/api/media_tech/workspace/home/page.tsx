@@ -1,11 +1,18 @@
-import type { Metadata } from "next";
-import WorkspaceManagement from "../WorkspaceManagement";
+import type { Metadata, Route } from "next";
+import WorkspaceHomeGuide from "@/app/api/hust_media/workspace/WorkspaceHomeGuide";
 
 export const metadata: Metadata = {
-  title: "Danh mục Workspace | Media Tech",
-  description: "Trang quản trị các workspace dự án, đường dẫn mã nguồn, mã định danh và trạng thái.",
+  title: "Hướng dẫn Workspace | Media Tech",
+  description: "Hướng dẫn xem và quản lý workspace theo từng agent trong Media Tech.",
 };
 
 export default function WorkspaceHomePage() {
-  return <WorkspaceManagement initialTab="workspaces" />;
+  return (
+    <WorkspaceHomeGuide
+      projectName="Media Tech"
+      agentHomeHref={"/next/api/mt/agent/home" as Route}
+      agentWorkspacePattern="/next/api/mt/agent/{agent_code}/workspace"
+      workspaceMapHref={"/api/mt/n8n/maps_main" as Route}
+    />
+  );
 }

@@ -1,0 +1,2678 @@
+openapi: 3.0.3
+info:
+  title: Hust Multi Agent API
+  version: 0.1.0
+  description: 'API điều phối Multi Agent chạy trong Node.js main server của Hust.
+
+
+    Vòng xử lý: Node.js nhận dữ liệu quan sát, gọi dịch vụ Python toán học (đạo hàm sai phân, xác suất thống kê),
+
+    đưa kết quả và danh sách phương án hợp lệ cho Laya (engine lựa chọn chạy local), rồi chuyển phương án đã chọn cho executor.
+
+
+    **Mặc định mọi lần chạy là dry-run**: chỉ ghi nhận quyết định, không gửi lệnh nào tới OpenClaw. Thực thi thật bị khóa
+
+    và cần đồng thời cấu hình phía server cùng header `Authorization: Bearer <token>` hợp lệ.
+
+
+    Route `GET /multi/agents/agents` chỉ đọc: liệt kê agent OpenClaw và workspace con của từng agent. Upstream mất khoảng 20 giây
+
+    ở lần đầu, sau đó được cache 60 giây.
+
+    '
+servers:
+- url: https://node_js.hust.media
+  description: Node.js main server (production)
+- url: http://localhost:2999
+  description: Node.js main server local (cổng 2999)
+tags:
+- name: Status
+  description: Trạng thái bộ điều phối, dịch vụ toán học và Laya.
+- name: Agents
+  description: Danh sách agent OpenClaw và workspace con (chỉ đọc).
+- name: Run
+  description: Chạy một vòng điều phối cho tình huống Agent thất bại hoặc hàng đợi tăng bất thường.
+- name: MCP
+  description: Endpoint MCP riêng cho từng agent, để Codex hoặc AI khác gọi công cụ.
+- name: Tools
+  description: Các công cụ MCP của agent, tổng 55 công cụ gồm 8 công cụ đọc workspace, 6 công cụ `ui_*` (gõ phím, đổi Việt/Anh của VKey) và 41 công cụ `agent_desktop_*` (điều khiển desktop); có hướng dẫn
+    gọi nhóm desktop và chụp màn hình.
+- name: Workspace API (Laravel)
+  description: Workspace REST and Markdown APIs. Laravel still handles these requests; they are grouped here for API discovery.
+- name: Qwen Relay
+  description: Gọi Qwen (Huihui 27B) qua Node Media Tech tại http://118.70.169.219:8818. Cần khóa Bearer do quản trị viên cấp (đặt ở nút Authorize). Khóa không được ghi trong tài liệu này. Không có khóa
+    hoặc sai khóa trả 401. Lần gọi đầu sau khi model ngủ có thể chậm khoảng 8 giây do nạp model từ đĩa.
+paths:
+  /multi/agents/status:
+    get:
+      tags:
+      - Status
+      operationId: getMultiAgentsStatus
+      summary: Trạng thái bộ điều phối
+      description: 'Cho biết chế độ dry-run, engine chọn phương án đang dùng và dịch vụ toán học, Laya có sẵn sàng hay không.
+
+        `ok` là `true` khi toán học và Laya đều sẵn sàng. Token và user id OpenClaw không bao giờ được trả về.
+
+        '
+      security: []
+      responses:
+        '200':
+          description: Trạng thái hiện tại.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+              example:
+                ok: true
+                config:
+                  enabled: true
+                  dry_run: true
+                  live_approved: false
+                  live_possible: false
+                  decider: laya
+                  openclaw_configured: false
+                  api_token_set: false
+                  limits:
+                    maxIterations: 3
+                    timeBudgetMs: 10000
+                    maxAiCalls: 5
+                services:
+                  math:
+                    reachable: true
+                    ok: true
+                  laya:
+                    reachable: true
+                    ok: true
+  /multi/agents/agents:
+    get:
+      tags:
+      - Agents
+      operationId: listMultiAgents
+      summary: Danh sách agent và workspace
+      description: 'Đọc `/openclaw/v2/health` và endpoint tổng hợp tương thích `/openclaw/v2/list` để gom workspace con theo từng agent. API workspace chuẩn `/openclaw/v2/workspace/list` nhận `agent_code`
+        và chỉ trả workspace của agent đó.
+
+        Danh sách được cache kiểu stale-while-revalidate: đã nạp một lần thì mọi lần sau trả ngay (quá 60 giây trả bản cũ kèm `stale: true` và làm mới ngầm). Các lần làm mới đồng thời dùng chung một request
+        tới OpenClaw.
+
+        Gateway không với tới được thì trả `502`.
+
+        '
+      security: []
+      parameters:
+      - name: refresh
+        in: query
+        required: false
+        description: Đặt `1` để bỏ qua cache.
+        schema:
+          type: string
+          enum:
+          - '1'
+      responses:
+        '200':
+          description: Registry agent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistry'
+              example:
+                ok: true
+                openclaw:
+                  reachable: true
+                  ok: true
+                  connected: true
+                  subscribed: true
+                  plugins: 15
+                agents:
+                - agent_code: chat_bot
+                  workspaces:
+                  - workspace_hust_dev
+                  - workspace_hust_test
+                  - workspace_hust_users
+                  mcp_path: /multi/agents/chat_bot/mcp
+                - agent_code: main
+                  workspaces:
+                  - workspace_hust_dev
+                  - workspace_hust_test
+                  - workspace_hust_users
+                  mcp_path: /multi/agents/main/mcp
+                workspaces:
+                - code: workspace-chat_bot
+                  name: Workspace Chat Bot
+                  status: active
+                  parent: openclaw
+                fetched_at: '2026-10-29T10:00:00.000Z'
+                cached: false
+        '502':
+          description: Không gọi được OpenClaw gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRegistry'
+  /multi/agents/run:
+    post:
+      tags:
+      - Run
+      operationId: runMultiAgents
+      summary: Chạy một vòng điều phối
+      description: 'Chạy vòng observe → analyze → decide → act cho một tình huống.
+
+
+        - `agent_failure`: gửi `samples` (mỗi mẫu có `agent_id` và `outcome`).
+
+        - `queue_growth`: gửi `depths` (độ sâu hàng đợi theo thời gian, mỗi mẫu cách nhau 1 giây).
+
+        - Có thể gửi `series` thay cho `samples` hoặc `depths`: mỗi phần tử là dữ liệu quan sát của một vòng, dùng để thử kịch bản hồi phục.
+
+
+        Tối đa 2 lần chạy cùng lúc, lần vượt giới hạn nhận `429`. Không có token hợp lệ thì luôn là dry-run.
+
+        Kết quả `status`: `resolved`, `escalated`, `insufficient_data`, `max_iterations`, `time_budget_exhausted`, `math_unavailable` hoặc `disabled`.
+
+        '
+      security:
+      - {}
+      - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunRequest'
+            examples:
+              queue_growth:
+                summary: Hàng đợi tăng bất thường
+                value:
+                  scenario: queue_growth
+                  depths:
+                  - 10
+                  - 14
+                  - 18
+                  - 22
+                  - 26
+                  - 30
+                  - 34
+                  - 38
+                  - 42
+                  - 46
+                  task_id: task-001
+                  workspace_id: workspace-chat_bot
+              queue_growth_recovery:
+                summary: Hàng đợi tăng rồi ổn định (series)
+                value:
+                  scenario: queue_growth
+                  series:
+                  - - 10
+                    - 14
+                    - 18
+                    - 22
+                    - 26
+                    - 30
+                    - 34
+                    - 38
+                    - 42
+                    - 46
+                  - - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                    - 30
+                  task_id: task-002
+              agent_failure:
+                summary: Agent thất bại liên tiếp
+                value:
+                  scenario: agent_failure
+                  samples:
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: media_tech
+                    outcome: error
+                  - agent_id: chat_bot
+                    outcome: success
+                  - agent_id: chat_bot
+                    outcome: success
+                  task_id: task-003
+                  agent_id: media_tech
+                  workspace_id: workspace-chat_bot
+      responses:
+        '200':
+          description: Kết quả vòng điều phối.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResult'
+              example:
+                status: resolved
+                run_id: 17142db1-7156-4614-95ea-f38a6b1ce403
+                scenario: agent_failure
+                iterations: 2
+                ai_calls: 1
+                actions:
+                - iteration: 1
+                  option_id: pause_agent:media_tech
+                  action: pause_agent
+                  target: media_tech
+                  source: laya
+                  status: dry_run
+                dry_run: true
+                live: false
+        '400':
+          description: Dữ liệu gửi lên không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                ok: false
+                error: scenario must be agent_failure or queue_growth
+        '413':
+          description: Body vượt quá giới hạn.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Đang có quá nhiều lần chạy cùng lúc.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Bộ điều phối đang tắt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /multi/agents/{agent}/mcp:
+    post:
+      tags:
+      - MCP
+      operationId: agentMcp
+      summary: MCP endpoint riêng của một agent
+      description: 'Mỗi agent OpenClaw có một MCP server riêng (Streamable HTTP, không giữ trạng thái) để Codex hoặc AI khác kết nối thẳng tới đúng agent.
+
+        Gửi JSON-RPC 2.0 bằng `POST`: `initialize`, `tools/list`, `tools/call`.
+
+
+        Gửi `Content-Type: application/json`. Header `Accept` nên là `application/json, text/event-stream`, nhưng không bắt buộc:
+
+        client chỉ gửi `application/json`, `*/*` hoặc không gửi gì vẫn được phục vụ. Phản hồi luôn là một sự kiện SSE `event: message` chứa JSON-RPC.
+
+
+        **Mở cho mọi nguồn (CORS `*`)**: trình duyệt ở bất kỳ trang nào cũng gọi được. Preflight `OPTIONS` được phản hồi đúng các header trình duyệt xin
+
+        (kể cả `Authorization`, `Mcp-Session-Id`, `MCP-Protocol-Version`).
+
+
+        `GET` thường (ví dụ mở bằng trình duyệt) trả mô tả endpoint và danh sách công cụ. `GET` xin luồng SSE (`Accept: text/event-stream`) và `DELETE`
+
+        nhận `405` kèm `Allow` vì server không giữ trạng thái. Có giới hạn số request MCP xử lý cùng lúc; vượt giới hạn nhận `429` kèm `Retry-After`.
+
+
+        `{agent}` là mã agent của OpenClaw (`chat_bot`, `main`, `media_tech`, `test`...). Có thể đặt tên viết tắt như `agent-01` bằng biến
+
+        `ORCH_AGENT_ALIASES` phía server. Agent không tồn tại trả `404` kèm danh sách agent hợp lệ (sau khi registry đã nạp).
+
+
+        Công cụ:
+
+        - `agent_info`: workspace cha, các workspace con (lấy từ SQL), workspace dùng chung và trạng thái gateway của agent (chỉ đọc).
+
+        - `get_workspace_tree`: bước đầu tiên. Liệt kê workspace phân cấp: nhóm mẹ, các workspace con, workspace dùng chung, kèm `description` và `markdown_count` (chỉ đọc).
+
+        - `get_workspace_info`: thông tin một workspace (mô tả, workspace con, thư mục cấp một).
+
+        - `search_workspace`: Laya xếp hạng workspace phù hợp với câu hỏi; `routing.source` là `laya` hoặc `keyword_only`.
+
+        - `get_markdown_tree`: cây thư mục và file `.md` đệ quy theo thực tế trên đĩa (số tầng không cố định), nhóm mẹ trả tổng quan cả nhóm; `path` lấy cây con, `max_depth` giới hạn tầng (chỉ đọc).
+
+        - `get_markdown_full`: như `get_markdown_tree` nhưng kèm nội dung từng file `.md` trong giới hạn dung lượng, che giá trị giống khóa bí mật (chỉ đọc).
+
+        - `get_markdown_file`: đọc một file `.md` theo (`workspace`, `path` tương đối). Chỉ `.md`, không thoát khỏi thư mục workspace, bỏ bộ nhớ riêng của agent, tối đa 256 KB mỗi file (chỉ đọc).
+
+        - `search_markdown`: tìm file `.md` phù hợp với câu hỏi hoặc từ khóa (đủ mọi từ trước, không có thì khớp bất kỳ từ nào); Laya xếp lại ứng viên, mỗi kết quả có `probability` và `relevance`. Bỏ trống
+        `workspace` để tìm khắp nơi (chỉ đọc).
+
+        - `ui_list_windows`, `ui_type_text`, `ui_press_key`: gõ phím vào cửa sổ máy chủ theo `window_handle` (nhóm cũ, không chỉ đọc).
+
+        - `ui_get_language`, `ui_set_language`, `ui_toggle_language`: đọc và đổi chế độ Việt/Anh của VKey (nhóm cũ, chỉ dùng cho việc đó).
+
+        - `agent_desktop_*` (41 công cụ): nhìn màn hình và điều khiển máy chủ như người (chụp ảnh, chuột, phím, clipboard, cửa sổ, accessibility). Chụp màn hình dùng `agent_desktop_screenshot`.
+
+
+        Hiện endpoint chưa giới hạn truy cập. Nhóm đọc workspace chỉ đọc; nhóm `ui_*` và `agent_desktop_*` điều khiển được máy chủ nên ai biết URL đều dùng được. Không có công cụ nào gửi tin nhắn tới agent.
+
+        '
+      security:
+      - {}
+      - BearerAuth: []
+      parameters:
+      - name: agent
+        in: path
+        required: true
+        description: Mã agent OpenClaw hoặc tên viết tắt.
+        schema:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,64}$
+          example: chat_bot
+      - name: Accept
+        in: header
+        required: false
+        description: Nên là `application/json, text/event-stream`. Không bắt buộc, giá trị khác vẫn được phục vụ.
+        schema:
+          type: string
+          default: application/json, text/event-stream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            examples:
+              tools_list:
+                summary: Danh sách công cụ của agent
+                value:
+                  jsonrpc: '2.0'
+                  id: 1
+                  method: tools/list
+                  params: {}
+              agent_info:
+                summary: Gọi công cụ agent_info
+                value:
+                  jsonrpc: '2.0'
+                  id: 2
+                  method: tools/call
+                  params:
+                    name: agent_info
+                    arguments: {}
+              search_markdown:
+                summary: Tìm file .md theo câu hỏi (Laya xếp lại)
+                value:
+                  jsonrpc: '2.0'
+                  id: 3
+                  method: tools/call
+                  params:
+                    name: search_markdown
+                    arguments:
+                      query: Cổng của Go API là bao nhiêu?
+                      workspace: workspace_hust_dev
+      responses:
+        '200':
+          description: 'Phản hồi JSON-RPC dạng SSE: một sự kiện `event: message` kèm `data: {...}`.'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'event: message
+
+                data: {"result":{"tools":[{"name":"agent_info"},{"name":"get_workspace_tree"},{"name":"search_markdown"}]},"jsonrpc":"2.0","id":1}
+
+                '
+        '404':
+          description: Agent không tồn tại.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  error:
+                    type: string
+                    example: agent_not_found
+                  agent:
+                    type: string
+                  agents:
+                    type: array
+                    items:
+                      type: string
+        '405':
+          description: '`GET` xin luồng SSE hoặc `DELETE`: server không giữ trạng thái. Header `Allow: POST, GET, OPTIONS`.'
+        '413':
+          description: Body vượt quá giới hạn.
+        '429':
+          description: Đang có quá nhiều request MCP cùng lúc. Thử lại sau theo `Retry-After`.
+        '503':
+          description: Bộ điều phối đang tắt.
+  /multi/agents/{agent}/mcp#agent_info:
+    post:
+      tags:
+      - Tools
+      operationId: tool_agent_info
+      summary: 'agent_info: Thông tin agent'
+      description: 'Workspace cha, workspace con (từ SQL), workspace dùng chung và trạng thái gateway của agent.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 10
+              method: tools/call
+              params:
+                name: agent_info
+                arguments: {}
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#get_workspace_tree:
+    post:
+      tags:
+      - Tools
+      operationId: tool_get_workspace_tree
+      summary: 'get_workspace_tree: Cây workspace'
+      description: 'Bước đầu tiên: liệt kê workspace phân cấp (nhóm mẹ, workspace con, dùng chung) kèm mô tả và số file .md.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 11
+              method: tools/call
+              params:
+                name: get_workspace_tree
+                arguments: {}
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#get_workspace_info:
+    post:
+      tags:
+      - Tools
+      operationId: tool_get_workspace_info
+      summary: 'get_workspace_info: Thông tin một workspace'
+      description: 'Mô tả, workspace con, thư mục và file cấp một của một workspace.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 12
+              method: tools/call
+              params:
+                name: get_workspace_info
+                arguments:
+                  workspace: workspace_hust_dev
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#search_workspace:
+    post:
+      tags:
+      - Tools
+      operationId: tool_search_workspace
+      summary: 'search_workspace: Tìm workspace bằng câu hỏi (Laya)'
+      description: 'Laya xếp hạng workspace phù hợp với câu hỏi. `routing.source` là `laya` hoặc `keyword_only`.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 13
+              method: tools/call
+              params:
+                name: search_workspace
+                arguments:
+                  question: Cổng của Go API là bao nhiêu?
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#get_markdown_tree:
+    post:
+      tags:
+      - Tools
+      operationId: tool_get_markdown_tree
+      summary: 'get_markdown_tree: Cây thư mục và file .md'
+      description: 'Cây thư mục và file `.md` đệ quy theo thực tế trên đĩa. Tham số `path`, `max_depth` tùy chọn.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 14
+              method: tools/call
+              params:
+                name: get_markdown_tree
+                arguments:
+                  workspace: workspace_hust_dev
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#get_markdown_full:
+    post:
+      tags:
+      - Tools
+      operationId: tool_get_markdown_full
+      summary: 'get_markdown_full: Cây kèm nội dung file .md'
+      description: 'Như `get_markdown_tree` nhưng kèm nội dung từng file trong giới hạn dung lượng.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 15
+              method: tools/call
+              params:
+                name: get_markdown_full
+                arguments:
+                  workspace: workspace_hust_dev
+                  path: auto_dev
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#get_markdown_file:
+    post:
+      tags:
+      - Tools
+      operationId: tool_get_markdown_file
+      summary: 'get_markdown_file: Đọc một file .md'
+      description: 'Đọc một file `.md` theo (`workspace`, `path` tương đối). Giá trị giống khóa bí mật bị che.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 16
+              method: tools/call
+              params:
+                name: get_markdown_file
+                arguments:
+                  workspace: workspace_hust_dev
+                  path: auto_dev/screen_win.md
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#search_markdown:
+    post:
+      tags:
+      - Tools
+      operationId: tool_search_markdown
+      summary: 'search_markdown: Tìm file .md (Laya xếp lại)'
+      description: 'Tìm file `.md` theo câu hỏi hoặc từ khóa; Laya xếp lại ứng viên, mỗi kết quả có `probability` và `relevance`.
+
+
+        Gọi qua `POST /multi/agents/{agent}/mcp` bằng JSON-RPC `tools/call` (xem mẫu bên dưới). Công cụ chỉ đọc.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            example:
+              jsonrpc: '2.0'
+              id: 17
+              method: tools/call
+              params:
+                name: search_markdown
+                arguments:
+                  query: Cổng của Go API là bao nhiêu?
+                  workspace: workspace_hust_dev
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#agent_desktop:
+    post:
+      tags:
+      - Tools
+      operationId: tool_agent_desktop
+      summary: 'agent_desktop_*: Điều khiển desktop như người (41 công cụ)'
+      description: 'Nhóm 41 công cụ `agent_desktop_*` dùng để nhìn màn hình và điều khiển máy chủ Windows như người: chụp ảnh, chuột, phím, gõ Unicode, clipboard, cửa sổ, accessibility.
+
+        Mọi công cụ gọi qua cùng endpoint `POST /multi/agents/{agent}/mcp` bằng `tools/call`, tên công cụ là `agent_desktop_<hành động>`.
+
+
+        **Luồng chạy**: AI bên ngoài → Node.js (cổng 2999) → cầu nối Python `127.0.0.1:8822` → desktop đang đăng nhập.
+
+
+        **Nhóm công cụ**:
+
+        - Quan sát: `status`, `cursor`, `list_apps`, `list_windows`, `list_displays`, `snapshot`, `screenshot`, `clipboard_get`, `wait`.
+
+        - Theo `ref` (accessibility): `launch`, `click`, `double_click`, `right_click`, `triple_click`, `type`, `set_value`, `focus`, `clear`, `hover`, `scroll`, `expand`, `collapse`, `select`, `toggle`,
+        `check`, `uncheck`, `press_ref`.
+
+        - Chuột/phím thật: `press`, `type_text`, `paste`, `clipboard_set`, `mouse_move`, `mouse_click`, `mouse_down`, `mouse_up`, `mouse_wheel`, `drag`.
+
+        - Cửa sổ: `focus_window`, `window_op`.
+
+        - Phiên: `session_start`, `session_end`.
+
+
+        **Vòng lặp nhanh nhất**: `agent_desktop_screenshot` để nhìn, rồi mỗi thao tác chuột/phím/gõ thêm `screenshot_after: true` để nhận ảnh sau thao tác trong cùng một lượt.
+
+        Có `ref` trong `snapshot` thì thao tác theo `ref`; không có thì `mouse_click` theo tọa độ trong ảnh.
+
+
+        **Điều kiện**: user đã đăng nhập và desktop đang mở khóa. RDP bị ngắt hoặc màn hình khóa thì chụp và bấm phím báo lỗi (ví dụ `DESKTOP_UNAVAILABLE`, `BitBlt failed`).
+
+        Tắt cả nhóm bằng biến môi trường `ORCH_AGENT_DESKTOP=0` của server Node.js.
+
+
+        **Bảo mật**: endpoint hiện mở không xác thực, ai biết URL đều xem được màn hình và điều khiển được máy chủ. Không dùng để nhập mật khẩu hay thao tác không thể hoàn tác khi chưa được yêu cầu rõ.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            examples:
+              status:
+                summary: Kiểm tra cầu nối và trạng thái desktop
+                value:
+                  jsonrpc: '2.0'
+                  id: 1
+                  method: tools/call
+                  params:
+                    name: agent_desktop_status
+                    arguments: {}
+              list_windows:
+                summary: Liệt kê cửa sổ (lấy hwnd)
+                value:
+                  jsonrpc: '2.0'
+                  id: 2
+                  method: tools/call
+                  params:
+                    name: agent_desktop_list_windows
+                    arguments: {}
+              type_text:
+                summary: Gõ chữ rồi nhận luôn ảnh sau thao tác
+                value:
+                  jsonrpc: '2.0'
+                  id: 3
+                  method: tools/call
+                  params:
+                    name: agent_desktop_type_text
+                    arguments:
+                      text: xin chào
+                      screenshot_after: true
+      responses:
+        '200':
+          $ref: '#/components/responses/ToolOk'
+  /multi/agents/{agent}/mcp#agent_desktop_screenshot:
+    post:
+      tags:
+      - Tools
+      operationId: tool_agent_desktop_screenshot
+      summary: 'agent_desktop_screenshot: Chụp màn hình máy chủ'
+      description: 'Chụp màn hình Windows đang đăng nhập và trả ảnh. Đây là công cụ chụp màn hình hiện dùng (thay cho `screen_capture` đã gỡ). Chỉ đọc.
+
+
+        **Tham số** (đều tùy chọn):
+
+        - `full_screen`, `screen`: chọn toàn màn hình hoặc một màn hình theo số thứ tự (xem `agent_desktop_list_displays`).
+
+        - `region`: `{x, y, width, height}` theo tọa độ màn hình, chỉ chụp vùng đó để nhìn chi tiết nhỏ.
+
+        - `window`: `hwnd` lấy từ `agent_desktop_list_windows`, chụp vùng của cửa sổ đó.
+
+        - `max_width`: thu nhỏ ảnh; `metadata.scale` cho biết một pixel ảnh bằng bao nhiêu pixel màn hình. Tọa độ màn hình = `region.x/y` + tọa độ ảnh × `metadata.scale`.
+
+        - `format`: `jpeg` (mặc định, nhẹ và nhanh) hoặc `png` (chữ nhỏ cần sắc nét); `quality` từ 30 đến 95.
+
+        - `cursor`: vẽ vòng đỏ và mũi tên tại con trỏ (mặc định `true`) vì ảnh chụp không chứa con trỏ.
+
+        - `grid`: vẽ lưới tọa độ mờ cách nhau N pixel (ví dụ `100`) để đọc tọa độ chính xác; `0` là tắt.
+
+        - `engine`: `gdi` (mặc định, nhanh) hoặc `ffi` (thư viện native, chậm hơn).
+
+
+        **Kết quả**: `result.content` có phần ảnh (`type: image`, `data` là base64) và phần `text` chứa metadata (kích thước, scale, vị trí con trỏ).
+
+        Với client MCP (Codex, Claude Code...) ảnh được hiển thị trực tiếp; muốn lưu file thì ghi `Buffer.from(data, "base64")`.
+
+
+        **Điều kiện**: desktop đang đăng nhập và mở khóa. Ảnh chụp lộ mọi thứ trên màn hình nên kiểm tra trước khi chia sẻ.
+
+        Endpoint hiện mở không xác thực nên ai biết URL đều chụp được màn hình máy chủ.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/AgentPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JsonRpcRequest'
+            examples:
+              default:
+                summary: Chụp toàn màn hình (JPEG, có vòng đỏ ở con trỏ)
+                value:
+                  jsonrpc: '2.0'
+                  id: 1
+                  method: tools/call
+                  params:
+                    name: agent_desktop_screenshot
+                    arguments: {}
+              grid:
+                summary: Thu nhỏ và vẽ lưới 100 px để đo tọa độ
+                value:
+                  jsonrpc: '2.0'
+                  id: 2
+                  method: tools/call
+                  params:
+                    name: agent_desktop_screenshot
+                    arguments:
+                      max_width: 1280
+                      grid: 100
+              region:
+                summary: Chụp một vùng PNG
+                value:
+                  jsonrpc: '2.0'
+                  id: 3
+                  method: tools/call
+                  params:
+                    name: agent_desktop_screenshot
+                    arguments:
+                      region:
+                        x: 0
+                        y: 0
+                        width: 800
+                        height: 600
+                      format: png
+      responses:
+        '200':
+          description: 'Phản hồi JSON-RPC dạng SSE. Ảnh nằm ở `result.content[0]` (`type: image`, base64).'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: 'event: message
+
+                data: {"result":{"content":[{"type":"image","data":"/9j/4AAQSkZJRg...","mimeType":"image/jpeg"},{"type":"text","text":"metadata: kích thước, scale, vị trí con trỏ"}]},"jsonrpc":"2.0","id":1}
+
+                '
+        '503':
+          description: Bộ điều phối đang tắt.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/workspaces/main/data:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: listLaravelMainWorkspaces
+      tags:
+      - Workspace API (Laravel)
+      summary: Lấy danh sách workspace
+      description: 'Trả danh sách workspace theo cấu trúc cây. Workspace cha `workspace-test` chứa trong
+
+        `children` các workspace con có `parent_workspace_code = "workspace-test"`.
+
+        Workspace cha có `is_selectable: false`; workspace con có `is_selectable: true`.
+
+        Pagination tính theo số nút cha, các nút con luôn đi cùng cha và không tách qua trang.
+
+        Thứ tự: `workspace-test` trước, sau đó `updated_at` mới nhất và `id` giảm dần.
+
+        '
+      security: []
+      parameters:
+      - name: q
+        in: query
+        required: false
+        description: Tìm theo work_space_code, agent_code, workspace_name hoặc slug; tối đa 120 ký tự.
+        schema:
+          type: string
+          maxLength: 120
+      - name: status
+        in: query
+        required: false
+        description: Lọc theo trạng thái workspace.
+        schema:
+          type: string
+          enum:
+          - active
+          - archived
+      - name: page
+        in: query
+        required: false
+        description: Trang cần lấy.
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: per_page
+        in: query
+        required: false
+        description: Số nút cha mỗi trang; các workspace con đi cùng nút cha.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      responses: null
+    ManageUnauthorized:
+      description: Thiếu hoặc sai Bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_UNAUTHORIZED
+              message: A valid bearer token is required.
+    ManageUserNotFound:
+      description: Không tìm thấy user hoặc session tương ứng.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGED_USER_NOT_FOUND
+              message: User or session not found.
+    ManageValidationError:
+      description: Tham số query hoặc request body không hợp lệ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageValidationError'
+          example:
+            message: The status field is required.
+            errors:
+              status:
+              - The status field is required.
+    ManageRateLimited:
+      description: Vượt giới hạn request (mặc định 60 request/phút theo IP). Xem header Retry-After.
+      headers:
+        Retry-After:
+          description: Số giây cần chờ trước khi thử lại
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_RATE_LIMITED
+              message: Too many requests. Please retry later.
+    ManageNotConfigured:
+      description: API quản lý chưa được cấu hình API Token trên máy chủ.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ManageError'
+          example:
+            success: false
+            error:
+              code: CHAT_BOT_MANAGE_API_NOT_CONFIGURED
+              message: API token is not configured on server.
+        '200':
+          description: Danh sách workspace và phân trang.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - workspace_name
+                      - agent_code
+                      - work_space_code
+                      - status
+                      - is_selectable
+                      - children
+                      properties:
+                        id:
+                          type: integer
+                          example: 5
+                        work_space_code:
+                          type: string
+                          example: workspace-test
+                        workspace_name:
+                          type: string
+                          example: Workspace Test
+                        agent_code:
+                          type: string
+                          example: test
+                        parent_workspace_code:
+                          type: string
+                          nullable: true
+                          example: openclaw
+                        slug:
+                          type: string
+                          example: workspace-test
+                        description:
+                          type: string
+                          example: Workspace mẹ test
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                        is_selectable:
+                          type: boolean
+                          description: false cho workspace cha quản lý; true cho workspace con có thể chọn khi chat.
+                          example: false
+                        children:
+                          type: array
+                          description: Workspace con có parent_workspace_code khớp mã workspace cha.
+                          items:
+                            type: object
+                            required:
+                            - id
+                            - workspace_name
+                            - agent_code
+                            - work_space_code
+                            - parent_workspace_code
+                            - status
+                            - is_selectable
+                            properties:
+                              id:
+                                type: integer
+                                example: 7
+                              workspace_name:
+                                type: string
+                                example: Workspace Tech Support
+                              agent_code:
+                                type: string
+                                example: test
+                              work_space_code:
+                                type: string
+                                example: workspace_tech_support
+                              parent_workspace_code:
+                                type: string
+                                example: workspace-test
+                              slug:
+                                type: string
+                                example: workspace-tech-support
+                              description:
+                                type: string
+                                example: Giải thích ngắn gọn công nghệ dự án đang dùng.
+                              status:
+                                type: string
+                                example: active
+                              created_at:
+                                type: string
+                                format: date-time
+                                example: '2026-10-05T10:09:18.000000Z'
+                              updated_at:
+                                type: string
+                                format: date-time
+                                example: '2026-10-05T10:09:18.000000Z'
+                              is_selectable:
+                                type: boolean
+                                example: true
+                  links:
+                    type: object
+                    properties:
+                      first:
+                        type: string
+                        nullable: true
+                        example: https://laravel.hust.media/api/workspaces/main/data?page=1
+                      last:
+                        type: string
+                        nullable: true
+                        example: https://laravel.hust.media/api/workspaces/main/data?page=1
+                      prev:
+                        type: string
+                        nullable: true
+                        example: null
+                      next:
+                        type: string
+                        nullable: true
+                        example: null
+                  meta:
+                    type: object
+                    properties:
+                      current_page:
+                        type: integer
+                        example: 1
+                      from:
+                        type: integer
+                        nullable: true
+                        example: 1
+                      last_page:
+                        type: integer
+                        example: 1
+                      per_page:
+                        type: integer
+                        example: 20
+                      to:
+                        type: integer
+                        nullable: true
+                        example: 1
+                      total:
+                        type: integer
+                        description: Tổng số nút cấp cao nhất; không tính riêng các workspace con.
+                        example: 1
+              example:
+                data:
+                - id: 5
+                  work_space_code: workspace-test
+                  workspace_name: Workspace Test
+                  agent_code: test
+                  parent_workspace_code: openclaw
+                  slug: workspace-test
+                  description: Workspace mẹ test
+                  status: active
+                  created_at: '2026-10-01T15:52:28.000000Z'
+                  updated_at: '2026-10-01T15:52:28.000000Z'
+                  is_selectable: false
+                  children:
+                  - id: 7
+                    workspace_name: Workspace Tech Support
+                    agent_code: test
+                    work_space_code: workspace_tech_support
+                    parent_workspace_code: workspace-test
+                    slug: workspace-tech-support
+                    description: Giải thích ngắn gọn công nghệ dự án đang dùng.
+                    status: active
+                    created_at: '2026-10-05T10:09:18.000000Z'
+                    updated_at: '2026-10-05T10:09:18.000000Z'
+                    is_selectable: true
+                links:
+                  first: https://laravel.hust.media/api/workspaces/main/data?page=1
+                  last: https://laravel.hust.media/api/workspaces/main/data?page=1
+                  prev: null
+                  next: null
+                meta:
+                  current_page: 1
+                  from: 1
+                  last_page: 1
+                  per_page: 20
+                  to: 1
+                  total: 1
+    post:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: updateLaravelMainWorkspace
+      tags:
+      - Workspace API (Laravel)
+      summary: Sửa một workspace
+      description: 'Cập nhật đúng một workspace theo `id`. Gửi một request POST cho mỗi workspace;
+
+        không gửi nhiều workspace trong cùng một request. Các trường không gửi, có giá trị
+
+        `null`, chuỗi rỗng hoặc chỉ chứa khoảng trắng sẽ được bỏ qua. Giá trị `false` và `0`
+
+        vẫn được xử lý bình thường. Muốn sửa nhiều trường của cùng workspace, gửi chúng chung
+
+        trong một request. Để cập nhật workspace khác, gửi request riêng với `id` tương ứng.
+
+        '
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - id
+              properties:
+                id:
+                  type: integer
+                  description: ID của workspace cần cập nhật.
+                  example: 4
+                agent_code:
+                  type: string
+                  nullable: true
+                  description: Mã agent.
+                  example: test
+                work_space_code:
+                  type: string
+                  nullable: true
+                  description: Mã workspace.
+                  example: workspace_hust_users
+                workspace_name:
+                  type: string
+                  nullable: true
+                  description: Tên workspace.
+                  example: Workspace Hust Users
+                parent_workspace_code:
+                  type: string
+                  nullable: true
+                  description: Mã workspace cha.
+                  example: openclaw
+                slug:
+                  type: string
+                  nullable: true
+                  description: Slug của workspace.
+                  example: workspace-hust-users
+                description:
+                  type: string
+                  nullable: true
+                  description: Mô tả workspace.
+                  example: Hướng dẫn sử dụng workspace Hust.
+                status:
+                  type: string
+                  nullable: true
+                  enum:
+                  - active
+                  - archived
+                  description: Trạng thái workspace.
+                  example: active
+            examples:
+              renameWorkspace:
+                summary: Đổi tên workspace
+                value:
+                  id: 4
+                  workspace_name: Workspace Hust Users mới
+              updateMultipleFields:
+                summary: Cập nhật nhiều trường của cùng workspace
+                value:
+                  id: 4
+                  workspace_name: Workspace Hust Users
+                  description: Hướng dẫn sử dụng workspace Hust.
+                  status: active
+      responses:
+        '200':
+          description: Workspace sau khi cập nhật.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    description: Bản ghi workspace đã cập nhật.
+                    properties:
+                      id:
+                        type: integer
+                        example: 4
+                      agent_code:
+                        type: string
+                        example: test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_users
+                      workspace_name:
+                        type: string
+                        example: Workspace Hust Users
+                      parent_workspace_code:
+                        type: string
+                        nullable: true
+                        example: openclaw
+                      slug:
+                        type: string
+                        example: workspace-hust-users
+                      description:
+                        type: string
+                        example: Hướng dẫn sử dụng workspace Hust.
+                      status:
+                        type: string
+                        example: active
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+              example:
+                data:
+                  id: 4
+                  agent_code: test
+                  work_space_code: workspace_hust_users
+                  workspace_name: Workspace Hust Users mới
+                  parent_workspace_code: openclaw
+                  slug: workspace-hust-users
+                  description: Hướng dẫn sử dụng workspace Hust.
+                  status: active
+                  created_at: '2026-10-01T15:52:28.000000Z'
+                  updated_at: '2026-10-15T12:00:00.000000Z'
+  /api/workspaces/user/data:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: listUserWorkspaces
+      tags:
+      - Workspace API (Laravel)
+      summary: Lấy workspace của user
+      description: 'Trả về các workspace có session đang `active` của user. Laravel đối chiếu
+
+        `user_id` với cột `upstream_user_id` trong bảng `work_space_session`.
+
+
+        Mặc định tra user `502`, không cần truyền query parameter. Có thể truyền
+
+        `user_id` để tra user khác, ví dụ `/api/workspaces/user/data?user_id=123`;
+
+        nếu user không có session active, `data` là mảng rỗng.
+
+        '
+      security: []
+      parameters:
+      - name: user_id
+        in: query
+        required: false
+        description: User ID cần tra; mặc định là 502.
+        schema:
+          type: integer
+          minimum: 1
+          default: 502
+        example: 502
+      responses:
+        '200':
+          description: Danh sách workspace có session active của user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - workspace_name
+                      - agent_code
+                      - work_space_code
+                      - parent_workspace_code
+                      - slug
+                      - status
+                      properties:
+                        id:
+                          type: integer
+                          example: 4
+                        workspace_name:
+                          type: string
+                          example: Hỗ trợ OpenClaw
+                        agent_code:
+                          type: string
+                          example: test
+                        work_space_code:
+                          type: string
+                          example: workspace_openclaw_support
+                        parent_workspace_code:
+                          type: string
+                          example: workspace-test
+                        slug:
+                          type: string
+                          example: workspace-openclaw-support
+                        description:
+                          type: string
+                          example: Hỗ trợ cấu hình OpenClaw
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          format: date-time
+                          example: '2026-10-01T08:52:28.000000Z'
+                        updated_at:
+                          type: string
+                          format: date-time
+                          example: '2026-10-02T09:14:06.000000Z'
+              examples:
+                activeWorkspaces:
+                  summary: User có workspace active
+                  value:
+                    data:
+                    - id: 4
+                      workspace_name: Hỗ trợ OpenClaw
+                      agent_code: test
+                      work_space_code: workspace_openclaw_support
+                      parent_workspace_code: workspace-test
+                      slug: workspace-openclaw-support
+                      description: Hỗ trợ cấu hình OpenClaw
+                      status: active
+                      created_at: '2026-10-01T08:52:28.000000Z'
+                      updated_at: '2026-10-02T09:14:06.000000Z'
+                noActiveWorkspaces:
+                  summary: User không có session active
+                  value:
+                    data: []
+  /api/workspaces/routing/update:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: getWorkspaceRoutingUpdate
+      tags:
+      - Workspace API (Laravel)
+      summary: Đồng bộ routing workspace (GET)
+      description: 'Đồng bộ workspace con của workspace cha trong SQL. Laravel đọc `agent_code` từ
+
+        workspace cha rồi gọi Node API `GET /openclaw/v2/workspace/list?agent_code=...`,
+
+        sau đó cập nhật các workspace con vào bảng workspace.
+
+
+        Workspace mẹ không bị sửa; workspace con không bị xóa chỉ vì vắng mặt trong danh
+
+        sách Node. API Laravel không cần query parameters hoặc request body.
+
+        '
+      security: []
+      responses:
+        '200':
+          description: Đồng bộ routing workspace thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: true
+        '404':
+          description: Không tìm thấy workspace mẹ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '409':
+          description: Workspace mẹ chưa có agent_code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '500':
+          description: Lỗi nội bộ khi đồng bộ workspace routing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+        '502':
+          description: Node không phản hồi hoặc trả dữ liệu không hợp lệ.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceRoutingUpdateResult'
+              example:
+                success: false
+  /api/workspaces/main/markdown:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: getWorkspaceMainMarkdown
+      tags:
+      - Workspace API (Laravel)
+      summary: Xem cấu trúc Markdown của workspace
+      description: 'Xem cây thư mục và danh sách file Markdown (`.md`) của workspace con theo `id`.
+
+        API chỉ nhận workspace con trực tiếp của `WORKSPACE_PARENT_CODE` (mặc định là `workspace-test`).
+
+        API trả cây thư mục và tên, đường dẫn các file `.md`, không trả nội dung file.
+
+
+        Đường dẫn Laravel đọc thư mục theo mẫu:
+
+        `{OPENCLAW_WORKSPACES_PATH}/{WORKSPACE_PARENT_CODE}/{work_space_code}`
+
+        '
+      security: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        description: ID workspace con trong bảng `work_space_main`.
+        schema:
+          type: integer
+          example: 8
+      responses:
+        '200':
+          description: Cấu trúc cây thư mục và file Markdown của workspace con.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - workspace_name
+                    - work_space_code
+                    - parent_workspace_code
+                    - relative_path
+                    - markdown_count
+                    - tree
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      workspace_name:
+                        type: string
+                        example: Hướng dẫn đấu API
+                      work_space_code:
+                        type: string
+                        example: workspace_tech_api
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-test
+                      relative_path:
+                        type: string
+                        example: workspace-test/workspace_tech_api
+                      markdown_count:
+                        type: integer
+                        example: 1
+                      tree:
+                        type: array
+                        description: Cây thư mục và tên, đường dẫn file .md.
+                        items:
+                          type: object
+                          required:
+                          - type
+                          - name
+                          - path
+                          properties:
+                            type:
+                              type: string
+                              enum:
+                              - file
+                              - directory
+                              example: file
+                            name:
+                              type: string
+                              example: SKILL.md
+                            path:
+                              type: string
+                              example: SKILL.md
+                            full_path:
+                              type: string
+                              description: Đường dẫn đầy đủ tương đối với workspace root, dùng làm path khi gọi API đọc nội dung.
+                              example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                            children:
+                              type: array
+                              description: Danh sách con nếu type là directory.
+                              items:
+                                type: object
+              example:
+                data:
+                  id: 2
+                  workspace_name: Hust Workspace Test
+                  work_space_code: workspace_hust_test
+                  parent_workspace_code: workspace-chat_bot
+                  relative_path: workspace-chat_bot/workspace_hust_test
+                  markdown_count: 1
+                  tree:
+                  - type: file
+                    name: SKILL.md
+                    path: SKILL.md
+                    full_path: workspace-chat_bot/workspace_hust_test/SKILL.md
+        '404':
+          description: Không tìm thấy workspace theo `id` hoặc thư mục của workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Không tìm thấy workspace theo id hoặc thư mục của workspace.
+        '422':
+          description: Thiếu/sai `id`, mã thư mục không hợp lệ hoặc workspace không phải con trực tiếp của workspace cha đã cấu hình.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Thiếu/sai id hoặc workspace không phải con trực tiếp.
+        '503':
+          description: Laravel không đọc được thư mục workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Laravel không đọc được thư mục workspace.
+  /api/workspaces/content/markdown/full:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: getWorkspaceMarkdownContentFull
+      tags:
+      - Workspace API (Laravel)
+      summary: Lấy toàn bộ nội dung Markdown của workspace (cây thư mục & nội dung file)
+      description: 'Dùng API này để frontend lấy cây thư mục và nội dung của tất cả file `.md` trong một workspace con chỉ bằng một request.
+
+
+        Workspace phải là workspace con theo cấu hình của project:
+
+        - Media Tech: workspace mẹ là `workspace-test` (https://laravel_mt.hust.media)
+
+        - Hust: workspace mẹ là `workspace-chat_bot` (https://laravel.hust.media)
+
+
+        ### Ý nghĩa các trường response
+
+        - `relative_path`: đường dẫn workspace tính từ thư mục gốc OpenClaw workspaces.
+
+        - `tree`: cây thư mục, chỉ gồm thư mục có chứa file `.md` và các file `.md`.
+
+        - `type`: `directory` là thư mục, `file` là file Markdown.
+
+        - `path`: đường dẫn tương đối bên trong workspace; dùng để xác định file khi gọi API đọc hoặc sửa file.
+
+        - `full_path`: đường dẫn tương đối từ thư mục gốc OpenClaw workspaces.
+
+        - `content`: toàn bộ nội dung file Markdown.
+
+        - `size_bytes`: kích thước nội dung file tính bằng byte.
+
+        - `markdown_count`: tổng số file `.md` tìm được trong workspace.
+
+
+        Frontend có thể duyệt đệ quy `tree`: hiển thị các node `directory`, rồi hiển thị `content` của từng node `file`.
+
+        Vì API trả nội dung đầy đủ, không cần gọi API đọc riêng cho từng file để dựng màn hình workspace.
+
+        '
+      security: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        description: ID workspace trong database. Workspace phải là workspace con theo cấu hình project.
+        schema:
+          type: integer
+          example: 8
+      responses:
+        '200':
+          description: Cây thư mục kèm toàn bộ nội dung Markdown của workspace con thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - workspace_name
+                    - work_space_code
+                    - parent_workspace_code
+                    - relative_path
+                    - markdown_count
+                    - tree
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      workspace_name:
+                        type: string
+                        example: Hướng dẫn đấu API
+                      work_space_code:
+                        type: string
+                        example: workspace_tech_api
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-test
+                      relative_path:
+                        type: string
+                        example: workspace-test/workspace_tech_api
+                      markdown_count:
+                        type: integer
+                        example: 5
+                      tree:
+                        type: array
+                        description: Cây thư mục gồm thư mục chứa file .md và các file .md kèm toàn bộ nội dung content.
+                        items:
+                          type: object
+                          required:
+                          - type
+                          - name
+                          - path
+                          - full_path
+                          properties:
+                            type:
+                              type: string
+                              enum:
+                              - file
+                              - directory
+                              example: file
+                            name:
+                              type: string
+                              example: SKILL.md
+                            path:
+                              type: string
+                              example: SKILL.md
+                            full_path:
+                              type: string
+                              example: workspace-test/workspace_tech_api/SKILL.md
+                            content:
+                              type: string
+                              description: Toàn bộ nội dung file Markdown.
+                              example: '# Hướng dẫn đấu API...'
+                            size_bytes:
+                              type: integer
+                              description: Kích thước file tính bằng byte.
+                              example: 1250
+                            children:
+                              type: array
+                              description: Danh sách con nếu type là directory.
+                              items:
+                                type: object
+              example:
+                data:
+                  id: 8
+                  workspace_name: Hướng dẫn đấu API
+                  work_space_code: workspace_tech_api
+                  parent_workspace_code: workspace-test
+                  relative_path: workspace-test/workspace_tech_api
+                  markdown_count: 5
+                  tree:
+                  - type: file
+                    name: SKILL.md
+                    path: SKILL.md
+                    full_path: workspace-test/workspace_tech_api/SKILL.md
+                    content: '# Hướng dẫn đấu API...'
+                    size_bytes: 1250
+                  - type: directory
+                    name: workspaces
+                    path: workspaces
+                    full_path: workspace-test/workspace_tech_api/workspaces
+                    children:
+                    - type: file
+                      name: api-map-and-flow.md
+                      path: workspaces/api-map-and-flow.md
+                      full_path: workspace-test/workspace_tech_api/workspaces/api-map-and-flow.md
+                      content: '# Luồng request/response...'
+                      size_bytes: 3990
+        '404':
+          description: Không tìm thấy workspace hoặc thư mục workspace trên ổ đĩa.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Không tìm thấy workspace theo id hoặc thư mục của workspace.
+        '422':
+          description: Thiếu `id`, `id` không hợp lệ hoặc workspace không phải con trực tiếp (workspace_child_required).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Workspace con được yêu cầu (workspace_child_required) hoặc id không hợp lệ.
+        '503':
+          description: Laravel không đọc được thư mục hoặc file Markdown (workspace_content_unavailable).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Laravel không đọc được thư mục hoặc file Markdown.
+  /api/workspaces/content/markdown:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: getWorkspaceMarkdownContent
+      tags:
+      - Workspace API (Laravel)
+      summary: Đọc nội dung một file .md của workspace
+      description: 'Đọc nội dung một file `.md` cụ thể của workspace con.
+
+        Dùng `full_path` lấy từ API cây thư mục (`GET /api/workspaces/main/markdown`) làm giá trị tham số `path`.
+
+
+        - Media Tech: workspace cha là `workspace-test` (https://laravel_mt.hust.media)
+
+        - Hust: workspace cha là `workspace-chat_bot` (https://laravel.hust.media)
+
+
+        `path` phải là đường dẫn tương đối từ workspace root, dùng dấu `/` và trỏ tới file `.md`.
+
+        Không gửi đường dẫn tuyệt đối như `D:\...`.
+
+        '
+      security: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        description: ID của workspace con trong bảng workspace.
+        schema:
+          type: integer
+          example: 2
+      - name: path
+        in: query
+        required: true
+        description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+        schema:
+          type: string
+          example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      responses:
+        '200':
+          description: Nội dung file Markdown thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - workspace_name
+                    - work_space_code
+                    - parent_workspace_code
+                    - path
+                    - content
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      content:
+                        type: string
+                        description: Nội dung định dạng Markdown của file.
+                        example: '# Nội dung Markdown...'
+              example:
+                data:
+                  id: 2
+                  workspace_name: Hust Workspace Test
+                  work_space_code: workspace_hust_test
+                  parent_workspace_code: workspace-chat_bot
+                  path: workspace-chat_bot/workspace_hust_test/SKILL.md
+                  content: '# Nội dung Markdown...'
+        '404':
+          description: Không tìm thấy workspace theo ID hoặc file Markdown theo đường dẫn.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Không tìm thấy file Markdown hoặc workspace.
+        '422':
+          description: Thiếu hoặc sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Đường dẫn path không hợp lệ hoặc thiếu id.
+        '503':
+          description: Không thể đọc file từ hệ thống lưu trữ.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Không thể đọc nội dung file Markdown.
+  /api/workspaces/content/markdown/get:
+    get:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: getWorkspaceMarkdownContentGet
+      tags:
+      - Workspace API (Laravel)
+      summary: Đọc nội dung một file .md (GET /get)
+      description: 'Đọc nội dung một file `.md` cụ thể của workspace con qua route `/api/workspaces/content/markdown/get`.
+
+        Dùng `full_path` lấy từ API cây thư mục (`GET /api/workspaces/main/markdown`) làm giá trị tham số `path`.
+
+
+        - Media Tech: workspace cha là `workspace-test` (https://laravel_mt.hust.media)
+
+        - Hust: workspace cha là `workspace-chat_bot` (https://laravel.hust.media)
+
+
+        `path` phải là đường dẫn tương đối từ workspace root, dùng dấu `/` và trỏ tới file `.md`.
+
+        Không gửi đường dẫn tuyệt đối như `D:\...`.
+
+        '
+      security: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        description: ID của workspace con trong bảng workspace.
+        schema:
+          type: integer
+          example: 2
+      - name: path
+        in: query
+        required: true
+        description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+        schema:
+          type: string
+          example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      responses:
+        '200':
+          description: Nội dung file Markdown thành công trong data.content.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - workspace_name
+                    - work_space_code
+                    - parent_workspace_code
+                    - path
+                    - content
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      content:
+                        type: string
+                        description: Toàn bộ nội dung định dạng Markdown của file.
+                        example: '# Nội dung Markdown...'
+              example:
+                data:
+                  id: 2
+                  workspace_name: Hust Workspace Test
+                  work_space_code: workspace_hust_test
+                  parent_workspace_code: workspace-chat_bot
+                  path: workspace-chat_bot/workspace_hust_test/SKILL.md
+                  content: '# Nội dung Markdown...'
+        '404':
+          description: Không tìm thấy workspace theo ID hoặc file Markdown theo đường dẫn.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: File không tồn tại.
+        '422':
+          description: Thiếu hoặc sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Đường dẫn path không hợp lệ hoặc thiếu id.
+        '503':
+          description: Thư mục hoặc file không truy cập được trên máy chủ Laravel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Không thể đọc nội dung file Markdown.
+  /api/workspaces/content/markdown/edit:
+    post:
+      servers:
+      - url: https://laravel.hust.media
+        description: Laravel Hust x? l? request Workspace.
+      operationId: updateWorkspaceMarkdownContentEdit
+      tags:
+      - Workspace API (Laravel)
+      summary: Ghi nội dung mới vào file .md (POST /edit)
+      description: 'Ghi nội dung mới vào file `.md` đã tồn tại của workspace.
+
+        Truyền `id` và `path` trên query string; nội dung mới gửi bằng JSON body `{"content": "..."}`.
+
+
+        - Khi thành công, API trả `success: true`, thông tin workspace, `path` và `bytes_written`.
+
+        - Gửi `"content": ""` sẽ làm trống file.
+
+        - API chỉ sửa file `.md` đã có, không tạo file mới.
+
+        '
+      security: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        description: ID của workspace con trong bảng workspace.
+        schema:
+          type: integer
+          example: 2
+      - name: path
+        in: query
+        required: true
+        description: Đường dẫn đầy đủ tương đối từ workspace root (lấy từ full_path của API cây thư mục).
+        schema:
+          type: string
+          example: workspace-chat_bot/workspace_hust_test/SKILL.md
+      requestBody:
+        required: true
+        description: JSON body chứa nội dung Markdown mới cần ghi vào file.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - content
+              properties:
+                content:
+                  type: string
+                  description: Nội dung Markdown mới cần ghi đè vào file. Gửi chuỗi rỗng để làm trống file.
+                  example: '# Nội dung Markdown mới
+
+                    ...'
+            examples:
+              updateContent:
+                summary: Ghi nội dung Markdown mới
+                value:
+                  content: '# Nội dung Markdown mới
+
+
+                    Cập nhật tài liệu API.'
+              clearContent:
+                summary: Làm trống file Markdown
+                value:
+                  content: ''
+      responses:
+        '200':
+          description: Cập nhật nội dung file Markdown thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - success
+                - message
+                - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Markdown file updated.
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - workspace_name
+                    - work_space_code
+                    - parent_workspace_code
+                    - path
+                    - bytes_written
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      workspace_name:
+                        type: string
+                        example: Hust Workspace Test
+                      work_space_code:
+                        type: string
+                        example: workspace_hust_test
+                      parent_workspace_code:
+                        type: string
+                        example: workspace-chat_bot
+                      path:
+                        type: string
+                        example: workspace-chat_bot/workspace_hust_test/SKILL.md
+                      bytes_written:
+                        type: integer
+                        description: Số bytes đã ghi vào file.
+                        example: 6483
+              example:
+                success: true
+                message: Markdown file updated.
+                data:
+                  id: 2
+                  workspace_name: Hust Workspace Test
+                  work_space_code: workspace_hust_test
+                  parent_workspace_code: workspace-chat_bot
+                  path: workspace-chat_bot/workspace_hust_test/SKILL.md
+                  bytes_written: 6483
+        '404':
+          description: Không tìm thấy file Markdown hoặc workspace.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: File không tồn tại.
+        '422':
+          description: Thiếu/sai id, đường dẫn path không hợp lệ hoặc không trỏ tới file .md.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Đường dẫn sai hoặc workspace không hợp lệ.
+        '503':
+          description: Thư mục hoặc file không truy cập được / lỗi ghi file.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Thư mục hoặc file không truy cập được.
+  /qwen/v1/models:
+    get:
+      operationId: qwenRelayListModels
+      tags:
+      - Qwen Relay
+      summary: Danh sách model Qwen
+      description: Trả danh sách model cố định của relay (qwen_v1). Không đánh thức model. Cần khóa Bearer.
+      servers: &id002
+      - url: http://118.70.169.219:8818
+        description: Node Media Tech công khai (Qwen relay, có khóa)
+      security:
+      - &id003
+        QwenBearer: []
+      responses:
+        '200':
+          description: Danh sách model
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                object: list
+                data:
+                - id: qwen_v1
+                  object: model
+                  created: 0
+                  owned_by: local
+        '401':
+          description: Thiếu hoặc sai khóa
+          content:
+            application/json:
+              schema: &id001
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                      type:
+                        type: string
+              example:
+                error:
+                  message: 'Thiếu hoặc sai khóa truy cập (Authorization: Bearer ...).'
+                  type: authentication_error
+        '503':
+          description: Relay chưa được cấu hình khóa
+          content:
+            application/json:
+              schema: *id001
+              example:
+                error:
+                  message: Qwen relay chưa được cấu hình khóa truy cập.
+                  type: server_error
+  /qwen/v1/chat/completions:
+    post:
+      operationId: qwenRelayChatCompletions
+      tags:
+      - Qwen Relay
+      summary: Chat với Qwen (OpenAI-compatible)
+      description: Gửi hội thoại tới Qwen, trả theo định dạng chat.completion. Hỗ trợ stream=true (SSE). Cần khóa Bearer. Với PowerShell hoặc Git Bash trên Windows, nên ghi body ra file UTF-8 rồi dùng --data-binary
+        @file để tránh lỗi tiếng Việt.
+      servers: *id002
+      security:
+      - *id003
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - messages
+              properties:
+                model:
+                  type: string
+                  example: qwen_v1
+                  description: Hiện chỉ có qwen_v1.
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum:
+                        - system
+                        - user
+                        - assistant
+                      content:
+                        type: string
+                max_tokens:
+                  type: integer
+                  example: 256
+                temperature:
+                  type: number
+                  example: 0.7
+                stream:
+                  type: boolean
+                  example: false
+            example:
+              model: qwen_v1
+              messages:
+              - role: user
+                content: Xin chào
+              max_tokens: 256
+              stream: false
+      responses:
+        '200':
+          description: Phản hồi chat (hoặc SSE nếu stream=true)
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                id: chatcmpl-...
+                object: chat.completion
+                model: qwen_v1
+                choices:
+                - index: 0
+                  message:
+                    role: assistant
+                    content: Chào bạn!
+                  finish_reason: stop
+        '400':
+          description: Body sai định dạng
+          content:
+            application/json:
+              schema: *id001
+              example:
+                error:
+                  message: JSON body không hợp lệ.
+                  type: invalid_request_error
+        '401':
+          description: Thiếu hoặc sai khóa
+          content:
+            application/json:
+              schema: *id001
+              example:
+                error:
+                  message: 'Thiếu hoặc sai khóa truy cập (Authorization: Bearer ...).'
+                  type: authentication_error
+        '502':
+          description: Không kết nối được Qwen
+          content:
+            application/json:
+              schema: *id001
+              example:
+                error:
+                  message: 'Không kết nối được Qwen: ECONNREFUSED'
+                  type: server_error
+        '503':
+          description: Relay chưa được cấu hình khóa
+          content:
+            application/json:
+              schema: *id001
+              example:
+                error:
+                  message: Qwen relay chưa được cấu hình khóa truy cập.
+                  type: server_error
+components:
+  parameters:
+    AgentPath:
+      name: agent
+      in: path
+      required: true
+      description: Mã agent OpenClaw hoặc tên viết tắt.
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9_-]{1,64}$
+        example: chat_bot
+  responses:
+    ToolOk:
+      description: 'Phản hồi JSON-RPC dạng SSE: một sự kiện `event: message` kèm `data: {...}`; kết quả công cụ ở `result.content`.'
+      content:
+        text/event-stream:
+          schema:
+            type: string
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Token điều phối (`ORCH_API_TOKEN` phía server). Chỉ cần khi thực thi thật; để trống thì mọi lần chạy là dry-run.
+
+        '
+    QwenBearer:
+      type: http
+      scheme: bearer
+      description: 'Khóa truy cập Qwen relay do quản trị viên cấp (Authorization: Bearer <khóa>).'
+  schemas:
+    JsonRpcRequest:
+      type: object
+      required:
+      - jsonrpc
+      - method
+      properties:
+        jsonrpc:
+          type: string
+          enum:
+          - '2.0'
+        id:
+          oneOf:
+          - type: integer
+          - type: string
+        method:
+          type: string
+          enum:
+          - initialize
+          - tools/list
+          - tools/call
+        params:
+          type: object
+    Error:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+    Status:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        config:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            dry_run:
+              type: boolean
+            live_approved:
+              type: boolean
+            live_possible:
+              type: boolean
+              description: '`true` chỉ khi mọi khóa thực thi thật đều mở.'
+            decider:
+              type: string
+              enum:
+              - laya
+              - jev
+            openclaw_configured:
+              type: boolean
+            api_token_set:
+              type: boolean
+            limits:
+              type: object
+              properties:
+                maxIterations:
+                  type: integer
+                timeBudgetMs:
+                  type: integer
+                maxAiCalls:
+                  type: integer
+        services:
+          type: object
+          properties:
+            math:
+              $ref: '#/components/schemas/ServiceHealth'
+            laya:
+              $ref: '#/components/schemas/ServiceHealth'
+    ServiceHealth:
+      type: object
+      properties:
+        reachable:
+          type: boolean
+        ok:
+          type: boolean
+    AgentRegistry:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        openclaw:
+          type: object
+          properties:
+            reachable:
+              type: boolean
+            ok:
+              type: boolean
+            connected:
+              type: boolean
+            subscribed:
+              type: boolean
+            plugins:
+              type: integer
+              nullable: true
+            error:
+              type: string
+        agents:
+          type: array
+          items:
+            type: object
+            properties:
+              agent_code:
+                type: string
+              workspaces:
+                type: array
+                items:
+                  type: string
+              mcp_path:
+                type: string
+                description: Đường dẫn endpoint MCP riêng của agent này.
+        workspaces:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              name:
+                type: string
+                nullable: true
+              status:
+                type: string
+                nullable: true
+              parent:
+                type: string
+                nullable: true
+        error:
+          type: string
+        fetched_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+    RunRequest:
+      type: object
+      required:
+      - scenario
+      properties:
+        scenario:
+          type: string
+          enum:
+          - agent_failure
+          - queue_growth
+        samples:
+          type: array
+          description: Dùng cho `agent_failure`.
+          items:
+            type: object
+            required:
+            - agent_id
+            - outcome
+            properties:
+              agent_id:
+                type: string
+                maxLength: 128
+              outcome:
+                type: string
+                description: '`success` hoặc một giá trị lỗi như `error`, `timeout`.'
+                maxLength: 64
+        depths:
+          type: array
+          description: Dùng cho `queue_growth`. Số hữu hạn.
+          items:
+            type: number
+        series:
+          type: array
+          description: Thay cho `samples` hoặc `depths`. Mỗi phần tử là dữ liệu quan sát của một vòng (tối đa 50 vòng).
+          items:
+            type: array
+            items: {}
+        task_id:
+          type: string
+          maxLength: 128
+        agent_id:
+          type: string
+          maxLength: 128
+        workspace_id:
+          type: string
+          maxLength: 128
+    RunResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - resolved
+          - escalated
+          - insufficient_data
+          - max_iterations
+          - time_budget_exhausted
+          - math_unavailable
+          - disabled
+        run_id:
+          type: string
+        scenario:
+          type: string
+        iterations:
+          type: integer
+        ai_calls:
+          type: integer
+        actions:
+          type: array
+          items:
+            type: object
+            properties:
+              iteration:
+                type: integer
+              option_id:
+                type: string
+              action:
+                type: string
+                enum:
+                - notify
+                - pause_agent
+                - throttle_intake
+              target:
+                type: string
+                nullable: true
+              source:
+                type: string
+                description: '`laya` khi Laya chọn, `fallback` khi dùng phương án an toàn `notify_only`.'
+              status:
+                type: string
+                description: '`dry_run`, `blocked`, `notified`, `sent` hoặc `failed`.'
+        dry_run:
+          type: boolean
+        live:
+          type: boolean
+    ManageError:
+      type: object
+      required:
+      - success
+      - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+              example: CHAT_BOT_MANAGE_UNAUTHORIZED
+            message:
+              type: string
+              example: A valid bearer token is required.
+    WorkspaceRoutingUpdateResult:
+      type: object
+      required:
+      - success
+      properties:
+        success:
+          type: boolean
+    ManageValidationError:
+      type: object
+      required:
+      - message
+      - errors
+      properties:
+        message:
+          type: string
+          example: The status field is required.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            status:
+            - The status field is required.

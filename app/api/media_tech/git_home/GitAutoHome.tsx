@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
+  handleHomeNavigationLink,
+  HomeNavigationToast,
+  useHomeNavigationToast,
+} from "@/app/api/hust_media/media_tech/HomeNavigationToast";
+import {
   GitBranch,
   Terminal,
   Code2,
@@ -32,6 +37,7 @@ interface GitAutoHomeProps {
 
 export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
   const router = useRouter();
+  const { pendingNavigation, showNavigationLoading } = useHomeNavigationToast();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -45,7 +51,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
   const workspaceLink = `${linkPrefix}/workspace/home`;
   const apiListLink = `${linkPrefix}/list/home`;
   const chatBotLink = `${linkPrefix}/chat/home`;
-  const workflowLink = isHust ? `${linkPrefix}/workflow` : `${linkPrefix}/n8n/home`;
+  const workflowLink = `${linkPrefix}/workflow/home`;
 
   const getDisplayPath = (link: string) => (link.startsWith("/next") ? link : `/next${link}`);
 
@@ -176,7 +182,10 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "auto") && (
           <div
-            onClick={() => router.push(gitAutoLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Git Auto");
+              router.push(gitAutoLink as Route);
+            }}
             title="Nhấp để mở Git Auto"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-amber-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -296,7 +305,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
               <Link
                 href={gitAutoLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "Git Auto", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Git Auto</span>
@@ -311,7 +320,10 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "test") && (
           <div
-            onClick={() => router.push(gitTestLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Git Test");
+              router.push(gitTestLink as Route);
+            }}
             title="Nhấp để mở Git Test"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-blue-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -431,7 +443,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
               <Link
                 href={gitTestLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "Git Test", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Git Test</span>
@@ -446,7 +458,10 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "gitea") && (
           <div
-            onClick={() => router.push(giteaTestLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Gitea Test");
+              router.push(giteaTestLink as Route);
+            }}
             title="Nhấp để mở Gitea Test"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-emerald-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -566,7 +581,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
               <Link
                 href={giteaTestLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "Gitea Test", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Gitea Test</span>
@@ -590,6 +605,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
           <div className="flex flex-wrap items-center gap-1.5">
             <Link
               href={chatBotLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Chat Bot", showNavigationLoading)}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
             >
               <Bot className="h-3 w-3 text-slate-500" />
@@ -598,6 +614,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
             <Link
               href={workspaceLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Workspace", showNavigationLoading)}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
             >
               <Briefcase className="h-3 w-3 text-slate-500" />
@@ -606,6 +623,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
             <Link
               href={apiListLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Danh sách API", showNavigationLoading)}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
             >
               <Code2 className="h-3 w-3 text-slate-500" />
@@ -614,6 +632,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
 
             <Link
               href={workflowLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Workflow", showNavigationLoading)}
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
             >
               <Workflow className="h-3 w-3 text-slate-500" />
@@ -651,6 +670,7 @@ export default function GitAutoHome({ isHust = false }: GitAutoHomeProps) {
           </button>
         </div>
       )}
+      <HomeNavigationToast label={pendingNavigation} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
   Terminal,
@@ -19,7 +19,10 @@ import {
   Zap,
   Activity,
   FolderGit2,
+  Bot,
+  LoaderCircle,
 } from "lucide-react";
+import { copyText } from "@/app/api/media_tech/workspace/copyText";
 
 interface DevHomePageProps {
   isHust?: boolean;
@@ -27,20 +30,49 @@ interface DevHomePageProps {
 
 export default function DevHomePage({ isHust = false }: DevHomePageProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [filterMode, setFilterMode] = useState<"all" | "workspace" | "workflow">("all");
+  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [filterMode, setFilterMode] = useState<"all" | "workspace" | "workflow" | "agent">("all");
 
   const linkPrefix = isHust ? "/api/hust" : "/api/mt";
 
   const workspaceHomeLink = `${linkPrefix}/workspace/home`;
   const workspaceMarkdownLink = `${linkPrefix}/workspace/markdown`;
 
-  const workflowHomeLink = isHust ? `${linkPrefix}/workflow` : `${linkPrefix}/n8n/home`;
+  const agentHomeLink = `${linkPrefix}/agent/home`;
+
+  const workflowHomeLink = `${linkPrefix}/workflow/home`;
   const workflowSubLink = isHust ? `${linkPrefix}/workflow/laravel` : `${linkPrefix}/n8n/laravel`;
 
   const getDisplayPath = (link: string) => (link.startsWith("/next") ? link : `/next${link}`);
+
+  const showNavigationLoading = (label: string) => {
+    setPendingNavigation(label);
+    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+    navigationTimerRef.current = setTimeout(() => setPendingNavigation(null), 15000);
+  };
+
+  const handleLinkNavigation = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    label: string,
+  ) => {
+    event.stopPropagation();
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    showNavigationLoading(label);
+  };
 
   // Derive absolute URL (with origin) from the link for reliable sharing
   const getFullUrl = (link: string) => {
@@ -53,21 +85,20 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
 
   const brandName = isHust ? "Hust Media AI" : "Media Tech AI";
 
-  const handleCopy = (link: string, key: string, label: string) => {
+  const handleCopy = async (link: string, key: string, label: string) => {
     const fullUrl = getFullUrl(link);
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      void navigator.clipboard.writeText(fullUrl);
-      setCopiedKey(key);
-      setToastMessage(fullUrl);
+    const copied = await copyText(fullUrl);
+    if (!copied) return;
+    setCopiedKey(key);
+    setToastMessage(fullUrl);
 
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
-      toastTimerRef.current = setTimeout(() => {
-        setCopiedKey(null);
-        setToastMessage(null);
-      }, 2500);
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
     }
+    toastTimerRef.current = setTimeout(() => {
+      setCopiedKey(null);
+      setToastMessage(null);
+    }, 2500);
   };
 
   useEffect(() => {
@@ -75,8 +106,19 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
       if (toastTimerRef.current) {
         clearTimeout(toastTimerRef.current);
       }
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+      }
     };
   }, []);
+
+  useEffect(() => {
+    setPendingNavigation(null);
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
+    }
+  }, [pathname]);
 
   return (
     <div className="w-full max-w-7xl xl:max-w-[1400px] mx-auto space-y-4 sm:space-y-4.5 pb-8">
@@ -98,7 +140,7 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
               </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-              Không gian công cụ phát triển: <strong>Workspace</strong> (phiên làm việc &amp; Markdown) và <strong>Workflow</strong> (n8n tự động hóa).
+              Không gian phát triển gồm <strong>Workspace</strong> (phiên làm việc &amp; Markdown), <strong>Workflow</strong> (n8n) và <strong>Agent</strong> (workspace theo agent).
             </p>
           </div>
         </div>
@@ -114,7 +156,7 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            Tất cả (2 Khung)
+            Tất cả (3 Khung)
           </button>
           <button
             type="button"
@@ -138,15 +180,26 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
           >
             Workflow
           </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode("agent")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+              filterMode === "agent"
+                ? "bg-teal-600 text-white shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            Agent
+          </button>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2 MAIN FRAMES: WORKSPACE & WORKFLOW                                      */}
+      {/* 3 MAIN FRAMES: WORKSPACE, WORKFLOW & AGENT                              */}
       {/* ========================================================================= */}
       <div
         className={`grid gap-4 sm:gap-4.5 lg:gap-5 ${
-          filterMode === "all" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-2xl mx-auto"
+          filterMode === "all" ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 max-w-2xl mx-auto"
         }`}
       >
         {/* ----------------------------------------------------------------------- */}
@@ -154,7 +207,10 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "workspace") && (
           <div
-            onClick={() => router.push(workspaceHomeLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Workspace");
+              router.push(workspaceHomeLink as Route);
+            }}
             title="Nhấp để mở Workspace"
             className="group flex flex-col justify-between rounded-2xl border border-indigo-200/90 bg-white shadow-2xs transition-all hover:border-indigo-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -216,14 +272,14 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
               <div className="flex items-center gap-2 pt-1">
                 <Link
                   href={workspaceHomeLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => handleLinkNavigation(e, "Quản trị Workspace")}
                   className="flex-1 text-center rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 px-2.5 py-1.5 text-[11px] font-bold text-indigo-700 transition"
                 >
                   Quản Trị Workspace
                 </Link>
                 <Link
                   href={workspaceMarkdownLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => handleLinkNavigation(e, "Markdown Editor")}
                   className="flex-1 text-center rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 transition"
                 >
                   Markdown Editor
@@ -262,7 +318,7 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
 
               <Link
                 href={workspaceHomeLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => handleLinkNavigation(e, "Workspace")}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-blue-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Workspace</span>
@@ -277,7 +333,10 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "workflow") && (
           <div
-            onClick={() => router.push(workflowHomeLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Workflow");
+              router.push(workflowHomeLink as Route);
+            }}
             title="Nhấp để mở Workflow"
             className="group flex flex-col justify-between rounded-2xl border border-cyan-200/90 bg-white shadow-2xs transition-all hover:border-cyan-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -339,14 +398,14 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
               <div className="flex items-center gap-2 pt-1">
                 <Link
                   href={workflowHomeLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => handleLinkNavigation(e, "Sơ đồ n8n")}
                   className="flex-1 text-center rounded-lg border border-cyan-200 bg-cyan-50/70 hover:bg-cyan-100 px-2.5 py-1.5 text-[11px] font-bold text-cyan-700 transition"
                 >
                   Sơ Đồ n8n
                 </Link>
                 <Link
                   href={workflowSubLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => handleLinkNavigation(e, "Backend Workflow")}
                   className="flex-1 text-center rounded-lg border border-teal-200 bg-teal-50/70 hover:bg-teal-100 px-2.5 py-1.5 text-[11px] font-bold text-teal-700 transition"
                 >
                   Backend Luồng
@@ -385,10 +444,118 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
 
               <Link
                 href={workflowHomeLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => handleLinkNavigation(e, "Workflow")}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-700 via-teal-600 to-blue-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Workflow</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ----------------------------------------------------------------------- */}
+        {/* KHUNG 3: AGENT                                                      */}
+        {/* ----------------------------------------------------------------------- */}
+        {(filterMode === "all" || filterMode === "agent") && (
+          <div
+            onClick={() => {
+              showNavigationLoading("Agent");
+              router.push(agentHomeLink as Route);
+            }}
+            title="Nhấp để mở Quản lý Agent"
+            className="group flex flex-col justify-between rounded-2xl border border-teal-200/90 bg-white shadow-2xs transition-all hover:border-teal-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
+          >
+            {/* Header banner */}
+            <div className="flex items-center justify-between gap-3 border-b border-teal-500/30 bg-gradient-to-r from-teal-700 via-emerald-600 to-cyan-600 px-4 py-3 sm:px-4.5 sm:py-3.5 text-white transition-all group-hover:brightness-105">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-8.5 w-8.5 sm:h-9.5 sm:w-9.5 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-md shadow-inner border border-white/30 shrink-0 group-hover:scale-105 transition-transform">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h2 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+                      Agent
+                    </h2>
+                    <span className="rounded bg-white/20 border border-white/30 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-bold text-white uppercase tracking-wider">
+                      OpenClaw Agents
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-teal-100 font-medium truncate">
+                    Quản lý agent, workspace con &amp; đường dẫn MCP
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-300/40 px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-emerald-100">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  <span>Hoạt động</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Body Description & Highlights */}
+            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Xem các mã agent đang được khai báo trong Workspace và mở nhanh danh sách workspace được gán cho từng agent.
+              </p>
+
+              {/* Highlights tags */}
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-2.5 py-1.5 sm:px-3 sm:py-2 min-w-0" title="Danh sách agent">
+                  <Bot className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                  <span className="font-semibold text-slate-700 truncate">Danh sách &amp; tìm kiếm agent OpenClaw</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-2.5 py-1.5 sm:px-3 sm:py-2 min-w-0" title="Workspace con của agent">
+                  <Layers className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                  <span className="font-semibold text-slate-700 truncate">Workspace con của từng agent</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/70 px-2.5 py-1.5 sm:px-3 sm:py-2 min-w-0" title="Địa chỉ MCP">
+                  <Network className="h-3.5 w-3.5 text-cyan-600 shrink-0" />
+                  <span className="font-semibold text-slate-700 truncate">Địa chỉ MCP &amp; trạng thái gateway</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-4.5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleCopy(agentHomeLink, "agent", "Quản lý Agent");
+                }}
+                className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  copiedKey === "agent"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-bold shadow-emerald-500/10"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-100/80"
+                }`}
+                title="Sao chép toàn bộ liên kết để chia sẻ"
+              >
+                {copiedKey === "agent" ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Đã chép Link!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="hidden sm:inline">Sao chép Link</span>
+                    <span className="sm:hidden">Share</span>
+                  </>
+                )}
+              </button>
+
+              <Link
+                href={agentHomeLink as unknown as Route}
+                onClick={(e) => handleLinkNavigation(e, "Agent")}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-700 via-emerald-600 to-cyan-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
+              >
+                <span>Mở Agent</span>
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
@@ -399,6 +566,19 @@ export default function DevHomePage({ isHust = false }: DevHomePageProps) {
       {/* ========================================================================= */}
       {/* FLOATING TOAST NOTIFICATION (Khi sao chép link thành công)                 */}
       {/* ========================================================================= */}
+      {pendingNavigation && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 pointer-events-none"
+        >
+          <div className="flex items-center gap-2 rounded-full border border-indigo-200 bg-white/95 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg backdrop-blur">
+            <LoaderCircle className="h-4 w-4 animate-spin text-indigo-600" />
+            <span>Đang mở {pendingNavigation}...</span>
+          </div>
+        </div>
+      )}
+
       {toastMessage && (
         <div
           role="status"

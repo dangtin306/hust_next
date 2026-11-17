@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import {
   Bot,
   User,
@@ -23,6 +23,8 @@ import {
   ChevronRight,
   Sliders,
   Server,
+  Cpu,
+  RefreshCw,
 } from "lucide-react";
 import {
   SUGGESTIONS,
@@ -787,12 +789,19 @@ export type MediaUiUxProps = {
   // Config & callbacks
   onClose?: () => void;
   className?: string;
+  agentControl?: ReactNode;
   isDrawer?: boolean;
   agent?: string;
   title?: string;
   subtitle?: string;
   agentBadge?: string;
   hideModel?: boolean;
+  availableModels?: Array<{ id: string; owned_by?: string }>;
+  selectedModel?: string;
+  setSelectedModel?: (model: string) => void;
+  isLoadingModels?: boolean;
+  modelListError?: string | null;
+  handleReloadModels?: () => void;
   showWorkspaceUpdateButton?: boolean;
   activeNodeUrl?: string;
   activeLaravelUrl?: string;
@@ -868,10 +877,17 @@ export function MediaUiUx(props: MediaUiUxProps) {
   const {
     onClose,
     className = "",
+    agentControl,
     isDrawer = false,
     agent,
     title = "Hust AI Assistant",
     subtitle = "Công cụ chat bot hỗ trợ bằng AI • Trực tuyến",
+    availableModels = [],
+    selectedModel = "",
+    setSelectedModel,
+    isLoadingModels = false,
+    modelListError = null,
+    handleReloadModels,
     agentBadge,
     hideModel = false,
     showWorkspaceUpdateButton = false,
@@ -926,10 +942,10 @@ export function MediaUiUx(props: MediaUiUxProps) {
     handleInputResize,
     handleCompositionStart,
     handleCompositionEnd,
-    activeNodeUrl = "https://node_js.hust.media/openclaw",
-    activeLaravelUrl = "https://laravel.hust.media",
-    defaultNodeUrl = "https://node_js.hust.media/openclaw",
-    defaultLaravelUrl = "https://laravel.hust.media",
+    activeNodeUrl = "",
+    activeLaravelUrl = "",
+    defaultNodeUrl = "",
+    defaultLaravelUrl = "",
     isApiConfigModalOpen = false,
     setIsApiConfigModalOpen,
     handleSaveApiConfig,
@@ -1025,6 +1041,19 @@ export function MediaUiUx(props: MediaUiUxProps) {
                       <span className="h-1.5 w-1.5 rounded-full bg-purple-600 animate-pulse" title="Đang dùng domain API tùy chỉnh" />
                     )}
                   </button>
+                  {/* URL backend đang dùng: chat gọi cả Node và Laravel */}
+                  <span
+                    className="hidden sm:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-mono text-slate-500 max-w-[220px] truncate"
+                    title={`Node: ${activeNodeUrl || defaultNodeUrl || "theo môi trường"}`}
+                  >
+                    {(activeNodeUrl || defaultNodeUrl || "theo môi trường").replace(/^https?:\/\//, "")}
+                  </span>
+                  <span
+                    className="hidden sm:inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-mono text-slate-500 max-w-[220px] truncate"
+                    title={`Laravel: ${activeLaravelUrl || defaultLaravelUrl || "theo môi trường"}`}
+                  >
+                    {(activeLaravelUrl || defaultLaravelUrl || "theo môi trường").replace(/^https?:\/\//, "")}
+                  </span>
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-1 sm:gap-1.5">
                   {/* User ID Tag */}
@@ -1123,8 +1152,9 @@ export function MediaUiUx(props: MediaUiUxProps) {
           </header>
 
           <div className="shrink-0 border-b border-slate-200/60 bg-slate-50/60 px-3 py-2 sm:px-6">
-            <div className="flex min-w-0 items-center justify-between gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                {agentControl}
                 <span className="hidden shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:inline-flex">
                   <Layers className="h-3 w-3 text-slate-400" />
                   Không gian
@@ -1158,7 +1188,6 @@ export function MediaUiUx(props: MediaUiUxProps) {
                     <span className="text-[11px]">Sửa</span>
                   </button>
                 </div>
-
                 {isLoadingWorkspaces && (
                   <span className="shrink-0 animate-pulse px-1 text-[10px] text-slate-400 font-medium">
                     Đang tải…
@@ -1440,7 +1469,7 @@ export function MediaUiUx(props: MediaUiUxProps) {
 
               <div className="min-w-0 flex-1">
                 {/* Active service badge (Click to open Central Modal) */}
-                <div className="mb-1 flex items-center gap-1.5 px-0.5">
+                <div className="mb-1 flex flex-wrap items-center gap-1.5 px-0.5">
                   <button
                     type="button"
                     onClick={() => setIsServiceMenuExpanded(true)}
@@ -1455,6 +1484,47 @@ export function MediaUiUx(props: MediaUiUxProps) {
                       · Đổi dịch vụ ▾
                     </span>
                   </button>
+                  {setSelectedModel && (
+                    <div className="inline-flex h-6 shrink-0 items-center gap-1 rounded-lg border border-indigo-200/80 bg-indigo-50/80 px-2">
+                      <Cpu className="h-3 w-3 text-indigo-600" aria-hidden="true" />
+                      <span className="text-[11px] font-semibold text-indigo-700">Model</span>
+                      {availableModels.length > 0 ? (
+                        <select
+                          aria-label="Chọn model chat"
+                          value={selectedModel}
+                          disabled={isLoadingModels}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          className="w-[8rem] max-w-full truncate bg-transparent px-0 py-0 text-[11px] font-medium leading-4 text-slate-700 outline-none sm:w-[9rem]"
+                          title="Đã chọn model cho tin nhắn tiếp theo; backend xử lý khi bạn gửi tin nhắn"
+                        >
+                          {availableModels.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.owned_by ? `${m.id} · ${m.owned_by}` : m.id}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="px-0.5 text-[11px] text-slate-500" role="status">
+                          {isLoadingModels ? "Đang tải…" : "Chưa có model"}
+                        </span>
+                      )}
+                      {handleReloadModels && (
+                        <button
+                          type="button"
+                          onClick={handleReloadModels}
+                          disabled={isLoadingModels}
+                          aria-label="Tải lại danh sách model"
+                          title={modelListError || "Tải lại danh sách model"}
+                          className="inline-flex h-5 w-5 items-center justify-center rounded text-indigo-600 transition hover:bg-indigo-100 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          <RefreshCw
+                            className={`h-3 w-3 ${isLoadingModels ? "animate-spin" : ""}`}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {selectedService === "media_content_smart" && (
                     <span className="hidden sm:inline text-[10px] text-slate-400 truncate">
                       (Dòng 1: tiêu đề • Dòng tiếp: mô tả)

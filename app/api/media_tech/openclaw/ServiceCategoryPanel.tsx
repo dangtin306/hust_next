@@ -687,7 +687,7 @@ export default function ServiceCategoryPanel({ hidden = false }: ServiceCategory
               <Briefcase className="h-4 w-4 text-purple-600" /> Quản trị Workspace &amp; Kích hoạt Skill
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-slate-600">
-              Lấy danh sách qua <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">GET {getDisplayPath("/v2/workspace/list")}</code>.
+              Lấy danh sách theo agent qua <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">GET {getDisplayPath("/v2/workspace/list?agent_code=test")}</code>. API tổng hợp cũ vẫn có tại <code className="font-mono">GET /openclaw/v2/list</code>.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               Kích hoạt workspace cho user bằng <code className="rounded bg-white px-1 py-0.5 font-mono text-[11px] text-purple-700">POST {getDisplayPath("/v2/workspace/select")}</code> với body <code className="font-mono">{"{\"user_id\": 502, \"work_space_code\": \"...\"}"}</code>.

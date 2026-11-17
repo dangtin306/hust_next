@@ -56,6 +56,33 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/hust_media/media_tech/chat_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/chat_home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/chat_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/chat_manage/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/chat_manage">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/chat_manage/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/chat_messages/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/chat_messages">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/chat_messages/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/hust_media/media_tech/chat_public/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/chat_public">> = Specific
@@ -83,6 +110,60 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/hust_media/media_tech/dev/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/dev/home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/dev/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/dev_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/dev_home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/dev_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/git_auto/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/git_auto">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/git_auto/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/git_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/git_home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/git_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/git_test/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/git_test">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/git_test/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/gitea_test/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/gitea_test">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/gitea_test/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/hust_media/media_tech/laravel/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/laravel">> = Specific
@@ -92,10 +173,73 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/hust_media/media_tech/list/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/list/home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/list/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/list/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/list">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/list/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/media/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/media/home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/media/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/media_tech/media_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/media_home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/media_tech/media_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/hust_media/media_tech/openclaw/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/media_tech/openclaw">> = Specific
   const handler = {} as typeof import("../../app/api/hust_media/media_tech/openclaw/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/n8n/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/n8n/home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/n8n/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/n8n/laravel/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/n8n/laravel">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/n8n/laravel/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/n8n/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/n8n">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/n8n/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -128,6 +272,60 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/hust_media/workspace/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/workspace/home">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/workspace/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/workspace/markdown/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/workspace/markdown">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/workspace/markdown/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/workspace/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/hust_media/workspace">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/workspace/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/chat_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/chat_home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/chat_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/chat_manage/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/chat_manage">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/chat_manage/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/chat_messages/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/chat_messages">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/chat_messages/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/media_tech/chat_public/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/chat_public">> = Specific
@@ -155,10 +353,37 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/media_tech/dev/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/dev/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/dev/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/dev_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/dev_home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/dev_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/media_tech/git_auto/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/git_auto">> = Specific
   const handler = {} as typeof import("../../app/api/media_tech/git_auto/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/git_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/git_home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/git_home/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -182,6 +407,42 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/media_tech/heygen/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/heygen/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/heygen/live/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/heygen/live">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/live/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/heygen/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/heygen">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/heygen/video/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/heygen/video">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/video/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/media_tech/laravel/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/laravel">> = Specific
@@ -191,10 +452,55 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/media_tech/list/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/list/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/list/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/list/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/list">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/list/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/media_tech/maps_main/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/maps_main">> = Specific
   const handler = {} as typeof import("../../app/api/media_tech/maps_main/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/media/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/media/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/media/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/media_home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/media_home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/media_home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/n8n/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/n8n/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/n8n/home/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -249,6 +555,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/api/media_tech">> = Specific
   const handler = {} as typeof import("../../app/api/media_tech/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/workspace/home/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/workspace/home">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/workspace/home/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/workspace/markdown/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/api/media_tech/workspace/markdown">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/workspace/markdown/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -371,15 +695,6 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
-// Validate ../../app/shop/ai/chat_bot/media_tech/page.tsx
-{
-  type __IsExpected<Specific extends AppPageConfig<"/shop/ai/chat_bot/media_tech">> = Specific
-  const handler = {} as typeof import("../../app/shop/ai/chat_bot/media_tech/page.js")
-  type __Check = __IsExpected<typeof handler>
-  // @ts-ignore
-  type __Unused = __Check
-}
-
 // Validate ../../app/shop/ai/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/shop/ai">> = Specific
@@ -470,10 +785,37 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/hust/chat/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/hust/chat/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/hust/chat/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/hust/openclaw/[...path]/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/hust/openclaw/[...path]">> = Specific
   const handler = {} as typeof import("../../app/api/hust/openclaw/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust/workspaces-proxy/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/hust/workspaces-proxy/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/hust/workspaces-proxy/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust/workspaces/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/hust/workspaces/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/hust/workspaces/[...path]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -510,6 +852,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/media_tech/gitea/[...path]">> = Specific
   const handler = {} as typeof import("../../app/api/media_tech/gitea/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/heygen/backend/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/media_tech/heygen/backend/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/backend/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/media_tech/heygen/session/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/media_tech/heygen/session">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/heygen/session/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -569,6 +929,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../app/api/media_tech/workspaces/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/media_tech/workspaces/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/media_tech/workspaces/[...path]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../app/api/resources/services-info/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/resources/services-info">> = Specific
@@ -582,6 +951,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/test1234">> = Specific
   const handler = {} as typeof import("../../app/api/test1234/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/workspaces/[...path]/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/workspaces/[...path]">> = Specific
+  const handler = {} as typeof import("../../app/api/workspaces/[...path]/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -613,6 +991,24 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends LayoutConfig<"/api/hust_media/media_tech">> = Specific
   const handler = {} as typeof import("../../app/api/hust_media/media_tech/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/n8n/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/api/hust_media/n8n">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/n8n/layout.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../app/api/hust_media/workspace/layout.tsx
+{
+  type __IsExpected<Specific extends LayoutConfig<"/api/hust_media/workspace">> = Specific
+  const handler = {} as typeof import("../../app/api/hust_media/workspace/layout.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

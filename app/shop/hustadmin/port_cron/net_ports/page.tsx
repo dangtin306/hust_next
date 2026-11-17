@@ -83,6 +83,7 @@ export default function NetPortsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [sortBy, setSortBy] = useState<string>("port_asc"); // Mặc định sắp xếp Port từ bé đến lớn
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
 
   // Modal dialog states
   const [showcheck, setshowcheck] = useState(false);
@@ -92,13 +93,57 @@ export default function NetPortsPage() {
   const [isDelete, setIsDelete] = useState(false);
 
   // Copy helper
-  const handleCopy = (text: string, key: string) => {
+  const handleCopy = async (text: string, key: string) => {
     if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    setTimeout(() => {
-      setCopiedKey((prev) => (prev === key ? null : prev));
-    }, 1800);
+
+    try {
+      let copied = false;
+
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        } catch {
+          // Clipboard API may be unavailable or denied on an HTTP page.
+        }
+      }
+
+      if (!copied) {
+        const previousFocus = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.top = "0";
+        textarea.style.left = "-9999px";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+
+        try {
+          textarea.focus();
+          textarea.select();
+          copied = document.execCommand("copy");
+        } finally {
+          textarea.remove();
+          previousFocus?.focus();
+        }
+      }
+
+      if (!copied) throw new Error("Clipboard copy failed");
+
+      setCopyErrorKey(null);
+      setCopiedKey(key);
+      setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev));
+      }, 1800);
+    } catch {
+      setCopyErrorKey(key);
+      setTimeout(() => {
+        setCopyErrorKey((prev) => (prev === key ? null : prev));
+      }, 1800);
+    }
   };
 
   // Open modals
@@ -657,7 +702,7 @@ export default function NetPortsPage() {
                               {copiedKey === `port-${portId}` ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-0.5" />
                               ) : (
-                                <Copy className="w-3.5 h-3.5 text-indigo-300 group-hover:text-indigo-600 shrink-0 ml-0.5 transition-colors" />
+                                <Copy className={`w-3.5 h-3.5 ${copyErrorKey === "port-" + portId ? "text-rose-500" : "text-indigo-300 group-hover:text-indigo-600"} shrink-0 ml-0.5 transition-colors`} />
                               )}
                             </button>
                           </div>
@@ -730,7 +775,7 @@ export default function NetPortsPage() {
                                 {copiedKey === `cmd-${portId}` ? (
                                   <Check className="w-3 h-3 text-emerald-600" />
                                 ) : (
-                                  <Copy className="w-3 h-3" />
+                                  <Copy className={copyErrorKey === "cmd-" + portId ? "w-3 h-3 text-rose-500" : "w-3 h-3"} />
                                 )}
                               </button>
                             </div>

@@ -1,4 +1,4 @@
-// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/info/private_policy/page.jsx
+// File: C:\hustmedia5\hust_next\app\info\private_policy\page.jsx
 import * as entry from '../../../../../app/info/private_policy/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

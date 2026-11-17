@@ -1,13 +1,11 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import ApiEnvironmentConfigCard from "./ApiEnvironmentConfigCard";
+import { NavigationToastLink } from "@/app/api/hust_media/media_tech/HomeNavigationToast";
 import {
   ArrowUpRight,
   Bot,
   Code2,
   BriefcaseBusiness,
-  GitBranch,
-  Video,
   Terminal,
 } from "lucide-react";
 
@@ -48,26 +46,6 @@ const destinations = [
     Icon: Bot,
     tone: "purple",
   },
-  {
-    label: "Media Studio · MC Ảo",
-    title: "Trung Tâm AI Media & Video",
-    description:
-      "Tạo video MC ảo từ kịch bản, trải nghiệm Live Avatar streaming và các giải pháp media thông minh.",
-    href: "/api/hust/media/home",
-    action: "Mở Media Hub",
-    Icon: Video,
-    tone: "rose",
-  },
-  {
-    label: "Git Auto · 3 Phân Hệ",
-    title: "Trung Tâm Git Control",
-    description:
-      "Trung tâm Git Hub quản trị 3 phân hệ: Git Auto tự động đồng bộ & commit, Git Test kiểm thử thao tác qua API, và Gitea Test kết nối kho lưu trữ.",
-    href: "/api/hust/git/home",
-    action: "Mở Git Auto Hub",
-    Icon: GitBranch,
-    tone: "amber",
-  },
 ] as const;
 
 const toneClasses: Record<string, string> = {
@@ -103,10 +81,10 @@ export default function SwaggerHomePage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {destinations.map(({ label, title, description, href, action, Icon, tone }) => (
-          <Link
+          <NavigationToastLink
             key={`${href}-${label}`}
-            prefetch={false}
             href={href as unknown as Route}
+            label={title}
             className="group flex min-h-56 flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <div className="flex items-center gap-2">
@@ -123,7 +101,7 @@ export default function SwaggerHomePage() {
               {action}
               <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" aria-hidden="true" />
             </span>
-          </Link>
+          </NavigationToastLink>
         ))}
       </div>
     </section>

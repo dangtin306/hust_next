@@ -25,8 +25,7 @@
   ],
   "headers": [],
   "rewrites": {
-    "beforeFiles": [],
-    "afterFiles": [
+    "beforeFiles": [
       {
         "source": "/next/api/maps/:path*",
         "destination": "/next/api/media_tech/:path*",
@@ -168,9 +167,29 @@
         "regex": "^/next/api/hust/home(?:/)?$"
       },
       {
+        "source": "/next/api/hust/list/home",
+        "destination": "/next/api/hust_media/media_tech/list/home",
+        "regex": "^/next/api/hust/list/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/list",
+        "destination": "/next/api/hust_media/media_tech/list/home",
+        "regex": "^/next/api/hust/list(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/list/laravel",
+        "destination": "/next/api/hust_media/media_tech/laravel",
+        "regex": "^/next/api/hust/list/laravel(?:/)?$"
+      },
+      {
         "source": "/next/api/hust/laravel",
         "destination": "/next/api/hust_media/media_tech/laravel",
         "regex": "^/next/api/hust/laravel(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/list/openclaw",
+        "destination": "/next/api/hust_media/media_tech/openclaw",
+        "regex": "^/next/api/hust/list/openclaw(?:/)?$"
       },
       {
         "source": "/next/api/hust/openclaw",
@@ -178,9 +197,49 @@
         "regex": "^/next/api/hust/openclaw(?:/)?$"
       },
       {
+        "source": "/next/api/hust/chat/home",
+        "destination": "/next/api/hust_media/media_tech/chat_home",
+        "regex": "^/next/api/hust/chat/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat",
+        "destination": "/next/api/hust_media/media_tech/chat_home",
+        "regex": "^/next/api/hust/chat(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat/manage",
+        "destination": "/next/api/hust_media/media_tech/chat_manage",
+        "regex": "^/next/api/hust/chat/manage(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat_manage",
+        "destination": "/next/api/hust_media/media_tech/chat_manage",
+        "regex": "^/next/api/hust/chat_manage(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat/messages",
+        "destination": "/next/api/hust_media/media_tech/chat_messages",
+        "regex": "^/next/api/hust/chat/messages(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat_messages",
+        "destination": "/next/api/hust_media/media_tech/chat_messages",
+        "regex": "^/next/api/hust/chat_messages(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat/test",
+        "destination": "/next/api/hust_media/media_tech/chat_test",
+        "regex": "^/next/api/hust/chat/test(?:/)?$"
+      },
+      {
         "source": "/next/api/hust/chat_test",
         "destination": "/next/api/hust_media/media_tech/chat_test",
         "regex": "^/next/api/hust/chat_test(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/chat/public",
+        "destination": "/next/api/hust_media/media_tech/chat_public",
+        "regex": "^/next/api/hust/chat/public(?:/)?$"
       },
       {
         "source": "/next/api/hust/chat_public",
@@ -193,14 +252,109 @@
         "regex": "^/next/api/hust/api_test(?:/)?$"
       },
       {
-        "source": "/next/api/hust/workflow",
+        "source": "/next/api/hust/workflow/home",
         "destination": "/next/api/hust_media/workflow",
-        "regex": "^/next/api/hust/workflow(?:/)?$"
+        "regex": "^/next/api/hust/workflow/home(?:/)?$"
       },
       {
         "source": "/next/api/hust/workflow/laravel",
         "destination": "/next/api/hust_media/workflow/laravel",
         "regex": "^/next/api/hust/workflow/laravel(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/workflow/maps_main",
+        "destination": "/next/api/media_tech/maps_main",
+        "regex": "^/next/api/hust/workflow/maps_main(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/n8n/home",
+        "destination": "/next/api/hust_media/n8n/home",
+        "regex": "^/next/api/hust/n8n/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/n8n/laravel",
+        "destination": "/next/api/hust_media/n8n/laravel",
+        "regex": "^/next/api/hust/n8n/laravel(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/workspace/home",
+        "destination": "/next/api/hust_media/workspace/home",
+        "regex": "^/next/api/hust/workspace/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/workspace/markdown",
+        "destination": "/next/api/hust_media/workspace/markdown",
+        "regex": "^/next/api/hust/workspace/markdown(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/workspace",
+        "destination": "/next/api/hust_media/workspace",
+        "regex": "^/next/api/hust/workspace(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git/home",
+        "destination": "/next/api/hust_media/media_tech/git_home",
+        "regex": "^/next/api/hust/git/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git",
+        "destination": "/next/api/hust_media/media_tech/git_home",
+        "regex": "^/next/api/hust/git(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git/auto",
+        "destination": "/next/api/hust_media/media_tech/git_auto",
+        "regex": "^/next/api/hust/git/auto(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git_auto",
+        "destination": "/next/api/hust_media/media_tech/git_auto",
+        "regex": "^/next/api/hust/git_auto(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git/test",
+        "destination": "/next/api/hust_media/media_tech/git_test",
+        "regex": "^/next/api/hust/git/test(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git_test",
+        "destination": "/next/api/hust_media/media_tech/git_test",
+        "regex": "^/next/api/hust/git_test(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/git/gitea",
+        "destination": "/next/api/hust_media/media_tech/gitea_test",
+        "regex": "^/next/api/hust/git/gitea(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/gitea_test",
+        "destination": "/next/api/hust_media/media_tech/gitea_test",
+        "regex": "^/next/api/hust/gitea_test(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/media/home",
+        "destination": "/next/api/hust_media/media_tech/media_home",
+        "regex": "^/next/api/hust/media/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/media",
+        "destination": "/next/api/hust_media/media_tech/media_home",
+        "regex": "^/next/api/hust/media(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/media/heygen/:path*",
+        "destination": "/next/api/media_tech/heygen/:path*",
+        "regex": "^/next/api/hust/media/heygen(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/dev/home",
+        "destination": "/next/api/hust_media/media_tech/dev_home",
+        "regex": "^/next/api/hust/dev/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/hust/dev",
+        "destination": "/next/api/hust_media/media_tech/dev_home",
+        "regex": "^/next/api/hust/dev(?:/)?$"
       },
       {
         "source": "/next/api/chat/:path*",
@@ -216,6 +370,16 @@
         "source": "/next/api/openclaw/:path*",
         "destination": "/next/api/media_tech/openclaw/gateway/:path*",
         "regex": "^/next/api/openclaw(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/workspaces/main/data",
+        "destination": "/next/api/media_tech/workspaces/main/data",
+        "regex": "^/next/api/workspaces/main/data(?:/)?$"
+      },
+      {
+        "source": "/next/api/workspaces/:path*",
+        "destination": "/next/api/media_tech/workspaces/:path*",
+        "regex": "^/next/api/workspaces(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
       },
       {
         "source": "/next/api/workspaces-proxy/:path*",
@@ -243,9 +407,49 @@
         "regex": "^/next/api/mt(?:/)?$"
       },
       {
+        "source": "/next/api/mt/chat/home",
+        "destination": "/next/api/media_tech/chat_home",
+        "regex": "^/next/api/mt/chat/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat",
+        "destination": "/next/api/media_tech/chat_home",
+        "regex": "^/next/api/mt/chat(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat/manage",
+        "destination": "/next/api/media_tech/chat_manage",
+        "regex": "^/next/api/mt/chat/manage(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat_manage",
+        "destination": "/next/api/media_tech/chat_manage",
+        "regex": "^/next/api/mt/chat_manage(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat/messages",
+        "destination": "/next/api/media_tech/chat_messages",
+        "regex": "^/next/api/mt/chat/messages(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat_messages",
+        "destination": "/next/api/media_tech/chat_messages",
+        "regex": "^/next/api/mt/chat_messages(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat/test",
+        "destination": "/next/api/media_tech/chat_test",
+        "regex": "^/next/api/mt/chat/test(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/chat_test",
         "destination": "/next/api/media_tech/chat_test",
         "regex": "^/next/api/mt/chat_test(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/chat/public",
+        "destination": "/next/api/media_tech/chat_public",
+        "regex": "^/next/api/mt/chat/public(?:/)?$"
       },
       {
         "source": "/next/api/mt/chat_public",
@@ -253,9 +457,44 @@
         "regex": "^/next/api/mt/chat_public(?:/)?$"
       },
       {
+        "source": "/next/api/mt/media/heygen/:path*",
+        "destination": "/next/api/media_tech/heygen/:path*",
+        "regex": "^/next/api/mt/media/heygen(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/media/home",
+        "destination": "/next/api/media_tech/media_home",
+        "regex": "^/next/api/mt/media/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/media",
+        "destination": "/next/api/media_tech/media_home",
+        "regex": "^/next/api/mt/media(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/list/home",
+        "destination": "/next/api/media_tech/list/home",
+        "regex": "^/next/api/mt/list/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/list",
+        "destination": "/next/api/media_tech/list/home",
+        "regex": "^/next/api/mt/list(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/list/openclaw",
+        "destination": "/next/api/media_tech/openclaw",
+        "regex": "^/next/api/mt/list/openclaw(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/openclaw",
         "destination": "/next/api/media_tech/openclaw",
         "regex": "^/next/api/mt/openclaw(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/list/laravel",
+        "destination": "/next/api/media_tech/laravel",
+        "regex": "^/next/api/mt/list/laravel(?:/)?$"
       },
       {
         "source": "/next/api/mt/laravel",
@@ -263,9 +502,9 @@
         "regex": "^/next/api/mt/laravel(?:/)?$"
       },
       {
-        "source": "/next/api/mt/n8n",
-        "destination": "/next/api/media_tech/n8n",
-        "regex": "^/next/api/mt/n8n(?:/)?$"
+        "source": "/next/api/mt/workflow/home",
+        "destination": "/next/api/media_tech/n8n/home",
+        "regex": "^/next/api/mt/workflow/home(?:/)?$"
       },
       {
         "source": "/next/api/mt/n8n/node_js",
@@ -283,9 +522,39 @@
         "regex": "^/next/api/mt/n8n/laravel(?:/)?$"
       },
       {
+        "source": "/next/api/mt/workspace/home",
+        "destination": "/next/api/media_tech/workspace/home",
+        "regex": "^/next/api/mt/workspace/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/workspace/markdown",
+        "destination": "/next/api/media_tech/workspace/markdown",
+        "regex": "^/next/api/mt/workspace/markdown(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/workspace",
         "destination": "/next/api/media_tech/workspace",
         "regex": "^/next/api/mt/workspace(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/workspaces/main/data",
+        "destination": "/next/api/media_tech/workspaces/main/data",
+        "regex": "^/next/api/mt/workspaces/main/data(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/workspaces/:path*",
+        "destination": "/next/api/media_tech/workspaces/:path*",
+        "regex": "^/next/api/mt/workspaces(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/dev/home",
+        "destination": "/next/api/media_tech/dev_home",
+        "regex": "^/next/api/mt/dev/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/dev",
+        "destination": "/next/api/media_tech/dev_home",
+        "regex": "^/next/api/mt/dev(?:/)?$"
       },
       {
         "source": "/next/api/mt/home",
@@ -293,9 +562,29 @@
         "regex": "^/next/api/mt/home(?:/)?$"
       },
       {
+        "source": "/next/api/mt/git/home",
+        "destination": "/next/api/media_tech/git_home",
+        "regex": "^/next/api/mt/git/home(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/git",
+        "destination": "/next/api/media_tech/git_home",
+        "regex": "^/next/api/mt/git(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/git/auto",
+        "destination": "/next/api/media_tech/git_auto",
+        "regex": "^/next/api/mt/git/auto(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/git_auto",
         "destination": "/next/api/media_tech/git_auto",
         "regex": "^/next/api/mt/git_auto(?:/)?$"
+      },
+      {
+        "source": "/next/api/mt/git/test",
+        "destination": "/next/api/media_tech/git_test",
+        "regex": "^/next/api/mt/git/test(?:/)?$"
       },
       {
         "source": "/next/api/mt/git_test",
@@ -303,11 +592,17 @@
         "regex": "^/next/api/mt/git_test(?:/)?$"
       },
       {
+        "source": "/next/api/mt/git/gitea",
+        "destination": "/next/api/media_tech/gitea_test",
+        "regex": "^/next/api/mt/git/gitea(?:/)?$"
+      },
+      {
         "source": "/next/api/mt/gitea_test",
         "destination": "/next/api/media_tech/gitea_test",
         "regex": "^/next/api/mt/gitea_test(?:/)?$"
       }
     ],
+    "afterFiles": [],
     "fallback": []
   },
   "dynamicRoutes": [
@@ -320,12 +615,36 @@
       "namedRegex": "^/api/features\\-image/(?<nxtPasset>.+?)(?:/)?$"
     },
     {
+      "page": "/api/hust/chat/[...path]",
+      "regex": "^/api/hust/chat/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/hust/chat/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
       "page": "/api/hust/openclaw/[...path]",
       "regex": "^/api/hust/openclaw/(.+?)(?:/)?$",
       "routeKeys": {
         "nxtPpath": "nxtPpath"
       },
       "namedRegex": "^/api/hust/openclaw/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/hust/workspaces/[...path]",
+      "regex": "^/api/hust/workspaces/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/hust/workspaces/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/hust/workspaces-proxy/[...path]",
+      "regex": "^/api/hust/workspaces\\-proxy/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/hust/workspaces\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
       "page": "/api/hust_media/media_tech/chat/[...path]",
@@ -360,6 +679,14 @@
       "namedRegex": "^/api/media_tech/gitea/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
+      "page": "/api/media_tech/heygen/backend/[...path]",
+      "regex": "^/api/media_tech/heygen/backend/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/media_tech/heygen/backend/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
       "page": "/api/media_tech/openclaw/gateway/[...path]",
       "regex": "^/api/media_tech/openclaw/gateway/(.+?)(?:/)?$",
       "routeKeys": {
@@ -368,12 +695,28 @@
       "namedRegex": "^/api/media_tech/openclaw/gateway/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
+      "page": "/api/media_tech/workspaces/[...path]",
+      "regex": "^/api/media_tech/workspaces/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/media_tech/workspaces/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
       "page": "/api/media_tech/workspaces-proxy/[...path]",
       "regex": "^/api/media_tech/workspaces\\-proxy/(.+?)(?:/)?$",
       "routeKeys": {
         "nxtPpath": "nxtPpath"
       },
       "namedRegex": "^/api/media_tech/workspaces\\-proxy/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/workspaces/[...path]",
+      "regex": "^/api/workspaces/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/workspaces/(?<nxtPpath>.+?)(?:/)?$"
     },
     {
       "page": "/community/docs/[slug]",
@@ -456,6 +799,24 @@
       "namedRegex": "^/api/hust_media/api(?:/)?$"
     },
     {
+      "page": "/api/hust_media/media_tech/chat_home",
+      "regex": "^/api/hust_media/media_tech/chat_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/chat_home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/chat_manage",
+      "regex": "^/api/hust_media/media_tech/chat_manage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/chat_manage(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/chat_messages",
+      "regex": "^/api/hust_media/media_tech/chat_messages(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/chat_messages(?:/)?$"
+    },
+    {
       "page": "/api/hust_media/media_tech/chat_public",
       "regex": "^/api/hust_media/media_tech/chat_public(?:/)?$",
       "routeKeys": {},
@@ -474,16 +835,94 @@
       "namedRegex": "^/api/hust_media/media_tech/dashboard(?:/)?$"
     },
     {
+      "page": "/api/hust_media/media_tech/dev/home",
+      "regex": "^/api/hust_media/media_tech/dev/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/dev/home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/dev_home",
+      "regex": "^/api/hust_media/media_tech/dev_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/dev_home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/git_auto",
+      "regex": "^/api/hust_media/media_tech/git_auto(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/git_auto(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/git_home",
+      "regex": "^/api/hust_media/media_tech/git_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/git_home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/git_test",
+      "regex": "^/api/hust_media/media_tech/git_test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/git_test(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/gitea_test",
+      "regex": "^/api/hust_media/media_tech/gitea_test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/gitea_test(?:/)?$"
+    },
+    {
       "page": "/api/hust_media/media_tech/laravel",
       "regex": "^/api/hust_media/media_tech/laravel(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/hust_media/media_tech/laravel(?:/)?$"
     },
     {
+      "page": "/api/hust_media/media_tech/list",
+      "regex": "^/api/hust_media/media_tech/list(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/list(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/list/home",
+      "regex": "^/api/hust_media/media_tech/list/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/list/home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/media/home",
+      "regex": "^/api/hust_media/media_tech/media/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/media/home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/media_tech/media_home",
+      "regex": "^/api/hust_media/media_tech/media_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/media_tech/media_home(?:/)?$"
+    },
+    {
       "page": "/api/hust_media/media_tech/openclaw",
       "regex": "^/api/hust_media/media_tech/openclaw(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/hust_media/media_tech/openclaw(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/n8n",
+      "regex": "^/api/hust_media/n8n(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/n8n(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/n8n/home",
+      "regex": "^/api/hust_media/n8n/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/n8n/home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/n8n/laravel",
+      "regex": "^/api/hust_media/n8n/laravel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/n8n/laravel(?:/)?$"
     },
     {
       "page": "/api/hust_media/workflow",
@@ -498,10 +937,46 @@
       "namedRegex": "^/api/hust_media/workflow/laravel(?:/)?$"
     },
     {
+      "page": "/api/hust_media/workspace",
+      "regex": "^/api/hust_media/workspace(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/workspace(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/workspace/home",
+      "regex": "^/api/hust_media/workspace/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/workspace/home(?:/)?$"
+    },
+    {
+      "page": "/api/hust_media/workspace/markdown",
+      "regex": "^/api/hust_media/workspace/markdown(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/hust_media/workspace/markdown(?:/)?$"
+    },
+    {
       "page": "/api/media_tech",
       "regex": "^/api/media_tech(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/media_tech(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/chat_home",
+      "regex": "^/api/media_tech/chat_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/chat_home(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/chat_manage",
+      "regex": "^/api/media_tech/chat_manage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/chat_manage(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/chat_messages",
+      "regex": "^/api/media_tech/chat_messages(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/chat_messages(?:/)?$"
     },
     {
       "page": "/api/media_tech/chat_public",
@@ -522,10 +997,28 @@
       "namedRegex": "^/api/media_tech/dashboard(?:/)?$"
     },
     {
+      "page": "/api/media_tech/dev/home",
+      "regex": "^/api/media_tech/dev/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/dev/home(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/dev_home",
+      "regex": "^/api/media_tech/dev_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/dev_home(?:/)?$"
+    },
+    {
       "page": "/api/media_tech/git_auto",
       "regex": "^/api/media_tech/git_auto(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/media_tech/git_auto(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/git_home",
+      "regex": "^/api/media_tech/git_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/git_home(?:/)?$"
     },
     {
       "page": "/api/media_tech/git_test",
@@ -540,10 +1033,52 @@
       "namedRegex": "^/api/media_tech/gitea_test(?:/)?$"
     },
     {
+      "page": "/api/media_tech/heygen",
+      "regex": "^/api/media_tech/heygen(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/heygen(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/heygen/home",
+      "regex": "^/api/media_tech/heygen/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/heygen/home(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/heygen/live",
+      "regex": "^/api/media_tech/heygen/live(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/heygen/live(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/heygen/session",
+      "regex": "^/api/media_tech/heygen/session(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/heygen/session(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/heygen/video",
+      "regex": "^/api/media_tech/heygen/video(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/heygen/video(?:/)?$"
+    },
+    {
       "page": "/api/media_tech/laravel",
       "regex": "^/api/media_tech/laravel(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/media_tech/laravel(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/list",
+      "regex": "^/api/media_tech/list(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/list(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/list/home",
+      "regex": "^/api/media_tech/list/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/list/home(?:/)?$"
     },
     {
       "page": "/api/media_tech/maps_main",
@@ -552,10 +1087,28 @@
       "namedRegex": "^/api/media_tech/maps_main(?:/)?$"
     },
     {
+      "page": "/api/media_tech/media/home",
+      "regex": "^/api/media_tech/media/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/media/home(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/media_home",
+      "regex": "^/api/media_tech/media_home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/media_home(?:/)?$"
+    },
+    {
       "page": "/api/media_tech/n8n",
       "regex": "^/api/media_tech/n8n(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/media_tech/n8n(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/n8n/home",
+      "regex": "^/api/media_tech/n8n/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/n8n/home(?:/)?$"
     },
     {
       "page": "/api/media_tech/n8n/laravel",
@@ -610,6 +1163,18 @@
       "regex": "^/api/media_tech/workspace(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/api/media_tech/workspace(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/workspace/home",
+      "regex": "^/api/media_tech/workspace/home(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/workspace/home(?:/)?$"
+    },
+    {
+      "page": "/api/media_tech/workspace/markdown",
+      "regex": "^/api/media_tech/workspace/markdown(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/media_tech/workspace/markdown(?:/)?$"
     },
     {
       "page": "/api/resources/services-info",
@@ -682,12 +1247,6 @@
       "regex": "^/shop/ai(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/shop/ai(?:/)?$"
-    },
-    {
-      "page": "/shop/ai/chat_bot/media_tech",
-      "regex": "^/shop/ai/chat_bot/media_tech(?:/)?$",
-      "routeKeys": {},
-      "namedRegex": "^/shop/ai/chat_bot/media_tech(?:/)?$"
     },
     {
       "page": "/shop/hustadmin/home",

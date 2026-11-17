@@ -1,0 +1,1926 @@
+openapi: 3.0.3
+info:
+  title: Media Tech OpenClaw API
+  version: 1.0.0
+  description: 'Node.js gateway cho tích hợp Media Tech OpenClaw.
+
+
+    Hiểu đơn giản: Conversations giữ một room chat và dữ liệu trong room, còn Responses dùng dữ liệu đó để tạo tin nhắn AI mới cho từng lượt chat.
+
+
+    Gateway cung cấp các route Responses, Conversations, Chat Completions, tạo
+
+    hình ảnh và kiểm tra health. Conversations có thể liên kết với Responses
+
+    bằng conversation_id; request không có field này vẫn tiếp tục dùng luồng
+
+    history cũ.
+
+    '
+servers:
+- url: https://node_md.hust.media/
+  description: OpenClaw Production Gateway
+- url: http://localhost:2999/openclaw
+  description: Node.js Gateway Local (cổng 2999)
+- url: http://localhost:8818
+  description: Backend Node.js local (cổng 8818)
+- url: https://nginx.hust.media/go/ai/test
+  description: Backend test
+security:
+- BearerAuth: []
+- SessionKey: []
+tags:
+- name: Health
+  description: Kiểm tra health của backend
+- name: Responses
+  description: Endpoint tương thích OpenResponses chính và các nhóm service
+- name: Conversations
+  description: Tạo và quản lý Conversations cùng các conversation item liên kết với Codex.
+- name: Model Selection
+  description: Xem danh sách model, chọn model cho request và reset chat bằng lệnh /reset.
+- name: Workspace
+  description: Lấy danh sách workspace.
+- name: Services
+  description: Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn.
+- name: Text To Image
+  description: Tạo hình ảnh thông qua image route của OpenClaw.
+- name: media_text_to_text
+  description: Hội thoại thông thường thông qua endpoint Responses.
+- name: media_content_smart
+  description: Viết nội dung thông minh theo title, description, length và tone.
+- name: media_spell_check
+  description: Sửa lỗi chính tả thông qua endpoint Responses.
+- name: media_script_writing
+  description: Viết script thông qua endpoint Responses.
+- name: media_image_to_text
+  description: OCR và phân tích hình ảnh thông qua endpoint Responses.
+- name: media_text_to_speech
+  description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
+x-service-categories:
+  services:
+    route: /openclaw/v2/service/list
+    status: implemented
+    description: Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn.
+  media_responses:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Endpoint chung tương thích OpenResponses cho các request chat và service AI.
+  media_conversations:
+    route: /openclaw/v1/conversations
+    status: implemented
+    description: Tạo room chat, quản lý item và liên kết Responses bằng conversation_id.
+  media_model_switch:
+    route: /openclaw/v1/models
+    status: implemented
+    description: Xem model, chọn model cho request hoặc gửi /reset qua Responses để reset chat.
+  workspace:
+    route: /openclaw/v2/workspace/list
+    status: documented
+    description: Lấy danh sách workspace.
+  media_text_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Hội thoại thông thường qua Responses. Đây là category mặc định.
+  media_content_smart:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Viết nội dung thông minh theo title, desc, len và tone; backend tự chuyển sang skill media_content_smart.
+  media_spell_check:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Sửa lỗi chính tả qua skill media_spelling trên route Responses dùng chung.
+  media_script_writing:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Viết kịch bản qua skill media_script_writing trên route Responses dùng chung.
+  media_image_to_text:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: OCR/phân tích hình ảnh bằng input_image, source Base64 và MIME type của ảnh.
+  media_text_to_speech:
+    route: /openclaw/v1/responses
+    status: implemented
+    description: Tạo audio với model F5_vie, services v3 và servicecode tùy chọn.
+  media_text_to_image:
+    route: /openclaw/v1/images/generations
+    status: implemented
+    description: Tạo hình ảnh qua image route và trả về hình ảnh hoàn tất dưới dạng Base64.
+paths:
+  /openclaw/v1/conversations:
+    post:
+      operationId: createConversation
+      tags:
+      - Conversations
+      summary: Tạo một conversation
+      description: 'Tạo conversation mới.
+
+        Body có thể rỗng hoặc truyền items ban đầu.
+
+        user_id chỉ là trường mở rộng nội bộ, không bắt buộc.
+
+        '
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationCreateRequest'
+            examples:
+              existingUser:
+                summary: Người dùng cũ — dùng lại User ID
+                value:
+                  user_id: 69
+                  metadata:
+                    source: frontend
+              newUser:
+                summary: Người dùng mới — không có user_id
+                value:
+                  user_id: false
+                  metadata:
+                    source: frontend
+              withItems:
+                summary: Tạo conversation kèm item ban đầu
+                value:
+                  items:
+                  - type: message
+                    role: user
+                    content: Xin chào
+              empty:
+                summary: Tạo conversation rỗng
+                value: {}
+              withUser:
+                summary: Tạo conversation có liên kết user nội bộ
+                value:
+                  user_id: 69
+                  metadata:
+                    source: frontend
+                  items:
+                  - type: message
+                    role: user
+                    content: Xin chào
+      responses:
+        '201':
+          description: Đã tạo conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+  /openclaw/v1/conversations/{id}:
+    get:
+      operationId: getConversation
+      tags:
+      - Conversations
+      summary: Lấy một conversation
+      description: id có thể là số tăng dần hoặc conversation identifier dạng conv_.
+      parameters:
+      - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Thông tin conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+  /openclaw/v1/conversations/{id}/items:
+    get:
+      operationId: listConversationItems
+      tags:
+      - Conversations
+      summary: Lấy danh sách conversation item
+      parameters:
+      - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Danh sách conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItemList'
+    post:
+      operationId: createConversationItem
+      tags:
+      - Conversations
+      summary: Thêm item vào conversation
+      parameters:
+      - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversationItemCreateRequest'
+            example:
+              role: user
+              content: Hãy giới thiệu về Hà Nội
+      responses:
+        '201':
+          description: Đã tạo conversation item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationItem'
+  /openclaw/v1/responses:
+    post:
+      operationId: createResponse
+      tags:
+      - Responses
+      - media_text_to_text
+      - media_content_smart
+      - media_spell_check
+      - media_script_writing
+      - media_image_to_text
+      - media_text_to_speech
+      summary: Tin nhắn thứ nhất
+      description: 'Endpoint chính cho chat thông thường, viết nội dung thông minh, kiểm tra
+
+        chính tả, viết script, OCR và các request tiếp tục. Khi có conversation_id,
+
+        backend tìm conversation, liên kết user item và assistant item, lưu
+
+        response_id rồi trả về response. Nếu không có, hệ thống dùng luồng history cũ.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResponsesRequest'
+              properties:
+                model:
+                  type: string
+                  example: gpt-5.6-luna
+                  description: Id model lấy từ GET /openclaw/v1/models (gpt-5.6-luna, gemini-3.7-flash, qwen_v1) hoặc alias trong danh mục; mặc định gpt-5.6-luna. Id không có trong danh mục trả 400 model_not_found.
+            examples:
+              normalChat:
+                summary: Hội thoại thông thường
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    content: Chào bạn
+              resetChat:
+                summary: Reset hoàn toàn chat (/reset)
+                description: Gửi lệnh /reset như nội dung tin nhắn user qua cùng Responses endpoint.
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    content: /reset
+              secondMessage:
+                summary: Tin nhắn thứ hai (previous_response_id)
+                value:
+                  model: gpt-5.6-luna
+                  previous_response_id: resp_abc123
+                  input:
+                  - role: user
+                    content: Hãy viết tiếp phần kết luận.
+              withConversation:
+                summary: Gửi tin nhắn liên kết conversation (conversation_id)
+                value:
+                  model: gpt-5.6-luna
+                  conversation_id: conv_550e8400-e29b-41d4-a716-446655440000
+                  input:
+                  - role: user
+                    content: Xin chào, hãy giới thiệu về Media Tech
+              spellCheck:
+                summary: Sửa lỗi chính tả
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    content: '/skill media_spelling
+
+                      Hãy sửa lỗi chính tả trong đoạn văn sau:
+
+                      Tôi dang hoc lap trinh tai Media Tech.'
+              smartWriting:
+                summary: media_content_smart
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    title: Bàn phương hằng
+                    desc: Giới thiệu, nội dung chính, kết luận
+                    len: 500
+                    tone: Tự nhiên
+              imageToText:
+                summary: media_image_to_text
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    content:
+                    - type: input_text
+                      text: media_image_to_text Nhận diện văn bản
+                    - type: input_image
+                      source:
+                        type: base64
+                        media_type: image/png
+                        data: BASE64_IMAGE
+              textToSpeech:
+                summary: media_text_to_speech
+                value:
+                  model: F5_vie
+                  input:
+                  - role: user
+                    text: Xin chào từ Media Tech
+                    tool: media_text_to_speech
+                    services: v3
+                    servicecode: F5_vie
+              scriptWriting:
+                summary: media_script_writing
+                value:
+                  model: gpt-5.6-luna
+                  input:
+                  - role: user
+                    content: '/skill media_script_writing
+
+                      Viết kịch bản video ngắn giới thiệu sản phẩm.'
+      responses:
+        '200':
+          description: Response hoàn tất theo định dạng Responses API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseObject'
+        '400':
+          description: Model không hợp lệ (model_not_found) hoặc request sai định dạng.
+          content:
+            application/json:
+              schema: &id001
+                type: object
+                required:
+                - error
+                properties:
+                  error:
+                    type: object
+                    required:
+                    - message
+                    - type
+                    - param
+                    - code
+                    properties:
+                      message:
+                        type: string
+                      type:
+                        type: string
+                        example: invalid_request_error
+                      param:
+                        type: string
+                        example: model
+                      code:
+                        type: string
+                        example: model_not_found
+              example: &id002
+                error:
+                  message: The model 'xyz' does not exist or you do not have access to it.
+                  type: invalid_request_error
+                  param: model
+                  code: model_not_found
+  /openclaw/v1/chat/completions:
+    post:
+      operationId: createChatCompletion
+      tags:
+      - Conversations
+      summary: Tạo response tương thích Chat Completions
+      description: 'Gateway nhận input Chat Completions, sử dụng transport Codex Responses
+
+        ở bên trong và chuyển kết quả về chat.completion. Dùng
+
+        previous_completion_id để tiếp tục trên route này.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionsRequest'
+              properties:
+                model:
+                  type: string
+                  example: gpt-5.6-luna
+                  description: Id model lấy từ GET /openclaw/v1/models (gpt-5.6-luna, gemini-3.7-flash, qwen_v1) hoặc alias trong danh mục; mặc định gpt-5.6-luna. Id không có trong danh mục trả 400 model_not_found.
+            example:
+              model: gpt-5.6-luna
+              messages:
+              - role: user
+                content: Chào bạn
+              stream: false
+      responses:
+        '200':
+          description: Response Chat Completions hoàn tất
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionObject'
+        '400':
+          description: Model không hợp lệ (model_not_found) hoặc request sai định dạng.
+          content:
+            application/json:
+              schema: *id001
+              example: *id002
+  /openclaw/v1/images/generations:
+    post:
+      operationId: generateImage
+      tags:
+      - Text To Image
+      summary: Tạo hình ảnh thông qua OpenClaw
+      description: 'Gateway gọi tool image_generate của OpenClaw, theo dõi task thông qua
+
+        admin RPC, đọc PNG được tạo từ shared Docker volume và trả về dưới dạng
+
+        output_image item tương thích Responses.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationRequest'
+            examples:
+              textToImage:
+                summary: Tạo ảnh từ mô tả
+                value:
+                  user_id: 69
+                  model: openai/gpt-image-2
+                  prompt: Một con mèo bên biển
+                  n: 1
+                  size: 1024x1024
+                  aspectRatio: 61
+                  quality: medium
+                  style: Hoạt hình
+                  tone: vui tươi
+      responses:
+        '200':
+          description: Image response hoàn tất
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponseObject'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /openclaw/v2/health:
+    get:
+      operationId: getOpenClawHealth
+      tags:
+      - Health
+      summary: Kiểm tra health backend
+      responses:
+        '200':
+          description: Backend đang hoạt động
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /openclaw/v1/models:
+    get:
+      operationId: listModels
+      tags:
+      - Model Selection
+      summary: Lấy danh sách model
+      description: Danh sách model hợp lệ cho trường `model` của /openclaw/v1/responses và /openclaw/v1/chat/completions. Lấy từ danh mục model_catalog.json của gateway.
+      responses:
+        '200':
+          description: Danh sách model
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - object
+                - data
+                properties:
+                  object:
+                    type: string
+                    example: list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - object
+                      - created
+                      - owned_by
+                      properties:
+                        id:
+                          type: string
+                          example: gpt-5.6-luna
+                        object:
+                          type: string
+                          example: model
+                        created:
+                          type: integer
+                          example: 0
+                        owned_by:
+                          type: string
+                          example: openai
+              example:
+                object: list
+                data:
+                - id: gpt-5.6-luna
+                  object: model
+                  created: 0
+                  owned_by: openai
+                - id: gemini-3.7-flash
+                  object: model
+                  created: 0
+                  owned_by: google
+                - id: qwen_v1
+                  object: model
+                  created: 0
+                  owned_by: local
+  /openclaw/v2/service/list:
+    get:
+      operationId: listServices
+      tags:
+      - Services
+      summary: Lấy danh mục service
+      description: "Lấy danh mục service để ứng dụng hiển thị và cho người dùng chọn. API này chỉ trả danh sách; không thực thi service. Các API thực thi hiện tại vẫn giữ nguyên.\n\nClient dùng `service_id`,\
+        \ mô tả và endpoint để hiển thị lựa chọn; khi người dùng chọn, gọi API thực thi tương ứng theo request schema hiện có. Nếu gọi endpoint này bằng method khác GET, Node trả `405 method_not_allowed`.\n\
+        \nDanh mục hiện gồm bảy service bạn đã liệt kê; nếu thêm service mới thì cần thêm mục vào catalog của Node.\n\n**Request:** Không cần query parameter hoặc request body.\n\nURL production: `https://node_md.hust.media/openclaw/v2/service/list`.\n\
+        Gửi `Accept: application/json`.\n\nVí dụ gọi cURL:\n```bash\ncurl -X GET \"https://node_md.hust.media/openclaw/v2/service/list\" \\\n  -H \"Accept: application/json\"\n```\n"
+      security: []
+      responses:
+        '200':
+          description: Danh mục service khả dụng
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - data
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - service_id
+                      - name
+                      - description
+                      - method
+                      - endpoint
+                      - operation_id
+                      properties:
+                        service_id:
+                          type: string
+                          example: text_to_image
+                        name:
+                          type: string
+                          example: Text To Image
+                        description:
+                          type: string
+                          example: Tạo hình ảnh thông qua image route của OpenClaw.
+                        method:
+                          type: string
+                          example: POST
+                        endpoint:
+                          type: string
+                          example: /openclaw/v1/images/generations
+                        operation_id:
+                          type: string
+                          example: generateImage
+              example:
+                ok: true
+                data:
+                - service_id: text_to_image
+                  name: Text To Image
+                  description: Tạo hình ảnh thông qua image route của OpenClaw.
+                  method: POST
+                  endpoint: /openclaw/v1/images/generations
+                  operation_id: generateImage
+                - service_id: media_text_to_text
+                  name: media_text_to_text
+                  description: Hội thoại thông thường thông qua endpoint Responses.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+                - service_id: media_content_smart
+                  name: media_content_smart
+                  description: Viết nội dung thông minh theo title, description, length và tone.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+                - service_id: media_spell_check
+                  name: media_spell_check
+                  description: Sửa lỗi chính tả thông qua endpoint Responses.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+                - service_id: media_script_writing
+                  name: media_script_writing
+                  description: Viết script thông qua endpoint Responses.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+                - service_id: media_image_to_text
+                  name: media_image_to_text
+                  description: OCR và phân tích hình ảnh thông qua endpoint Responses.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+                - service_id: media_text_to_speech
+                  name: media_text_to_speech
+                  description: Tạo Text-to-speech thông qua service TTS đã cấu hình.
+                  method: POST
+                  endpoint: /openclaw/v1/responses
+                  operation_id: createResponse
+        '405':
+          description: Method Not Allowed khi gọi method khác GET
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - error
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+  /openclaw/v2/workspace/list:
+    get:
+      operationId: listWorkspaces
+      tags:
+      - Workspace
+      parameters:
+      - name: agent_code
+        in: query
+        required: true
+        description: Mã agent sở hữu workspace cần lấy.
+        schema:
+          type: string
+          maxLength: 120
+        example: test
+      summary: Lấy danh sách workspace
+      description: "Lấy workspace cha của agent và danh sách skill workspace mà OpenClaw nhận diện.\nCó thể truyền `agent_code` để chỉ lấy skill của một agent và ghép với dòng workspace\ngốc trong SQL có\
+        \ cùng `agent_code` và `parent_workspace_code = \"openclaw\"`.\nURI chuẩn yêu cầu `agent_code`. URI cũ `GET /openclaw/v2/list` vẫn hỗ trợ\ncách liệt kê tất cả agent và workspace mặc định để tương\
+        \ thích.\n\nMỗi skill được trả trong `children`; `children[].agent_code` là agent sở hữu skill,\n`children[].work_space_code` là tên skill OpenClaw dùng để nhận diện/gọi.\n`path` tương đối với workspace\
+        \ của agent. Chỉ skill xuất hiện trong `skills.status`\ntại thời điểm gọi mới được đưa vào danh sách.\n\nGọi thành công nhưng `data: []` nghĩa là không có skill khớp hoặc không tìm thấy\nworkspace\
+        \ cha trong SQL cho agent được yêu cầu. `agent_code` rỗng hoặc dài hơn 120\nký tự trả HTTP 422.\n\nURL production: `https://node_md.hust.media/openclaw/v2/workspace/list`.\nGửi `Accept: application/json`\
+        \ và `Authorization: Bearer media_tech`.\n\nVí dụ PowerShell:\n```powershell\ncurl.exe -X GET \"https://node_md.hust.media/openclaw/v2/workspace/list?agent_code=test\" `\n  -H \"Accept: application/json\"\
+        \ `\n  -H \"Authorization: Bearer media_tech\"\n```\n"
+      security:
+      - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - data
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - agent_code
+                      - work_space_code
+                      - workspace_name
+                      - status
+                      properties:
+                        agent_code:
+                          type: string
+                          description: Agent code owning the parent workspace.
+                          example: test
+                        id:
+                          type: integer
+                          example: 5
+                        work_space_code:
+                          type: string
+                          example: workspace-test
+                        workspace_name:
+                          type: string
+                          example: '...'
+                        parent_workspace_code:
+                          type: string
+                          nullable: true
+                          example: openclaw
+                        slug:
+                          type: string
+                          example: workspace-test
+                        description:
+                          type: string
+                          example: '...'
+                        status:
+                          type: string
+                          example: active
+                        created_at:
+                          type: string
+                          example: '...'
+                        updated_at:
+                          type: string
+                          example: '...'
+                        children:
+                          type: array
+                          description: Các skill workspace do OpenClaw nhận diện cho từng agent.
+                          items:
+                            type: object
+                            required:
+                            - agent_code
+                            - work_space_code
+                            properties:
+                              agent_code:
+                                type: string
+                                description: Mã agent OpenClaw sở hữu skill.
+                                example: test
+                              work_space_code:
+                                type: string
+                                description: Tên skill chính xác do OpenClaw dùng để nhận diện/gọi.
+                                example: workspace_backend_support
+                              path:
+                                type: string
+                                example: skills/workspace_backend_support
+                              description:
+                                type: string
+                                example: Mô tả skill do OpenClaw trả về
+                              source:
+                                type: string
+                                example: openclaw-workspace
+                              bundled:
+                                type: boolean
+                                example: false
+                              filePath:
+                                type: string
+                                description: Đường dẫn tuyệt đối tới SKILL.md.
+                                example: D:\\hustmedia\\workspace\\skills\\workspace_backend_support\\SKILL.md
+                              baseDir:
+                                type: string
+                                description: Đường dẫn tuyệt đối tới thư mục skill.
+                                example: D:\\hustmedia\\workspace\\skills\\workspace_backend_support
+                              skillKey:
+                                type: string
+                                example: workspace_backend_support
+                              always:
+                                type: boolean
+                                example: false
+                              disabled:
+                                type: boolean
+                                example: false
+                              blockedByAllowlist:
+                                type: boolean
+                                example: false
+                              blockedByAgentFilter:
+                                type: boolean
+                                example: false
+                              eligible:
+                                type: boolean
+                                example: true
+                              platformIncompatible:
+                                type: boolean
+                                example: false
+                              modelVisible:
+                                type: boolean
+                                example: true
+                              userInvocable:
+                                type: boolean
+                                example: true
+                              commandVisible:
+                                type: boolean
+                                example: true
+                              requirements:
+                                $ref: '#/components/schemas/WorkspaceSkillRequirements'
+                              missing:
+                                $ref: '#/components/schemas/WorkspaceSkillRequirements'
+                              configChecks:
+                                type: array
+                                items:
+                                  type: object
+                                  additionalProperties: true
+                              install:
+                                type: array
+                                items:
+                                  type: object
+                                  additionalProperties: true
+              example:
+                ok: true
+                data:
+                - id: 5
+                  agent_code: test
+                  work_space_code: workspace-test
+                  workspace_name: Workspace Test
+                  parent_workspace_code: openclaw
+                  slug: workspace-test
+                  description: Workspace mẹ test
+                  status: active
+                  created_at: '2026-10-01T08:52:28.000Z'
+                  updated_at: '2026-10-01T08:52:28.000Z'
+                  children:
+                  - agent_code: test
+                    work_space_code: workspace_backend_support
+                    path: skills/workspace_backend_support
+                    description: Mô tả skill do OpenClaw trả về
+                    source: openclaw-workspace
+                    bundled: false
+                    filePath: D:\\hustmedia\\workspace\\skills\\workspace_backend_support\\SKILL.md
+                    baseDir: D:\\hustmedia\\workspace\\skills\\workspace_backend_support
+                    skillKey: workspace_backend_support
+                    always: false
+                    disabled: false
+                    blockedByAllowlist: false
+                    blockedByAgentFilter: false
+                    eligible: true
+                    platformIncompatible: false
+                    modelVisible: true
+                    userInvocable: true
+                    commandVisible: true
+                    requirements:
+                      bins: []
+                      anyBins: []
+                      env: []
+                      config: []
+                      os: []
+                    missing:
+                      bins: []
+                      anyBins: []
+                      env: []
+                      config: []
+                      os: []
+                    configChecks: []
+                    install: []
+                  - agent_code: test
+                    work_space_code: workspace_openclaw_support
+                    path: skills/workspace_openclaw_support
+                    description: Mô tả skill do OpenClaw trả về
+                    source: openclaw-workspace
+                    bundled: false
+                    skillKey: workspace_openclaw_support
+                    always: false
+                    disabled: false
+                    blockedByAllowlist: false
+                    blockedByAgentFilter: false
+                    eligible: true
+                    platformIncompatible: false
+                    modelVisible: true
+                    userInvocable: true
+                    commandVisible: true
+                    requirements:
+                      bins: []
+                      anyBins: []
+                      env: []
+                      config: []
+                      os: []
+                    missing:
+                      bins: []
+                      anyBins: []
+                      env: []
+                      config: []
+                      os: []
+                    configChecks: []
+                    install: []
+        '422':
+          description: Thiếu hoặc không hợp lệ `agent_code`.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - error
+                - required
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                    - agent_code_required
+                    - invalid_agent_code
+                  required:
+                    type: array
+                    items:
+                      type: string
+                example:
+                  ok: false
+                  error: agent_code_required
+                  required:
+                  - agent_code
+        '405':
+          description: Method Not Allowed; endpoint chỉ nhận GET.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - error
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+        '503':
+          description: Service Unavailable; Gateway/WebSocket hoặc database không khả dụng.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - error
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    enum:
+                    - openclaw_unavailable
+                    - database_unavailable
+              example:
+                ok: false
+                error: database_unavailable
+              examples:
+                openclawUnavailable:
+                  summary: Không gọi được Gateway/WebSocket
+                  value:
+                    ok: false
+                    error: openclaw_unavailable
+                databaseUnavailable:
+                  summary: Không truy vấn được database
+                  value:
+                    ok: false
+                    error: database_unavailable
+  /openclaw/v2/workspace/user:
+    get:
+      operationId: getUserWorkspaces
+      tags:
+      - Workspace
+      summary: Lấy workspace của user
+      description: Trả workspace session hiện tại của user và cờ `work_space_selected`.
+      security:
+      - BearerAuth: []
+      parameters:
+      - name: user_id
+        in: query
+        required: true
+        description: ID user cần tra workspace.
+        schema:
+          type: integer
+          minimum: 1
+        example: 502
+      responses:
+        '200':
+          description: Tìm thấy workspace session của user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - data
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                    - user_id
+                    - work_space_selected
+                    - work_space_code
+                    - workspace_id
+                    - work_session_id
+                    properties:
+                      user_id:
+                        type: integer
+                        example: 501
+                      work_space_selected:
+                        type: boolean
+                        description: true nghĩa là user đã chọn workspace; false nghĩa là chưa chọn.
+                        example: true
+                      work_space_code:
+                        type: string
+                        example: workspace-test
+                      workspace_id:
+                        type: integer
+                        example: 5
+                      work_session_id:
+                        type: integer
+                        example: 3
+              example:
+                ok: true
+                data:
+                  user_id: 501
+                  work_space_selected: true
+                  work_space_code: workspace-test
+                  workspace_id: 5
+                  work_session_id: 3
+        '404':
+          description: User chưa có workspace session.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - error
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_session_not_found
+              example:
+                ok: false
+                error: workspace_session_not_found
+  /openclaw/v2/workspace/new:
+    post:
+      operationId: createWorkspace
+      tags:
+      - Workspace
+      summary: Tạo workspace mới
+      description: 'Tạo session workspace cho User ID nhận từ API tạo conversation.
+
+        API tự gắn workspace mặc định `workspace-test` (workspace_id 5) và tạo
+
+        `created_at`, `updated_at`. Nếu User ID đã có session, bản ghi cũ không bị ghi đè.
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - user_id
+              properties:
+                user_id:
+                  type: integer
+                  minimum: 1
+                  description: User ID dương đã nhận từ API tạo conversation.
+                  example: 69
+            example:
+              user_id: 69
+      responses:
+        '201':
+          description: Đã tạo session workspace mới.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - data
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                    - id
+                    - user_id
+                    - openclaw_session_key
+                    - workspace_id
+                    - work_space_code
+                    - status
+                    - created_at
+                    - updated_at
+                    properties:
+                      id:
+                        type: integer
+                        example: 2
+                      user_id:
+                        type: integer
+                        example: 69
+                      openclaw_session_key:
+                        type: string
+                        nullable: true
+                        example: null
+                      workspace_id:
+                        type: integer
+                        example: 5
+                      work_space_code:
+                        type: string
+                        example: workspace-test
+                      status:
+                        type: string
+                        example: active
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: '2026-10-01T10:00:00.000Z'
+                      updated_at:
+                        type: string
+                        format: date-time
+                        example: '2026-10-01T10:00:00.000Z'
+              example:
+                ok: true
+                data:
+                  id: 2
+                  user_id: 69
+                  openclaw_session_key: null
+                  workspace_id: 5
+                  work_space_code: workspace-test
+                  status: active
+                  created_at: '2026-10-01T10:00:00.000Z'
+                  updated_at: '2026-10-01T10:00:00.000Z'
+        '400':
+          description: Body không phải JSON hợp lệ.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: invalid_json
+        '405':
+          description: Method không được hỗ trợ; endpoint chỉ nhận POST.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: method_not_allowed
+        '422':
+          description: Thiếu user_id hoặc user_id không phải số nguyên dương.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: invalid_request
+                required:
+                - user_id
+        '409':
+          description: User ID đã có session; bản ghi cũ không bị ghi đè.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: workspace_session_already_exists
+        '500':
+          description: Không tìm thấy workspace mặc định đang active.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: default_workspace_not_found
+        '503':
+          description: Không kết nối hoặc ghi được database.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                ok: false
+                error: database_unavailable
+  /openclaw/v2/workspace/select:
+    post:
+      operationId: selectWorkspace
+      tags:
+      - Workspace
+      summary: Chọn workspace
+      description: "Chọn skill/workspace cho user bằng cách gửi lệnh `/skill {work_space_code}` qua luồng chat OpenClaw.\n\n`work_space_code` phải khớp chính xác mã skill nằm trong `children` của kết quả\n\
+        `GET /openclaw/v2/workspace/list`. API trả nội dung phản hồi của OpenClaw để kiểm tra kết quả.\nAPI này không cập nhật SQL hoặc `user_session.json`.\n\nVí dụ gọi production trực tiếp:\n```bash\n\
+        curl -X POST \"https://node_md.hust.media/openclaw/v2/workspace/select\" \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"user_id\":502,\"work_space_code\":\"workspace_openclaw_support\"\
+        }'\n```\n"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - user_id
+              - work_space_code
+              properties:
+                user_id:
+                  type: integer
+                  minimum: 1
+                  description: User ID đã được tạo ở luồng chat.
+                  example: 502
+                work_space_code:
+                  type: string
+                  minLength: 1
+                  description: Mã skill chính xác lấy từ `children` trong API `/openclaw/v2/workspace/list`.
+                  example: workspace_openclaw_support
+            example:
+              user_id: 502
+              work_space_code: workspace_openclaw_support
+      responses:
+        '200':
+          description: OpenClaw đã trả phản hồi không rỗng cho lệnh chọn skill.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - ok
+                - data
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    required:
+                    - user_id
+                    - work_space_code
+                    - skill_code
+                    - agent_code
+                    - command
+                    - status
+                    - response_text
+                    - chat_result
+                    properties:
+                      user_id:
+                        type: integer
+                        example: 502
+                      work_space_code:
+                        type: string
+                        example: workspace_openclaw_support
+                      skill_code:
+                        type: string
+                        example: workspace_openclaw_support
+                      agent_code:
+                        type: string
+                        example: test
+                      command:
+                        type: string
+                        example: /skill workspace_openclaw_support
+                      status:
+                        type: string
+                        example: response_received
+                      response_text:
+                        type: string
+                        description: Nội dung phản hồi OpenClaw.
+                        example: Nội dung OpenClaw trả lời
+                      chat_result:
+                        type: object
+                        description: Kết quả chat gốc trả về từ OpenClaw.
+                        additionalProperties: true
+              example:
+                ok: true
+                data:
+                  user_id: 502
+                  work_space_code: workspace_openclaw_support
+                  skill_code: workspace_openclaw_support
+                  agent_code: test
+                  command: /skill workspace_openclaw_support
+                  status: response_received
+                  response_text: Nội dung OpenClaw trả lời
+                  chat_result: {}
+        '400':
+          description: Request body không phải JSON hợp lệ.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: invalid_json
+              example:
+                ok: false
+                error: invalid_json
+        '405':
+          description: Endpoint chỉ nhận method POST.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: method_not_allowed
+              example:
+                ok: false
+                error: method_not_allowed
+        '422':
+          description: Thiếu hoặc sai user_id/work_space_code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: invalid_request
+              example:
+                ok: false
+                error: invalid_request
+        '404':
+          description: Không tìm thấy skill khớp chính xác với work_space_code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_skill_not_found
+              example:
+                ok: false
+                error: workspace_skill_not_found
+        '502':
+          description: OpenClaw trả về phản hồi rỗng cho lệnh chọn skill.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: workspace_skill_empty_response
+              example:
+                ok: false
+                error: workspace_skill_empty_response
+        '503':
+          description: Không gọi được OpenClaw hoặc xảy ra lỗi ngoài các trường hợp đã nêu.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: openclaw_unavailable
+              example:
+                ok: false
+                error: openclaw_unavailable
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Nhập token API, ví dụ media_tech.
+    SessionKey:
+      type: apiKey
+      in: header
+      name: x-openclaw-session-key
+      description: Header phiên OpenClaw, mặc định agent:chat_bot:real (hoặc agent:chat_bot:demo).
+  parameters:
+    ConversationId:
+      name: id
+      in: path
+      required: true
+      description: id số tăng dần hoặc conversation identifier UUID có prefix conv_.
+      schema:
+        type: string
+      example: conv_550e8400-e29b-41d4-a716-446655440000
+  schemas:
+    WorkspaceSkillRequirements:
+      type: object
+      properties:
+        bins:
+          type: array
+          items:
+            type: string
+        anyBins:
+          type: array
+          items:
+            type: string
+        env:
+          type: array
+          items:
+            type: string
+        config:
+          type: array
+          items:
+            type: string
+        os:
+          type: array
+          items:
+            type: string
+    ConversationCreateRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Các item ban đầu của conversation.
+          maxItems: 20
+          items:
+            type: object
+            required:
+            - role
+            - content
+            properties:
+              type:
+                type: string
+                example: message
+              role:
+                type: string
+                enum:
+                - user
+                - assistant
+                - system
+                - developer
+              content:
+                oneOf:
+                - type: string
+                - type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+        user_id:
+          type: integer
+          nullable: true
+          description: Trường liên kết user nội bộ, không bắt buộc.
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Metadata mở rộng của ứng dụng.
+          example:
+            source: frontend
+    Conversation:
+      type: object
+      required:
+      - id
+      - conversation_id
+      - category
+      - metadata
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: integer
+          example: 1
+        conversation_id:
+          type: string
+          example: conv_550e8400-e29b-41d4-a716-446655440000
+        category:
+          type: string
+          example: conversation
+        user_id:
+          type: integer
+          nullable: true
+          example: 69
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ConversationItemCreateRequest:
+      type: object
+      required:
+      - role
+      - content
+      properties:
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+          - system
+          - developer
+        content:
+          type: string
+          example: Hãy giới thiệu về Hà Nội
+    ConversationItem:
+      type: object
+      required:
+      - id
+      - object
+      - role
+      - content
+      - created_at
+      properties:
+        id:
+          type: string
+          example: item_abc123
+        object:
+          type: string
+          example: conversation.item
+        role:
+          type: string
+          example: user
+        content:
+          type: string
+        response_id:
+          type: string
+          nullable: true
+          example: resp_abc123
+        created_at:
+          type: string
+          format: date-time
+    ConversationItemList:
+      type: object
+      required:
+      - object
+      - data
+      - has_more
+      - first_id
+      - last_id
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConversationItem'
+        has_more:
+          type: boolean
+          example: false
+        first_id:
+          type: string
+          example: item_abc123
+        last_id:
+          type: string
+          example: item_def456
+    ResponsesRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        input:
+          type: array
+          items:
+            oneOf:
+            - $ref: '#/components/schemas/TextInputItem'
+            - $ref: '#/components/schemas/StructuredWritingInputItem'
+            - $ref: '#/components/schemas/ImageToTextInputItem'
+            - $ref: '#/components/schemas/TextToSpeechInputItem'
+        previous_response_id:
+          type: string
+          nullable: true
+        conversation_id:
+          type: string
+          description: conversation identifier dạng conv_ dùng để liên kết response với conversation, không bắt buộc.
+          example: conv_550e8400-e29b-41d4-a716-446655440000
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+    TextInputItem:
+      type: object
+      required:
+      - role
+      - content
+      properties:
+        role:
+          type: string
+          enum:
+          - user
+          - assistant
+          - system
+          - developer
+        content:
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: object
+              additionalProperties: true
+    StructuredWritingInputItem:
+      type: object
+      required:
+      - role
+      properties:
+        role:
+          type: string
+          example: user
+        title:
+          type: string
+        desc:
+          type: string
+        len:
+          oneOf:
+          - type: string
+          - type: integer
+        tone:
+          type: string
+    ImageToTextInputItem:
+      type: object
+      required:
+      - role
+      - content
+      properties:
+        role:
+          type: string
+          example: user
+        content:
+          type: array
+          items:
+            oneOf:
+            - type: object
+              properties:
+                type:
+                  type: string
+                  example: input_text
+                text:
+                  type: string
+            - type: object
+              properties:
+                type:
+                  type: string
+                  example: input_image
+                source:
+                  type: object
+                  required:
+                  - type
+                  - media_type
+                  - data
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - base64
+                    media_type:
+                      type: string
+                      enum:
+                      - image/png
+                      - image/jpeg
+                      - image/gif
+                      - image/webp
+                    data:
+                      type: string
+                      description: Dữ liệu ảnh Base64, không gồm tiền tố Data URI.
+          description: Data URI, ví dụ data:image/png;base64,...
+    TextToSpeechInputItem:
+      type: object
+      required:
+      - role
+      - text
+      - tool
+      - services
+      properties:
+        role:
+          type: string
+          example: user
+        text:
+          type: string
+        tool:
+          type: string
+          enum:
+          - media_text_to_speech
+        services:
+          type: string
+          example: v3
+        servicecode:
+          type: string
+          example: F5_vie
+        model:
+          type: string
+          example: F5_vie
+    ChatCompletionsRequest:
+      type: object
+      required:
+      - messages
+      properties:
+        model:
+          type: string
+          example: gpt-5.6-luna
+        messages:
+          type: array
+          items:
+            type: object
+            required:
+            - role
+            - content
+            properties:
+              role:
+                type: string
+                enum:
+                - user
+                - assistant
+                - system
+                - developer
+              content:
+                type: string
+        stream:
+          type: boolean
+          default: false
+        previous_completion_id:
+          type: string
+    ImageGenerationRequest:
+      type: object
+      required:
+      - prompt
+      properties:
+        user_id:
+          type: integer
+        chat_token:
+          type: string
+        model:
+          type: string
+          example: openai/gpt-image-2
+        prompt:
+          type: string
+        n:
+          type: integer
+          minimum: 1
+          default: 1
+        size:
+          type: string
+          example: 1024x1024
+        aspectRatio:
+          type: string
+          example: 61
+        quality:
+          type: string
+          example: medium
+        style:
+          type: string
+        tone:
+          type: string
+        previous_response_id:
+          type: string
+    ResponseObject:
+      type: object
+      required:
+      - id
+      - object
+      - status
+      - output
+      properties:
+        id:
+          type: string
+          example: resp_abc123
+        object:
+          type: string
+          example: response
+        status:
+          type: string
+          example: completed
+        model:
+          type: string
+        previous_response_id:
+          type: string
+          nullable: true
+        output:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        output_text:
+          type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+    ImageResponseObject:
+      allOf:
+      - $ref: '#/components/schemas/ResponseObject'
+      - type: object
+        properties:
+          output:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                  example: message
+                role:
+                  type: string
+                  example: assistant
+                content:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        example: output_image
+                      source:
+                        type: object
+                        required:
+                        - type
+                        - media_type
+                        - data
+                        properties:
+                          type:
+                            type: string
+                            example: base64
+                          media_type:
+                            type: string
+                            example: image/png
+                          data:
+                            type: string
+    ChatCompletionObject:
+      type: object
+      required:
+      - id
+      - object
+      - choices
+      properties:
+        id:
+          type: string
+          example: chatcmpl_abc123
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+        usage:
+          $ref: '#/components/schemas/ResponseUsage'
+    ResponseUsage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+    Error:
+      type: object
+      required:
+      - ok
+      - error
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Request không hợp lệ hoặc OpenClaw downstream gặp lỗi
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

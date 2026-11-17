@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import {
+  handleHomeNavigationLink,
+  HomeNavigationToast,
+  useHomeNavigationToast,
+} from "@/app/api/hust_media/media_tech/HomeNavigationToast";
+import {
   Bot,
   MessageSquare,
   Sparkles,
@@ -31,6 +36,7 @@ interface ChatBotHomeProps {
 
 export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   const router = useRouter();
+  const { pendingNavigation, showNavigationLoading } = useHomeNavigationToast();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -44,7 +50,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
   const chatPublicLink = `${linkPrefix}/chat/public`;
   const workspaceLink = `${linkPrefix}/workspace/home`;
   const apiListLink = `${linkPrefix}/list/home`;
-  const workflowLink = isHust ? `${linkPrefix}/workflow` : `${linkPrefix}/n8n/home`;
+  const workflowLink = `${linkPrefix}/workflow/home`;
 
   // Single source of truth: derive display path (with /next basePath) from the Link variable
   const getDisplayPath = (link: string) => (link.startsWith("/next") ? link : `/next${link}`);
@@ -172,7 +178,10 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "manage") && (
           <div
-            onClick={() => router.push(chatManageLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Quản trị Chat Bot");
+              router.push(chatManageLink as Route);
+            }}
             title="Nhấp để mở Quản Trị Chat Bot"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-indigo-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -301,7 +310,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   href={chatMessagesLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(event) => handleHomeNavigationLink(event, "Messages", showNavigationLoading)}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
@@ -310,7 +319,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
                 <Link
                   href={chatManageLink as unknown as Route}
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(event) => handleHomeNavigationLink(event, "Quản trị Chat Bot", showNavigationLoading)}
                   className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
                 >
                   <span>Mở Quản Lý</span>
@@ -326,7 +335,10 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "test") && (
           <div
-            onClick={() => router.push(chatTestLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Chat Test");
+              router.push(chatTestLink as Route);
+            }}
             title="Nhấp để mở Chat Test"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-blue-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -454,7 +466,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
               <Link
                 href={chatTestLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "Chat Test", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Chat Test</span>
@@ -469,7 +481,10 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
         {/* ----------------------------------------------------------------------- */}
         {(filterMode === "all" || filterMode === "public") && (
           <div
-            onClick={() => router.push(chatPublicLink as Route)}
+            onClick={() => {
+              showNavigationLoading("Chat Public");
+              router.push(chatPublicLink as Route);
+            }}
             title="Nhấp để mở Chat Public"
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-emerald-400 hover:shadow-md cursor-pointer overflow-hidden active:scale-[0.995]"
           >
@@ -597,7 +612,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
               <Link
                 href={chatPublicLink as unknown as Route}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => handleHomeNavigationLink(event, "Chat Public", showNavigationLoading)}
                 className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-2xs hover:shadow-xs hover:brightness-105 transition-all hover:scale-[1.01] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Chat Public</span>
@@ -621,6 +636,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={workspaceLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Workspace", showNavigationLoading)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition shadow-2xs"
             >
               <Briefcase className="h-3.5 w-3.5 text-slate-500" />
@@ -629,6 +645,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
             <Link
               href={apiListLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Danh sách API", showNavigationLoading)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition shadow-2xs"
             >
               <Code2 className="h-3.5 w-3.5 text-slate-500" />
@@ -637,6 +654,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
             <Link
               href={workflowLink as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Workflow", showNavigationLoading)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition shadow-2xs"
             >
               <Workflow className="h-3.5 w-3.5 text-slate-500" />
@@ -645,6 +663,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
 
             <Link
               href={`${linkPrefix}/git/home` as unknown as Route}
+              onClick={(event) => handleHomeNavigationLink(event, "Git Auto", showNavigationLoading)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition shadow-2xs"
             >
               <GitBranch className="h-3.5 w-3.5 text-slate-500" />
@@ -682,6 +701,7 @@ export default function ChatBotHome({ isHust = false }: ChatBotHomeProps) {
           </button>
         </div>
       )}
+      <HomeNavigationToast label={pendingNavigation} />
     </div>
   );
 }

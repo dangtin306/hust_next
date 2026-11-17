@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import {
   Server,
@@ -12,10 +13,13 @@ import {
   Bot,
   Briefcase,
   Boxes,
+  Network,
+  LoaderCircle,
 } from "lucide-react";
 import ApiEnvironmentConfigCard from "../dashboard/ApiEnvironmentConfigCard";
 import {
   getChatBotApiConfig,
+  DEFAULT_PRESETS,
   CHAT_BOT_API_CHANGE_EVENT,
   type ChatBotApiConfig,
 } from "../config/chatBotApiConfig";
@@ -25,13 +29,17 @@ interface ApiListHomeProps {
 }
 
 export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
+  const pathname = usePathname();
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [filterMode, setFilterMode] = useState<"all" | "laravel" | "openclaw">("all");
+  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [filterMode, setFilterMode] = useState<"all" | "laravel" | "openclaw" | "agents">("all");
 
-  const [config, setConfig] = useState<ChatBotApiConfig>(() =>
-    getChatBotApiConfig(isHust)
+  // Giá trị đầu giống hệt bản render trên server (không đọc cookie) để hydrate khớp; useEffect bên dưới nạp cấu hình thật.
+  const [config, setConfig] = useState<ChatBotApiConfig>(
+    () => (isHust ? DEFAULT_PRESETS.hust.production.config : DEFAULT_PRESETS.mt.company.config)
   );
 
   useEffect(() => {
@@ -50,12 +58,22 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
     return () => {
       window.removeEventListener(CHAT_BOT_API_CHANGE_EVENT, handleConfigChange);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
     };
   }, [isHust]);
+
+  useEffect(() => {
+    setPendingNavigation(null);
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
+    }
+  }, [pathname]);
 
   const basePrefix = isHust ? "/api/hust" : "/api/mt";
   const laravelUrl = `${basePrefix}/list/laravel`;
   const openclawUrl = `${basePrefix}/list/openclaw`;
+  const agentsUrl = `${basePrefix}/list/agents`;
   const workspaceUrl = `${basePrefix}/workspace/home`;
   const chatBotHomeUrl = `${basePrefix}/chat/home`;
 
@@ -65,7 +83,30 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
     (isHust ? "https://laravel.hust.media" : "http://192.168.0.189:8817");
   const nodeHost =
     config.backend_node ||
-    (isHust ? "https://node_md.hust.media" : "http://192.168.0.189:8818");
+    (isHust ? "https://node_js.hust.media" : "http://192.168.0.189:8818");
+
+  // Hust có runtime Multi Agent riêng; Workspace REST vẫn được Laravel xử lý ở cả hai project.
+  const agentsHost = isHust ? "https://node_js.hust.media" : null;
+
+  const handleLinkNavigation = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    label: string,
+  ) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    setPendingNavigation(label);
+    if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+    navigationTimerRef.current = setTimeout(() => setPendingNavigation(null), 15000);
+  };
 
   const handleCopy = (text: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -80,20 +121,8 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
     }
   };
 
-  const laravelEndpoints = [
-    { method: "POST", path: "/api/chat/bot/messages", desc: "Lưu & phản hồi tin nhắn chat bot" },
-    { method: "GET", path: "/api/chat/bot/rooms", desc: "Danh sách phòng chat" },
-    { method: "GET", path: "/api/workspaces/main/data", desc: "Dữ liệu danh sách Workspace" },
-  ];
-
-  const openclawEndpoints = [
-    { method: "POST", path: "/v1/responses", desc: "Lượt gọi AI tạo phản hồi văn bản" },
-    { method: "GET", path: "/v1/conversations", desc: "Quản lý ngữ cảnh hội thoại" },
-    { method: "POST", path: "/v1/model/switch", desc: "Chuyển đổi mô hình AI" },
-  ];
-
   return (
-    <div className="w-full space-y-3.5">
+    <div className="mx-auto w-full max-w-7xl space-y-4 pb-8 xl:max-w-[1400px]">
       {/* ========================================================================= */}
       {/* SLIM HEADER SECTION                                                      */}
       {/* ========================================================================= */}
@@ -107,7 +136,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
               Danh Sách API Hệ Thống (API List)
             </h1>
             <p className="text-[11px] text-slate-500 truncate hidden sm:block">
-              Tra cứu và mở nhanh 2 hệ thống API: Laravel Backend REST API và OpenClaw AI Gateway.
+              Tra cứu Laravel, OpenClaw và Multi Agent API. Workspace được tài liệu hóa trong nhóm Multi Agent; Laravel vẫn xử lý request.
             </p>
           </div>
         </div>
@@ -123,7 +152,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            Tất cả (2 Khung)
+            Tất cả (3 Khung)
           </button>
           <button
             type="button"
@@ -147,18 +176,29 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
           >
             OpenClaw
           </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode("agents")}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+              filterMode === "agents"
+                ? "bg-teal-600 text-white shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            Multi Agent
+          </button>
         </div>
       </div>
 
       {/* ========================================================================= */}
       {/* MÔI TRƯỜNG API HIỆN TẠI (Đồng bộ cookie url_api_chat_bot_mt / url_api_chat_bot_hust) */}
       {/* ========================================================================= */}
-      <ApiEnvironmentConfigCard isHust={isHust} />
+      <ApiEnvironmentConfigCard isHust={isHust} compact />
 
       {/* ========================================================================= */}
-      {/* 2 MAIN COMPACT API FRAMES                                                */}
+      {/* 3 MAIN COMPACT API FRAMES                                                */}
       {/* ========================================================================= */}
-      <div className={`grid gap-4 ${filterMode === "all" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}>
+      <div className={`grid gap-4 sm:gap-4.5 lg:gap-5 ${filterMode === "all" ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "mx-auto w-full max-w-2xl grid-cols-1"}`}>
 
         {/* ----------------------------------------------------------------------- */}
         {/* KHUNG 1: LARAVEL BACKEND API                                            */}
@@ -168,6 +208,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
             {/* Clickable Frame Header - Direct entry to Swagger */}
             <Link
               href={laravelUrl as unknown as Route}
+              onClick={(event) => handleLinkNavigation(event, "Laravel API")}
               title="Nhấp để mở Swagger Laravel"
               className="group/hdr flex items-center justify-between gap-3 border-b border-blue-500/30 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-600 px-4 py-3 text-white transition-all hover:brightness-105 cursor-pointer"
             >
@@ -185,7 +226,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
                     </span>
                   </div>
                   <p className="text-[11px] text-blue-100 font-medium truncate">
-                    Backend Chat Sessions & Quản trị Workspace
+                      Backend Chat Sessions & lịch sử hội thoại
                   </p>
                 </div>
               </div>
@@ -228,70 +269,16 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
-                Hệ thống Backend chịu trách nhiệm quản lý phiên làm việc của Chat Bot, lưu trữ lịch sử phòng chat (Rooms) và đồng bộ Workspace dự án.
+                Laravel quản lý session, phòng chat và lịch sử hội thoại của Chat Bot.
               </p>
 
-              {/* Endpoints List */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                  <span>Endpoint Tiêu Biểu</span>
-                  <span className="text-[10px] text-blue-600 font-semibold">3 endpoint chính</span>
-                </div>
-
-                <div className="divide-y divide-slate-100 rounded-xl border border-slate-200/80 bg-slate-50/50 overflow-hidden text-xs">
-                  {laravelEndpoints.map((ep) => {
-                    const fullEpUrl = `${laravelHost.replace(/\/$/, "")}${ep.path}`;
-                    return (
-                      <div
-                        key={ep.path}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-white transition-colors gap-2"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold font-mono shrink-0 ${
-                              ep.method === "GET"
-                                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                                : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                            }`}
-                          >
-                            {ep.method}
-                          </span>
-                          <code className="font-mono font-semibold text-slate-800 truncate text-[11px]">
-                            {ep.path}
-                          </code>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[140px]">{ep.desc}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(fullEpUrl)}
-                            title={`Sao chép endpoint đầy đủ: ${fullEpUrl}`}
-                            className="flex items-center gap-1 rounded-lg border border-slate-200/60 bg-white hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 px-2 py-1 text-slate-400 transition cursor-pointer shadow-2xs"
-                          >
-                            {copiedText === fullEpUrl ? (
-                              <>
-                                <Check className="h-3 w-3 text-emerald-600" />
-                                <span className="text-[10px] font-bold text-emerald-600">Đã chép</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" />
-                                <span className="text-[10px] font-medium hidden md:inline">Chép</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Frame Footer Actions */}
             <div className="border-t border-slate-100 bg-slate-50/90 px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
               <Link
                 href={workspaceUrl as unknown as Route}
+                onClick={(event) => handleLinkNavigation(event, "Workspace")}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100/80 transition-all hover:scale-[1.01] active:scale-95 shadow-2xs"
               >
                 <Briefcase className="h-4 w-4 text-slate-500" />
@@ -300,6 +287,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
 
               <Link
                 href={laravelUrl as unknown as Route}
+                onClick={(event) => handleLinkNavigation(event, "Swagger Laravel")}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:shadow-md hover:from-blue-700 hover:to-indigo-700 transition-all hover:scale-[1.02] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Swagger Laravel</span>
@@ -317,6 +305,7 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
             {/* Clickable Frame Header - Direct entry to Swagger */}
             <Link
               href={openclawUrl as unknown as Route}
+              onClick={(event) => handleLinkNavigation(event, "OpenClaw API")}
               title="Nhấp để mở Swagger OpenClaw"
               className="group/hdr flex items-center justify-between gap-3 border-b border-purple-500/30 bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 px-4 py-3 text-white transition-all hover:brightness-105 cursor-pointer"
             >
@@ -380,67 +369,13 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
                 Cổng API AI đa mô hình kết nối LLM, lưu trữ ngữ cảnh hội thoại bền vững (Conversations), thực thi lượt gọi AI (Responses) và đa phương tiện.
               </p>
 
-              {/* Endpoints List */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                  <span>Endpoint Tiêu Biểu</span>
-                  <span className="text-[10px] text-purple-600 font-semibold">3 endpoint chính</span>
-                </div>
-
-                <div className="divide-y divide-slate-100 rounded-xl border border-slate-200/80 bg-slate-50/50 overflow-hidden text-xs">
-                  {openclawEndpoints.map((ep) => {
-                    const fullEpUrl = `${nodeHost.replace(/\/$/, "")}${ep.path}`;
-                    return (
-                      <div
-                        key={ep.path}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-white transition-colors gap-2"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold font-mono shrink-0 ${
-                              ep.method === "GET"
-                                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                                : "bg-purple-100 text-purple-700 border border-purple-200"
-                            }`}
-                          >
-                            {ep.method}
-                          </span>
-                          <code className="font-mono font-semibold text-slate-800 truncate text-[11px]">
-                            {ep.path}
-                          </code>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] text-slate-500 hidden sm:inline truncate max-w-[140px]">{ep.desc}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(fullEpUrl)}
-                            title={`Sao chép endpoint đầy đủ: ${fullEpUrl}`}
-                            className="flex items-center gap-1 rounded-lg border border-slate-200/60 bg-white hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 px-2 py-1 text-slate-400 transition cursor-pointer shadow-2xs"
-                          >
-                            {copiedText === fullEpUrl ? (
-                              <>
-                                <Check className="h-3 w-3 text-emerald-600" />
-                                <span className="text-[10px] font-bold text-emerald-600">Đã chép</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3 w-3" />
-                                <span className="text-[10px] font-medium hidden md:inline">Chép</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* Frame Footer Actions */}
             <div className="border-t border-slate-100 bg-slate-50/90 px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
               <Link
                 href={chatBotHomeUrl as unknown as Route}
+                onClick={(event) => handleLinkNavigation(event, "Chat Bot")}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100/80 transition-all hover:scale-[1.01] active:scale-95 shadow-2xs"
               >
                 <Bot className="h-4 w-4 text-purple-600" />
@@ -449,9 +384,141 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
 
               <Link
                 href={openclawUrl as unknown as Route}
+                onClick={(event) => handleLinkNavigation(event, "Swagger OpenClaw")}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-pink-600 px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:shadow-md hover:from-violet-700 hover:to-purple-700 transition-all hover:scale-[1.02] active:scale-95 flex-1 sm:flex-initial"
               >
                 <span>Mở Swagger OpenClaw</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ----------------------------------------------------------------------- */}
+        {/* KHUNG 3: MULTI AGENT API VÀ WORKSPACE REST API                           */}
+        {/* ----------------------------------------------------------------------- */}
+        {(filterMode === "all" || filterMode === "agents") && (
+          <div className="group flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all hover:border-teal-300 hover:shadow-sm overflow-hidden">
+            {/* Clickable Frame Header - Direct entry to Swagger */}
+            <Link
+              href={agentsUrl as unknown as Route}
+              onClick={(event) => handleLinkNavigation(event, "Multi Agent API")}
+              title="Nhấp để mở Swagger Multi Agent"
+              className="group/hdr flex items-center justify-between gap-3 border-b border-teal-500/30 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-4 py-3 text-white transition-all hover:brightness-105 cursor-pointer"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white backdrop-blur-md shadow-inner border border-white/30 shrink-0 group-hover/hdr:scale-105 transition-transform">
+                  <Network className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-sm font-bold tracking-tight text-white truncate">
+                      Multi Agent API
+                    </h2>
+                    <span className="rounded-md bg-white/20 border border-white/30 px-1.5 py-0.2 text-[10px] font-bold text-white tracking-wide uppercase">
+                      OpenAPI 3.0
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-teal-100 font-medium truncate">
+                    {isHust
+                      ? "Điều phối Agent và tài liệu Workspace; request Workspace vẫn do Laravel xử lý"
+                      : "Tài liệu Workspace trong nhóm Multi Agent; Laravel vẫn xử lý request"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {isHust && <div className="hidden sm:flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-300/40 px-2 py-0.5 text-[10px] font-bold text-emerald-100">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  <span>Active</span>
+                </div>}
+                <div className="flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 border border-white/30 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md transition-all group-hover/hdr:bg-white group-hover/hdr:text-teal-700 shadow-2xs">
+                  <span>Mở Swagger</span>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover/hdr:translate-x-0.5 transition-transform" />
+                </div>
+              </div>
+            </Link>
+
+            {/* Frame Body */}
+            <div className="flex-1 p-3.5 sm:p-4 space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 gap-2 pb-1.5 border-b border-slate-100">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span>{isHust ? "Node Server:" : "Laravel:"}</span>
+                  <strong className="font-mono text-teal-700 truncate">{agentsHost || laravelHost}</strong>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(agentsHost || laravelHost)}
+                    title={`Sao chép URL ${isHust ? "Node" : "Laravel"}`}
+                    className="text-slate-400 hover:text-teal-600 transition p-0.5 cursor-pointer shrink-0"
+                  >
+                    {copiedText === (agentsHost || laravelHost) ? (
+                      <Check className="h-3 w-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </button>
+                </span>
+                <span className="bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-md text-[10px] shrink-0">{isHust ? "REST JSON · Dry-run" : "Workspace REST API"}</span>
+              </div>
+              {isHust && (
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                  <span>Workspace request qua Laravel:</span>
+                  <strong className="truncate font-mono text-teal-700">{laravelHost}</strong>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(laravelHost)}
+                    title="Sao chép URL Laravel xử lý Workspace"
+                    className="shrink-0 p-0.5 text-slate-400 transition hover:text-teal-600"
+                  >
+                    {copiedText === laravelHost ? (
+                      <Check className="h-3 w-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </button>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                {isHust
+                  ? "API điều phối agent của Hust. Các API quản lý Workspace và Markdown được tài liệu hóa cùng nhóm; request Workspace vẫn chạy qua Laravel."
+                  : "Nhóm tài liệu Multi Agent chứa API quản lý Workspace và Markdown của Media Tech. Các request vẫn được Laravel xử lý; không gọi Node Multi Agent."}
+              </p>
+
+            </div>
+
+            {/* Frame Footer Actions */}
+            <div className="border-t border-slate-100 bg-slate-50/90 px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+              {isHust ? (
+                <a
+                  href={`${agentsHost || laravelHost}/multi/agents/status`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100/80 transition-all hover:scale-[1.01] active:scale-95 shadow-2xs"
+                >
+                  <Network className="h-4 w-4 text-teal-600" />
+                  <span>Xem trạng thái</span>
+                </a>
+              ) : (
+                <Link
+                  href={workspaceUrl as unknown as Route}
+                  onClick={(event) => handleLinkNavigation(event, "Workspace")}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-100/80 transition-all hover:scale-[1.01] active:scale-95 shadow-2xs"
+                >
+                  <Briefcase className="h-4 w-4 text-teal-600" />
+                  <span>Quản trị Workspace</span>
+                </Link>
+              )}
+
+              <Link
+                href={agentsUrl as unknown as Route}
+                onClick={(event) => handleLinkNavigation(event, "Swagger Multi Agent")}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-white shadow-sm hover:shadow-md hover:from-teal-700 hover:to-emerald-700 transition-all hover:scale-[1.02] active:scale-95 flex-1 sm:flex-initial"
+              >
+                <span>Mở Swagger Multi Agent</span>
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
@@ -463,6 +530,19 @@ export default function ApiListHome({ isHust = false }: ApiListHomeProps) {
       {/* ========================================================================= */}
       {/* FLOATING TOAST NOTIFICATION (Khi sao chép link/endpoint thành công)        */}
       {/* ========================================================================= */}
+      {pendingNavigation && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed left-1/2 top-4 z-[100] -translate-x-1/2"
+        >
+          <div className="flex items-center gap-2 rounded-full border border-indigo-200 bg-white/95 px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg backdrop-blur">
+            <LoaderCircle className="h-4 w-4 animate-spin text-indigo-600" />
+            <span>Đang mở {pendingNavigation}...</span>
+          </div>
+        </div>
+      )}
+
       {toastMessage && (
         <div
           role="status"

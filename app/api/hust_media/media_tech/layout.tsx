@@ -15,20 +15,22 @@ const getSpecs = cache(async () => {
   const loadedSpec = await readOpenApiSpec("openclaw", "openclaw.yaml");
   const laravelSpec = await readOpenApiSpec("laravel", "laravel.yaml");
   const homeSpec = await readOpenApiSpec("dashboard", "home.yaml");
+  const agentsSpec = await readOpenApiSpec("agents", "multi_agents.yaml");
   const categories = Object.entries(
     (loadedSpec["x-service-categories"] || {}) as Record<string, ServiceCategory>,
   );
-  return { loadedSpec, laravelSpec, homeSpec, categories };
+  return { loadedSpec, laravelSpec, homeSpec, agentsSpec, categories };
 });
 
 export default async function SwaggerLayout({ children }: { children: React.ReactNode }) {
-  const { loadedSpec, laravelSpec, homeSpec, categories } = await getSpecs();
+  const { loadedSpec, laravelSpec, homeSpec, agentsSpec, categories } = await getSpecs();
 
   return (
     <SwaggerLayoutClient
       spec={loadedSpec}
       laravelSpec={laravelSpec}
       homeSpec={homeSpec}
+      agentsSpec={agentsSpec}
       categories={categories}
     >
       {children}

@@ -44,7 +44,7 @@ export default async function RealChatPage({
     >
       <MediaTechChatClient
         className="h-full max-h-full"
-        targetUrl="https://node_md.hust.media/openclaw"
+        targetUrl=""
         sessionKey="agent:test:user_502"
         storageKey="hust_chat_conv_id_real"
         model="gpt-5.6-luna"

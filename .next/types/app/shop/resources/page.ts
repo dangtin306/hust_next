@@ -1,4 +1,4 @@
-// File: /Users/dangtin306/Desktop/12112/front_end/hust_next/app/shop/resources/page.tsx
+// File: C:\hustmedia5\hust_next\app\shop\resources\page.tsx
 import * as entry from '../../../../../app/shop/resources/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
